@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# run-remote-steps.sh — fetch N scripts from one repo and run them interactively
+
+set -u  # (avoid -e here so we can inspect non-zero exits without aborting)
+IFS=$'\n\t'
+
+### --- CONFIG ---------------------------------------------------------------
+
+# 1) Point to your repo. You can use a branch or PIN to a commit SHA.
+OWNER_REPO="durantschoon/cloudzy-guix-install"
+REF="main"             # e.g. "main" or a full commit SHA like "4b7f1d9..."
+RAW_BASE="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}"
+
+# 2) List the scripts (in order) relative to the repo root.
+SCRIPTS=(
+  "01-partition.sh"
+  "02-mount-bind.sh"
+  "03-config-write.sh"
+  "04-system-init.sh"
+  "05-postinstall.sh"
+)
+
+# 3) Optional: expected sha256 checksums (filename -> sha256).
+# Leave empty to skip verification.
+declare -A SHA256=(
+#  ["01-partition.sh"]="aaaaaaaa... (64 hex)"
+#  ["02-mount-bind.sh"]="bbbbbbbb..."
+)
+
+# 4) Where to store downloads & logs locally
+WORKDIR="$(mktemp -d /tmp/run-steps.XXXXXX)"
+LOGDIR="${WORKDIR}/logs"
+
+# 5) Extra env for child scripts (edit if useful)
+export TMPDIR="${TMPDIR:-/var/tmp}"
+export GUIX_BUILD_OPTIONS="${GUIX_BUILD_OPTIONS:---max-jobs=1 --cores=1}"
+
+### --- UTIL ----------------------------------------------------------------
+
+msg(){ printf "\n\033[1;34m==> %s\033[0m\n" "$*"; }
+warn(){ printf "\n\033[1;33m[warn]\033[0m %s\n" "$*"; }
+err(){ printf "\n\033[1;31m[err]\033[0m  %s\n" "$*"; }
+ask_yes(){
+  # ask_yes "Prompt?" default_yes|default_no
+  local prompt="$1" default="$2" ans
+  if [[ "$default" == default_yes ]]; then
+    read -r -p "$prompt [Y/n] " ans
+    [[ -z "$ans" || "$ans" =~ ^[Yy]$ ]]
+  else
+    read -r -p "$prompt [y/N] " ans
+    [[ "$ans" =~ ^[Yy]$ ]]
+  fi
+}
+
+fetch_file(){ # fetch_file path/to/script
+  local rel="$1" dest="${WORKDIR}/${rel}"
+  mkdir -p "$(dirname "$dest")"
+  local url="${RAW_BASE}/${rel}"
+  curl -fsSL "$url" -o "$dest" || { err "Download failed: $url"; return 1; }
+  chmod +x "$dest"
+  if [[ -n "${SHA256[$rel]:-}" ]]; then
+    echo "${SHA256[$rel]}  ${dest}" | sha256sum -c - || {
+      err "SHA256 mismatch for $rel"; return 1; }
+  fi
+  echo "$dest"
+}
+
+run_step(){ # run_step local_script_path
+  local script="$1" name="$(basename "$script")"
+  mkdir -p "$LOGDIR"
+  local log="${LOGDIR}/${name}.log"
+  msg "Running ${name}"
+  # Run in a clean subshell; preserve PATH for tiny ISOs
+  ( set -o pipefail; bash "$script" 2>&1 | tee "$log" )
+  local rc=${PIPESTATUS[0]}
+  msg "Exit status for ${name}: ${rc}"
+  echo "Log saved to: $log"
+  # Show tail and offer to view all
+  echo "---- last 40 lines ----"
+  tail -n 40 "$log" || true
+  echo "-----------------------"
+  if ! ask_yes "Continue to next step?" default_yes; then
+    warn "User chose to stop. Workdir: $WORKDIR"
+    exit $rc
+  fi
+  return $rc
+}
+
+### --- MAIN ----------------------------------------------------------------
+
+msg "Workdir: ${WORKDIR}"
+msg "Fetching from: ${RAW_BASE}"
+
+# Basic prereqs
+command -v curl >/dev/null 2>&1 || { err "curl is required"; exit 1; }
+mkdir -p "$WORKDIR" "$LOGDIR"
+
+for rel in "${SCRIPTS[@]}"; do
+  msg "Fetch $rel"
+  local_path="$(fetch_file "$rel")" || {
+    err "Failed to fetch $rel"; exit 1; }
+  # Preview the script head
+  echo "---- ${rel} (head) ----"
+  sed -n '1,30p' "$local_path"
+  echo "-----------------------"
+  if ! ask_yes "Run ${rel} now?" default_yes; then
+    warn "Skipping ${rel} per user request"
+    continue
+  fi
+  run_step "$local_path" || warn "${rel} returned non-zero; you may want to stop."
+done
+
+msg "All done. Logs in: $LOGDIR"
