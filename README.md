@@ -7,4 +7,4 @@ bash ./run-remote-steps.sh
 ```
 
 ## TODO
-check sha256 of main script
+Check sha256 of run-remote-steps.sh
