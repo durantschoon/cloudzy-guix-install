@@ -111,7 +111,11 @@ for rel in "${SCRIPTS[@]}"; do
   local_path="$(fetch_file "$rel")" || {
     err "Failed to fetch $rel"; exit 1; }
   # Ensure file is fully written before reading
-  sleep 0.1
+  sleep 0.5
+  # Wait for file to be readable
+  while [[ ! -r "$local_path" ]]; do
+    sleep 0.1
+  done
   # Preview the script head
   echo "---- ${rel} (head) ----"
   sed -n '1,30p' "$local_path"

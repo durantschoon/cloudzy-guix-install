@@ -55,36 +55,44 @@ bash ./run-remote-steps.sh
 
 ### For Future Self: How to Create New Versions
 
+**IMPORTANT: Only tag versions that are tested and working!**
+
 When making changes that affect the scripts:
 
 1. **Make your changes** on the `main` branch
-2. **Update SHA256 checksums** in `run-remote-steps.sh`:
+2. **Test thoroughly** in the target environment (Guix ISO)
+3. **Update SHA256 checksums** in `run-remote-steps.sh`:
 
    ```bash
    shasum -a 256 *.sh
    ```
 
-3. **Anticipate the next version** in `run-remote-steps.sh`:
-   - Change `REF="v0.1.3"` to `REF="v0.1.4"` (or next version)
-4. **Commit the changes**:
+4. **Only when you have a working version:**
+   - Anticipate the next version in `run-remote-steps.sh`:
+     - Change `REF="v0.1.3"` to `REF="v0.1.4"` (or next version)
+   - Commit the changes:
 
-   ```bash
-   git add .
-   git commit -m "Description of changes"
-   ```
+     ```bash
+     git add .
+     git commit -m "Description of changes"
+     ```
 
-5. **Create the anticipated tag**:
+   - Create the anticipated tag:
 
-   ```bash
-   git tag -a v0.1.4 -m "Description of changes"
-   ```
+     ```bash
+     git tag -a v0.1.4 -m "Description of changes"
+     ```
 
-6. **Push everything**:
+   - Push everything:
 
-   ```bash
-   git push origin main
-   git push origin v0.1.4
-   ```
+     ```bash
+     git push origin main
+     git push origin v0.1.4
+     ```
+
+**For development/testing:**
+- Use `REF="main"` during development
+- Only switch to a specific tag when you have a stable, tested version
 
 ### Why This Works
 
