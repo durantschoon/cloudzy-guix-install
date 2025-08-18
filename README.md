@@ -50,3 +50,51 @@ shasum -a 256 run-remote-steps.sh
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
+
+## Version Anticipation Workflow
+
+### For Future Self: How to Create New Versions
+
+When making changes that affect the scripts:
+
+1. **Make your changes** on the `main` branch
+2. **Update SHA256 checksums** in `run-remote-steps.sh`:
+
+   ```bash
+   shasum -a 256 *.sh
+   ```
+
+3. **Anticipate the next version** in `run-remote-steps.sh`:
+   - Change `REF="v0.1.3"` to `REF="v0.1.4"` (or next version)
+4. **Commit the changes**:
+
+   ```bash
+   git add .
+   git commit -m "Description of changes"
+   ```
+
+5. **Create the anticipated tag**:
+
+   ```bash
+   git tag -a v0.1.4 -m "Description of changes"
+   ```
+
+6. **Push everything**:
+
+   ```bash
+   git push origin main
+   git push origin v0.1.4
+   ```
+
+### Why This Works
+
+- **No chicken-and-egg problem**: The script points to a tag that includes the script itself
+- **Stable releases**: Tags are immutable, so users get consistent behavior
+- **Clean development**: Continue working on `main` without affecting stable versions
+- **Self-referential**: Each tag contains the script pointing to itself
+
+### Current Stable Version
+
+- **Tag**: `v0.1.3`
+- **Features**: Safety flags (`set -euo pipefail`) on all scripts
+- **Status**: Production ready
