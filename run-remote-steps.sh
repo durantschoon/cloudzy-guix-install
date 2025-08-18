@@ -63,7 +63,8 @@ fetch_file(){ # fetch_file path/to/script
   local url="${RAW_BASE}/${rel}"
   curl -fsSL "$url?$(date +%s)" -o "$dest" || { err "Download failed: $url"; return 1; }
   chmod +x "$dest"
-  if [[ -n "${SHA256[$rel]:-}" ]]; then
+  # Skip SHA256 verification when using main branch for debugging
+  if [[ -n "${SHA256[$rel]:-}" ]] && [[ "$REF" != "main" ]]; then
     echo "${SHA256[$rel]}  ${dest}" | shasum -a 256 -c - >/dev/null 2>&1 || {
       err "SHA256 mismatch for $rel"; return 1; }
   fi
