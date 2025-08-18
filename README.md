@@ -95,8 +95,6 @@ curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/
 
 ## Version Anticipation Workflow
 
-### For Future Self: How to Create New Versions
-
 **IMPORTANT: Only tag versions that are tested and working!**
 
 When making changes that affect the scripts:
@@ -152,6 +150,6 @@ When making changes that affect the scripts:
 
 ### Latest Development Version (main branch)
 
-- **Checksum**: `6a4381fca29952de9079683d1306e59dcf17eed2b37d93f4e1449f4d7a2b5d2c`
-- **Features**: Latest fixes including race condition improvements
+- **Checksum**: `c5abb8ca797bdd6dcefa9acf03062d47a6e18555215f5eebe259e9581616a8c3`
+- **Features**: Latest fixes including race condition improvements, variable sharing between scripts
 - **Status**: Testing/development
