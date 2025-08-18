@@ -6,15 +6,29 @@
 
 Where repo is cloned, get the shasum256 of the main `run-remote-steps.sh`
 
+**IMPORTANT**: Always get the checksum from the same source you'll download from!
+
+- **For testing/development**: Use `main` branch
+- **For stable releases**: Use a specific tag (e.g., `v0.1.3`)
+
 Substitute your command for pbcopy if not on a mac
 
 To check and record on the iso instance:
 
-`shasum -a 256 run-remote-steps.sh | pbcopy`
+```bash
+# For testing latest changes (main branch)
+shasum -a 256 run-remote-steps.sh | pbcopy
+
+# For stable version (specific tag)
+git checkout v0.1.3
+shasum -a 256 run-remote-steps.sh | pbcopy
+```
 
 or instead prepare to manually check
 
-`shasum -a 256 run-remote-steps.sh`
+```bash
+shasum -a 256 run-remote-steps.sh
+```
 
 ### In guix iso environment
 
@@ -31,8 +45,19 @@ guix install perl
 
 Download and verify the script (do preparation above first)
 
+**Choose the right URL based on what you're testing:**
+
 ```bash
+# For testing latest changes (main branch)
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
+
+# For stable version (specific tag)
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/v0.1.3/run-remote-steps.sh -o run-remote-steps.sh
+```
+
+Then verify with your checksum:
+
+```bash
 echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES-SINGLE-NEWLINE-IS-OK " | head -1 > rrs-checksum.txt
 cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
@@ -45,8 +70,13 @@ bash ./run-remote-steps.sh
 If you prefer to verify manually:
 
 ```bash
+# Download (choose appropriate URL)
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
+
+# Check the checksum
 shasum -a 256 run-remote-steps.sh
+
+# Compare with your expected checksum, then run
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
