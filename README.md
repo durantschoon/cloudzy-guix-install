@@ -58,9 +58,13 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/v
 Then verify with your checksum:
 
 ```bash
+USER_NAME="YOUR_USER_NAME"
+FULL_NAME="YOUR_FULL_NAME"
+
 echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES-SINGLE-NEWLINE-IS-OK " | head -1 > rrs-checksum.txt
 cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
+
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
@@ -70,13 +74,13 @@ bash ./run-remote-steps.sh
 If you prefer to verify manually:
 
 ```bash
+USER_NAME="YOUR_USER_NAME"
+FULL_NAME="YOUR_FULL_NAME"
+
 # Download (choose appropriate URL)
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
-
-# Check the checksum
 shasum -a 256 run-remote-steps.sh
 
-# Compare with your expected checksum, then run
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
