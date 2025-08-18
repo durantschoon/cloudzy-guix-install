@@ -8,7 +8,7 @@ IFS=$'\n\t'
 
 # 1) Point to your repo. You can use a branch or PIN to a commit SHA.
 OWNER_REPO="durantschoon/cloudzy-guix-install"
-REF="main"             # e.g. "main" or a full commit SHA like "4b7f1d9..."
+REF="v0.1.0-alpha"             # e.g. "main" or a full commit SHA like "4b7f1d9...", PREFER a tag or release
 RAW_BASE="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}"
 
 # 2) List the scripts (in order) relative to the repo root.
@@ -17,14 +17,19 @@ SCRIPTS=(
   "02-mount-bind.sh"
   "03-config-write.sh"
   "04-system-init.sh"
-  "05-postinstall.sh"
+  "05-postinstall-console.sh"
+  "06-postinstall-own-terminal.sh"
 )
 
 # 3) Optional: expected sha256 checksums (filename -> sha256).
 # Leave empty to skip verification.
 declare -A SHA256=(
-#  ["01-partition.sh"]="aaaaaaaa... (64 hex)"
-#  ["02-mount-bind.sh"]="bbbbbbbb..."
+  ["01-partition.sh"]="86c0b5ea174127337e8a0d34c542b52c57931f837b37a4033f2001b37dd4352a"
+  ["02-mount-bind.sh"]="1bd7ec7049776f6fee97c7a09c84132b0f9ffa7070e268aed7d6e8fbc5e7e00c"
+  ["03-config-write.sh"]="a77b17bdbdee73c2a51d520a74b4aea0a12c6c249241940cfd35a4b64305fd67"
+  ["04-system-init.sh"]="50cb2fd7c569d8c43fc48d047abf77029332279e609d8ba0ca20df84a3482144"
+  ["05-postinstall-console.sh"]="d2fb7ce4e73f54c2922f42d53aae3863ea1fa76ddad39c15d13d3fd2e5820112"
+  ["06-postinstall-own-terminal.sh"]="0f0a24c6d9ac21ced8bd8c73e109c6051e779355057127722ef75a3b593ff8bc"
 )
 
 # 4) Where to store downloads & logs locally
@@ -97,7 +102,7 @@ mkdir -p "$WORKDIR" "$LOGDIR"
 
 for rel in "${SCRIPTS[@]}"; do
   msg "Fetch $rel"
-  local_path="$(fetch_file "$rel")" || {
+  local local_path="$(fetch_file "$rel")" || {
     err "Failed to fetch $rel"; exit 1; }
   # Preview the script head
   echo "---- ${rel} (head) ----"
