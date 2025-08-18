@@ -2,41 +2,50 @@
 
 ## Preparation
 
-On local machine where repo is cloned, get the shasum256 of the main run-remote-steps.sh
+### On local machine
 
-Note: We can't put the actual shasum in this readme because the act of commiting to main will change the shasum value.
-So this is how we'll do it:
+where repo is cloned, get the shasum256 of the main run-remote-steps.sh
 
-On a mac:
+Substitute your command for pbcopy if not on a mac
+
+To check and record on the iso instance:
 
 `shasum -a 256 run-remote-steps.sh | pbcopy`
 
+Preparation to manually check
+
+`shasum -a 256 run-remote-steps.sh`
+
+### In guix iso environment
+
+perl for shasum
+
+```bash
+guix install curl
+guix install perl
+```
+
 ## Quick Start
+
+### To leave copy of shasum in temp iso environment
 
 Download and verify the script (do preparation above first)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
-echo "PASTE-YOUR-SHASUM-HERE" > rrs-checksum.txt
+echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES " > rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
 
-## Manual Verification
+### Manual Verification Instead
 
 If you prefer to verify manually:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
 shasum -a 256 run-remote-steps.sh
-# Should output: 0dd2152dc1d1133ec4eba5a72516b1d59fc1223a365340ffe313019d1fcee8238  run-remote-steps.sh
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
-
-## Prerequisites
-
-- `curl` (install with `guix install curl` if not available)
-- `shasum` (install with `guix install perl` if not available)
-- Internet connection to download scripts
