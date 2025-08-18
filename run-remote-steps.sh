@@ -61,7 +61,7 @@ fetch_file(){ # fetch_file path/to/script
   local rel="$1" dest="${WORKDIR}/${rel}"
   mkdir -p "$(dirname "$dest")"
   local url="${RAW_BASE}/${rel}"
-  curl -fsSL -H "Cache-Control: no-cache" "$url" -o "$dest" || { err "Download failed: $url"; return 1; }
+  curl -fsSL "$url?$(date +%s)" -o "$dest" || { err "Download failed: $url"; return 1; }
   chmod +x "$dest"
   if [[ -n "${SHA256[$rel]:-}" ]]; then
     echo "${SHA256[$rel]}  ${dest}" | shasum -a 256 -c - >/dev/null 2>&1 || {
