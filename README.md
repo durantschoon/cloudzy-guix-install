@@ -137,3 +137,9 @@ When making changes that affect the scripts:
 - **Tag**: `v0.1.3`
 - **Features**: Safety flags (`set -euo pipefail`) on all scripts
 - **Status**: Production ready
+
+### Latest Development Version (main branch)
+
+- **Checksum**: `6a4381fca29952de9079683d1306e59dcf17eed2b37d93f4e1449f4d7a2b5d2c`
+- **Features**: Latest fixes including race condition improvements
+- **Status**: Testing/development
