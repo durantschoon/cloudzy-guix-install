@@ -155,5 +155,5 @@ When making changes that affect the scripts:
 ### Latest Development Version (main branch)
 
 - **Checksum**: `c5abb8ca797bdd6dcefa9acf03062d47a6e18555215f5eebe259e9581616a8c3`
-- **Features**: Latest fixes including race condition improvements, variable sharing between scripts
+- **Features**: Latest fixes including race condition improvements, variable sharing between scripts, user variable setup
 - **Status**: Testing/development
