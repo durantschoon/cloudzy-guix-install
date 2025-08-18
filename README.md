@@ -94,6 +94,16 @@ If you're getting a different checksum than expected (especially across differen
 curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh?$(date +%s)" -o run-remote-steps.sh
 ```
 
+**Why the timestamp trick works:**
+- GitHub's CDN caches content by URL
+- Adding `?$(date +%s)` creates a unique URL each time
+- This forces the CDN to fetch fresh content instead of serving cached version
+
+**If it still doesn't work:**
+- CDN propagation can take 2-3 minutes across different regions
+- Keep retrying every minute or so
+- The timestamp method will eventually work once the CDN updates
+
 ## Version Anticipation Workflow
 
 **IMPORTANT: Only tag versions that are tested and working!**
