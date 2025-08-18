@@ -8,7 +8,7 @@ IFS=$'\n\t'
 
 # 1) Point to your repo. You can use a branch or PIN to a commit SHA.
 OWNER_REPO="durantschoon/cloudzy-guix-install"
-REF="v0.1.0-alpha"             # e.g. "main" or a full commit SHA like "4b7f1d9...", PREFER a tag or release
+REF="v0.1.3"             # e.g. "main" or a full commit SHA like "4b7f1d9...", PREFER a tag or release
 RAW_BASE="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}"
 
 # 2) List the scripts (in order) relative to the repo root.
@@ -24,12 +24,12 @@ SCRIPTS=(
 # 3) Optional: expected sha256 checksums (filename -> sha256).
 # Leave empty to skip verification.
 declare -A SHA256=(
-  ["01-partition.sh"]="86c0b5ea174127337e8a0d34c542b52c57931f837b37a4033f2001b37dd4352a"
-  ["02-mount-bind.sh"]="1bd7ec7049776f6fee97c7a09c84132b0f9ffa7070e268aed7d6e8fbc5e7e00c"
-  ["03-config-write.sh"]="a77b17bdbdee73c2a51d520a74b4aea0a12c6c249241940cfd35a4b64305fd67"
-  ["04-system-init.sh"]="50cb2fd7c569d8c43fc48d047abf77029332279e609d8ba0ca20df84a3482144"
-  ["05-postinstall-console.sh"]="d2fb7ce4e73f54c2922f42d53aae3863ea1fa76ddad39c15d13d3fd2e5820112"
-  ["06-postinstall-own-terminal.sh"]="0f0a24c6d9ac21ced8bd8c73e109c6051e779355057127722ef75a3b593ff8bc"
+  ["01-partition.sh"]="6b8bab8d7e62fe4137766bf91d9c161aa0c2bc302a3ad7c5bc23d430b9f0c9bb"
+  ["02-mount-bind.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
+  ["03-config-write.sh"]="a9c4937172a536012682a1f8b262e8a84f6802400504b0b6df7d4d1694ce3f95"
+  ["04-system-init.sh"]="8e9f7ef71bea689085f6fe9db6d868f3241421bdaa4ba1268f57b3f1b4ae3fe9"
+  ["05-postinstall-console.sh"]="767758bce87af36f579286edd93197958f1c69c26d7768ef9ad87196fbd52c33"
+  ["06-postinstall-own-terminal.sh"]="540e5ba8c286778541e1a384ced47f5ceee0e493be27b1dc0970a320c2e47340"
 )
 
 # 4) Where to store downloads & logs locally
