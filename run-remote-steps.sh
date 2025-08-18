@@ -82,6 +82,10 @@ run_step(){ # run_step local_script_path
   local log="${LOGDIR}/${name}.log"
   msg "Running ${name}"
   # Run in a clean subshell; preserve PATH for tiny ISOs
+  # Source any existing variables from previous scripts
+  if [[ -f "${WORKDIR}/script_vars.sh" ]]; then
+    source "${WORKDIR}/script_vars.sh"
+  fi
   ( set -o pipefail; bash "$script" 2>&1 | tee "$log" )
   local rc=${PIPESTATUS[0]}
   msg "Exit status for ${name}: ${rc}"
