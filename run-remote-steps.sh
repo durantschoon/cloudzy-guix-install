@@ -110,6 +110,9 @@ msg "Fetching from: ${RAW_BASE}"
 command -v curl >/dev/null 2>&1 || { err "curl is required"; exit 1; }
 mkdir -p "$WORKDIR" "$LOGDIR"
 
+# Clear any existing script variables from previous runs
+rm -f /tmp/script_vars.sh
+
 for rel in "${SCRIPTS[@]}"; do
   msg "Fetch $rel"
   local_path="$(fetch_file "$rel")" || {
