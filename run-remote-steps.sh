@@ -64,7 +64,7 @@ fetch_file(){ # fetch_file path/to/script
   curl -fsSL "$url" -o "$dest" || { err "Download failed: $url"; return 1; }
   chmod +x "$dest"
   if [[ -n "${SHA256[$rel]:-}" ]]; then
-    echo "${SHA256[$rel]}  ${dest}" | sha256sum -c - || {
+    echo "${SHA256[$rel]}  ${dest}" | shasum -a 256 -c - || {
       err "SHA256 mismatch for $rel"; return 1; }
   fi
   echo "$dest"
