@@ -55,6 +55,15 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/v0.1.3/run-remote-steps.sh -o run-remote-steps.sh
 ```
 
+**Pro tip: Use environment variable for easy switching:**
+```bash
+# For debugging/development
+GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
+
+# For stable version
+GUIX_INSTALL_REF=v0.1.3 bash ./run-remote-steps.sh
+```
+
 Then verify with your checksum:
 
 ```bash
@@ -95,11 +104,13 @@ curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/
 ```
 
 **Why the timestamp trick works:**
+
 - GitHub's CDN caches content by URL
 - Adding `?$(date +%s)` creates a unique URL each time
 - This forces the CDN to fetch fresh content instead of serving cached version
 
 **If it still doesn't work:**
+
 - CDN propagation can take 2-3 minutes across different regions
 - Keep retrying every minute or so
 - The timestamp method will eventually work once the CDN updates

@@ -8,7 +8,7 @@ IFS=$'\n\t'
 
 # 1) Point to your repo. You can use a branch or PIN to a commit SHA.
 OWNER_REPO="durantschoon/cloudzy-guix-install"
-REF="v0.1.5"             # e.g. "main" for testing, or a tag for stable
+REF="${GUIX_INSTALL_REF:-v0.1.5}"  # Set GUIX_INSTALL_REF env var to override (e.g., "main" for debugging)
 RAW_BASE="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}"
 
 # 2) List the scripts (in order) relative to the repo root.
