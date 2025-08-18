@@ -33,7 +33,8 @@ Download and verify the script (do preparation above first)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
-echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES " > rrs-checksum.txt
+echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES " | head -1 > rrs-checksum.txt
+cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
