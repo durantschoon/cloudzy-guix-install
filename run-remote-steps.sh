@@ -67,7 +67,13 @@ fetch_file(){ # fetch_file path/to/script
     echo "${SHA256[$rel]}  ${dest}" | shasum -a 256 -c - || {
       err "SHA256 mismatch for $rel"; return 1; }
   fi
-  echo "$dest"
+  # Only echo the path if everything succeeded
+  if [[ -f "$dest" ]]; then
+    echo "$dest"
+  else
+    err "File not found after download: $dest"
+    return 1
+  fi
 }
 
 run_step(){ # run_step local_script_path
@@ -104,6 +110,8 @@ for rel in "${SCRIPTS[@]}"; do
   msg "Fetch $rel"
   local_path="$(fetch_file "$rel")" || {
     err "Failed to fetch $rel"; exit 1; }
+  # Ensure file is fully written before reading
+  sleep 0.1
   # Preview the script head
   echo "---- ${rel} (head) ----"
   sed -n '1,30p' "$local_path"
