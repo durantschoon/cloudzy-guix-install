@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
+
 # ... logged on from console for first time ...
 
 passwd 

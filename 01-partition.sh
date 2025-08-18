@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
+
 export PATH=/run/current-system/profile/bin:/run/current-system/profile/sbin:/run/setuid-programs:$PATH
 
 for d in /dev/sda /dev/vda /dev/nvme0n1; do [ -b "$d" ] && DEVICE=$d && break; done

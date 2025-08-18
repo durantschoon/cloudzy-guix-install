@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
+
 mkdir -p /mnt/etc/guix
 cat > /mnt/etc/guix/channels.scm <<'EOF'
 (list (channel

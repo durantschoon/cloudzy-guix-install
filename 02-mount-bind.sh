@@ -1,4 +1,5 @@
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 
 mount | grep -q " on /mnt " || mount $ROOT /mnt
 

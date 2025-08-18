@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
+
 export TMPDIR=/mnt/var/tmp
 mkdir -p "$TMPDIR" && chmod 1777 "$TMPDIR"
 rm -rf /var/guix/substitute-cache/* 2>/dev/null

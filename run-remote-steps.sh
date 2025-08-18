@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run-remote-steps.sh — fetch N scripts from one repo and run them interactively
 
-set -u  # (avoid -e here so we can inspect non-zero exits without aborting)
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 IFS=$'\n\t'
 
 ### --- CONFIG ---------------------------------------------------------------
@@ -102,7 +102,7 @@ mkdir -p "$WORKDIR" "$LOGDIR"
 
 for rel in "${SCRIPTS[@]}"; do
   msg "Fetch $rel"
-  local local_path="$(fetch_file "$rel")" || {
+  local_path="$(fetch_file "$rel")" || {
     err "Failed to fetch $rel"; exit 1; }
   # Preview the script head
   echo "---- ${rel} (head) ----"

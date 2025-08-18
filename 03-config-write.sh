@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
+
 eval $(blkid -s UUID -o value $ROOT | awk '{print "UUID="$1}')
 [ -n "$UUID" ] && echo "UUID set: $UUID" || echo "UUID not set"
 
