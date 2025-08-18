@@ -81,6 +81,18 @@ chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
 
+### Troubleshooting: CDN Cache Issues
+
+If you're getting a different checksum than expected (especially across different regions), try:
+
+```bash
+# Force fresh download (bypass cache)
+curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
+
+# Or add timestamp to bypass cache
+curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh?$(date +%s)" -o run-remote-steps.sh
+```
+
 ## Version Anticipation Workflow
 
 ### For Future Self: How to Create New Versions
