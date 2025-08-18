@@ -4,7 +4,7 @@
 
 ### On local machine
 
-where repo is cloned, get the shasum256 of the main run-remote-steps.sh
+Where repo is cloned, get the shasum256 of the main `run-remote-steps.sh`
 
 Substitute your command for pbcopy if not on a mac
 
@@ -12,13 +12,13 @@ To check and record on the iso instance:
 
 `shasum -a 256 run-remote-steps.sh | pbcopy`
 
-Preparation to manually check
+or instead prepare to manually check
 
 `shasum -a 256 run-remote-steps.sh`
 
 ### In guix iso environment
 
-perl for shasum
+`perl` is for `shasum`
 
 ```bash
 guix install curl
@@ -33,7 +33,7 @@ Download and verify the script (do preparation above first)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
-echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES " | head -1 > rrs-checksum.txt
+echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES-SINGLE-NEWLINE-IS-OK " | head -1 > rrs-checksum.txt
 cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
 chmod +x run-remote-steps.sh
