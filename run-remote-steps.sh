@@ -113,9 +113,19 @@ for rel in "${SCRIPTS[@]}"; do
   # Ensure file is fully written before reading
   sleep 0.5
   # Wait for file to be readable
-  while [[ ! -r "$local_path" ]]; do
-    sleep 0.1
+  echo "Checking if file is readable: $local_path"
+  ls -la "$local_path" || echo "File not found or not accessible"
+  timeout=30  # 30 second timeout
+  count=0
+  while [[ ! -r "$local_path" ]] && [[ $count -lt $timeout ]]; do
+    echo "Waiting for file to be readable: $local_path (attempt $((count + 1))/$timeout)"
+    sleep 1
+    ((count++))
   done
+  if [[ ! -r "$local_path" ]]; then
+    err "Timeout waiting for file to be readable: $local_path"
+    exit 1
+  fi
   # Preview the script head
   echo "---- ${rel} (head) ----"
   sed -n '1,30p' "$local_path"
