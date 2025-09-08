@@ -3,8 +3,24 @@ set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failure
 
 export PATH=/run/current-system/profile/bin:/run/current-system/profile/sbin:/run/setuid-programs:$PATH
 
-for d in /dev/sda /dev/vda /dev/nvme0n1; do [ -b "$d" ] && DEVICE=$d && break; done
-echo "Using $DEVICE"
+if [[ -n "${DEVICE:-}" ]]; then
+  if [[ ! -b "$DEVICE" ]]; then
+    echo "Error: Specified device $DEVICE is not a block device"
+    exit 1
+  fi
+  echo "Using user-specified device: $DEVICE"
+else
+  for d in /dev/sda /dev/vda /dev/nvme0n1; do [ -b "$d" ] && DEVICE=$d && break; done
+  
+  if [[ -z "${DEVICE:-}" ]]; then
+    echo "Error: No suitable block device found. Expected one of: /dev/sda, /dev/vda, /dev/nvme0n1"
+    echo "Available block devices:"
+    lsblk -d -n -o NAME,SIZE,TYPE | grep -E '^(sd|vd|nvme)' || echo "None found"
+    echo "You can override by setting DEVICE environment variable (e.g., DEVICE=/dev/sdb)"
+    exit 1
+  fi
+  echo "Auto-detected device: $DEVICE"
+fi
 
 parted --script "$DEVICE" \
 	mklabel gpt \

@@ -43,7 +43,7 @@ guix install perl
 
 This installation process consists of several scripts that work together to set up a complete Guix system:
 
-- **`01-partition.sh`**: Automatically detects the primary storage device and creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Formats partitions and exports device variables for subsequent scripts.
+- **`01-partition.sh`**: Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/nvme0n1) or uses user-specified DEVICE environment variable. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
 
 - **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. This allows the installation to use the target system's storage while running from the ISO.
 
