@@ -47,7 +47,7 @@ This installation process consists of several scripts that work together to set 
 
 - **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
 
-- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Validates all required environment variables are set before proceeding. Includes SSH service, desktop environment, and essential packages.
+- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Automatically detects BIOS/UEFI boot mode and configures the appropriate bootloader. Validates all required environment variables are set before proceeding. Includes SSH service, desktop environment, and essential packages.
 
 - **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
 
@@ -70,6 +70,15 @@ The `DEVICE` environment variable specifies the target storage device for instal
 - `/dev/vdb` - Secondary Virtio block devices
 
 You can override with: `DEVICE="/dev/sdb"`
+
+### BOOT_MODE (auto-detected)
+
+The `BOOT_MODE` environment variable specifies the boot mode for the system. If not set, the script automatically detects whether the system uses BIOS or UEFI boot:
+
+- **UEFI**: Uses `grub-efi-bootloader` with `/boot/efi` target
+- **BIOS**: Uses `grub-bootloader` with device target
+
+You can override with: `BOOT_MODE="bios"` or `BOOT_MODE="uefi"`
 
 ### SWAP_SIZE (default: 4G)
 

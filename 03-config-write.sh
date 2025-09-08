@@ -27,6 +27,28 @@ fi
 eval $(blkid -s UUID -o value $ROOT | awk '{print "UUID="$1}')
 [ -n "$UUID" ] && echo "UUID set: $UUID" || echo "UUID not set"
 
+# Detect boot mode and set appropriate bootloader
+detect_boot_mode() {
+  if [ -d /sys/firmware/efi ] || [ -d /boot/efi ]; then
+    echo "uefi"
+  else
+    echo "bios"
+  fi
+}
+
+# Allow user override with environment variable, otherwise auto-detect
+BOOT_MODE="${BOOT_MODE:-$(detect_boot_mode)}"
+
+if [ "$BOOT_MODE" = "uefi" ]; then
+  BOOTLOADER="grub-efi-bootloader"
+  TARGETS='("/boot/efi")'
+  echo "UEFI boot detected - using grub-efi-bootloader"
+else
+  BOOTLOADER="grub-bootloader"
+  TARGETS='("'$DEVICE'")'
+  echo "BIOS boot detected - using grub-bootloader"
+fi
+
 mkdir -p /mnt/etc
 cat > /mnt/etc/config.scm <<'EOF'
 (use-modules (gnu)
@@ -41,8 +63,8 @@ cat > /mnt/etc/config.scm <<'EOF'
 
  (bootloader
   (bootloader-configuration
-   (bootloader grub-efi-bootloader)    ; use grub-bootloader if BIOS only
-   (targets '("/boot/efi"))
+   (bootloader BOOTLOADER_PLACEHOLDER)
+   (targets 'TARGETS_PLACEHOLDER)
    (keyboard-layout (keyboard-layout "us"))))
 
  (file-systems
@@ -90,6 +112,8 @@ FULL_ESC=$(escape "$FULL_NAME")
 USER_ESC=$(escape "$USER_NAME")
 TZ_ESC=$(escape "$TIMEZONE")
 HOST_ESC=$(escape "$HOST_NAME")
+BOOTLOADER_ESC=$(escape "$BOOTLOADER")
+TARGETS_ESC=$(escape "$TARGETS")
 
 sed -i \
   -e "s|REPLACE_WITH_ROOT_UUID|$UUID_ESC|g" \
@@ -98,6 +122,8 @@ sed -i \
   -e "s|USER_NAME|$USER_ESC|g" \
   -e "s|TIMEZONE_PLACEHOLDER|$TZ_ESC|g" \
   -e "s|HOST_NAME|$HOST_ESC|g" \
+  -e "s|BOOTLOADER_PLACEHOLDER|$BOOTLOADER_ESC|g" \
+  -e "s|TARGETS_PLACEHOLDER|$TARGETS_ESC|g" \
   /mnt/etc/config.scm
 
 cat /mnt/etc/config.scm
