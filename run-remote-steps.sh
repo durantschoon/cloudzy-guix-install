@@ -24,10 +24,10 @@ SCRIPTS=(
 # 3) Optional: expected sha256 checksums (filename -> sha256).
 # Leave empty to skip verification.
 declare -A SHA256=(
-  ["01-partition.sh"]="6b8bab8d7e62fe4137766bf91d9c161aa0c2bc302a3ad7c5bc23d430b9f0c9bb"
+  ["01-partition.sh"]="55d7c25369a746e8ed57aedb9b1f37af8ad8b97d01adad28a326a6c03457a7aa"
   ["02-mount-bind.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
-  ["03-config-write.sh"]="a9c4937172a536012682a1f8b262e8a84f6802400504b0b6df7d4d1694ce3f95"
-  ["04-system-init.sh"]="8e9f7ef71bea689085f6fe9db6d868f3241421bdaa4ba1268f57b3f1b4ae3fe9"
+  ["03-config-write.sh"]="2be38b20d2f7b1604a19b4582ef28d620d6aa1dd0b1539b8d0724ecbdbf2ee53"
+  ["04-system-init.sh"]="8da56e5221ff812b0b5423487929f1f1f4e4d6f5e84eaf6c6ae25b1072f7ee1d"
   ["05-postinstall-console.sh"]="767758bce87af36f579286edd93197958f1c69c26d7768ef9ad87196fbd52c33"
   ["06-postinstall-own-terminal.sh"]="540e5ba8c286778541e1a384ced47f5ceee0e493be27b1dc0970a320c2e47340"
 )

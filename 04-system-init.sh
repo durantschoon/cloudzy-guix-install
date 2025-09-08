@@ -10,7 +10,7 @@ chmod 600 /mnt/swapfile
 mkswap /mnt/swapfile
 swapon /mnt/swapfile
 
-# Verify:
+echo "Verify swap is active and memory is available (swapon --show and free -h):"
 swapon --show
 free -h
 
@@ -18,7 +18,7 @@ export GIT_HTTP_MAX_REQUESTS=2
 export GIT_HTTP_LOW_SPEED_LIMIT=1000
 export GIT_HTTP_LOW_SPEED_TIME=60
 
-guix pull --commit=v1.4.0
+guix pull --commit="${GUIX_VERSION:-v1.4.0}"
 
 guix system init /mnt/etc/config.scm /mnt
 

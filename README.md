@@ -39,7 +39,25 @@ guix install curl
 guix install perl
 ```
 
+## Script Overview
+
+This installation process consists of several scripts that work together to set up a complete Guix system:
+
+- **`01-partition.sh`**: Automatically detects the primary storage device and creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Formats partitions and exports device variables for subsequent scripts.
+
+- **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. This allows the installation to use the target system's storage while running from the ISO.
+
+- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Includes SSH service, desktop environment, and essential packages.
+
+- **`04-system-init.sh`**: Sets up swap space, configures Git for slow connections, pulls the specified Guix version, and initializes the new system. This is the main installation step that creates the bootable Guix system.
+
+- **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon, allowing remote access to the newly installed system.
+
+- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Configures additional Guix channels (including nonguix) and performs a system reconfigure to ensure all services are properly set up.
+
 ## Quick Start
+
+_In guix iso environment..._
 
 ### To leave copy of shasum in temp iso environment
 
@@ -56,6 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/v
 ```
 
 **Pro tip: Use environment variable for easy switching:**
+
 ```bash
 # For debugging/development
 GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
@@ -69,6 +88,9 @@ Then verify with your checksum:
 ```bash
 USER_NAME="YOUR_USER_NAME"
 FULL_NAME="YOUR_FULL_NAME"
+TIMEZONE="America/New_York"
+HOST_NAME="guix-vps"
+GUIX_VERSION="v1.4.0"
 
 echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES-SINGLE-NEWLINE-IS-OK " | head -1 > rrs-checksum.txt
 cat rrs-checksum.txt
@@ -85,6 +107,9 @@ If you prefer to verify manually:
 ```bash
 USER_NAME="YOUR_USER_NAME"
 FULL_NAME="YOUR_FULL_NAME"
+TIMEZONE="America/New_York"
+HOST_NAME="guix-vps"
+GUIX_VERSION="v1.4.0"
 
 # Download (choose appropriate URL)
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh

@@ -10,15 +10,18 @@ cat > /mnt/etc/config.scm <<'EOF'
              (gnu system nss)
              (gnu services ssh)
              (gnu services desktop))
+
 (operating-system
- (host-name "guix-system")
- (timezone "Europe/Rome")
+ (host-name "HOST_NAME")               ; e.g. "guix-vps"
+ (timezone "TIMEZONE_PLACEHOLDER")     ; will be replaced with $TIMEZONE
  (locale "en_US.utf8")
+
  (bootloader
   (bootloader-configuration
-   (bootloader grub-efi-bootloader)
+   (bootloader grub-efi-bootloader)    ; use grub-bootloader if BIOS only
    (targets '("/boot/efi"))
    (keyboard-layout (keyboard-layout "us"))))
+
  (file-systems
   (cons* (file-system
           (mount-point "/")
@@ -26,21 +29,24 @@ cat > /mnt/etc/config.scm <<'EOF'
           (type "ext4"))
          (file-system
           (mount-point "/boot/efi")
-          (device "REPLACE_WITH_EFI") ;; eg. /dev/sda1
+          (device "REPLACE_WITH_EFI")  ; e.g. /dev/sda1 or /dev/vda1
           (type "vfat"))
          %base-file-systems))
+
  (users (cons* (user-account
-                (name "USER_NAME")
-                (comment "FULL_NAME")
+                (name "USER_NAME")             ; login name
+                (comment "FULL_NAME")          ; your full name
                 (group "users")
                 (home-directory "/home/USER_NAME")
                 (supplementary-groups '("wheel" "netdev" "audio" "video")))
                %base-user-accounts))
+
  (packages
   (append (list (specification->package "emacs")
                 (specification->package "git")
-                (specification->package "vim")) ; add more if you want
+                (specification->package "vim"))
           %base-packages))
+
  (services
   (append
    (list (service openssh-service-type)
@@ -53,11 +59,22 @@ cat > /mnt/etc/config.scm <<'EOF'
                                        "https://bordeaux.guix.gnu.org"))))))))
 EOF
 
-sed -i "
-    s/REPLACE_WITH_ROOT_UUID/$UUID/g
-    s|REPLACE_WITH_EFI|$EFI|g
-    s/FULL_NAME/$FULL_NAME/g
-    s/USER_NAME/$USER_NAME/g
-" /mnt/etc/config.scm
+escape() { printf '%s' "$1" | sed -e 's/[\/&]/\\&/g'; }
+
+UUID_ESC=$(escape "$UUID")
+EFI_ESC=$(escape "$EFI")
+FULL_ESC=$(escape "$FULL_NAME")
+USER_ESC=$(escape "$USER_NAME")
+TZ_ESC=$(escape "$TIMEZONE")
+HOST_ESC=$(escape "$HOST_NAME")
+
+sed -i \
+  -e "s|REPLACE_WITH_ROOT_UUID|$UUID_ESC|g" \
+  -e "s|REPLACE_WITH_EFI|$EFI_ESC|g" \
+  -e "s|FULL_NAME|$FULL_ESC|g" \
+  -e "s|USER_NAME|$USER_ESC|g" \
+  -e "s|TIMEZONE_PLACEHOLDER|$TZ_ESC|g" \
+  -e "s|HOST_NAME|$HOST_ESC|g" \
+  /mnt/etc/config.scm
 
 cat /mnt/etc/config.scm
