@@ -24,7 +24,7 @@ SCRIPTS=(
 # 3) Optional: expected sha256 checksums (filename -> sha256).
 # Leave empty to skip verification.
 declare -A SHA256=(
-  ["01-partition.sh"]="775e03aa2b4ce2ed895fd9fa1f17e6d820b7b8d131ea402653ca4b01997aaa40"
+  ["01-partition.sh"]="3404c26a940d3402ea3daf51a7a17c41e4fdfec355e7f75996c9dae333be8df5"
   ["02-mount-bind.sh"]="f43d90c86f96f891fabaec2ab80ac0d86b9665aa2ce94d780f047a9a1321531a"
   ["03-config-write.sh"]="c6b1ebbafa06d3dd9d3e7d9f3a55a55a96e605bf2e295622fb63fce07dd48358"
   ["04-system-init.sh"]="031d7e94ac31405efa387d3ee44d57a2fa4e1a94ff172473decb061c410c265d"

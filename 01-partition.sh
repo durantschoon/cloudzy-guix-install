@@ -10,10 +10,13 @@ if [[ -n "${DEVICE:-}" ]]; then
   fi
   echo "Using user-specified device: $DEVICE"
 else
-  for d in /dev/sda /dev/vda /dev/nvme0n1; do [ -b "$d" ] && DEVICE=$d && break; done
+  # Common VPS device names in order of preference
+  for d in /dev/sda /dev/vda /dev/xvda /dev/nvme0n1 /dev/nvme1n1 /dev/sdb /dev/vdb; do 
+    [ -b "$d" ] && DEVICE=$d && break
+  done
   
   if [[ -z "${DEVICE:-}" ]]; then
-    echo "Error: No suitable block device found. Expected one of: /dev/sda, /dev/vda, /dev/nvme0n1"
+    echo "Error: No suitable block device found. Expected one of: /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb"
     echo "Available block devices:"
     lsblk -d -n -o NAME,SIZE,TYPE | grep -E '^(sd|vd|nvme)' || echo "None found"
     echo "You can override by setting DEVICE environment variable (e.g., DEVICE=/dev/sdb)"

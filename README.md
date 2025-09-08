@@ -43,7 +43,7 @@ guix install perl
 
 This installation process consists of several scripts that work together to set up a complete Guix system:
 
-- **`01-partition.sh`**: Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/nvme0n1) or uses user-specified DEVICE environment variable. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
+- **`01-partition.sh`**: Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb) or uses user-specified DEVICE environment variable. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
 
 - **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
 
@@ -56,6 +56,20 @@ This installation process consists of several scripts that work together to set 
 - **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Validates the installation environment and configures additional Guix channels (including nonguix) and performs a system reconfigure to ensure all services are properly set up.
 
 ## Environment Variables
+
+### DEVICE (auto-detected)
+
+The `DEVICE` environment variable specifies the target storage device for installation. If not set, the script automatically detects from common VPS device names in order of preference:
+
+- `/dev/sda` - Standard SATA/SCSI devices (most common)
+- `/dev/vda` - Virtio block devices (KVM/QEMU)
+- `/dev/xvda` - Xen virtual block devices
+- `/dev/nvme0n1` - NVMe SSD devices (first drive)
+- `/dev/nvme1n1` - NVMe SSD devices (second drive)
+- `/dev/sdb` - Secondary SATA/SCSI devices
+- `/dev/vdb` - Secondary Virtio block devices
+
+You can override with: `DEVICE="/dev/sdb"`
 
 ### SWAP_SIZE (default: 4G)
 
