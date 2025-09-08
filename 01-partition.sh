@@ -3,6 +3,41 @@ set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failure
 
 export PATH=/run/current-system/profile/bin:/run/current-system/profile/sbin:/run/setuid-programs:$PATH
 
+# Simple detection for obvious wrong situations
+echo "=== Guix Installation Script ==="
+echo "WARNING: This script will DESTROY ALL DATA on the target device!"
+echo ""
+
+# Check if we're running from a live ISO (expected scenario)
+if [ ! -f /etc/os-release ] || ! grep -q "Guix" /etc/os-release 2>/dev/null; then
+  echo "⚠️  WARNING: This doesn't appear to be a Guix live ISO environment!"
+  echo "   This script is designed to run from a Guix live ISO on a fresh VPS."
+  echo "   If you're not sure you're in the right environment, STOP NOW!"
+  echo ""
+  echo "   Expected: Guix live ISO on a fresh VPS instance"
+  echo "   Current:  $(cat /etc/os-release 2>/dev/null | head -1 || echo "Unknown system")"
+  echo ""
+  echo "   Press Ctrl+C to abort, or wait 10 seconds to continue..."
+  sleep 10
+  echo ""
+fi
+
+# Check for multiple mounted filesystems (might indicate existing system)
+mounted_count=$(mount | grep -c "^/dev/" || true)
+if [ "$mounted_count" -gt 3 ]; then
+  echo "⚠️  WARNING: Multiple filesystems are mounted ($mounted_count found)!"
+  echo "   This might indicate an existing system with data."
+  echo "   Expected: Fresh VPS with minimal mounts"
+  echo ""
+  echo "   Current mounts:"
+  mount | grep "^/dev/" | head -5
+  echo "   ..."
+  echo ""
+  echo "   Press Ctrl+C to abort, or wait 10 seconds to continue..."
+  sleep 10
+  echo ""
+fi
+
 if [[ -n "${DEVICE:-}" ]]; then
   if [[ ! -b "$DEVICE" ]]; then
     echo "Error: Specified device $DEVICE is not a block device"

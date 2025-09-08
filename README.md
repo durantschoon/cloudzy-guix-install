@@ -1,5 +1,40 @@
 # cloudzy-guix-install
 
+## ⚠️ CRITICAL WARNING
+
+**THIS SCRIPT WILL DESTROY ALL DATA ON THE TARGET DEVICE!**
+
+This installation script is designed for **fresh VPS instances** where you want to completely replace the existing system with Guix. It will:
+
+- **Wipe the entire disk** and create new partitions
+- **Destroy all existing data** on the target device
+- **Replace the operating system** with Guix
+
+### ✅ **Safe to Use When:**
+
+- You have a **fresh VPS instance** with no important data
+- You're running from a **Guix live ISO**
+- You want to **completely replace** the existing system
+- You're **100% certain** you're targeting the right device
+
+### ❌ **DO NOT USE When:**
+
+- You have **important data** on the target device
+- You're running on a **production server** with existing data
+- You're **unsure** which device will be targeted
+- You want to **preserve** any existing data or system
+
+### 🛡️ **Safety Features:**
+
+- Script detects if you're not on a Guix live ISO
+- Script warns if multiple filesystems are mounted (existing system)
+- Script shows which device will be targeted before proceeding
+- **10-second delay** when warnings are triggered (time to abort)
+
+**If you're not absolutely certain you're in the right situation, STOP NOW!**
+
+---
+
 ## Preparation
 
 ### On local machine
@@ -43,7 +78,7 @@ guix install perl
 
 This installation process consists of several scripts that work together to set up a complete Guix system:
 
-- **`01-partition.sh`**: Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb) or uses user-specified DEVICE environment variable. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
+- **`01-partition.sh`**: **DESTRUCTIVE OPERATION** - Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb) or uses user-specified DEVICE environment variable. Includes safety warnings for wrong environments. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
 
 - **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
 
@@ -109,6 +144,8 @@ You can customize the swap size using formats like:
 - `SWAP_SIZE="8192K"` - 8192 kilobytes
 
 ## Quick Start
+
+**⚠️ READ THE WARNING ABOVE FIRST! This script will destroy all data on the target device.**
 
 _In guix iso environment..._
 
