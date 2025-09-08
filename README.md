@@ -51,9 +51,9 @@ This installation process consists of several scripts that work together to set 
 
 - **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
 
-- **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon, allowing remote access to the newly installed system.
+- **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon with clear instructions on how to connect remotely. Provides IP address discovery commands and SSH connection examples.
 
-- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Validates the installation environment and configures additional Guix channels (including nonguix) and performs a system reconfigure to ensure all services are properly set up.
+- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Configures additional Guix channels (including nonguix for proprietary software) and performs a system reconfigure. Provides guidance on installing additional packages and examples of nonguix packages.
 
 ## Environment Variables
 

@@ -28,8 +28,8 @@ declare -A SHA256=(
   ["02-mount-bind.sh"]="f43d90c86f96f891fabaec2ab80ac0d86b9665aa2ce94d780f047a9a1321531a"
   ["03-config-write.sh"]="c6b1ebbafa06d3dd9d3e7d9f3a55a55a96e605bf2e295622fb63fce07dd48358"
   ["04-system-init.sh"]="031d7e94ac31405efa387d3ee44d57a2fa4e1a94ff172473decb061c410c265d"
-  ["05-postinstall-console.sh"]="767758bce87af36f579286edd93197958f1c69c26d7768ef9ad87196fbd52c33"
-  ["06-postinstall-own-terminal.sh"]="2637f51250c713591778757587aff023358e02e3216b67f58064436a1872f2c5"
+  ["05-postinstall-console.sh"]="5d4fa9650ec4c039ae698340c588cf12550651d4856530996b2a5638cfcbd285"
+  ["06-postinstall-own-terminal.sh"]="5629fdbc2105bc1b9e03c9d4763a48aa8c1f63e0c571f2d52e6598358d98c9c4"
 )
 
 # 4) Where to store downloads & logs locally
