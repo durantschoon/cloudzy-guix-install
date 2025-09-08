@@ -21,6 +21,11 @@ if [[ ${#missing_vars[@]} -gt 0 ]]; then
   echo "  TIMEZONE=\"America/New_York\""
   echo "  HOST_NAME=\"guix-vps\""
   echo "  ROOT and EFI are set by previous scripts"
+  echo ""
+  echo "Optional variables:"
+  echo "  DESKTOP_ENV=\"gnome\"  # Desktop: gnome, xfce, mate, lxqt, none"
+  echo "  BOOT_MODE=\"uefi\"     # Boot: uefi, bios (auto-detected)"
+  echo "  SWAP_SIZE=\"4G\"       # Swap size: 2G, 4G, 8G, etc."
   exit 1
 fi
 
@@ -48,6 +53,57 @@ else
   TARGETS='("'$DEVICE'")'
   echo "BIOS boot detected - using grub-bootloader"
 fi
+
+# Configure desktop environment
+configure_desktop() {
+  case "$1" in
+    gnome)
+      echo "gnome-desktop-service-type"
+      ;;
+    xfce)
+      echo "xfce-desktop-service-type"
+      ;;
+    mate)
+      echo "mate-desktop-service-type"
+      ;;
+    lxqt)
+      echo "lxqt-desktop-service-type"
+      ;;
+    none)
+      echo ""
+      ;;
+    *)
+      echo "Error: Unknown desktop environment '$1'" >&2
+      echo "" >&2
+      echo "Supported desktop environments:" >&2
+      echo "  gnome  - Full-featured, modern desktop (default)" >&2
+      echo "  xfce   - Lightweight, fast, traditional desktop" >&2
+      echo "  mate   - Classic GNOME 2 experience" >&2
+      echo "  lxqt   - Very lightweight, minimal resource usage" >&2
+      echo "  none   - Server mode, no desktop environment" >&2
+      echo "" >&2
+      echo "Example: DESKTOP_ENV=\"xfce\"" >&2
+      exit 1
+      ;;
+  esac
+}
+
+# Allow user override with environment variable, otherwise use default
+DESKTOP_ENV="${DESKTOP_ENV:-gnome}"
+DESKTOP_SERVICE=$(configure_desktop "$DESKTOP_ENV")
+
+if [ -n "$DESKTOP_SERVICE" ]; then
+  echo "Desktop environment: $DESKTOP_ENV - using $DESKTOP_SERVICE"
+else
+  echo "Desktop environment: none - server mode (no desktop)"
+fi
+
+echo ""
+echo "Note: You can change the desktop environment by setting DESKTOP_ENV:"
+echo "  DESKTOP_ENV=\"xfce\"   # Lightweight desktop"
+echo "  DESKTOP_ENV=\"lxqt\"   # Minimal resource usage"
+echo "  DESKTOP_ENV=\"none\"   # Server mode (no desktop)"
+echo ""
 
 mkdir -p /mnt/etc
 cat > /mnt/etc/config.scm <<'EOF'
@@ -95,7 +151,7 @@ cat > /mnt/etc/config.scm <<'EOF'
  (services
   (append
    (list (service openssh-service-type)
-         (service gnome-desktop-service-type))
+         DESKTOP_SERVICE_PLACEHOLDER)
    (modify-services %base-services
                     (guix-service-type
                      config => (guix-configuration
@@ -114,6 +170,7 @@ TZ_ESC=$(escape "$TIMEZONE")
 HOST_ESC=$(escape "$HOST_NAME")
 BOOTLOADER_ESC=$(escape "$BOOTLOADER")
 TARGETS_ESC=$(escape "$TARGETS")
+DESKTOP_SERVICE_ESC=$(escape "$DESKTOP_SERVICE")
 
 sed -i \
   -e "s|REPLACE_WITH_ROOT_UUID|$UUID_ESC|g" \
@@ -124,6 +181,7 @@ sed -i \
   -e "s|HOST_NAME|$HOST_ESC|g" \
   -e "s|BOOTLOADER_PLACEHOLDER|$BOOTLOADER_ESC|g" \
   -e "s|TARGETS_PLACEHOLDER|$TARGETS_ESC|g" \
+  -e "s|DESKTOP_SERVICE_PLACEHOLDER|$DESKTOP_SERVICE_ESC|g" \
   /mnt/etc/config.scm
 
 cat /mnt/etc/config.scm

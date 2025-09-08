@@ -47,7 +47,7 @@ This installation process consists of several scripts that work together to set 
 
 - **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
 
-- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Automatically detects BIOS/UEFI boot mode and configures the appropriate bootloader. Validates all required environment variables are set before proceeding. Includes SSH service, desktop environment, and essential packages.
+- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Automatically detects BIOS/UEFI boot mode and configures the appropriate bootloader. Supports configurable desktop environments (GNOME, Xfce, MATE, LXQt, or none for server mode). Validates all required environment variables are set before proceeding. Includes SSH service and essential packages.
 
 - **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
 
@@ -79,6 +79,18 @@ The `BOOT_MODE` environment variable specifies the boot mode for the system. If 
 - **BIOS**: Uses `grub-bootloader` with device target
 
 You can override with: `BOOT_MODE="bios"` or `BOOT_MODE="uefi"`
+
+### DESKTOP_ENV (default: gnome)
+
+The `DESKTOP_ENV` environment variable specifies the desktop environment to install. If not set, defaults to GNOME:
+
+- **`gnome`** (default) - Full-featured, modern desktop environment
+- **`xfce`** - Lightweight, fast, traditional desktop feel
+- **`mate`** - Classic GNOME 2 experience, traditional layout
+- **`lxqt`** - Very lightweight, minimal resource usage
+- **`none`** - Server mode, no desktop environment
+
+You can override with: `DESKTOP_ENV="xfce"` or `DESKTOP_ENV="none"`
 
 ### SWAP_SIZE (default: 4G)
 
