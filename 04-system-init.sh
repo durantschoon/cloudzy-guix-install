@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 
+# Validate required files exist
+if [[ ! -f "/mnt/etc/config.scm" ]]; then
+  echo "Error: System configuration file not found: /mnt/etc/config.scm"
+  echo "Make sure you've run the previous scripts in order:"
+  echo "  01-partition.sh -> 02-mount-bind.sh -> 03-config-write.sh"
+  exit 1
+fi
+
 export TMPDIR=/mnt/var/tmp
 mkdir -p "$TMPDIR" && chmod 1777 "$TMPDIR"
 rm -rf /var/guix/substitute-cache/* 2>/dev/null

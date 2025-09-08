@@ -45,15 +45,15 @@ This installation process consists of several scripts that work together to set 
 
 - **`01-partition.sh`**: Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/nvme0n1) or uses user-specified DEVICE environment variable. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
 
-- **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. This allows the installation to use the target system's storage while running from the ISO.
+- **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
 
-- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Includes SSH service, desktop environment, and essential packages.
+- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Validates all required environment variables are set before proceeding. Includes SSH service, desktop environment, and essential packages.
 
-- **`04-system-init.sh`**: Sets up swap space, configures Git for slow connections, pulls the specified Guix version, and initializes the new system. This is the main installation step that creates the bootable Guix system.
+- **`04-system-init.sh`**: Sets up swap space, configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
 
 - **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon, allowing remote access to the newly installed system.
 
-- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Configures additional Guix channels (including nonguix) and performs a system reconfigure to ensure all services are properly set up.
+- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Validates the installation environment and configures additional Guix channels (including nonguix) and performs a system reconfigure to ensure all services are properly set up.
 
 ## Quick Start
 

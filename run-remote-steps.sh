@@ -25,11 +25,11 @@ SCRIPTS=(
 # Leave empty to skip verification.
 declare -A SHA256=(
   ["01-partition.sh"]="775e03aa2b4ce2ed895fd9fa1f17e6d820b7b8d131ea402653ca4b01997aaa40"
-  ["02-mount-bind.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
-  ["03-config-write.sh"]="2be38b20d2f7b1604a19b4582ef28d620d6aa1dd0b1539b8d0724ecbdbf2ee53"
-  ["04-system-init.sh"]="8da56e5221ff812b0b5423487929f1f1f4e4d6f5e84eaf6c6ae25b1072f7ee1d"
+  ["02-mount-bind.sh"]="f43d90c86f96f891fabaec2ab80ac0d86b9665aa2ce94d780f047a9a1321531a"
+  ["03-config-write.sh"]="c6b1ebbafa06d3dd9d3e7d9f3a55a55a96e605bf2e295622fb63fce07dd48358"
+  ["04-system-init.sh"]="a96bc8a15f20fffbdc30cc25c34c27202db5eca598f7b536fe2e38a99e9fd7ee"
   ["05-postinstall-console.sh"]="767758bce87af36f579286edd93197958f1c69c26d7768ef9ad87196fbd52c33"
-  ["06-postinstall-own-terminal.sh"]="540e5ba8c286778541e1a384ced47f5ceee0e493be27b1dc0970a320c2e47340"
+  ["06-postinstall-own-terminal.sh"]="2637f51250c713591778757587aff023358e02e3216b67f58064436a1872f2c5"
 )
 
 # 4) Where to store downloads & logs locally
