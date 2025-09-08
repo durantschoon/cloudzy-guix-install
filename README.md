@@ -49,19 +49,48 @@ This installation process consists of several scripts that work together to set 
 
 - **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Validates all required environment variables are set before proceeding. Includes SSH service, desktop environment, and essential packages.
 
-- **`04-system-init.sh`**: Sets up swap space, configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
+- **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
 
 - **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon, allowing remote access to the newly installed system.
 
 - **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Validates the installation environment and configures additional Guix channels (including nonguix) and performs a system reconfigure to ensure all services are properly set up.
 
+## Environment Variables
+
+### SWAP_SIZE (default: 4G)
+
+The `SWAP_SIZE` environment variable controls the size of the swap file created during installation. The default of 4G is chosen because:
+
+- **VPS Compatibility**: Covers most VPS memory configurations (1-8GB RAM)
+- **Guix Requirements**: Guix package compilation and system updates are memory-intensive
+- **Modern Best Practices**: 2-4GB is recommended for systems with 1-8GB RAM
+- **Safety Margin**: Provides headroom for memory spikes and system stability
+- **Hibernation Support**: Allows for suspend-to-disk if needed
+
+You can customize the swap size using formats like:
+
+- `SWAP_SIZE="2G"` - 2 gigabytes
+- `SWAP_SIZE="512M"` - 512 megabytes  
+- `SWAP_SIZE="8192K"` - 8192 kilobytes
+
 ## Quick Start
 
 _In guix iso environment..._
 
-### To leave copy of shasum in temp iso environment
+### 1. Set Environment Variables
 
-Download and verify the script (do preparation above first)
+First, configure your installation variables:
+
+```bash
+USER_NAME="YOUR_USER_NAME"
+FULL_NAME="YOUR_FULL_NAME"
+TIMEZONE="America/New_York"
+HOST_NAME="guix-vps"
+GUIX_VERSION="v1.4.0"
+SWAP_SIZE="4G"
+```
+
+### 2. Download and Verify Script
 
 **Choose the right URL based on what you're testing:**
 
@@ -83,15 +112,11 @@ GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
 GUIX_INSTALL_REF=v0.1.3 bash ./run-remote-steps.sh
 ```
 
-Then verify with your checksum:
+### 3. Verify with Checksum
+
+**Option A: Automated verification (recommended):**
 
 ```bash
-USER_NAME="YOUR_USER_NAME"
-FULL_NAME="YOUR_FULL_NAME"
-TIMEZONE="America/New_York"
-HOST_NAME="guix-vps"
-GUIX_VERSION="v1.4.0"
-
 echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES-SINGLE-NEWLINE-IS-OK " | head -1 > rrs-checksum.txt
 cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
@@ -100,20 +125,11 @@ chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
 ```
 
-### Manual Verification Instead
-
-If you prefer to verify manually:
+**Option B: Manual verification:**
 
 ```bash
-USER_NAME="YOUR_USER_NAME"
-FULL_NAME="YOUR_FULL_NAME"
-TIMEZONE="America/New_York"
-HOST_NAME="guix-vps"
-GUIX_VERSION="v1.4.0"
-
-# Download (choose appropriate URL)
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
 shasum -a 256 run-remote-steps.sh
+# Compare with your expected checksum
 
 chmod +x run-remote-steps.sh
 bash ./run-remote-steps.sh
