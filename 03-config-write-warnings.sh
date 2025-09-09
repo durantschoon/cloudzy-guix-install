@@ -28,3 +28,7 @@ if [[ ${#missing_vars[@]} -gt 0 ]]; then
   echo "  SWAP_SIZE=\"4G\"       # Swap size: 2G, 4G, 8G, etc."
   exit 1
 fi
+
+# Export all validated variables for the clean script
+export USER_NAME FULL_NAME TIMEZONE HOST_NAME ROOT EFI
+export DESKTOP_ENV BOOT_MODE SWAP_SIZE

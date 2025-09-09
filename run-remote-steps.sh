@@ -8,7 +8,7 @@ declare -A SHA256=(
   # Warning scripts
   ["01-partition-warnings.sh"]="791f9294fea2aa4f0abea2fe305d73c3d6797dda0fc99f234ec9d778b62dcb44"
   ["02-mount-bind-warnings.sh"]="bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de"
-  ["03-config-write-warnings.sh"]="e61ddd68a1f1adc793f3c697033dca0ab93e9daff299188290efafc5437f7460"
+  ["03-config-write-warnings.sh"]="f8df34d2fe57f1b67c704ebd115d5fc2d221c6c694de4ba415e347a1cbe396a8"
   ["04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["05-postinstall-console-warnings.sh"]="c5f212f705ca6aad6609152a619974b551aeb5fe972fe6c19171a8f534c3334c"
   ["06-postinstall-own-terminal-warnings.sh"]="36a6bbc23153b0e2b93464f61d920c3d8c28f3a601c2ad6f1a4eeb7ae5c4be7a"
