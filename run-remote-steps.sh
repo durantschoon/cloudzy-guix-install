@@ -12,18 +12,21 @@ REF="${GUIX_INSTALL_REF:-v0.1.5}"  # Set GUIX_INSTALL_REF env var to override (e
 RAW_BASE="https://raw.githubusercontent.com/${OWNER_REPO}/${REF}"
 
 # 2) List the scripts (in order) relative to the repo root.
-SCRIPTS=(
-  "01-partition.sh"
-  "02-mount-bind.sh"
-  "03-config-write.sh"
-  "04-system-init.sh"
-  "05-postinstall-console.sh"
-  "06-postinstall-own-terminal.sh"
+# Each script now has two parts: warnings and clean implementation
+SCRIPT_BASES=(
+  "01-partition"
+  "02-mount-bind"
+  "03-config-write"
+  "04-system-init"
+  "05-postinstall-console"
+  "06-postinstall-own-terminal"
 )
 
 # 3) Optional: expected sha256 checksums (filename -> sha256).
 # Leave empty to skip verification.
+# Note: Checksums are for the original combined scripts, not the new split versions
 declare -A SHA256=(
+  # Original combined scripts (for backward compatibility)
   ["01-partition.sh"]="d7b8857e820fe2ba0ced7c61001d40d2a2333372a33b2f9ffc95bebd8d370a6d"
   ["02-mount-bind.sh"]="f43d90c86f96f891fabaec2ab80ac0d86b9665aa2ce94d780f047a9a1321531a"
   ["03-config-write.sh"]="b482f06f29d1eca31241d1e7f8ce17caa716aaffc499c88d7c2b15051faa83d0"
@@ -80,7 +83,8 @@ fetch_file(){ # fetch_file path/to/script
 run_step(){ # run_step local_script_path
   if [ "$#" -lt 1 ]; then
     err "run_step called without a script path"; return 1; fi
-  local script="$1" name="$(basename "$script")"
+  local script="$1"
+  local name="$(basename "$script")"
   mkdir -p "$LOGDIR"
   local log="${LOGDIR}/${name}.log"
   msg "Running ${name}"
@@ -122,35 +126,57 @@ mkdir -p "$WORKDIR" "$LOGDIR"
 # Clear any existing script variables from previous runs
 rm -f /tmp/script_vars.sh "${WORKDIR}/script_vars.sh"
 
-for rel in "${SCRIPTS[@]}"; do
-  msg "Fetch $rel"
-  local_path="$(fetch_file "$rel")" || {
-    err "Failed to fetch $rel"; exit 1; }
-  # Ensure file is fully written before reading
+for base in "${SCRIPT_BASES[@]}"; do
+  warning_script="${base}-warnings.sh"
+  clean_script="${base}-clean.sh"
+  
+  msg "Fetch ${warning_script}"
+  warning_path="$(fetch_file "$warning_script")" || {
+    err "Failed to fetch $warning_script"; exit 1; }
+  
+  msg "Fetch ${clean_script}"
+  clean_path="$(fetch_file "$clean_script")" || {
+    err "Failed to fetch $clean_script"; exit 1; }
+  
+  # Ensure files are fully written before reading
   sleep 0.5
-  # Wait for file to be readable
-  echo "Checking if file is readable: $local_path"
-  ls -la "$local_path" || echo "File not found or not accessible"
-  timeout=30  # 30 second timeout
-  count=0
-  while [[ ! -r "$local_path" ]] && [[ $count -lt $timeout ]]; do
-    echo "Waiting for file to be readable: $local_path (attempt $((count + 1))/$timeout)"
-    sleep 1
-    ((count++))
+  
+  # Wait for files to be readable
+  for script_path in "$warning_path" "$clean_path"; do
+    echo "Checking if file is readable: $script_path"
+    ls -la "$script_path" || echo "File not found or not accessible"
+    timeout=30  # 30 second timeout
+    count=0
+    while [[ ! -r "$script_path" ]] && [[ $count -lt $timeout ]]; do
+      echo "Waiting for file to be readable: $script_path (attempt $((count + 1))/$timeout)"
+      sleep 1
+      ((count++))
+    done
+    if [[ ! -r "$script_path" ]]; then
+      err "Timeout waiting for file to be readable: $script_path"
+      exit 1
+    fi
   done
-  if [[ ! -r "$local_path" ]]; then
-    err "Timeout waiting for file to be readable: $local_path"
-    exit 1
-  fi
-  # Preview the script head
-  echo "---- ${rel} (head) ----"
-  sed -n '1,30p' "$local_path"
+  
+  # Preview the clean script head (this is what users care about)
+  echo "---- ${clean_script} (head) ----"
+  sed -n '1,30p' "$clean_path"
   echo "-----------------------"
-  if ! ask_yes "Run ${rel} now?" default_yes; then
-    warn "Skipping ${rel} per user request"
+  
+  if ! ask_yes "Run ${base} step now?" default_yes; then
+    warn "Skipping ${base} per user request"
     continue
   fi
-  run_step "$local_path" || warn "${rel} returned non-zero; you may want to stop."
+  
+  # Run warning script first
+  msg "Running warnings for ${base}"
+  run_step "$warning_path" || {
+    warn "${warning_script} returned non-zero; stopping."
+    exit 1
+  }
+  
+  # Run clean script
+  run_step "$clean_path" || warn "${clean_script} returned non-zero; you may want to stop."
 done
 
 msg "All done. Logs in: $LOGDIR"
