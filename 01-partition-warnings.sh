@@ -57,3 +57,6 @@ else
   fi
   echo "Auto-detected device: $DEVICE"
 fi
+
+# Export DEVICE for the clean script
+export DEVICE
