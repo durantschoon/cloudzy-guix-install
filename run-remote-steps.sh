@@ -78,6 +78,8 @@ fetch_file(){ # fetch_file path/to/script
 }
 
 run_step(){ # run_step local_script_path
+  if [ "$#" -lt 1 ]; then
+    err "run_step called without a script path"; return 1; fi
   local script="$1" name="$(basename "$script")"
   mkdir -p "$LOGDIR"
   local log="${LOGDIR}/${name}.log"
@@ -86,6 +88,12 @@ run_step(){ # run_step local_script_path
   # Source any existing variables from previous scripts
   if [[ -f "${WORKDIR}/script_vars.sh" ]]; then
     source "${WORKDIR}/script_vars.sh"
+  fi
+  # Also support scripts writing to /tmp/script_vars.sh directly
+  if [[ -f "/tmp/script_vars.sh" ]]; then
+    source "/tmp/script_vars.sh"
+    # keep a copy in WORKDIR for subsequent steps/logging continuity
+    cp -f "/tmp/script_vars.sh" "${WORKDIR}/script_vars.sh" 2>/dev/null || true
   fi
   ( set -o pipefail; bash "$script" 2>&1 | tee "$log" )
   local rc=${PIPESTATUS[0]}
@@ -112,7 +120,7 @@ command -v curl >/dev/null 2>&1 || { err "curl is required"; exit 1; }
 mkdir -p "$WORKDIR" "$LOGDIR"
 
 # Clear any existing script variables from previous runs
-rm -f /tmp/script_vars.sh
+rm -f /tmp/script_vars.sh "${WORKDIR}/script_vars.sh"
 
 for rel in "${SCRIPTS[@]}"; do
   msg "Fetch $rel"
