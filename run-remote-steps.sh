@@ -70,7 +70,8 @@ ask_yes(){
 }
 
 fetch_file(){ # fetch_file path/to/script
-  local rel="$1" dest="${WORKDIR}/${rel}"
+  local rel="$1"
+  local dest="${WORKDIR}/${rel}"
   mkdir -p "$(dirname "$dest")"
   local url="${RAW_BASE}/${rel}"
   curl -fsSL "$url?$(date +%s)" -o "$dest" || { err "Download failed: $url"; return 1; }
