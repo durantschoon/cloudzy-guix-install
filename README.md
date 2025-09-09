@@ -35,6 +35,22 @@ This installation script is designed for **fresh VPS instances** where you want 
 
 ---
 
+## Script Overview
+
+This installation process consists of several scripts that work together to set up a complete Guix system:
+
+- **`01-partition.sh`**: **DESTRUCTIVE OPERATION** - Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb) or uses user-specified DEVICE environment variable. Includes safety warnings for wrong environments. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
+
+- **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
+
+- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Automatically detects BIOS/UEFI boot mode and configures the appropriate bootloader. Supports configurable desktop environments (GNOME, Xfce, MATE, LXQt, or none for server mode). Validates all required environment variables are set before proceeding. Includes SSH service and essential packages.
+
+- **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
+
+- **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon with clear instructions on how to connect remotely. Provides IP address discovery commands and SSH connection examples.
+
+- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Configures additional Guix channels (including nonguix for proprietary software) and performs a system reconfigure. Provides guidance on installing additional packages and examples of nonguix packages.
+
 ## Preparation
 
 ### On local machine
@@ -64,31 +80,6 @@ or instead prepare to manually check
 ```bash
 shasum -a 256 run-remote-steps.sh
 ```
-
-### In guix iso environment
-
-`perl` is for `shasum`
-
-```bash
-guix install curl
-guix install perl
-```
-
-## Script Overview
-
-This installation process consists of several scripts that work together to set up a complete Guix system:
-
-- **`01-partition.sh`**: **DESTRUCTIVE OPERATION** - Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb) or uses user-specified DEVICE environment variable. Includes safety warnings for wrong environments. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
-
-- **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
-
-- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Automatically detects BIOS/UEFI boot mode and configures the appropriate bootloader. Supports configurable desktop environments (GNOME, Xfce, MATE, LXQt, or none for server mode). Validates all required environment variables are set before proceeding. Includes SSH service and essential packages.
-
-- **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
-
-- **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon with clear instructions on how to connect remotely. Provides IP address discovery commands and SSH connection examples.
-
-- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Configures additional Guix channels (including nonguix for proprietary software) and performs a system reconfigure. Provides guidance on installing additional packages and examples of nonguix packages.
 
 ## Environment Variables
 
@@ -147,9 +138,16 @@ You can customize the swap size using formats like:
 
 **⚠️ READ THE WARNING ABOVE FIRST! This script will destroy all data on the target device.**
 
-_In guix iso environment..._
+### 1. Prepare Guix Live ISO Environment
 
-### 1. Set Environment Variables
+First, install required packages in the Guix live ISO:
+
+```bash
+guix install curl
+guix install perl  # needed for shasum
+```
+
+### 2. Set Environment Variables
 
 First, configure your installation variables:
 
@@ -162,7 +160,7 @@ GUIX_VERSION="v1.4.0"
 SWAP_SIZE="4G"
 ```
 
-### 2. Download and Verify Script
+### 3. Download and Verify Script
 
 **Choose the right URL based on what you're testing:**
 
@@ -184,7 +182,7 @@ GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
 GUIX_INSTALL_REF=v0.1.3 bash ./run-remote-steps.sh
 ```
 
-### 3. Verify with Checksum
+### 4. Verify with Checksum
 
 **Option A: Automated verification (recommended):**
 
