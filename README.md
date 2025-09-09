@@ -192,7 +192,8 @@ cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
 
 chmod +x run-remote-steps.sh
-bash ./run-remote-steps.sh
+# GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
+# GUIX_INSTALL_REF=vX.Y.Z bash ./run-remote-steps.sh
 ```
 
 **Option B: Manual verification:**
@@ -202,7 +203,8 @@ shasum -a 256 run-remote-steps.sh
 # Compare with your expected checksum
 
 chmod +x run-remote-steps.sh
-bash ./run-remote-steps.sh
+# GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
+# GUIX_INSTALL_REF=vX.Y.Z bash ./run-remote-steps.sh
 ```
 
 ### Troubleshooting: CDN Cache Issues
