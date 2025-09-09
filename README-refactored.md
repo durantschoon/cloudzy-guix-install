@@ -44,9 +44,9 @@ The `run-remote-steps.sh` script automatically:
 3. Runs the clean script if warnings pass
 4. Shows preview of the clean script (not the warning script) for user review
 
-## Backward Compatibility
+## Migration from Original Scripts
 
-The original combined scripts (`01-partition.sh`, etc.) are still available for backward compatibility, but the new split structure is recommended for new installations.
+The original combined scripts have been replaced with the new split structure. The new approach provides better readability, maintainability, and safety while preserving all functionality.
 
 ## File Structure
 
@@ -64,5 +64,5 @@ The original combined scripts (`01-partition.sh`, etc.) are still available for 
 ├── 05-postinstall-console-clean.sh  # Clean console setup
 ├── 06-postinstall-own-terminal-warnings.sh # Terminal setup warnings
 ├── 06-postinstall-own-terminal-clean.sh    # Clean terminal setup
-└── [original combined scripts for backward compatibility]
+└── update-sha256.sh                        # SHA256 checksum management
 ```

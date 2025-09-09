@@ -5,6 +5,6 @@ set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failure
 if [[ ! -f "/mnt/etc/config.scm" ]]; then
   echo "Error: System configuration file not found: /mnt/etc/config.scm"
   echo "Make sure you've run the previous scripts in order:"
-  echo "  01-partition.sh -> 02-mount-bind.sh -> 03-config-write.sh"
+  echo "  01-partition-clean.sh -> 02-mount-bind-clean.sh -> 03-config-write-clean.sh"
   exit 1
 fi
