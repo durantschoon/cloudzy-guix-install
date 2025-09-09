@@ -60,3 +60,6 @@ fi
 
 # Export DEVICE for the clean script
 export DEVICE
+
+# Write DEVICE to script_vars.sh for the clean script
+echo "export DEVICE=$DEVICE" > "/tmp/script_vars.sh"
