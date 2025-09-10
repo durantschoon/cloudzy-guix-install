@@ -139,6 +139,10 @@ run_step(){ # run_step local_script_path
   exec 1>&3 2>&4 # Restore original stdout and stderr
   exec 3>&- 4>&- # Close saved file descriptors
   
+  # Ensure log file is fully written before reading
+  sync
+  sleep 0.1
+  
   msg "Exit status for ${name}: ${rc}"
   echo "Log saved to: $log"
   echo "---- last 40 lines ----"
@@ -174,6 +178,10 @@ run_warning_step(){ # run_warning_step local_script_path
   # Restore stdout/stderr
   exec 1>&3 2>&4
   exec 3>&- 4>&-
+
+  # Ensure log file is fully written before reading
+  sync
+  sleep 0.1
 
   msg "Exit status for ${name}: ${rc}"
   echo "Log saved to: $log"
