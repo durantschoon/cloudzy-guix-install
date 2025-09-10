@@ -216,6 +216,24 @@ If you're getting a different checksum than expected (especially across differen
 curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh?$(date +%s)" -o run-remote-steps.sh
 ```
 
+### Development Tips: Working with 'main' branch
+
+When developing or debugging, you'll often want to use the latest code from the `main` branch. Here are some helpful aliases and workflows:
+
+```bash
+# Set up aliases for easier development
+alias run='GUIX_INSTALL_REF=main bash ./run-remote-steps.sh'
+alias recurl='curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh?$(date +%s)" -o run-remote-steps.sh'
+
+# Quick workflow for testing changes:
+# 1. Make changes to scripts locally
+# 2. Update SHA256 checksums: ./update-sha256.sh
+# 3. Commit and push changes
+# 4. Test with: recurl && run
+```
+
+**Pro tip:** Keep a local file with the current SHA256 checksums for the `main` branch so you can quickly update them when testing changes.
+
 **Why the timestamp trick works:**
 
 - GitHub's CDN caches content by URL
