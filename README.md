@@ -1,5 +1,7 @@
 # cloudzy-guix-install
 
+Status: this set of scripts was not completed (ran out of time, so I'm choosing a different path)
+
 ## ⚠️ CRITICAL WARNING
 
 **THIS SCRIPT WILL DESTROY ALL DATA ON THE TARGET DEVICE!**
