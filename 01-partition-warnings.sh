@@ -58,8 +58,5 @@ else
   echo "Auto-detected device: $DEVICE"
 fi
 
-# Export DEVICE for the clean script
+# Export DEVICE for the clean script (directly available in main context)
 export DEVICE
-
-# Write DEVICE to script_vars.sh for the clean script
-echo "export DEVICE=$DEVICE" > "/tmp/script_vars.sh"

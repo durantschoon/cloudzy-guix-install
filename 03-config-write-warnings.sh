@@ -29,19 +29,6 @@ if [[ ${#missing_vars[@]} -gt 0 ]]; then
   exit 1
 fi
 
-# Export all validated variables for the clean script
+# Export all validated variables for the clean script (directly available in main context)
 export USER_NAME FULL_NAME TIMEZONE HOST_NAME ROOT EFI
 export DESKTOP_ENV BOOT_MODE SWAP_SIZE
-
-# Write all variables to script_vars.sh for the clean script
-{
-  echo "export USER_NAME=\"$USER_NAME\""
-  echo "export FULL_NAME=\"$FULL_NAME\""
-  echo "export TIMEZONE=\"$TIMEZONE\""
-  echo "export HOST_NAME=\"$HOST_NAME\""
-  echo "export ROOT=\"$ROOT\""
-  echo "export EFI=\"$EFI\""
-  echo "export DESKTOP_ENV=\"${DESKTOP_ENV:-gnome}\""
-  echo "export BOOT_MODE=\"${BOOT_MODE:-uefi}\""
-  echo "export SWAP_SIZE=\"${SWAP_SIZE:-4G}\""
-} >> "/tmp/script_vars.sh"

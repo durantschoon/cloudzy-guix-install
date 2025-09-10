@@ -27,13 +27,10 @@ ROOT=${DEVICE}2
 
 echo "EFI is $EFI and ROOT is $ROOT"
 
-# Export variables for subsequent scripts
+# Export variables for subsequent scripts (directly available in main context)
 export EFI ROOT
-echo "export EFI=$EFI" >> "/tmp/script_vars.sh"
-echo "export ROOT=$ROOT" >> "/tmp/script_vars.sh"
 
 mkfs.vfat -F32 "$EFI"
 mkfs.ext4 "$ROOT"
 
-# Write completion marker only if everything succeeded
-echo "01-partition-completed" > "/tmp/01-partition-completion.marker"
+# Script completed successfully - variables are now available in main context
