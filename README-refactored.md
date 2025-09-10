@@ -50,7 +50,7 @@ The original combined scripts have been replaced with the new split structure. T
 
 ## File Structure
 
-```
+```text
 ├── run-remote-steps.sh              # Main orchestrator (updated)
 ├── 01-partition-warnings.sh         # Partitioning warnings/validation
 ├── 01-partition-clean.sh            # Clean partitioning logic
