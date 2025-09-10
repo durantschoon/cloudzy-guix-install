@@ -15,9 +15,19 @@ fi
 start=$(date +%s)
 
 if command -v rsync >/dev/null 2>&1; then
-  rsync -aHAX --info=progress2 /gnu/store/. /mnt/gnu/store/.
+  echo "Syncing /gnu/store to /mnt/gnu/store using rsync..."
+  if ! rsync -aHAX --info=progress2,stats /gnu/store/. /mnt/gnu/store/.; then
+    echo "ERROR: rsync failed with exit code $?"
+    exit 1
+  fi
+  echo "rsync completed successfully"
 else
-  cp -a /gnu/store/. /mnt/gnu/store/
+  echo "rsync not available, using cp instead..."
+  if ! cp -a /gnu/store/. /mnt/gnu/store/; then
+    echo "ERROR: cp failed with exit code $?"
+    exit 1
+  fi
+  echo "cp completed successfully"
 fi
 
 end=$(date +%s)
@@ -26,9 +36,16 @@ echo "Time taken: $((end - start)) seconds"
 mkdir -p /mnt/boot/efi
 mount $EFI /mnt/boot/efi
 
+# Create the bind mount targets and copy the store
 mkdir -p /mnt/gnu /mnt/var/guix
+echo "Copying /gnu/store to /mnt/gnu/store for bind mount..."
+cp -a /gnu/store /mnt/gnu/
+echo "Copying /var/guix to /mnt/var/guix for bind mount..."
+cp -a /var/guix /mnt/var/
+
 herd stop guix-daemon
 
+echo "Setting up bind mounts..."
 mount --bind /mnt/gnu /gnu
 mount --bind /mnt/var/guix /var/guix
 

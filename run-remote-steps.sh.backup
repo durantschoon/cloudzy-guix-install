@@ -164,7 +164,7 @@ run_warning_step(){ # run_warning_step local_script_path
   local name="$(basename "$script")"
   mkdir -p "$LOGDIR"
   local log="${LOGDIR}/${name}.log"
-  msg "Running ${name} (sourced to persist exported vars)"
+  msg "Running ${name}"
 
   # Save original stdout/stderr
   exec 3>&1 4>&2

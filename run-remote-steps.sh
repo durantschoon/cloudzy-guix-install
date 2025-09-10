@@ -15,7 +15,7 @@ declare -A SHA256=(
 
   # Clean scripts
   ["01-partition-clean.sh"]="f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1"
-  ["02-mount-bind-clean.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
+  ["02-mount-bind-clean.sh"]="6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632"
   ["03-config-write-clean.sh"]="047c90cdc79f245fe85cc44bd8917cb51a00f40b2796f3be4d88f8e801c75403"
   ["04-system-init-clean.sh"]="986c8c59ced113ed48dee197cc414efad932a68113a2a56ae42acdde123438f9"
   ["05-postinstall-console-clean.sh"]="4c0f26e514245a58b3b0679f27293c304492a630099fe44cfd0cb1e6e6fc0c66"
@@ -164,7 +164,7 @@ run_warning_step(){ # run_warning_step local_script_path
   local name="$(basename "$script")"
   mkdir -p "$LOGDIR"
   local log="${LOGDIR}/${name}.log"
-  msg "Running ${name} (sourced to persist exported vars)"
+  msg "Running ${name}"
 
   # Save original stdout/stderr
   exec 3>&1 4>&2
