@@ -16,7 +16,7 @@ echo "EFI is $EFI and ROOT is $ROOT"
 
 # Export variables for subsequent scripts
 export EFI ROOT
-echo "export EFI=$EFI" > "/tmp/script_vars.sh"
+echo "export EFI=$EFI" >> "/tmp/script_vars.sh"
 echo "export ROOT=$ROOT" >> "/tmp/script_vars.sh"
 
 mkfs.vfat -F32 "$EFI"

@@ -14,7 +14,7 @@ declare -A SHA256=(
   ["06-postinstall-own-terminal-warnings.sh"]="36a6bbc23153b0e2b93464f61d920c3d8c28f3a601c2ad6f1a4eeb7ae5c4be7a"
 
   # Clean scripts
-  ["01-partition-clean.sh"]="b388767fc595cf3faf510ffb7f871eddf5e7c011be7437b43893e7c9e1816a2a"
+  ["01-partition-clean.sh"]="cecf9277a36378cf466217905231bba767c77de5913eb0f3c8d0dfac9fb846d1"
   ["02-mount-bind-clean.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
   ["03-config-write-clean.sh"]="047c90cdc79f245fe85cc44bd8917cb51a00f40b2796f3be4d88f8e801c75403"
   ["04-system-init-clean.sh"]="986c8c59ced113ed48dee197cc414efad932a68113a2a56ae42acdde123438f9"
