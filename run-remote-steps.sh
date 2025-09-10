@@ -139,6 +139,42 @@ run_step(){ # run_step local_script_path
   return $rc
 }
 
+# Source-and-log runner for warning scripts so that exported variables persist
+run_warning_step(){ # run_warning_step local_script_path
+  if [ "$#" -lt 1 ]; then
+    err "run_warning_step called without a script path"; return 1; fi
+  local script="$1"
+  local name="$(basename "$script")"
+  mkdir -p "$LOGDIR"
+  local log="${LOGDIR}/${name}.log"
+  msg "Running ${name} (sourced to persist exported vars)"
+
+  # Save original stdout/stderr
+  exec 3>&1 4>&2
+  # Redirect current shell stdout/stderr through tee for logging
+  exec > >(tee "$log") 2>&1
+
+  # Source the script in the current shell so 'export VAR=...' persists
+  . "$script"
+  local rc=$?
+
+  # Restore stdout/stderr
+  exec 1>&3 2>&4
+  exec 3>&- 4>&-
+
+  msg "Exit status for ${name}: ${rc}"
+  echo "Log saved to: $log"
+  echo "---- last 40 lines ----"
+  tail -n 40 "$log" || true
+  echo "-----------------------"
+
+  if ! ask_yes "Continue to next step?" default_yes; then
+    warn "User chose to stop. Workdir: $WORKDIR"
+    exit $rc
+  fi
+  return $rc
+}
+
 ### --- MAIN ----------------------------------------------------------------
 
 msg "Workdir: ${WORKDIR}"
@@ -189,7 +225,8 @@ for base in "${SCRIPT_BASES[@]}"; do
       ;;
   esac
   
-  run_step "$warning_path" || {
+  # Source the warnings script so that any 'export VAR=...' persists for the clean script
+  run_warning_step "$warning_path" || {
     warn "${warning_script} returned non-zero; stopping."
     exit 1
   }
