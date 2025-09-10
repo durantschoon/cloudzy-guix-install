@@ -140,24 +140,35 @@ You can customize the swap size using formats like:
 
 ### 1. Prepare Guix Live ISO Environment
 
-First, install required packages in the Guix live ISO:
+First, install required packages in the Guix live ISO (perl is needed for shasum)
 
 ```bash
 guix install curl
-guix install perl  # needed for shasum
+guix install perl
 ```
 
 ### 2. Set Environment Variables
 
-First, configure your installation variables:
+First, configure your installation variables (the second group contains optional variables (with defaults)):
 
 ```bash
+# Required variables
 USER_NAME="YOUR_USER_NAME"
 FULL_NAME="YOUR_FULL_NAME"
 TIMEZONE="America/New_York"
 HOST_NAME="guix-vps"
-GUIX_VERSION="v1.4.0"
+
+DESKTOP_ENV="gnome"
+BOOT_MODE="uefi"
 SWAP_SIZE="4G"
+```
+
+#### Options
+
+```bash
+DESKTOP_ENV="gnome"     # Options: gnome, xfce, mate, lxqt, none
+BOOT_MODE="uefi"        # Options: uefi, bios (auto-detected)
+SWAP_SIZE="4G"          # Options: 2G, 4G, 8G, etc.
 ```
 
 ### 3. Download and Verify Script
