@@ -20,7 +20,6 @@ declare -A SHA256=(
   ["04-system-init-clean.sh"]="986c8c59ced113ed48dee197cc414efad932a68113a2a56ae42acdde123438f9"
   ["05-postinstall-console-clean.sh"]="4c0f26e514245a58b3b0679f27293c304492a630099fe44cfd0cb1e6e6fc0c66"
   ["06-postinstall-own-terminal-clean.sh"]="21622f339aeff1a62a8088dedac64d5a1a7ee4a6f0761a9d0ac595e63740ad4a"
-  ["test-final-clean.sh"]="171d39389bdde7f6714810698964a9638987c348e968891985bda0e698b2c132"
 )
 # END SHA256 REPLACEMENT
 
@@ -233,7 +232,7 @@ for base in "${SCRIPT_BASES[@]}"; do
   
   # Run clean script
   run_step "$clean_path"
-  local clean_rc=$?
+  clean_rc=$?
   
   # Verify critical steps completed successfully
   case "$base" in
