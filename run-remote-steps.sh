@@ -57,6 +57,22 @@ export GUIX_BUILD_OPTIONS="${GUIX_BUILD_OPTIONS:---max-jobs=1 --cores=1}"
 msg(){ printf "\n\033[1;34m==> %s\033[0m\n" "$*"; }
 warn(){ printf "\n\033[1;33m[warn]\033[0m %s\n" "$*"; }
 err(){ printf "\n\033[1;31m[err]\033[0m  %s\n" "$*"; }
+
+verify_required_vars(){ # verify_required_vars var1 var2 ...
+  local missing_vars=()
+  for var in "$@"; do
+    if [[ -z "${!var:-}" ]]; then
+      missing_vars+=("$var")
+    fi
+  done
+  
+  if [[ ${#missing_vars[@]} -gt 0 ]]; then
+    err "Missing required environment variables:"
+    printf "  - %s\n" "${missing_vars[@]}"
+    return 1
+  fi
+  return 0
+}
 ask_yes(){
   # ask_yes "Prompt?" default_yes|default_no
   local prompt="$1" default="$2" ans
@@ -105,6 +121,8 @@ run_step(){ # run_step local_script_path
   fi
   # Also support scripts writing to /tmp/script_vars.sh directly
   if [[ -f "/tmp/script_vars.sh" ]]; then
+    # Add a small delay to ensure file is fully written
+    sleep 0.1
     source "/tmp/script_vars.sh"
     # keep a copy in WORKDIR for subsequent steps/logging continuity
     cp -f "/tmp/script_vars.sh" "${WORKDIR}/script_vars.sh" 2>/dev/null || true
@@ -117,6 +135,18 @@ run_step(){ # run_step local_script_path
   echo "---- last 40 lines ----"
   tail -n 40 "$log" || true
   echo "-----------------------"
+  
+  # Ensure script variables are properly written and synced to disk
+  if [[ -f "/tmp/script_vars.sh" ]]; then
+    sync  # Force filesystem sync to ensure data is written to disk
+    # Verify the file is readable and has content
+    if [[ -r "/tmp/script_vars.sh" ]] && [[ -s "/tmp/script_vars.sh" ]]; then
+      msg "Script variables file verified and synced to disk"
+    else
+      warn "Script variables file may not be properly written"
+    fi
+  fi
+  
   if ! ask_yes "Continue to next step?" default_yes; then
     warn "User chose to stop. Workdir: $WORKDIR"
     exit $rc
@@ -180,6 +210,27 @@ for base in "${SCRIPT_BASES[@]}"; do
   
   # Run warning script first
   msg "Running warnings for ${base}"
+  
+  # Verify required variables for specific scripts that depend on previous steps
+  case "$base" in
+    "02-mount-bind")
+      if ! verify_required_vars "ROOT" "EFI"; then
+        err "Cannot run ${base} - required variables from previous step are missing"
+        err "Make sure 01-partition step completed successfully"
+        exit 1
+      fi
+      msg "Verified required variables: ROOT=$ROOT, EFI=$EFI"
+      ;;
+    "03-config-write")
+      if ! verify_required_vars "ROOT" "EFI"; then
+        err "Cannot run ${base} - required variables from previous step are missing"
+        err "Make sure 01-partition step completed successfully"
+        exit 1
+      fi
+      msg "Verified required variables: ROOT=$ROOT, EFI=$EFI"
+      ;;
+  esac
+  
   run_step "$warning_path" || {
     warn "${warning_script} returned non-zero; stopping."
     exit 1
