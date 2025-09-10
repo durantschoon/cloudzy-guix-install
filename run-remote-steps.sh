@@ -115,21 +115,35 @@ run_step(){ # run_step local_script_path
   mkdir -p "$LOGDIR"
   local log="${LOGDIR}/${name}.log"
   msg "Running ${name}"
-  # Variables from previous scripts are directly available in main context
   
-  # Run script directly (no subshell) - variables will be available in main context
+  local old_stdout=$(mktemp)
+  local old_stderr=$(mktemp)
+  exec 3>&1 4>&2 # Save current stdout and stderr
+  exec > >(tee "$log" >&3) 2> >(tee "$log" >&4) # Redirect to tee and original stdout/stderr
+  
+  local old_pipefail_setting
+  if [[ "$(set -o | grep pipefail)" == "pipefail on" ]]; then
+    old_pipefail_setting="on"
+  else
+    old_pipefail_setting="off"
+  fi
   set -o pipefail
-  bash "$script" 2>&1 | tee "$log"
-  local rc=${PIPESTATUS[0]}
-  set +o pipefail
+  
+  . "$script" # Source the script
+  local rc=$?
+  
+  if [[ "$old_pipefail_setting" == "off" ]]; then
+    set +o pipefail
+  fi
+  
+  exec 1>&3 2>&4 # Restore original stdout and stderr
+  exec 3>&- 4>&- # Close saved file descriptors
+  
   msg "Exit status for ${name}: ${rc}"
   echo "Log saved to: $log"
-  # Show tail and offer to view all
   echo "---- last 40 lines ----"
   tail -n 40 "$log" || true
   echo "-----------------------"
-  
-  # Variables set by the script are directly available in main context
   
   if ! ask_yes "Continue to next step?" default_yes; then
     warn "User chose to stop. Workdir: $WORKDIR"
