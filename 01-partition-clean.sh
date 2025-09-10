@@ -21,3 +21,6 @@ echo "export ROOT=$ROOT" >> "/tmp/script_vars.sh"
 
 mkfs.vfat -F32 "$EFI"
 mkfs.ext4 "$ROOT"
+
+# Write completion marker
+echo "01-partition-completed" > "/tmp/01-partition-completion.marker"

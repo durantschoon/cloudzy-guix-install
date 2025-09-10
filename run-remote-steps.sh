@@ -14,7 +14,7 @@ declare -A SHA256=(
   ["06-postinstall-own-terminal-warnings.sh"]="36a6bbc23153b0e2b93464f61d920c3d8c28f3a601c2ad6f1a4eeb7ae5c4be7a"
 
   # Clean scripts
-  ["01-partition-clean.sh"]="cecf9277a36378cf466217905231bba767c77de5913eb0f3c8d0dfac9fb846d1"
+  ["01-partition-clean.sh"]="e54883ea079cd31c2a871e8c16d1c81227de814d3ccda1b7845b25aea913c441"
   ["02-mount-bind-clean.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
   ["03-config-write-clean.sh"]="047c90cdc79f245fe85cc44bd8917cb51a00f40b2796f3be4d88f8e801c75403"
   ["04-system-init-clean.sh"]="986c8c59ced113ed48dee197cc414efad932a68113a2a56ae42acdde123438f9"
@@ -72,6 +72,49 @@ verify_required_vars(){ # verify_required_vars var1 var2 ...
     return 1
   fi
   return 0
+}
+
+wait_for_script_completion(){ # wait_for_script_completion script_name expected_vars...
+  local script_name="$1"
+  shift
+  local expected_vars=("$@")
+  local max_wait=30  # Maximum wait time in seconds
+  local wait_time=0
+  local completion_marker="/tmp/${script_name}-completion.marker"
+  
+  msg "Waiting for ${script_name} to complete and set variables..."
+  
+  while [[ $wait_time -lt $max_wait ]]; do
+    # Check if completion marker exists
+    if [[ -f "$completion_marker" ]]; then
+      # Check if variables file exists and has content
+      if [[ -f "/tmp/script_vars.sh" ]] && [[ -s "/tmp/script_vars.sh" ]]; then
+        # Source the variables
+        source "/tmp/script_vars.sh"
+        
+        # Check if all expected variables are present
+        local all_present=true
+        for var in "${expected_vars[@]}"; do
+          if [[ -z "${!var:-}" ]]; then
+            all_present=false
+            break
+          fi
+        done
+        
+        if [[ "$all_present" == true ]]; then
+          msg "✅ ${script_name} completed successfully - all variables present"
+          return 0
+        fi
+      fi
+    fi
+    
+    sleep 1
+    ((wait_time++))
+    echo -n "."
+  done
+  
+  err "❌ Timeout waiting for ${script_name} to complete (${max_wait}s)"
+  return 1
 }
 ask_yes(){
   # ask_yes "Prompt?" default_yes|default_no
@@ -142,6 +185,8 @@ run_step(){ # run_step local_script_path
     # Verify the file is readable and has content
     if [[ -r "/tmp/script_vars.sh" ]] && [[ -s "/tmp/script_vars.sh" ]]; then
       msg "Script variables file verified and synced to disk"
+      # Source the variables into the main script context for verification
+      source "/tmp/script_vars.sh"
     else
       warn "Script variables file may not be properly written"
     fi
@@ -238,6 +283,16 @@ for base in "${SCRIPT_BASES[@]}"; do
   
   # Run clean script
   run_step "$clean_path" || warn "${clean_script} returned non-zero; you may want to stop."
+  
+  # Wait for script completion and verify variables for dependent scripts
+  case "$base" in
+    "01-partition")
+      if ! wait_for_script_completion "01-partition" "DEVICE" "ROOT" "EFI"; then
+        err "01-partition step did not complete successfully"
+        exit 1
+      fi
+      ;;
+  esac
 done
 
 msg "All done. Logs in: $LOGDIR"
