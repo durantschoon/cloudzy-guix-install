@@ -14,7 +14,7 @@ declare -A SHA256=(
   ["06-postinstall-own-terminal-warnings.sh"]="36a6bbc23153b0e2b93464f61d920c3d8c28f3a601c2ad6f1a4eeb7ae5c4be7a"
 
   # Clean scripts
-  ["01-partition-clean.sh"]="e54883ea079cd31c2a871e8c16d1c81227de814d3ccda1b7845b25aea913c441"
+  ["01-partition-clean.sh"]="7a1ac77001a39e22578f5201aea5c6488c53fe441b1da81e327fea72ff03f687"
   ["02-mount-bind-clean.sh"]="de8722ff394355659e48f380065ab73ec1ef0184b119b3447be01cf1d6b05094"
   ["03-config-write-clean.sh"]="047c90cdc79f245fe85cc44bd8917cb51a00f40b2796f3be4d88f8e801c75403"
   ["04-system-init-clean.sh"]="986c8c59ced113ed48dee197cc414efad932a68113a2a56ae42acdde123438f9"
@@ -282,17 +282,29 @@ for base in "${SCRIPT_BASES[@]}"; do
   }
   
   # Run clean script
-  run_step "$clean_path" || warn "${clean_script} returned non-zero; you may want to stop."
+  run_step "$clean_path"
+  local clean_rc=$?
   
   # Wait for script completion and verify variables for dependent scripts
   case "$base" in
     "01-partition")
-      if ! wait_for_script_completion "01-partition" "DEVICE" "ROOT" "EFI"; then
-        err "01-partition step did not complete successfully"
+      if [[ $clean_rc -eq 0 ]]; then
+        if ! wait_for_script_completion "01-partition" "DEVICE" "ROOT" "EFI"; then
+          err "01-partition step did not complete successfully"
+          exit 1
+        fi
+      else
+        err "01-partition step failed (exit code: $clean_rc) - cannot proceed"
+        err "Please fix the partition issue and try again"
         exit 1
       fi
       ;;
   esac
+  
+  # Warn if script returned non-zero but don't exit (for non-critical scripts)
+  if [[ $clean_rc -ne 0 ]] && [[ "$base" != "01-partition" ]]; then
+    warn "${clean_script} returned non-zero; you may want to stop."
+  fi
 done
 
 msg "All done. Logs in: $LOGDIR"
