@@ -21,9 +21,10 @@ Modular scripts for installing minimal Guix OS on different platforms:
 
 ## Installation Philosophy
 
-**Minimal First, Customize Later**
+### Minimal First, Customize Later
 
 All installation scripts create a **truly minimal** bootable Guix system:
+
 - ✅ Base system packages only
 - ✅ User account with sudo access
 - ❌ No desktop environment
@@ -33,6 +34,7 @@ All installation scripts create a **truly minimal** bootable Guix system:
 **Why?** Get a working system fast (~10 min), boot into it (free of ISO!), then customize for your exact needs.
 
 **Workflow:**
+
 1. Install minimal Guix from ISO (scripts 01-04)
 2. Boot into installed system
 3. Customize using `guix-customize` tool or manual config edits
@@ -148,6 +150,7 @@ Designed for **Raspberry Pi 4** single-board computer:
 **After Boot:** Use customize tool + shared recipes
 
 **Why experimental?**
+
 - Cannot automate firmware addition (licensing)
 - Requires off-device image build (aarch64)
 - Smaller community, less testing
@@ -162,6 +165,7 @@ Designed for **Raspberry Pi 4** single-board computer:
 ### Automatic Region Detection
 
 Scripts detect your location and configure:
+
 - **Git repository mirrors** (for `guix pull`)
 - **Substitute servers** (for binary downloads)
 - **Channel configurations** (post-boot)
@@ -216,6 +220,7 @@ Where repo is cloned, get the shasum256 of the main `run-remote-steps.sh`
 **IMPORTANT**: Always get the checksum from the same source you'll download from!
 
 - **For testing/development**: Use `main` branch
+
 - **For stable releases**: Use a specific tag (e.g., `v0.1.3`)
 
 Substitute your command for pbcopy if not on a mac
