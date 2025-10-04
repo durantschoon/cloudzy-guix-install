@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 
+# Source mirror configuration for regional optimization
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../lib/mirrors.sh"
+
+# Get best mirrors for user's region
+get_mirrors
+
 export TMPDIR=/mnt/var/tmp
 mkdir -p "$TMPDIR" && chmod 1777 "$TMPDIR"
 rm -rf /var/guix/substitute-cache/* 2>/dev/null
@@ -38,7 +45,8 @@ export GIT_HTTP_MAX_REQUESTS=2
 export GIT_HTTP_LOW_SPEED_LIMIT=1000
 export GIT_HTTP_LOW_SPEED_TIME=60
 
-guix pull --commit="${GUIX_VERSION:-v1.4.0}"
+echo "Pulling Guix from configured mirror: $GUIX_GIT_URL"
+guix pull --url="$GUIX_GIT_URL" --commit="${GUIX_VERSION:-v1.4.0}"
 
 guix system init /mnt/etc/config.scm /mnt
 

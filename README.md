@@ -9,6 +9,7 @@ Modular scripts for installing minimal Guix OS on different platforms:
 
 - ⚡ **Quick Start Guide**: See [`QUICKSTART.md`](QUICKSTART.md) - Complete workflow from ISO to customized system
 - 🎨 **Customization Guide**: See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) - Add features after minimal install
+- 🌍 **Mirror Configuration**: See [`lib/mirrors.md`](lib/mirrors.md) - Optimize download speeds globally
 - 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
 - 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
 
@@ -99,6 +100,39 @@ Designed for Framework 13 laptops with existing Pop!_OS installations:
 
 ---
 
+## Global Mirror Optimization
+
+**Faster downloads worldwide** - The installation scripts automatically optimize download speeds by selecting the best mirrors for your region.
+
+### Automatic Region Detection
+
+Scripts detect your location and configure:
+- **Git repository mirrors** (for `guix pull`)
+- **Substitute servers** (for binary downloads)
+- **Channel configurations** (post-boot)
+
+### Supported Regions
+
+- 🇨🇳 **Asia/China**: SJTU, Tsinghua mirrors (10x+ faster in China)
+- 🇪🇺 **Europe**: Bordeaux build farm, Savannah
+- 🇺🇸 **Americas**: CI server, Bordeaux fallback
+- 🌍 **Global**: Official mirrors (default)
+
+### Manual Override
+
+```bash
+# Set region before installation
+export GUIX_REGION="asia"
+./run-remote-steps.sh
+
+# Or use custom mirrors
+export GUIX_GIT_URL="https://your-mirror.example.com/guix.git"
+```
+
+**Full documentation:** [`lib/mirrors.md`](lib/mirrors.md)
+
+---
+
 ## Architecture
 
 Both installation types share a common architecture:
@@ -114,7 +148,7 @@ Each installation step has two parts:
 
 Scripts 04-06 are identical across platforms (symlinked in `framework-dual/`):
 
-- `04-system-init`: Swap setup, Guix pull, system initialization
+- `04-system-init`: Swap setup, Guix pull (with mirror optimization), system initialization
 - `05-postinstall-console`: Root password, SSH setup
 - `06-postinstall-own-terminal`: Channel configuration (nonguix, etc.)
 

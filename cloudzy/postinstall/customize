@@ -144,9 +144,28 @@ add_nonguix_info() {
   info "  - Proprietary firmware (WiFi, graphics drivers)"
   info "  - Non-free software (Steam, Discord, etc.)"
   echo ""
-  info "To add nonguix channel, create ~/.config/guix/channels.scm:"
-  echo ""
-  cat <<'EOF'
+
+  # Source mirror configuration
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [[ -f "$SCRIPT_DIR/../../lib/common.sh" ]]; then
+    source "$SCRIPT_DIR/../../lib/common.sh"
+  fi
+
+  # Generate channels.scm with regional mirrors
+  local channels_file="$HOME/.config/guix/channels.scm"
+  mkdir -p "$(dirname "$channels_file")"
+
+  if ask_yes "Generate channels.scm with regional mirror optimization?" default_yes; then
+    generate_channels_scm > "$channels_file"
+    success "Created $channels_file with optimized mirrors"
+    echo ""
+    cat "$channels_file"
+    echo ""
+    info "Then run: guix pull && sudo guix system reconfigure /etc/config.scm"
+  else
+    info "To add nonguix channel manually, create ~/.config/guix/channels.scm:"
+    echo ""
+    cat <<'EOF'
 (cons* (channel
         (name 'nonguix)
         (url "https://gitlab.com/nonguix/nonguix")
@@ -158,8 +177,9 @@ add_nonguix_info() {
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
        %default-channels)
 EOF
-  echo ""
-  info "Then run: guix pull && sudo guix system reconfigure /etc/config.scm"
+    echo ""
+    info "Then run: guix pull && sudo guix system reconfigure /etc/config.scm"
+  fi
 }
 
 # Apply changes (reconfigure system)

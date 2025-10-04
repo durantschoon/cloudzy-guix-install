@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # lib/common.sh - Shared functions for Guix installation scripts
 
+# Source mirror configuration if available
+SCRIPT_DIR_COMMON="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR_COMMON/mirrors.sh" ]]; then
+  source "$SCRIPT_DIR_COMMON/mirrors.sh"
+fi
+
 # Get UUID of root partition
 get_root_uuid() {
   local root_device="${1:-$ROOT}"
@@ -115,6 +121,51 @@ generate_minimal_config_scm() {
  ;; Minimal services - add SSH, desktop, etc. after installation
  (services %base-services))
 EOF
+}
+
+# Generate channels.scm with configured mirrors
+# Usage: generate_channels_scm > ~/.config/guix/channels.scm
+generate_channels_scm() {
+  # Get mirrors if not already loaded
+  if [[ -z "${GUIX_GIT_URL:-}" ]]; then
+    get_mirrors >/dev/null 2>&1 || true
+  fi
+
+  local guix_url="${GUIX_GIT_URL:-https://git.savannah.gnu.org/git/guix.git}"
+  local nonguix_url="${NONGUIX_GIT_URL:-https://gitlab.com/nonguix/nonguix.git}"
+
+  cat <<EOF
+;; Guix channels configuration
+;; Generated with regional mirror optimization
+
+(list (channel
+        (name 'guix)
+        (url "$guix_url")
+        (branch "master"))
+      (channel
+        (name 'nonguix)
+        (url "$nonguix_url")
+        (branch "master")))
+EOF
+}
+
+# Generate substitute-urls list for config.scm
+# Usage: SUBSTITUTE_URLS_SCHEME=$(generate_substitute_urls)
+generate_substitute_urls() {
+  # Get mirrors if not already loaded
+  if [[ -z "${SUBSTITUTE_URLS:-}" ]]; then
+    get_mirrors >/dev/null 2>&1 || true
+  fi
+
+  local urls=("${SUBSTITUTE_URLS[@]:-https://ci.guix.gnu.org https://bordeaux.guix.gnu.org}")
+  local result="(list"
+
+  for url in "${urls[@]}"; do
+    result="$result \"$url\""
+  done
+
+  result="$result)"
+  echo "$result"
 }
 
 # Generate base Guix config.scm (backward compatibility)
