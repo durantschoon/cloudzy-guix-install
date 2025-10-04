@@ -1,0 +1,1 @@
+../../cloudzy/install/04-system-init-clean.sh

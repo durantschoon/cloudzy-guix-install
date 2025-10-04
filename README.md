@@ -1,16 +1,53 @@
-# cloudzy-guix-install
+# Guix Installation Scripts
 
-Status: this set of scripts was not completed (ran out of time, so I'm choosing a different path)
+Modular scripts for installing minimal Guix OS on different platforms:
 
-## ⚠️ CRITICAL WARNING
+- **`cloudzy/`** - VPS fresh install (Cloudzy and similar providers)
+- **`framework-dual/`** - Framework 13 dual-boot with Pop!_OS
 
-**THIS SCRIPT WILL DESTROY ALL DATA ON THE TARGET DEVICE!**
+## Quick Navigation
 
-This installation script is designed for **fresh VPS instances** where you want to completely replace the existing system with Guix. It will:
+- ⚡ **Quick Start Guide**: See [`QUICKSTART.md`](QUICKSTART.md) - Complete workflow from ISO to customized system
+- 🎨 **Customization Guide**: See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) - Add features after minimal install
+- 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
+- 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
+
+---
+
+## Installation Philosophy
+
+**Minimal First, Customize Later**
+
+All installation scripts create a **truly minimal** bootable Guix system:
+- ✅ Base system packages only
+- ✅ User account with sudo access
+- ❌ No desktop environment
+- ❌ No SSH server
+- ❌ No extra packages
+
+**Why?** Get a working system fast (~10 min), boot into it (free of ISO!), then customize for your exact needs.
+
+**Workflow:**
+1. Install minimal Guix from ISO (scripts 01-04)
+2. Boot into installed system
+3. Customize using `guix-customize` tool or manual config edits
+
+See [`QUICKSTART.md`](QUICKSTART.md) for complete workflow.
+
+---
+
+## Installation Types
+
+### 1. VPS Fresh Install (Cloudzy)
+
+**⚠️ THIS WILL DESTROY ALL DATA ON THE TARGET DEVICE!**
+
+Designed for **fresh VPS instances** where you want to completely replace the existing system with Guix. It will:
 
 - **Wipe the entire disk** and create new partitions
 - **Destroy all existing data** on the target device
-- **Replace the operating system** with Guix
+- **Replace the operating system** with minimal Guix
+- **No SSH/desktop** until you customize after boot
 
 ### ✅ **Safe to Use When:**
 
@@ -35,23 +72,51 @@ This installation script is designed for **fresh VPS instances** where you want 
 
 **If you're not absolutely certain you're in the right situation, STOP NOW!**
 
+**Installation:** See [`cloudzy/README.md`](cloudzy/README.md)
+**After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add SSH/packages
+
 ---
 
-## Script Overview
+### 2. Framework 13 Dual-Boot
 
-This installation process consists of several scripts that work together to set up a complete Guix system:
+**Safe dual-boot installation alongside existing Pop!_OS.**
 
-- **`01-partition.sh`**: **DESTRUCTIVE OPERATION** - Automatically detects the primary storage device (supports /dev/sda, /dev/vda, /dev/xvda, /dev/nvme0n1, /dev/nvme1n1, /dev/sdb, /dev/vdb) or uses user-specified DEVICE environment variable. Includes safety warnings for wrong environments. Creates a GPT partition table with EFI boot partition (512MB) and root partition (remaining space). Validates device exists before proceeding and formats partitions.
+Designed for Framework 13 laptops with existing Pop!_OS installations:
 
-- **`02-mount-bind.sh`**: Mounts the root partition, copies the Guix store from the ISO to the target system, and sets up bind mounts to redirect `/gnu` and `/var/guix` to the target filesystem. Validates that required device variables are set by previous scripts.
+- **Preserves** existing Pop!_OS installation
+- **Reuses** existing EFI System Partition
+- **Creates** new Guix partition in free space
+- **Shares** bootloader with Pop!_OS
 
-- **`03-config-write.sh`**: Generates a complete Guix system configuration file (`/mnt/etc/config.scm`) with user-provided variables (hostname, timezone, user account, etc.) and replaces placeholders with actual values. Automatically detects BIOS/UEFI boot mode and configures the appropriate bootloader. Supports configurable desktop environments (GNOME, Xfce, MATE, LXQt, or none for server mode). Validates all required environment variables are set before proceeding. Includes SSH service and essential packages.
+**Prerequisites:**
 
-- **`04-system-init.sh`**: Sets up configurable swap space (default 4G), configures Git for slow connections, pulls the specified Guix version, and initializes the new system. Validates that the configuration file exists before proceeding. This is the main installation step that creates the bootable Guix system.
+- Existing Pop!_OS installation
+- At least 40-60GB free space (unallocated)
+- Backup of important data
 
-- **`05-postinstall-console.sh`**: Post-installation script for console access. Sets the root password and starts the SSH daemon with clear instructions on how to connect remotely. Provides IP address discovery commands and SSH connection examples.
+**Installation:** See [`framework-dual/README.md`](framework-dual/README.md)
+**After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add desktop/WiFi
 
-- **`06-postinstall-own-terminal.sh`**: Post-installation script for remote terminal access. Configures additional Guix channels (including nonguix for proprietary software) and performs a system reconfigure. Provides guidance on installing additional packages and examples of nonguix packages.
+---
+
+## Architecture
+
+Both installation types share a common architecture:
+
+### Script Structure
+
+Each installation step has two parts:
+
+- **`*-warnings.sh`**: Pre-flight checks, variable validation, user confirmation
+- **`*-clean.sh`**: Actual implementation (partition, mount, configure, install)
+
+### Shared Components
+
+Scripts 04-06 are identical across platforms (symlinked in `framework-dual/`):
+
+- `04-system-init`: Swap setup, Guix pull, system initialization
+- `05-postinstall-console`: Root password, SSH setup
+- `06-postinstall-own-terminal`: Channel configuration (nonguix, etc.)
 
 ## Preparation
 

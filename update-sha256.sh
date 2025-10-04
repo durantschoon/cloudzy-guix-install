@@ -9,11 +9,12 @@ echo ""
 # Generate checksums for all warning and clean scripts
 declare -A checksums
 
-for file in *-warnings.sh *-clean.sh; do
+for file in cloudzy/install/*-warnings.sh cloudzy/install/*-clean.sh; do
   if [[ -f "$file" ]]; then
     checksum=$(shasum -a 256 "$file" | cut -d' ' -f1)
-    checksums["$file"]="$checksum"
-    echo "  $file: $checksum"
+    basename_file=$(basename "$file")
+    checksums["cloudzy/install/$basename_file"]="$checksum"
+    echo "  cloudzy/install/$basename_file: $checksum"
   fi
 done
 
@@ -30,9 +31,13 @@ declare -A SHA256=(
 EOF
 
 # Add warning scripts
-for file in *-warnings.sh; do
-  if [[ -f "$file" && -n "${checksums[$file]:-}" ]]; then
-    echo "  [\"$file\"]=\"${checksums[$file]}\"" >> /tmp/sha256_block.txt
+for file in cloudzy/install/*-warnings.sh; do
+  if [[ -f "$file" ]]; then
+    basename_file=$(basename "$file")
+    full_path="cloudzy/install/$basename_file"
+    if [[ -n "${checksums[$full_path]:-}" ]]; then
+      echo "  [\"$full_path\"]=\"${checksums[$full_path]}\"" >> /tmp/sha256_block.txt
+    fi
   fi
 done
 
@@ -40,9 +45,13 @@ echo "" >> /tmp/sha256_block.txt
 echo "  # Clean scripts" >> /tmp/sha256_block.txt
 
 # Add clean scripts
-for file in *-clean.sh; do
-  if [[ -f "$file" && -n "${checksums[$file]:-}" ]]; then
-    echo "  [\"$file\"]=\"${checksums[$file]}\"" >> /tmp/sha256_block.txt
+for file in cloudzy/install/*-clean.sh; do
+  if [[ -f "$file" ]]; then
+    basename_file=$(basename "$file")
+    full_path="cloudzy/install/$basename_file"
+    if [[ -n "${checksums[$full_path]:-}" ]]; then
+      echo "  [\"$full_path\"]=\"${checksums[$full_path]}\"" >> /tmp/sha256_block.txt
+    fi
   fi
 done
 
@@ -108,8 +117,12 @@ echo "✓ Updated run-remote-steps.sh with new SHA256 checksums"
 echo "✓ Backup saved as run-remote-steps.sh.backup"
 echo ""
 echo "Summary of checksums:"
-for file in *-warnings.sh *-clean.sh; do
-  if [[ -f "$file" && -n "${checksums[$file]:-}" ]]; then
-    echo "  $file: ${checksums[$file]}"
+for file in cloudzy/install/*-warnings.sh cloudzy/install/*-clean.sh; do
+  if [[ -f "$file" ]]; then
+    basename_file=$(basename "$file")
+    full_path="cloudzy/install/$basename_file"
+    if [[ -n "${checksums[$full_path]:-}" ]]; then
+      echo "  $full_path: ${checksums[$full_path]}"
+    fi
   fi
 done

@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+# Framework 13 Laptop Customization Tool
+# Optimized for Framework 13 dual-boot with Pop!_OS
+
+set -euo pipefail
+
+CONFIG_FILE="/etc/config.scm"
+BACKUP_DIR="$HOME/.config/guix-customize/backups"
+
+# Colors for output
+msg() { printf "\n\033[1;34m==> %s\033[0m\n" "$*"; }
+warn() { printf "\n\033[1;33m[warn]\033[0m %s\n" "$*"; }
+err() { printf "\n\033[1;31m[err]\033[0m  %s\n" "$*"; }
+info() { printf "  %s\n" "$*"; }
+
+ask_yes() {
+  local prompt="$1"
+  read -r -p "$prompt [y/N] " ans
+  [[ "$ans" =~ ^[Yy]$ ]]
+}
+
+# Backup current config
+backup_config() {
+  mkdir -p "$BACKUP_DIR"
+  local backup_file="$BACKUP_DIR/config.scm.$(date +%Y%m%d-%H%M%S)"
+  cp "$CONFIG_FILE" "$backup_file"
+  info "Backed up config to: $backup_file"
+}
+
+# Add SSH service
+add_ssh() {
+  msg "Adding SSH Service"
+
+  if grep -q "openssh-service-type" "$CONFIG_FILE"; then
+    warn "SSH service already configured"
+    return
+  fi
+
+  backup_config
+
+  # Add ssh module if not present
+  if ! grep -q "(gnu services ssh)" "$CONFIG_FILE"; then
+    sed -i '/^(use-modules/a\             (gnu services ssh)' "$CONFIG_FILE"
+  fi
+
+  # Add SSH service to services list
+  sed -i 's|(services %base-services)|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services))|' "$CONFIG_FILE"
+
+  info "✓ SSH service added"
+  info "After reconfigure, SSH will be available on port 22"
+}
+
+# Add desktop environment
+add_desktop() {
+  msg "Desktop Environment Selection"
+  echo ""
+  echo "Available desktop environments:"
+  echo "  1) GNOME   - Full-featured, modern desktop"
+  echo "  2) Xfce    - Lightweight, traditional desktop"
+  echo "  3) MATE    - Classic GNOME 2 experience"
+  echo "  4) LXQt    - Very lightweight, minimal resources"
+  echo "  0) Cancel"
+  echo ""
+  read -r -p "Select desktop [1-4, 0 to cancel]: " choice
+
+  case "$choice" in
+    1) desktop="gnome"; service="gnome-desktop-service-type" ;;
+    2) desktop="xfce"; service="xfce-desktop-service-type" ;;
+    3) desktop="mate"; service="mate-desktop-service-type" ;;
+    4) desktop="lxqt"; service="lxqt-desktop-service-type" ;;
+    0) info "Cancelled"; return ;;
+    *) err "Invalid choice"; return 1 ;;
+  esac
+
+  if grep -q "desktop-service-type" "$CONFIG_FILE"; then
+    warn "Desktop environment already configured"
+    return
+  fi
+
+  backup_config
+
+  # Add desktop module if not present
+  if ! grep -q "(gnu services desktop)" "$CONFIG_FILE"; then
+    sed -i '/^(use-modules/a\             (gnu services desktop)' "$CONFIG_FILE"
+  fi
+
+  # Add desktop service
+  if grep -q "services %base-services" "$CONFIG_FILE"; then
+    # Simple services list
+    sed -i "s|(services %base-services)|(services\n  (append\n   (list (service $service))\n   %base-services))|" "$CONFIG_FILE"
+  else
+    # Already has append, add to list
+    sed -i "s|(list |(list (service $service)\n         |" "$CONFIG_FILE"
+  fi
+
+  info "✓ $desktop desktop added"
+}
+
+# Add common packages
+add_packages() {
+  msg "Adding Common Packages"
+
+  if grep -q "specification->package" "$CONFIG_FILE"; then
+    warn "Custom packages already defined"
+    return
+  fi
+
+  backup_config
+
+  # Replace minimal packages with useful defaults
+  sed -i 's|(packages %base-packages)|(packages\n  (append (list (specification->package "emacs")\n                (specification->package "git")\n                (specification->package "vim")\n                (specification->package "htop")\n                (specification->package "curl")\n                (specification->package "wget"))\n          %base-packages))|' "$CONFIG_FILE"
+
+  info "✓ Added: emacs, git, vim, htop, curl, wget"
+}
+
+# Add Framework 13 specific customizations
+add_framework_hardware() {
+  msg "Adding Framework 13 Hardware Support"
+
+  if grep -q "linux-firmware" "$CONFIG_FILE"; then
+    warn "Hardware firmware already configured"
+    return
+  fi
+
+  backup_config
+
+  # Add firmware module
+  if ! grep -q "(gnu packages linux)" "$CONFIG_FILE"; then
+    sed -i '/^(use-modules/a\             (gnu packages linux)' "$CONFIG_FILE"
+  fi
+
+  # Add firmware to operating-system
+  sed -i '/^(operating-system/a\ (firmware (list linux-firmware))' "$CONFIG_FILE"
+
+  info "✓ Added WiFi/Bluetooth firmware (linux-firmware)"
+  info "Note: For best results, also add nonguix channel for proprietary firmware"
+}
+
+# Add nonguix channel info
+add_nonguix_info() {
+  msg "Nonguix Channel (for proprietary software/firmware)"
+  echo ""
+  info "Nonguix provides:"
+  info "  - Proprietary firmware (WiFi, graphics drivers)"
+  info "  - Non-free software (Steam, Discord, etc.)"
+  echo ""
+  info "To add nonguix channel, create ~/.config/guix/channels.scm:"
+  echo ""
+  cat <<'EOF'
+(cons* (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (branch "master")
+        (introduction
+         (make-channel-introduction
+          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+          (openpgp-fingerprint
+           "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+       %default-channels)
+EOF
+  echo ""
+  info "Then run: guix pull && sudo guix system reconfigure /etc/config.scm"
+}
+
+# Apply changes (reconfigure system)
+reconfigure() {
+  msg "System Reconfigure"
+  echo ""
+  info "This will apply all changes to your system."
+  info "Current config: $CONFIG_FILE"
+  echo ""
+
+  if ! ask_yes "Proceed with system reconfigure?"; then
+    info "Cancelled"
+    return
+  fi
+
+  sudo guix system reconfigure "$CONFIG_FILE"
+}
+
+# Main menu
+main_menu() {
+  while true; do
+    clear
+    msg "Framework 13 Laptop Customization Tool"
+    echo ""
+    echo "Platform: Framework 13 (Dual-boot with Pop!_OS)"
+    echo "Current config: $CONFIG_FILE"
+    echo ""
+    echo "Hardware Support:"
+    echo "  4) Add Framework 13 hardware support (WiFi/BT firmware)"
+    echo ""
+    echo "Desktop Environment:"
+    echo "  2) Add desktop environment (GNOME/Xfce/MATE/LXQt)"
+    echo ""
+    echo "Essential Services:"
+    echo "  1) Add SSH service (optional for laptop)"
+    echo "  3) Add common packages (git, vim, emacs, etc.)"
+    echo ""
+    echo "Advanced:"
+    echo "  5) Show nonguix channel info (proprietary software)"
+    echo ""
+    echo "Actions:"
+    echo "  r) Apply changes (reconfigure system)"
+    echo "  e) Edit config manually"
+    echo "  v) View current config"
+    echo "  q) Quit"
+    echo ""
+    info "Tip: Start with option 4 (WiFi firmware) to get network connectivity"
+    echo ""
+    read -r -p "Select option: " choice
+
+    case "$choice" in
+      1) add_ssh; read -p "Press Enter to continue..." ;;
+      2) add_desktop; read -p "Press Enter to continue..." ;;
+      3) add_packages; read -p "Press Enter to continue..." ;;
+      4) add_framework_hardware; read -p "Press Enter to continue..." ;;
+      5) add_nonguix_info; read -p "Press Enter to continue..." ;;
+      r) reconfigure; read -p "Press Enter to continue..." ;;
+      e) ${EDITOR:-nano} "$CONFIG_FILE"; read -p "Press Enter to continue..." ;;
+      v) less "$CONFIG_FILE"; ;;
+      q) msg "Goodbye!"; exit 0 ;;
+      *) err "Invalid option"; sleep 1 ;;
+    esac
+  done
+}
+
+# Check if running as root
+if [[ $EUID -eq 0 ]]; then
+  err "Do not run this script as root"
+  info "Run as normal user (will prompt for sudo when needed)"
+  exit 1
+fi
+
+# Check if config exists
+if [[ ! -f "$CONFIG_FILE" ]]; then
+  err "Config file not found: $CONFIG_FILE"
+  info "Are you running this on an installed Guix system?"
+  exit 1
+fi
+
+# Run main menu
+main_menu
