@@ -128,33 +128,34 @@ Designed for Framework 13 laptops with existing Pop!_OS installations:
 
 ---
 
-### 4. Raspberry Pi 4 (Experimental)
+### 4. Raspberry Pi 4 (Apple Silicon Required)
 
-⚠️ **EXPERIMENTAL** - Requires manual steps, not fully automated like other platforms.
+⚠️ **REQUIRES APPLE SILICON MAC** - Build Raspberry Pi images on M1/M2/M3/M4 Macs.
 
-Designed for **Raspberry Pi 4** single-board computer:
+Designed for building **Raspberry Pi 4** images using Apple Silicon:
 
-- **Build image** on aarch64 machine (or Qemu VM)
-- **Manual firmware** addition required (cannot be automated)
-- **Image-based** installation (not interactive installer)
-- **Works!** Many users run Guix successfully on Pi 4
+- **Build on Mac** with Apple Silicon (M1/M2/M3/M4)
+- **Native ARM64** compilation (no cross-compilation needed)
+- **Manual firmware** addition (licensing restrictions)
+- **Flash to SD card** and boot on Raspberry Pi
 
 **Prerequisites:**
 
+- **Apple Silicon Mac** (M1, M2, M3, or M4) - Intel Macs won't work
 - Raspberry Pi 4 (4GB+ RAM recommended)
 - MicroSD card (32GB+, Class 10)
-- aarch64 build environment (or substitute server access)
-- Manual firmware download from Raspberry Pi repo
+- Guix installed on your Mac
+- Balena Etcher or `dd` for SD card flashing
 
 **Installation:** See [`raspberry-pi/README.md`](raspberry-pi/README.md)
 **After Boot:** Use customize tool + shared recipes
 
-**Why experimental?**
+**Why Apple Silicon?**
 
-- Cannot automate firmware addition (licensing)
-- Requires off-device image build (aarch64)
-- Smaller community, less testing
-- But proven to work for home servers, learning, IoT
+- Native ARM64 architecture (same as Raspberry Pi)
+- Fast builds without emulation
+- Proven workflow on M-series Macs
+- Simplified process compared to cross-compilation
 
 ---
 

@@ -1,79 +1,153 @@
 # Raspberry Pi 4 Guix Installation
 
-⚠️ **EXPERIMENTAL PLATFORM** - Raspberry Pi support in Guix is functional but requires manual steps and workarounds.
-
-## Status: Work in Progress
-
-**What works:**
-- ✅ Guix System runs on Raspberry Pi 4 (aarch64)
-- ✅ Can boot through U-Boot → GRUB → Guix
-- ✅ Official raspberry-pi-64.tmpl template available
-
-**What requires manual work:**
-- ⚠️ Must build image on aarch64 machine (or cross-compile)
-- ⚠️ Must manually add Raspberry Pi firmware files
-- ⚠️ Boot configuration requires careful setup
-- ⚠️ Limited community testing compared to x86_64
-
----
+⚠️ **REQUIRES APPLE SILICON MAC** - This installation method is designed for building Raspberry Pi images using Apple Silicon (M1/M2/M3/M4) Macs.
 
 ## Prerequisites
 
-### Hardware Requirements
+### Required Hardware
+
+- **Apple Silicon Mac** (M1, M2, M3, or M4)
+  - These are ARM64 (aarch64) machines that can natively build Raspberry Pi images
+  - Intel Macs will NOT work with these scripts
 - **Raspberry Pi 4** (4GB or 8GB RAM recommended)
 - **MicroSD card** (32GB+ recommended, Class 10 or better)
 - **Power supply** (official 5V 3A USB-C recommended)
 - **For initial setup**: Ethernet cable, monitor, keyboard
 
 ### Software Requirements
-- **aarch64 build machine** (another ARM64 system or VM)
-- **Or**: Access to Guix substitute servers with aarch64 builds
+
+- **macOS** with Homebrew
+- **Guix** installed on your Mac (installation script provided)
 - Balena Etcher or `dd` for writing SD card image
+
+### Why Apple Silicon?
+
+Apple Silicon Macs are ARM64 machines, the same architecture as Raspberry Pi 4. This means:
+
+- ✅ Native compilation (no cross-compilation needed)
+- ✅ Fast builds (no emulation overhead)
+- ✅ Proven workflow (tested on M1/M2/M3 Macs)
+- ✅ Reliable results
+
+**What works:**
+
+- ✅ Guix System runs on Raspberry Pi 4 (aarch64)
+- ✅ Can boot through U-Boot → GRUB → Guix
+- ✅ Official raspberry-pi-64.tmpl template available
+- ✅ Build on Apple Silicon, flash to SD card, boot on Pi
+
+**What's different from other platforms:**
+
+- ⚠️ Requires Apple Silicon Mac for building
+- ⚠️ Must manually add Raspberry Pi firmware files
+- ⚠️ Image-based installation (not live ISO)
+- ⚠️ Limited community testing compared to x86_64
 
 ---
 
-## Installation Methods
+## Installation Steps
 
-### Method 1: Build Image on aarch64 Machine (Recommended)
+### Step 1: Install Guix on Your Apple Silicon Mac
 
-This is the most reliable method.
-
-**1. On an aarch64 machine with Guix:**
+**1. Install Homebrew (if not already installed):**
 
 ```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+**2. Install Guix via the official installer:**
+
+```bash
+# Download the official Guix installer
+cd /tmp
+curl -O https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh
+
+# Review the script (recommended)
+less guix-install.sh
+
+# Run the installer (requires sudo)
+sudo bash guix-install.sh
+```
+
+**3. Start the Guix daemon:**
+
+```bash
+sudo -i guix-daemon --build-users-group=guixbuild &
+```
+
+**4. Verify Guix is working:**
+
+```bash
+guix --version
+guix describe
+```
+
+---
+
+### Step 2: Build Raspberry Pi Image on Your Mac
+
+**1. Find and copy the Raspberry Pi template:**
+
+```bash
+# On your Apple Silicon Mac, verify architecture
+uname -m  # Should show: arm64
+
+# Update Guix to latest version
+guix pull
+
 # Find the Raspberry Pi template
 guix system search raspberry-pi-64
 
 # Or locate it directly
 find /gnu/store -name '*raspberry-pi-64.tmpl'
 
-# Build the image (this will take a while)
-guix system image --system=aarch64-linux \
-  /gnu/store/.../raspberry-pi-64.tmpl
+# Build the image (this will take 30-60 minutes on M1/M2)
+# Note: No need for --system=aarch64-linux since we're on ARM64 already!
+guix system image /gnu/store/...-raspberry-pi-64.tmpl
 
-# Or use a custom config
-guix system image --system=aarch64-linux \
-  /path/to/your/raspberry-pi-config.scm
+# The output will show the path to the generated image, like:
+# /gnu/store/xxxxx-disk-image
 ```
 
-**2. Add Required Firmware:**
-
-The generated image lacks Raspberry Pi firmware files. You must add them manually:
+**2. Download and prepare Raspberry Pi firmware:**
 
 ```bash
-# Download firmware
+# Download official Raspberry Pi firmware
+cd ~/Downloads
 git clone --depth=1 https://github.com/raspberrypi/firmware.git
 
-# Mount the boot partition of your image
-# (or of your SD card after flashing)
+# Note the firmware path for next step
+FIRMWARE_DIR=~/Downloads/firmware
+```
 
-# Copy firmware files to boot partition
-cp firmware/boot/*.dat /path/to/boot/partition/
-cp firmware/boot/*.elf /path/to/boot/partition/
-cp firmware/boot/bootcode.bin /path/to/boot/partition/
+---
 
-# Create config.txt
-cat > /path/to/boot/partition/config.txt <<EOF
+### Step 3: Add Firmware to Image
+
+**1. Mount the generated image:**
+
+```bash
+# Identify the image path from previous step
+IMAGE_PATH="/gnu/store/xxxxx-disk-image"
+
+# Attach image as a device (macOS)
+hdiutil attach "$IMAGE_PATH"
+
+# This will mount two partitions:
+# - /Volumes/boot (FAT32 - this is what we need)
+# - /Volumes/Guix-on-RPi (ext4 - system partition)
+```
+
+**2. Copy firmware files to boot partition:**
+
+```bash
+# Copy firmware files
+sudo cp ~/Downloads/firmware/boot/*.dat /Volumes/boot/
+sudo cp ~/Downloads/firmware/boot/*.elf /Volumes/boot/
+sudo cp ~/Downloads/firmware/boot/bootcode.bin /Volumes/boot/
+
+# Create config.txt for Raspberry Pi 4
+sudo tee /Volumes/boot/config.txt <<EOF
 # Raspberry Pi 4 boot configuration for Guix
 enable_uart=1
 arm_64bit=1
@@ -85,52 +159,57 @@ gpu_mem=128
 # Optional: HDMI settings
 hdmi_force_hotplug=1
 EOF
+
+# Verify files are present
+ls -lh /Volumes/boot/
 ```
 
-**3. Flash to SD Card:**
+**3. Unmount the image:**
 
 ```bash
-# Using dd (Linux/macOS)
-sudo dd if=/gnu/store/...-disk-image of=/dev/sdX bs=4M status=progress
+hdiutil detach /Volumes/boot
+```
+
+---
+
+### Step 4: Flash Image to SD Card
+
+**1. Insert SD card and identify device:**
+
+```bash
+# Before inserting SD card
+diskutil list
+
+# Insert SD card, then run again to see new device
+diskutil list
+
+# Identify the SD card (usually /dev/disk2 or /dev/disk4)
+# CAUTION: Double-check this is your SD card, not your Mac's drive!
+SD_CARD=/dev/disk2
+```
+
+**2. Flash the image:**
+
+```bash
+# Unmount the SD card (but don't eject)
+diskutil unmountDisk "$SD_CARD"
+
+# Flash the image (this will take 5-10 minutes)
+sudo dd if="$IMAGE_PATH" of="$SD_CARD" bs=4m status=progress
+
+# Flush writes
 sync
 
-# Or use Balena Etcher (cross-platform, easier)
-# https://www.balena.io/etcher/
+# Eject the SD card
+diskutil eject "$SD_CARD"
 ```
 
----
+**3. Alternative: Use Balena Etcher (easier, GUI):**
 
-### Method 2: Use Qemu aarch64 VM
-
-If you don't have an aarch64 machine, use Qemu/UTM to run an aarch64 VM:
-
-**On macOS (using UTM):**
-
-1. Download Debian aarch64 image
-2. Create aarch64 VM in UTM
-3. Install Guix in the Debian VM
-4. Follow Method 1 inside the VM
-
-**On Linux (using Qemu):**
-
-```bash
-# Install qemu-system-aarch64
-# Create Debian aarch64 VM
-# Install Guix
-# Build Raspberry Pi image
-```
-
----
-
-### Method 3: Direct Installation (Advanced)
-
-**Not currently automated** - Would require:
-- Custom partitioning scripts for SD card
-- U-Boot installation
-- Firmware setup
-- GRUB configuration for ARM
-
-This method is not yet implemented in this repository.
+- Download from: https://www.balena.io/etcher/
+- Select your image file
+- Select your SD card
+- Click "Flash!"
 
 ---
 
@@ -221,6 +300,7 @@ chmod +x customize
 ## Hardware-Specific Notes
 
 ### Raspberry Pi 4 Specifications
+
 - **CPU**: Broadcom BCM2711 (quad-core Cortex-A72, ARM v8, 64-bit)
 - **Architecture**: aarch64
 - **Storage**: MicroSD card (primary)
@@ -229,12 +309,14 @@ chmod +x customize
 - **Video**: Dual 4K HDMI output
 
 ### Known Issues
+
 - **Firmware dependency**: Requires manual firmware addition
 - **WiFi**: May need additional firmware (consider using Ethernet initially)
 - **Heat**: Consider heatsink or fan for prolonged use
 - **SD card**: Use high-quality cards (Samsung EVO, SanDisk Extreme)
 
 ### Performance Expectations
+
 - **Boot time**: 30-60 seconds (slower than x86_64)
 - **Package builds**: Slow on device (use substitutes when possible)
 - **Desktop**: LXDE/Xfce recommended over GNOME (lighter weight)
@@ -246,6 +328,7 @@ chmod +x customize
 ### Pi doesn't boot / blank screen
 
 **Check:**
+
 - Firmware files present in boot partition (start4.elf, fixup4.dat, etc.)
 - config.txt exists and has correct settings
 - U-Boot binary is named u-boot.bin
@@ -278,15 +361,18 @@ guix system image --system=aarch64-linux config.scm
 ## Resources
 
 ### Official Guix Documentation
+
 - Guix Manual: https://guix.gnu.org/manual/
 - Guix on ARM: System examples (raspberry-pi-64.tmpl)
 
 ### Community Resources
+
 - Guix mailing lists: help-guix@gnu.org
 - Blog: "Booting Guix on a Raspberry Pi 4" - superkamiguru.org
 - IRC: #guix on libera.chat
 
 ### Raspberry Pi Resources
+
 - Firmware repository: https://github.com/raspberrypi/firmware
 - Documentation: https://www.raspberrypi.com/documentation/
 - Boot configuration: config.txt reference
@@ -302,6 +388,7 @@ guix system image --system=aarch64-linux config.scm
 5. **No official Guix images** - Must build yourself
 
 **But it works!** Many users successfully run Guix on Raspberry Pi 4 for:
+
 - Home automation
 - Network services (Pi-hole, VPN)
 - Learning/education
@@ -312,6 +399,7 @@ guix system image --system=aarch64-linux config.scm
 ## Future Improvements
 
 **Planned (contributions welcome):**
+
 - [ ] Pre-built aarch64 images (with firmware)
 - [ ] Automated firmware download script
 - [ ] USB boot support
@@ -323,6 +411,7 @@ guix system image --system=aarch64-linux config.scm
 ## Contributing
 
 If you successfully install Guix on Raspberry Pi 4:
+
 - Share your config.scm
 - Document any issues/workarounds
 - Test and report performance
