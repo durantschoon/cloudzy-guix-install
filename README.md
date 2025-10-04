@@ -5,6 +5,7 @@ Modular scripts for installing minimal Guix OS on different platforms:
 - **`cloudzy/`** - VPS fresh install (Cloudzy and similar providers)
 - **`framework/`** - Framework 13 single-boot (Guix only)
 - **`framework-dual/`** - Framework 13 dual-boot with Pop!_OS
+- **`raspberry-pi/`** - Raspberry Pi 4 (aarch64, experimental)
 
 ## Quick Navigation
 
@@ -14,6 +15,7 @@ Modular scripts for installing minimal Guix OS on different platforms:
 - 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
 - 💻 **Framework 13 Single-Boot**: See [`framework/README.md`](framework/README.md)
 - 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
+- 🥧 **Raspberry Pi 4** (Experimental): See [`raspberry-pi/README.md`](raspberry-pi/README.md)
 
 ---
 
@@ -121,6 +123,35 @@ Designed for Framework 13 laptops with existing Pop!_OS installations:
 
 **Installation:** See [`framework-dual/README.md`](framework-dual/README.md)
 **After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add desktop/WiFi
+
+---
+
+### 4. Raspberry Pi 4 (Experimental)
+
+⚠️ **EXPERIMENTAL** - Requires manual steps, not fully automated like other platforms.
+
+Designed for **Raspberry Pi 4** single-board computer:
+
+- **Build image** on aarch64 machine (or Qemu VM)
+- **Manual firmware** addition required (cannot be automated)
+- **Image-based** installation (not interactive installer)
+- **Works!** Many users run Guix successfully on Pi 4
+
+**Prerequisites:**
+
+- Raspberry Pi 4 (4GB+ RAM recommended)
+- MicroSD card (32GB+, Class 10)
+- aarch64 build environment (or substitute server access)
+- Manual firmware download from Raspberry Pi repo
+
+**Installation:** See [`raspberry-pi/README.md`](raspberry-pi/README.md)
+**After Boot:** Use customize tool + shared recipes
+
+**Why experimental?**
+- Cannot automate firmware addition (licensing)
+- Requires off-device image build (aarch64)
+- Smaller community, less testing
+- But proven to work for home servers, learning, IoT
 
 ---
 
