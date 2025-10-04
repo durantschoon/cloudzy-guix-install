@@ -5,7 +5,7 @@ Modular scripts for installing minimal Guix OS on different platforms:
 - **`cloudzy/`** - VPS fresh install (Cloudzy and similar providers)
 - **`framework/`** - Framework 13 single-boot (Guix only)
 - **`framework-dual/`** - Framework 13 dual-boot with Pop!_OS
-- **`raspberry-pi/`** - Raspberry Pi 4 (aarch64, experimental)
+- **`raspberry-pi/`** - Raspberry Pi 3/4/5 (aarch64, experimental)
 
 ## Quick Navigation
 
@@ -15,7 +15,7 @@ Modular scripts for installing minimal Guix OS on different platforms:
 - 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
 - 💻 **Framework 13 Single-Boot**: See [`framework/README.md`](framework/README.md)
 - 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
-- 🥧 **Raspberry Pi 4** (Experimental): See [`raspberry-pi/README.md`](raspberry-pi/README.md)
+- 🥧 **Raspberry Pi 3/4/5** (Experimental): See [`raspberry-pi/README.md`](raspberry-pi/README.md)
 
 ---
 
@@ -128,21 +128,25 @@ Designed for Framework 13 laptops with existing Pop!_OS installations:
 
 ---
 
-### 4. Raspberry Pi 4 (Apple Silicon Required)
+### 4. Raspberry Pi (Apple Silicon Required)
 
 ⚠️ **REQUIRES APPLE SILICON MAC** - Build Raspberry Pi images on M1/M2/M3/M4 Macs.
 
-Designed for building **Raspberry Pi 4** images using Apple Silicon:
+Designed for building **Raspberry Pi 3/4/5** images using Apple Silicon:
 
 - **Build on Mac** with Apple Silicon (M1/M2/M3/M4)
 - **Native ARM64** compilation (no cross-compilation needed)
+- **Single image** works on Pi 3, 4, and 5 (all aarch64)
 - **Manual firmware** addition (licensing restrictions)
-- **Flash to SD card** and boot on Raspberry Pi
+- **Flash to SD card** and boot on any compatible Raspberry Pi
 
 **Prerequisites:**
 
 - **Apple Silicon Mac** (M1, M2, M3, or M4) - Intel Macs won't work
-- Raspberry Pi 4 (4GB+ RAM recommended)
+- **Raspberry Pi** (3, 4, or 5)
+  - Pi 5: 4GB+ recommended (best performance)
+  - Pi 4: 2GB+ works well
+  - Pi 3: 1GB (headless/server only)
 - MicroSD card (32GB+, Class 10)
 - Guix installed on your Mac
 - Balena Etcher or `dd` for SD card flashing
@@ -152,8 +156,9 @@ Designed for building **Raspberry Pi 4** images using Apple Silicon:
 
 **Why Apple Silicon?**
 
-- Native ARM64 architecture (same as Raspberry Pi)
+- Native ARM64 architecture (same as all Raspberry Pi models)
 - Fast builds without emulation
+- Build once, works on Pi 3, 4, and 5
 - Proven workflow on M-series Macs
 - Simplified process compared to cross-compilation
 

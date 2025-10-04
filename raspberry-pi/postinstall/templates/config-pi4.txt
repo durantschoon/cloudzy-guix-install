@@ -1,0 +1,42 @@
+# Raspberry Pi 4 boot configuration for Guix
+# BCM2711 - Cortex-A72 @ 1.8GHz, 2GB/4GB/8GB RAM
+
+# Enable UART for serial console access
+enable_uart=1
+
+# Force 64-bit mode (aarch64)
+arm_64bit=1
+
+# Use U-Boot as kernel
+kernel=u-boot.bin
+
+# GPU memory allocation (128MB for Pi 4)
+gpu_mem=128
+
+# Force HDMI hotplug (important for Pi 4)
+hdmi_force_hotplug=1
+
+# HDMI settings (optional, adjust as needed)
+# hdmi_group=2
+# hdmi_mode=82
+
+# Enable audio
+dtparam=audio=on
+
+# Enable I2C and SPI (optional, for GPIO projects)
+# dtparam=i2c_arm=on
+# dtparam=spi=on
+
+# Boot delay (optional, for troubleshooting)
+# boot_delay=1
+
+# Disable rainbow splash screen (saves boot time)
+disable_splash=1
+
+# USB settings (Pi 4 specific)
+# usb_max_current_enable=1
+
+# Overclock settings (optional, use with caution)
+# arm_freq=2000
+# gpu_freq=600
+# over_voltage=2

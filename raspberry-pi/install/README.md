@@ -50,7 +50,7 @@ Complete documentation for building Raspberry Pi images on Apple Silicon:
 - Build Raspberry Pi image natively (no emulation)
 - Add firmware files to image
 - Flash to SD card using `dd` or Balena Etcher
-- Boot on Raspberry Pi 4
+- Boot on Raspberry Pi 3, 4, or 5
 
 ### ✅ **Post-Installation Customization**
 
@@ -61,9 +61,10 @@ Complete documentation for building Raspberry Pi images on Apple Silicon:
 ### ✅ **Configuration Templates**
 
 - Based on Guix's official `raspberry-pi-64.tmpl`
-- Minimal working configuration
+- Model-specific config.txt templates for Pi 3, 4, and 5
 - U-Boot bootloader setup
 - Correct file system layout
+- Automated config setup script
 
 ### ✅ **macOS-Specific Commands**
 
@@ -150,6 +151,12 @@ On your Apple Silicon Mac:
 2. Image build + firmware integration script
 3. SD card detection and flashing script
 4. More configuration templates
+
+**New in this version:**
+
+- ✅ Model-specific config.txt templates (Pi 3, 4, 5)
+- ✅ Automated config setup script
+- ✅ Hardware-specific optimizations
 
 ---
 

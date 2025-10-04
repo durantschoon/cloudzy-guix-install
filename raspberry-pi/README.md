@@ -1,6 +1,16 @@
-# Raspberry Pi 4 Guix Installation
+# Raspberry Pi Guix Installation
 
 ⚠️ **REQUIRES APPLE SILICON MAC** - This installation method is designed for building Raspberry Pi images using Apple Silicon (M1/M2/M3/M4) Macs.
+
+## Supported Models
+
+This guide works for:
+
+- **Raspberry Pi 5** (recommended) - BCM2712, Cortex-A76 @ 2.4GHz, 4GB/8GB RAM
+- **Raspberry Pi 4** - BCM2711, Cortex-A72 @ 1.8GHz, 2GB/4GB/8GB RAM
+- **Raspberry Pi 3** (slower) - BCM2837, Cortex-A53 @ 1.2GHz, 1GB RAM
+
+All models are ARM64 (aarch64) and use the same installation process.
 
 ## Prerequisites
 
@@ -9,9 +19,15 @@
 - **Apple Silicon Mac** (M1, M2, M3, or M4)
   - These are ARM64 (aarch64) machines that can natively build Raspberry Pi images
   - Intel Macs will NOT work with these scripts
-- **Raspberry Pi 4** (4GB or 8GB RAM recommended)
+- **Raspberry Pi** (3, 4, or 5)
+  - Pi 5: 4GB+ RAM recommended for desktop use
+  - Pi 4: 2GB+ RAM (4GB/8GB for desktop)
+  - Pi 3: 1GB RAM (headless/lightweight only)
 - **MicroSD card** (32GB+ recommended, Class 10 or better)
-- **Power supply** (official 5V 3A USB-C recommended)
+- **Power supply**
+  - Pi 5: 5V 5A USB-C (27W recommended)
+  - Pi 4: 5V 3A USB-C
+  - Pi 3: 5V 2.5A Micro USB
 - **For initial setup**: Ethernet cable, monitor, keyboard
 
 ### Software Requirements
@@ -22,26 +38,32 @@
 
 ### Why Apple Silicon?
 
-Apple Silicon Macs are ARM64 machines, the same architecture as Raspberry Pi 4. This means:
+Apple Silicon Macs are ARM64 machines, the same architecture as all Raspberry Pi 3/4/5 models. This means:
 
 - ✅ Native compilation (no cross-compilation needed)
 - ✅ Fast builds (no emulation overhead)
 - ✅ Proven workflow (tested on M1/M2/M3 Macs)
-- ✅ Reliable results
+- ✅ Same binary works on Pi 3, 4, and 5 (all aarch64)
 
 **What works:**
 
-- ✅ Guix System runs on Raspberry Pi 4 (aarch64)
+- ✅ Guix System runs on Raspberry Pi 3, 4, and 5 (aarch64)
 - ✅ Can boot through U-Boot → GRUB → Guix
-- ✅ Official raspberry-pi-64.tmpl template available
-- ✅ Build on Apple Silicon, flash to SD card, boot on Pi
+- ✅ Official raspberry-pi-64.tmpl template (works for all models)
+- ✅ Build once on Apple Silicon, flash to any Pi model
 
 **What's different from other platforms:**
 
 - ⚠️ Requires Apple Silicon Mac for building
-- ⚠️ Must manually add Raspberry Pi firmware files
+- ⚠️ Must manually add Raspberry Pi firmware files (model-specific)
 - ⚠️ Image-based installation (not live ISO)
 - ⚠️ Limited community testing compared to x86_64
+
+**Performance expectations:**
+
+- **Pi 5**: 2-3x faster than Pi 4, can run GNOME smoothly
+- **Pi 4**: Good for Xfce/MATE, usable for light desktop work
+- **Pi 3**: Best for headless/server use, very slow for desktop
 
 ---
 
@@ -141,23 +163,49 @@ hdiutil attach "$IMAGE_PATH"
 **2. Copy firmware files to boot partition:**
 
 ```bash
-# Copy firmware files
+# Copy firmware files (same for all Pi models)
 sudo cp ~/Downloads/firmware/boot/*.dat /Volumes/boot/
 sudo cp ~/Downloads/firmware/boot/*.elf /Volumes/boot/
 sudo cp ~/Downloads/firmware/boot/bootcode.bin /Volumes/boot/
 
-# Create config.txt for Raspberry Pi 4
+# Create config.txt - CHOOSE YOUR MODEL:
+
+# Option 1: Use pre-made templates (recommended)
+# Copy the appropriate template for your Pi model:
+# For Pi 3: cp ~/Downloads/cloudzy-guix-install/raspberry-pi/postinstall/templates/config-pi3.txt /Volumes/boot/config.txt
+# For Pi 4: cp ~/Downloads/cloudzy-guix-install/raspberry-pi/postinstall/templates/config-pi4.txt /Volumes/boot/config.txt  
+# For Pi 5: cp ~/Downloads/cloudzy-guix-install/raspberry-pi/postinstall/templates/config-pi5.txt /Volumes/boot/config.txt
+
+# Option 2: Create manually (choose your model):
+
+# For Raspberry Pi 5:
+sudo tee /Volumes/boot/config.txt <<EOF
+# Raspberry Pi 5 boot configuration for Guix
+enable_uart=1
+arm_64bit=1
+kernel=u-boot.bin
+gpu_mem=128
+dtparam=pciex1
+dtparam=pciex1_gen=2
+EOF
+
+# For Raspberry Pi 4:
 sudo tee /Volumes/boot/config.txt <<EOF
 # Raspberry Pi 4 boot configuration for Guix
 enable_uart=1
 arm_64bit=1
 kernel=u-boot.bin
-
-# GPU memory (adjust as needed)
 gpu_mem=128
-
-# Optional: HDMI settings
 hdmi_force_hotplug=1
+EOF
+
+# For Raspberry Pi 3:
+sudo tee /Volumes/boot/config.txt <<EOF
+# Raspberry Pi 3 boot configuration for Guix
+enable_uart=1
+arm_64bit=1
+kernel=u-boot.bin
+gpu_mem=64
 EOF
 
 # Verify files are present
@@ -206,7 +254,7 @@ diskutil eject "$SD_CARD"
 
 **3. Alternative: Use Balena Etcher (easier, GUI):**
 
-- Download from: https://www.balena.io/etcher/
+- Download from: <https://www.balena.io/etcher/>
 - Select your image file
 - Select your SD card
 - Click "Flash!"
@@ -295,31 +343,95 @@ chmod +x customize
 # f - Install fonts
 ```
 
+### 4. Update Boot Configuration (if needed)
+
+If you need to change your Pi model's boot configuration:
+
+```bash
+# Copy the config setup script to your Pi
+# (from the templates directory in this repository)
+
+# Auto-detect your Pi model and setup config
+./setup-config.sh
+
+# Or specify your model manually
+./setup-config.sh pi4    # For Raspberry Pi 4
+./setup-config.sh pi5    # For Raspberry Pi 5
+./setup-config.sh pi3    # For Raspberry Pi 3
+```
+
 ---
 
 ## Hardware-Specific Notes
 
+### Raspberry Pi 5 Specifications
+
+- **CPU**: Broadcom BCM2712 (quad-core Cortex-A76 @ 2.4GHz, ARM v8, 64-bit)
+- **Architecture**: aarch64
+- **RAM**: 4GB or 8GB LPDDR4X
+- **Storage**: MicroSD card or NVMe via PCIe 2.0
+- **Network**: Gigabit Ethernet, WiFi 5 (802.11ac), Bluetooth 5.0
+- **Video**: Dual 4K @ 60fps HDMI output
+- **Power**: 5V 5A USB-C (27W recommended)
+
 ### Raspberry Pi 4 Specifications
 
-- **CPU**: Broadcom BCM2711 (quad-core Cortex-A72, ARM v8, 64-bit)
+- **CPU**: Broadcom BCM2711 (quad-core Cortex-A72 @ 1.8GHz, ARM v8, 64-bit)
 - **Architecture**: aarch64
-- **Storage**: MicroSD card (primary)
-- **USB**: Can boot from USB 3.0 (requires bootloader update)
+- **RAM**: 2GB, 4GB, or 8GB LPDDR4
+- **Storage**: MicroSD card (can boot from USB 3.0)
 - **Network**: Gigabit Ethernet, WiFi 5 (802.11ac), Bluetooth 5.0
 - **Video**: Dual 4K HDMI output
+- **Power**: 5V 3A USB-C
 
-### Known Issues
+### Raspberry Pi 3 Specifications
+
+- **CPU**: Broadcom BCM2837 (quad-core Cortex-A53 @ 1.2GHz, ARM v8, 64-bit)
+- **Architecture**: aarch64 (same as Pi 4/5!)
+- **RAM**: 1GB LPDDR2
+- **Storage**: MicroSD card only
+- **Network**: 100Mbps Ethernet, WiFi 4 (802.11n), Bluetooth 4.2
+- **Video**: Single HDMI output
+- **Power**: 5V 2.5A Micro USB
+
+### GPIO and Expansion (All Models)
+
+- **GPIO**: 40-pin header (Pi 3/4/5), 26-pin header (older Pi 3)
+- **I2C/SPI**: Available on all models (enable in config.txt)
+- **Camera**: CSI connector for Raspberry Pi Camera Module
+- **Display**: DSI connector for official touchscreen displays
+- **Pi 5**: PCIe 2.0 x1 connector for NVMe, USB 3.0, or other expansion
+
+### Known Issues (All Models)
 
 - **Firmware dependency**: Requires manual firmware addition
 - **WiFi**: May need additional firmware (consider using Ethernet initially)
-- **Heat**: Consider heatsink or fan for prolonged use
+- **Heat**: Pi 5 runs hot - heatsink/fan recommended; Pi 4 needs passive cooling
 - **SD card**: Use high-quality cards (Samsung EVO, SanDisk Extreme)
+- **Pi 3**: Very limited RAM (1GB) - headless use recommended
 
 ### Performance Expectations
 
-- **Boot time**: 30-60 seconds (slower than x86_64)
-- **Package builds**: Slow on device (use substitutes when possible)
-- **Desktop**: LXDE/Xfce recommended over GNOME (lighter weight)
+**Raspberry Pi 5:**
+
+- **Boot time**: 20-30 seconds
+- **Desktop**: Can run GNOME smoothly, excellent for Xfce/MATE
+- **Package builds**: Moderate speed, substitutes still recommended
+- **Use cases**: Desktop replacement, development, media center
+
+**Raspberry Pi 4:**
+
+- **Boot time**: 30-45 seconds
+- **Desktop**: Xfce/MATE recommended, GNOME usable but slow
+- **Package builds**: Slow, always use substitutes
+- **Use cases**: Light desktop, server, home automation
+
+**Raspberry Pi 3:**
+
+- **Boot time**: 45-60 seconds
+- **Desktop**: Only lightweight WMs (i3, openbox), no full DE
+- **Package builds**: Very slow, substitutes required
+- **Use cases**: Headless server, learning, IoT only
 
 ---
 
@@ -330,20 +442,76 @@ chmod +x customize
 **Check:**
 
 - Firmware files present in boot partition (start4.elf, fixup4.dat, etc.)
-- config.txt exists and has correct settings
+- config.txt exists and has correct settings for your Pi model
 - U-Boot binary is named u-boot.bin
 - SD card is properly formatted (FAT32 boot partition, ext4 root)
 
+**Model-specific checks:**
+
+- **Pi 3**: Ensure `gpu_mem=64` in config.txt
+- **Pi 4**: Ensure `hdmi_force_hotplug=1` in config.txt
+- **Pi 5**: Ensure `dtparam=pciex1` and `dtparam=pciex1_gen=2` in config.txt
+
 **Serial console access:**
+
 ```bash
 # Connect USB-UART adapter to GPIO pins
 # Use screen, minicom, or similar
 screen /dev/ttyUSB0 115200
 ```
 
+### Model-specific issues
+
+#### Raspberry Pi 3 Issues
+
+**Problem**: Very slow boot or system unresponsive
+
+- **Cause**: Limited RAM (1GB) and slower CPU
+- **Solution**: Use headless configuration, avoid desktop environments
+
+**Problem**: WiFi not working
+
+- **Cause**: Pi 3 has older WiFi chip
+- **Solution**: Use Ethernet or add nonguix channel for firmware
+
+#### Raspberry Pi 4 Issues
+
+**Problem**: No HDMI output
+
+- **Cause**: Missing `hdmi_force_hotplug=1` in config.txt
+- **Solution**: Add the setting and reboot
+
+**Problem**: System overheats and throttles
+
+- **Cause**: Pi 4 runs hot under load
+- **Solution**: Add heatsink/fan, ensure adequate power supply
+
+**Problem**: USB devices not working
+
+- **Cause**: Insufficient power or USB issues
+- **Solution**: Use powered USB hub, check power supply (5V 3A)
+
+#### Raspberry Pi 5 Issues
+
+**Problem**: PCIe devices not detected
+
+- **Cause**: Missing PCIe configuration in config.txt
+- **Solution**: Add `dtparam=pciex1` and `dtparam=pciex1_gen=2`
+
+**Problem**: System unstable or crashes
+
+- **Cause**: Insufficient power (Pi 5 needs 5V 5A)
+- **Solution**: Use official 27W power supply or equivalent
+
+**Problem**: NVMe not working
+
+- **Cause**: Missing NVMe configuration
+- **Solution**: Add `dtparam=nvme` to config.txt
+
 ### Can't build image
 
 **Solution**: Use substitute servers or find an aarch64 machine
+
 ```bash
 # Enable substitutes
 guix-daemon --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org'
@@ -352,9 +520,24 @@ guix-daemon --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu
 ### Image built for wrong architecture
 
 **Solution**: Explicitly specify --system
+
 ```bash
 guix system image --system=aarch64-linux config.scm
 ```
+
+### Config.txt issues
+
+**Problem**: Wrong config.txt for your Pi model
+
+- **Solution**: Use the setup script to auto-detect and configure
+
+```bash
+./setup-config.sh
+```
+
+**Problem**: Config changes not taking effect
+
+- **Solution**: Ensure config.txt is in the boot partition and reboot
 
 ---
 
@@ -362,19 +545,19 @@ guix system image --system=aarch64-linux config.scm
 
 ### Official Guix Documentation
 
-- Guix Manual: https://guix.gnu.org/manual/
+- Guix Manual: <https://guix.gnu.org/manual/>
 - Guix on ARM: System examples (raspberry-pi-64.tmpl)
 
 ### Community Resources
 
-- Guix mailing lists: help-guix@gnu.org
+- Guix mailing lists: <help-guix@gnu.org>
 - Blog: "Booting Guix on a Raspberry Pi 4" - superkamiguru.org
 - IRC: #guix on libera.chat
 
 ### Raspberry Pi Resources
 
-- Firmware repository: https://github.com/raspberrypi/firmware
-- Documentation: https://www.raspberrypi.com/documentation/
+- Firmware repository: <https://github.com/raspberrypi/firmware>
+- Documentation: <https://www.raspberrypi.com/documentation/>
 - Boot configuration: config.txt reference
 
 ---

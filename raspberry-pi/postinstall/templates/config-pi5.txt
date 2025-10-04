@@ -1,0 +1,53 @@
+# Raspberry Pi 5 boot configuration for Guix
+# BCM2712 - Cortex-A76 @ 2.4GHz, 4GB/8GB RAM
+
+# Enable UART for serial console access
+enable_uart=1
+
+# Force 64-bit mode (aarch64)
+arm_64bit=1
+
+# Use U-Boot as kernel
+kernel=u-boot.bin
+
+# GPU memory allocation (128MB for Pi 5)
+gpu_mem=128
+
+# PCIe settings (Pi 5 specific)
+dtparam=pciex1
+dtparam=pciex1_gen=2
+
+# Force HDMI hotplug
+hdmi_force_hotplug=1
+
+# HDMI settings (Pi 5 supports dual 4K)
+# hdmi_group=2
+# hdmi_mode=87
+
+# Enable audio
+dtparam=audio=on
+
+# Enable I2C and SPI (optional, for GPIO projects)
+# dtparam=i2c_arm=on
+# dtparam=spi=on
+
+# Boot delay (optional, for troubleshooting)
+# boot_delay=1
+
+# Disable rainbow splash screen (saves boot time)
+disable_splash=1
+
+# USB settings (Pi 5 specific)
+# usb_max_current_enable=1
+
+# Power management (Pi 5 specific)
+# dtparam=pwr_led_gpio=10
+# dtparam=act_led_gpio=14
+
+# Overclock settings (optional, use with caution)
+# arm_freq=2800
+# gpu_freq=800
+# over_voltage=2
+
+# NVMe support (if using NVMe via PCIe)
+# dtparam=nvme

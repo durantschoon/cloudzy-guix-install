@@ -1,0 +1,32 @@
+# Raspberry Pi 3 boot configuration for Guix
+# BCM2837 - Cortex-A53 @ 1.2GHz, 1GB RAM
+
+# Enable UART for serial console access
+enable_uart=1
+
+# Force 64-bit mode (aarch64)
+arm_64bit=1
+
+# Use U-Boot as kernel
+kernel=u-boot.bin
+
+# GPU memory allocation (64MB for Pi 3)
+gpu_mem=64
+
+# Disable audio (saves memory on Pi 3)
+dtparam=audio=off
+
+# Enable I2C and SPI (optional, for GPIO projects)
+# dtparam=i2c_arm=on
+# dtparam=spi=on
+
+# Boot delay (optional, for troubleshooting)
+# boot_delay=1
+
+# Disable rainbow splash screen (saves boot time)
+disable_splash=1
+
+# Overclock settings (optional, use with caution)
+# arm_freq=1400
+# gpu_freq=500
+# over_voltage=2
