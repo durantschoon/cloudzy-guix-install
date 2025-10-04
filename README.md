@@ -301,6 +301,24 @@ You can customize the swap size using formats like:
 - `SWAP_SIZE="512M"` - 512 megabytes  
 - `SWAP_SIZE="8192K"` - 8192 kilobytes
 
+### GUIX_PLATFORM (default: cloudzy)
+
+The `GUIX_PLATFORM` environment variable specifies which platform's installation scripts to use. If not set, defaults to `cloudzy`:
+
+- **`cloudzy`** (default) - VPS fresh install (Cloudzy and similar providers)
+- **`framework`** - Framework 13 single-boot (Guix only)
+- **`framework-dual`** - Framework 13 dual-boot with Pop!_OS
+
+You can override with: `GUIX_PLATFORM="framework"` or `GUIX_PLATFORM="framework-dual"`
+
+**Platform-specific script sequences:**
+
+- **cloudzy**: `01-partition` → `02-mount-bind` → `03-config-write` → `04-system-init`
+- **framework**: `01-partition` → `02-mount-bind` → `03-config-write` → `04-system-init`
+- **framework-dual**: `01-partition-check` → `02-mount-existing` → `03-config-dual-boot` → `04-system-init`
+
+**Note**: Raspberry Pi installation uses a different approach (image-based) and is not supported by this script-based installer.
+
 ## Quick Start
 
 **⚠️ READ THE WARNING ABOVE FIRST! This script will destroy all data on the target device.**
@@ -336,6 +354,7 @@ SWAP_SIZE="4G"
 DESKTOP_ENV="gnome"     # Options: gnome, xfce, mate, lxqt, none
 BOOT_MODE="uefi"        # Options: uefi, bios (auto-detected)
 SWAP_SIZE="4G"          # Options: 2G, 4G, 8G, etc.
+GUIX_PLATFORM="cloudzy" # Options: cloudzy, framework, framework-dual
 ```
 
 ### 3. Download and Verify Script
@@ -350,7 +369,7 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/v0.1.3/run-remote-steps.sh -o run-remote-steps.sh
 ```
 
-**Pro tip: Use environment variable for easy switching:**
+**Pro tip: Use environment variables for easy switching:**
 
 ```bash
 # For debugging/development
@@ -358,6 +377,10 @@ GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
 
 # For stable version
 GUIX_INSTALL_REF=v0.1.3 bash ./run-remote-steps.sh
+
+# For different platforms
+GUIX_PLATFORM=framework bash ./run-remote-steps.sh
+GUIX_PLATFORM=framework-dual bash ./run-remote-steps.sh
 ```
 
 ### 4. Verify with Checksum
