@@ -1,0 +1,1 @@
+../../cloudzy/install/01-partition-clean.sh

@@ -15,7 +15,8 @@
       "Bash(echo \"✓ $script\")",
       "Bash(echo:*)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

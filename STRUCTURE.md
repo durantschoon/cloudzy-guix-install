@@ -20,6 +20,20 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 │   │
 │   └── README.md
 │
+├── framework/                  # Framework 13 Laptop (Single-boot, Guix only)
+│   ├── install/               # ISO phase: Minimal Guix installation
+│   │   ├── 01-partition-*.sh → ../../cloudzy/install/01-*
+│   │   ├── 02-mount-bind-*.sh → ../../cloudzy/install/02-*
+│   │   ├── 03-config-write-*.sh → ../../cloudzy/install/03-*
+│   │   └── 04-system-init-*.sh → ../../cloudzy/install/04-*
+│   │
+│   ├── postinstall/           # Post-boot phase: Laptop-specific customization
+│   │   ├── customize          # Interactive tool (WiFi-first, desktop-focused)
+│   │   ├── recipes/           # Modular scripts (add-firmware, add-desktop, etc.)
+│   │   └── templates/         # Pre-configured setups (gnome-laptop.scm, etc.)
+│   │
+│   └── README.md
+│
 ├── framework-dual/             # Framework 13 Laptop (Dual-boot with Pop!_OS)
 │   ├── install/               # ISO phase: Minimal Guix dual-boot installation
 │   │   ├── 01-partition-check-*.sh
@@ -36,6 +50,8 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 │
 ├── lib/                        # Shared installation libraries
 │   ├── common.sh              # Config generation, UUID handling, desktop selector
+│   ├── mirrors.sh             # Regional mirror detection and configuration
+│   ├── mirrors.md             # Mirror configuration documentation
 │   └── runner-common.sh       # Runner utilities (msg, fetch_file, etc.)
 │
 ├── deprecated/                 # Archived old scripts
@@ -95,7 +111,21 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 - Container runtimes
 - Security hardening
 
-### Framework 13 (Laptop)
+### Framework 13 Single-Boot
+**Installation focus:**
+- Wipe entire disk (like VPS)
+- Auto-detect NVMe storage (typically /dev/nvme0n1)
+- UEFI only (Framework requirement)
+- Full disk installation (no dual-boot)
+
+**Customization focus:**
+- WiFi/Bluetooth firmware (critical first step)
+- Desktop environments
+- Power management (TLP, auto-cpufreq)
+- Audio enhancements
+- High-DPI display scaling
+
+### Framework 13 Dual-Boot
 **Installation focus:**
 - Preserve existing Pop!_OS
 - Reuse existing ESP
@@ -127,6 +157,11 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 - Standard mount (`02-mount-bind-*`)
 - Server-oriented defaults
 
+**framework/install:**
+- All scripts symlinked to `cloudzy/install/` (identical process)
+- Full disk partitioning for laptop
+- UEFI-only (Framework 13 requirement)
+
 **framework-dual/install:**
 - Dual-boot partition check (`01-partition-check-*`)
 - Existing ESP mount (`02-mount-existing-*`)
@@ -137,8 +172,13 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 - No desktop options
 - Server recipes
 
+**framework/postinstall:**
+- WiFi firmware first (critical!)
+- Desktop + laptop optimizations
+- Single-boot focus
+
 **framework-dual/postinstall:**
-- Hardware firmware first
+- WiFi firmware first (critical!)
 - Desktop + laptop optimizations
 - Dual-boot tools
 

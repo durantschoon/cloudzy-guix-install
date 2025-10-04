@@ -3,6 +3,7 @@
 Modular scripts for installing minimal Guix OS on different platforms:
 
 - **`cloudzy/`** - VPS fresh install (Cloudzy and similar providers)
+- **`framework/`** - Framework 13 single-boot (Guix only)
 - **`framework-dual/`** - Framework 13 dual-boot with Pop!_OS
 
 ## Quick Navigation
@@ -11,6 +12,7 @@ Modular scripts for installing minimal Guix OS on different platforms:
 - 🎨 **Customization Guide**: See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) - Add features after minimal install
 - 🌍 **Mirror Configuration**: See [`lib/mirrors.md`](lib/mirrors.md) - Optimize download speeds globally
 - 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
+- 💻 **Framework 13 Single-Boot**: See [`framework/README.md`](framework/README.md)
 - 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
 
 ---
@@ -78,7 +80,29 @@ Designed for **fresh VPS instances** where you want to completely replace the ex
 
 ---
 
-### 2. Framework 13 Dual-Boot
+### 2. Framework 13 Single-Boot
+
+**⚠️ THIS WILL DESTROY ALL DATA ON THE TARGET DEVICE!**
+
+Designed for **Framework 13 laptops** where you want Guix as your only OS:
+
+- **Wipes the entire disk** and creates new partitions
+- **Destroys all existing data** on the laptop
+- **Replaces any existing OS** with minimal Guix
+- **WiFi firmware** needed after boot (add via customize tool)
+
+**Prerequisites:**
+
+- Fresh Framework 13 or willingness to wipe everything
+- Guix live ISO
+- Backup of all important data
+
+**Installation:** See [`framework/README.md`](framework/README.md)
+**After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add WiFi/desktop
+
+---
+
+### 3. Framework 13 Dual-Boot
 
 **Safe dual-boot installation alongside existing Pop!_OS.**
 

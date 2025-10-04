@@ -1,0 +1,1 @@
+../../cloudzy/install/03-config-write-warnings.sh
