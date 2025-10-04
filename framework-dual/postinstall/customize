@@ -220,6 +220,11 @@ main_menu() {
     echo "Advanced:"
     echo "  5) Show nonguix channel info (proprietary software)"
     echo ""
+    echo "Shared Recipes:"
+    echo "  s) Install Spacemacs (Emacs distribution)"
+    echo "  d) Install development tools (git, vim, python, etc.)"
+    echo "  f) Install fonts (Fira Code, JetBrains Mono, etc.)"
+    echo ""
     echo "Actions:"
     echo "  r) Apply changes (reconfigure system)"
     echo "  e) Edit config manually"
@@ -236,6 +241,9 @@ main_menu() {
       3) add_packages; read -p "Press Enter to continue..." ;;
       4) add_framework_hardware; read -p "Press Enter to continue..." ;;
       5) add_nonguix_info; read -p "Press Enter to continue..." ;;
+      s) source "$(dirname "$0")/../../postinstall/recipes/add-spacemacs.sh" && add_spacemacs; read -p "Press Enter to continue..." ;;
+      d) source "$(dirname "$0")/../../postinstall/recipes/add-development.sh" && add_development; read -p "Press Enter to continue..." ;;
+      f) source "$(dirname "$0")/../../postinstall/recipes/add-fonts.sh" && add_fonts; read -p "Press Enter to continue..." ;;
       r) reconfigure; read -p "Press Enter to continue..." ;;
       e) ${EDITOR:-nano} "$CONFIG_FILE"; read -p "Press Enter to continue..." ;;
       v) less "$CONFIG_FILE"; ;;
