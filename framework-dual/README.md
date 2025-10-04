@@ -111,9 +111,24 @@ export DESKTOP_ENV="gnome"  # Options: gnome, xfce, mate, lxqt, none
 export SWAP_SIZE="4G"       # Default: 4G
 ```
 
-### Optional: Manual Partition Resizing
+## Partition Planning
 
-If you don't have free space, you'll need to shrink Pop!_OS first:
+### Recommended Partition Layout
+
+This is a suggested partition layout for dual-booting Guix with Pop!_OS on Framework 13:
+
+| Partition | Size | Filesystem | Purpose |
+|-----------|------|------------|---------|
+| **EFI System Partition (ESP)** | 512 MB–1 GB | FAT32 | Shared UEFI bootloader (Pop!_OS creates, Guix adds entries) |
+| **Pop!_OS Root (`/`)** | 60–100 GB | ext4 | Pop!_OS system files |
+| **Guix Root (`/`)** | 40–60 GB | ext4/btrfs | Guix system files |
+| **Swap** | 8–32 GB | swap | Suspend-to-disk/extra memory (can be shared) |
+| **Home / Data** | Remainder | ext4/btrfs | Shared personal files (optional) |
+| _(Optional)_ Boot (`/boot`) | 1–2 GB | ext4 | Separate kernel storage if needed |
+
+### Manual Partition Resizing
+
+If you don't have free space, shrink Pop!_OS first:
 
 ```bash
 # Boot into Pop!_OS live ISO (not Guix ISO)
