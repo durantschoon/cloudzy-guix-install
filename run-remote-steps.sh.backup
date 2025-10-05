@@ -8,32 +8,32 @@ declare -A SHA256=(
   # cloudzy platform
   ["cloudzy/install/01-partition-warnings.sh"]="32b81097e203d0e9f6c011a8ea9b02a9d988107b3c8356b788a611a3d009e952"
   ["cloudzy/install/02-mount-bind-warnings.sh"]="bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de"
-  ["cloudzy/install/03-config-write-warnings.sh"]="0c3b79012ae5130e9f256727a8a78973c2133f3cdd54dea458b8c54e48837111"
+  ["cloudzy/install/03-config-write-warnings.sh"]="c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8"
   ["cloudzy/install/04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["cloudzy/install/01-partition-clean.sh"]="f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1"
   ["cloudzy/install/02-mount-bind-clean.sh"]="6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632"
   ["cloudzy/install/03-config-write-clean.sh"]="5b6bddcadd69d948159d197e45806563bdab563de9032ebe20abe2dbff881120"
-  ["cloudzy/install/04-system-init-clean.sh"]="bf8751ef24ebb32d59164ca3858b684fef53e8b3d6d1dd57714d8c90828c52ea"
+  ["cloudzy/install/04-system-init-clean.sh"]="45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8"
 
   # framework platform
   ["framework/install/01-partition-warnings.sh"]="32b81097e203d0e9f6c011a8ea9b02a9d988107b3c8356b788a611a3d009e952"
   ["framework/install/02-mount-bind-warnings.sh"]="bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de"
-  ["framework/install/03-config-write-warnings.sh"]="0c3b79012ae5130e9f256727a8a78973c2133f3cdd54dea458b8c54e48837111"
+  ["framework/install/03-config-write-warnings.sh"]="c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8"
   ["framework/install/04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["framework/install/01-partition-clean.sh"]="f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1"
   ["framework/install/02-mount-bind-clean.sh"]="6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632"
   ["framework/install/03-config-write-clean.sh"]="5b6bddcadd69d948159d197e45806563bdab563de9032ebe20abe2dbff881120"
-  ["framework/install/04-system-init-clean.sh"]="bf8751ef24ebb32d59164ca3858b684fef53e8b3d6d1dd57714d8c90828c52ea"
+  ["framework/install/04-system-init-clean.sh"]="45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8"
 
   # framework-dual platform
   ["framework-dual/install/01-partition-check-warnings.sh"]="d139a00815eb00637c808d8fa243c92b7b922639255b99c50ecbc40e12d4bff1"
   ["framework-dual/install/02-mount-existing-warnings.sh"]="3a67c43528660ced1e27040c31a16669e56ef6676811f53ac1ef71c534555fda"
-  ["framework-dual/install/03-config-dual-boot-warnings.sh"]="31a30cf520efad01b381af034bf4316533faf946afce175583e52fa5bee82f85"
+  ["framework-dual/install/03-config-dual-boot-warnings.sh"]="689a61109a9da4a4dab494d201ff359c25dc7b61cdbf6a3bf1b7fc3156d872eb"
   ["framework-dual/install/04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["framework-dual/install/01-partition-check-clean.sh"]="5a72ac5478b3e83a9cd4a3acce160f78efabedb40eea6543760fda66e3ddb84b"
   ["framework-dual/install/02-mount-existing-clean.sh"]="88b350588411e7a2239c5849bb7b963037e8347e040efd0a6efaf1d21b1f339d"
   ["framework-dual/install/03-config-dual-boot-clean.sh"]="21eaee5e887cf0cd7aa00e18bfe798510e204769ca83cf214787c4b7bf4bcef8"
-  ["framework-dual/install/04-system-init-clean.sh"]="bf8751ef24ebb32d59164ca3858b684fef53e8b3d6d1dd57714d8c90828c52ea"
+  ["framework-dual/install/04-system-init-clean.sh"]="45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8"
 
 )
 # END SHA256 REPLACEMENT
@@ -248,6 +248,12 @@ msg "Fetching from: ${RAW_BASE}"
 # Basic prereqs
 command -v curl >/dev/null 2>&1 || { err "curl is required"; exit 1; }
 mkdir -p "$WORKDIR" "$LOGDIR"
+
+# Download shared library files first (required by install scripts)
+msg "Fetching shared library files"
+fetch_file "lib/common.sh" || { err "Failed to fetch lib/common.sh"; exit 1; }
+fetch_file "lib/mirrors.sh" || { err "Failed to fetch lib/mirrors.sh"; exit 1; }
+fetch_file "lib/runner-common.sh" || { err "Failed to fetch lib/runner-common.sh"; exit 1; }
 
 # No need to clear variables - they're in main context
 

@@ -249,6 +249,12 @@ msg "Fetching from: ${RAW_BASE}"
 command -v curl >/dev/null 2>&1 || { err "curl is required"; exit 1; }
 mkdir -p "$WORKDIR" "$LOGDIR"
 
+# Download shared library files first (required by install scripts)
+msg "Fetching shared library files"
+fetch_file "lib/common.sh" || { err "Failed to fetch lib/common.sh"; exit 1; }
+fetch_file "lib/mirrors.sh" || { err "Failed to fetch lib/mirrors.sh"; exit 1; }
+fetch_file "lib/runner-common.sh" || { err "Failed to fetch lib/runner-common.sh"; exit 1; }
+
 # No need to clear variables - they're in main context
 
 for base in "${SCRIPT_BASES[@]}"; do
