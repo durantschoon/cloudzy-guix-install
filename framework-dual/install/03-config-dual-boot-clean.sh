@@ -43,5 +43,5 @@ echo ""
 echo "=== Generated config.scm ==="
 cat /mnt/etc/config.scm
 echo ""
-echo "✓ Configuration written to /mnt/etc/config.scm"
+echo "Configuration written to /mnt/etc/config.scm"
 echo "  This will install GRUB to the existing ESP alongside Pop!_OS"

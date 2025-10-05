@@ -326,7 +326,7 @@ for base in "${SCRIPT_BASES[@]}"; do
           err "01-partition completed but required variables are missing"
           exit 1
         fi
-        msg "✅ 01-partition completed successfully"
+        msg "01-partition completed successfully"
       else
         err "01-partition failed (exit code: $clean_rc) - cannot proceed"
         exit 1

@@ -22,7 +22,7 @@ MISSING_VARS=()
 [[ -z "${HOST_NAME:-}" ]] && MISSING_VARS+=("HOST_NAME")
 
 if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
-  echo "⚠️  ERROR: Missing required environment variables:"
+  echo "ERROR: Missing required environment variables:"
   for var in "${MISSING_VARS[@]}"; do
     echo "    - $var"
   done
@@ -36,7 +36,7 @@ if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
   exit 1
 fi
 
-echo "✓ All required variables are set"
+echo "All required variables are set"
 echo ""
 echo "This script will generate /mnt/etc/config.scm with:"
 echo "  - Dual-boot GRUB configuration (UEFI)"

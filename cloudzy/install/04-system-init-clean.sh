@@ -68,9 +68,9 @@ mkdir -p /mnt/root/guix-customize/recipes
 echo "Downloading ${INSTALL_PLATFORM} customize script..."
 if curl -fsSL "${RAW_BASE}/${INSTALL_PLATFORM}/postinstall/customize" -o /mnt/root/guix-customize/customize 2>/dev/null; then
   chmod +x /mnt/root/guix-customize/customize
-  echo "✓ Customize script installed"
+  echo "Customize script installed"
 else
-  echo "⚠ Warning: Could not download customize script (network issue?)"
+  echo "Warning: Could not download customize script (network issue?)"
   echo "  You can manually download it after first boot"
 fi
 
@@ -79,9 +79,9 @@ echo "Downloading shared recipes..."
 for recipe in add-spacemacs.sh add-development.sh add-fonts.sh; do
   if curl -fsSL "${RAW_BASE}/postinstall/recipes/${recipe}" -o "/mnt/root/guix-customize/recipes/${recipe}" 2>/dev/null; then
     chmod +x "/mnt/root/guix-customize/recipes/${recipe}"
-    echo "✓ ${recipe}"
+    echo "Downloaded ${recipe}"
   else
-    echo "⚠ ${recipe} (skipped)"
+    echo "Skipped ${recipe}"
   fi
 done
 
@@ -129,7 +129,7 @@ https://github.com/durantschoon/cloudzy-guix-install/blob/main/CUSTOMIZATION.md
 EOF
 
 echo ""
-echo "✓ Customization tools installed to /root/guix-customize/"
+echo "Customization tools installed to /root/guix-customize/"
 echo "  After first boot, run: cd ~/guix-customize && ./customize"
 echo ""
 

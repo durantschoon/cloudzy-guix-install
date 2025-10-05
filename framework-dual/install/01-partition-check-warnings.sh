@@ -8,7 +8,7 @@ echo ""
 
 # Check if we're running from a live ISO (expected scenario)
 if [ ! -f /etc/os-release ] || ! grep -q "Guix" /etc/os-release 2>/dev/null; then
-  echo "⚠️  WARNING: This doesn't appear to be a Guix live ISO environment!"
+  echo "WARNING: This doesn't appear to be a Guix live ISO environment!"
   echo "   This script is designed to run from a Guix live ISO."
   echo "   If you're not sure you're in the right environment, STOP NOW!"
   echo ""
@@ -51,7 +51,7 @@ echo "=== Checking for existing EFI partition ==="
 EFI_PARTITIONS=$(lsblk -n -o NAME,PARTTYPE "$DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk '{print $1}' || true)
 
 if [[ -z "$EFI_PARTITIONS" ]]; then
-  echo "⚠️  ERROR: No EFI System Partition found!"
+  echo "ERROR: No EFI System Partition found!"
   echo "   This script requires an existing Pop!_OS installation with an ESP."
   echo "   Please install Pop!_OS first, then run this script."
   exit 1
@@ -66,7 +66,7 @@ else
   EFI="${DEVICE}${EFI_PARTITION##*[a-z]}"
 fi
 
-echo "✓ Found existing EFI partition: $EFI"
+echo "Found existing EFI partition: $EFI"
 
 # Check for existing Pop!_OS installation
 echo ""
@@ -75,7 +75,7 @@ POPOS_FOUND=false
 lsblk -n -o NAME,FSTYPE,LABEL "$DEVICE" | while read name fstype label; do
   if [[ "$label" == *"Pop_OS"* ]] || [[ "$label" == *"PopOS"* ]]; then
     POPOS_FOUND=true
-    echo "✓ Found Pop!_OS partition: /dev/$name ($label)"
+    echo "Found Pop!_OS partition: /dev/$name ($label)"
   fi
 done
 
@@ -88,7 +88,7 @@ echo ""
 # Check if there's sufficient free space (at least 40GB recommended)
 FREE_SPACE_GB=$(parted "$DEVICE" unit GiB print free 2>/dev/null | grep "Free Space" | tail -1 | awk '{print $3}' | sed 's/GiB//' || echo "0")
 if (( $(echo "$FREE_SPACE_GB < 40" | bc -l) )); then
-  echo "⚠️  WARNING: Less than 40GB of free space available (found: ${FREE_SPACE_GB}GiB)"
+  echo "WARNING: Less than 40GB of free space available (found: ${FREE_SPACE_GB}GiB)"
   echo "   Recommended: At least 40-60GB for Guix root partition"
   echo "   You may need to shrink your Pop!_OS partition first."
   echo ""
@@ -104,7 +104,7 @@ echo "  2. Keep all existing Pop!_OS partitions (untouched)"
 echo "  3. Create a new partition for Guix in available free space"
 echo "  4. Install Guix bootloader to ESP (will chain to Pop!_OS)"
 echo ""
-echo "⚠️  IMPORTANT: Make sure you have backed up your data!"
+echo "IMPORTANT: Make sure you have backed up your data!"
 echo "   While this script tries to be safe, disk operations are always risky."
 echo ""
 read -p "Type 'YES' to proceed with partition creation: " confirmation

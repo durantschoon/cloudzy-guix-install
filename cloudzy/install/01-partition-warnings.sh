@@ -8,7 +8,7 @@ echo ""
 
 # Check if we're running from a live ISO (expected scenario)
 if [ ! -f /etc/os-release ] || ! grep -q "Guix" /etc/os-release 2>/dev/null; then
-  echo "⚠️  WARNING: This doesn't appear to be a Guix live ISO environment!"
+  echo "WARNING: This doesn't appear to be a Guix live ISO environment!"
   echo "   This script is designed to run from a Guix live ISO on a fresh VPS."
   echo "   If you're not sure you're in the right environment, STOP NOW!"
   echo ""
@@ -23,7 +23,7 @@ fi
 # Check for multiple mounted filesystems (might indicate existing system)
 mounted_count=$(mount | grep -c "^/dev/" || true)
 if [ "$mounted_count" -gt 3 ]; then
-  echo "⚠️  WARNING: Multiple filesystems are mounted ($mounted_count found)!"
+  echo "WARNING: Multiple filesystems are mounted ($mounted_count found)!"
   echo "   This might indicate an existing system with data."
   echo "   Expected: Fresh VPS with minimal mounts"
   echo ""
