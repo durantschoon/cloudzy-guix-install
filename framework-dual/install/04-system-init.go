@@ -45,17 +45,14 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		return err
 	}
 
-	// Optional: guix pull (can skip to save time, do it after first boot)
-	// Set SKIP_GUIX_PULL=1 to skip this step
-	skipPull := getEnv("SKIP_GUIX_PULL", "")
-	if skipPull != "" {
-		fmt.Println("Skipping guix pull (SKIP_GUIX_PULL is set)")
-		fmt.Println("You can run 'guix pull' after first boot")
-	} else {
+	// guix pull is now a post-install step (run after first boot)
+	// The ISO version is good enough to install the system
+	// To enable during install: set RUN_GUIX_PULL=1 (not recommended, takes 10-30 min)
+	runPull := getEnv("RUN_GUIX_PULL", "")
+	if runPull != "" {
 		fmt.Println()
 		fmt.Println("=== Guix Pull ===")
 		fmt.Println("Updating Guix to latest version (takes 10-30 minutes)...")
-		fmt.Println("To skip: set SKIP_GUIX_PULL=1 before running installer")
 		fmt.Println()
 
 		// Set up Git environment variables for slow connections
@@ -71,6 +68,11 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		if err := runCommand("guix", "pull", "--url="+guixGitURL, "--commit="+guixVersion); err != nil {
 			return fmt.Errorf("guix pull failed: %w", err)
 		}
+	} else {
+		fmt.Println()
+		fmt.Println("Skipping guix pull - this is now a post-install step")
+		fmt.Println("After first boot, run: guix pull && guix package -u")
+		fmt.Println()
 	}
 
 	// Download customization tools
