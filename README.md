@@ -365,27 +365,47 @@ GUIX_PLATFORM=framework-dual bash ./run-remote-steps.sh
 
 ### 4. Verify with Checksum
 
-**Option A: Automated verification (recommended):**
+**Choose verification method based on your platform:**
+
+#### For VPS (Cloudzy) - Paste-based verification
+
+You can easily paste from your local machine into the web console:
 
 ```bash
-echo " PASTE-YOUR-SHASUM-HERE-WITH-NO-SPACES-INSIDE-THESE-QUOTES-SINGLE-NEWLINE-IS-OK " | head -1 > rrs-checksum.txt
+# On your local machine, get the checksum
+shasum -a 256 run-remote-steps.sh
+
+# In VPS web console, paste and verify
+echo "PASTE-CHECKSUM-HERE" | head -1 > rrs-checksum.txt
 cat rrs-checksum.txt
 shasum -a 256 -c rrs-checksum.txt
 
 chmod +x run-remote-steps.sh
 # GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
-# GUIX_INSTALL_REF=vX.Y.Z bash ./run-remote-steps.sh
 ```
 
-**Option B: Manual verification:**
+#### For Framework Laptop - Visual verification
+
+When booting from Guix ISO on your laptop, pasting is not possible. Use visual comparison:
 
 ```bash
+# Calculate checksum
 shasum -a 256 run-remote-steps.sh
-# Compare with your expected checksum
 
+# Expected checksum for main branch:
+# c5abb8ca797bdd6dcefa9acf03062d47a6e18555215f5eebe259e9581616a8c3
+
+# Visually compare the output with expected checksum above
+# If they match, proceed:
 chmod +x run-remote-steps.sh
 # GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
-# GUIX_INSTALL_REF=vX.Y.Z bash ./run-remote-steps.sh
+```
+
+**Alternative for Framework:** Since you're downloading via HTTPS from GitHub, the connection is already encrypted and verified. You can optionally skip checksum verification for local installations:
+
+```bash
+chmod +x run-remote-steps.sh
+GUIX_INSTALL_REF=main bash ./run-remote-steps.sh
 ```
 
 ### Troubleshooting: CDN Cache Issues
