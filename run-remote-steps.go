@@ -246,12 +246,19 @@ func runScript(cfg Config, relPath string, isWarning bool) error {
 	scriptPath := filepath.Join(cfg.WorkDir, relPath)
 	logPath := filepath.Join(cfg.LogDir, filepath.Base(relPath)+".log")
 
+	// Check if script exists
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("script not found: %s (error: %w)", scriptPath, err)
+	}
+
 	// Create log file
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		return fmt.Errorf("create log failed: %w", err)
 	}
 	defer logFile.Close()
+
+	fmt.Printf("Executing: /bin/bash %s\n", scriptPath)
 
 	// Run script with bash
 	cmd := exec.Command("/bin/bash", scriptPath)
