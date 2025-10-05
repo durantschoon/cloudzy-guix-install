@@ -33,4 +33,6 @@ export EFI ROOT
 mkfs.vfat -F32 "$EFI"
 mkfs.ext4 "$ROOT"
 
-# Script completed successfully - variables are now available in main context
+# Output variables for Go program to capture and pass to next script
+echo "###GUIX_INSTALL_VARS###"
+echo "DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"

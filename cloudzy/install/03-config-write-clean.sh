@@ -40,3 +40,7 @@ generate_minimal_config_scm > /mnt/etc/config.scm
 apply_config_substitutions /mnt/etc/config.scm
 
 cat /mnt/etc/config.scm
+
+# Output variables for Go program to capture and pass to next script
+echo "###GUIX_INSTALL_VARS###"
+echo "DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"
