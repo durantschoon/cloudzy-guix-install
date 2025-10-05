@@ -304,6 +304,9 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	// Parse output for exported variables
 	parseAndSetVars(outputBuf.String())
 
+	if err != nil {
+		fmt.Printf("Command execution error: %v\n", err)
+	}
 	msg("Exit status for script pair: %v", cmd.ProcessState.ExitCode())
 	fmt.Printf("Log saved to: %s\n", logPath)
 
