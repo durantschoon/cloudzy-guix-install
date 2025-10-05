@@ -21,18 +21,22 @@ trap "rm -rf $WORK_DIR" EXIT
 
 cd "$WORK_DIR"
 
-# Clone repository - Git verifies commit integrity
-echo "Cloning repository..."
-if ! git clone --depth 1 --branch "$REPO_REF" "https://github.com/${REPO_OWNER}.git" installer; then
-    echo "Error: Failed to clone repository"
+# Download repository tarball (avoids git HTTPS issues on Guix ISO)
+echo "Downloading repository..."
+TARBALL_URL="https://github.com/${REPO_OWNER}/archive/refs/heads/${REPO_REF}.tar.gz"
+if ! curl -fsSL "$TARBALL_URL" -o repo.tar.gz; then
+    echo "Error: Failed to download repository"
     exit 1
 fi
-cd installer
 
-# Show the commit we're building from
-COMMIT=$(git rev-parse HEAD)
+# Extract tarball
+echo "Extracting..."
+tar -xzf repo.tar.gz
+cd cloudzy-guix-install-*
+
+# Show what we're building
 echo ""
-echo "Building from commit: $COMMIT"
+echo "Building from: ${REPO_OWNER} (${REPO_REF})"
 echo ""
 
 # Verify source manifest (ensures GitHub CDN has latest version)

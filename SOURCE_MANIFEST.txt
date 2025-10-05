@@ -1,5 +1,5 @@
 # Source File Manifest
-# Generated: 2025-10-05 21:26:43 UTC
+# Generated: 2025-10-05 21:35:06 UTC
 #
 # Use this to verify GitHub's CDN has the latest version:
 # Compare these checksums with what you see in the raw files on GitHub
@@ -15,4 +15,4 @@ e2a29aaad133ddd4b95f44a0f8a9bafa53413836c6ed49ce7da5ef9fd6cc6116  ./run-remote-s
 
 ## Bootstrap Script
 
-33f07ff86fcdc9deb5f1e3a1c766d6ac1a3bd7f9a96d4977fd5d13176ffae10f  bootstrap-installer.sh
+f0009ac3396354be1910e3e5c86ee0366e13c74c182de08b0ab9dcd3b758fad8  bootstrap-installer.sh
