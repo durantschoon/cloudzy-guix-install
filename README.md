@@ -375,7 +375,7 @@ GUIX_INSTALL_REF=v0.2.0 ./run-remote-steps
 
 The original bash script is still available but the Go version is recommended for reliability.
 
-#### 1. Prepare Guix Live ISO Environment
+### 1. Setup Environment
 
 Install required packages:
 
@@ -383,7 +383,7 @@ Install required packages:
 guix install curl perl
 ```
 
-#### 2. Set Environment Variables
+### 2. Set Environment Variables
 
 First, configure your installation variables (the second group contains optional variables (with defaults)):
 
