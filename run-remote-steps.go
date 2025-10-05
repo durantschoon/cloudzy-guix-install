@@ -282,7 +282,8 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 
 	// Run both scripts in same bash session using source
 	// Set INCOMING_VARS from previous script pair's output
-	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
+	// Quote paths in case they contain spaces
+	bashCmd := fmt.Sprintf("source %q && source %q", warningPath, cleanPath)
 	if capturedVars != "" {
 		// Export INCOMING_VARS as the captured variable string
 		// Use ; instead of && so export doesn't stop execution if it "fails"
