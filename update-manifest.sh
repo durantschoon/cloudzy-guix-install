@@ -10,7 +10,6 @@ MANIFEST_FILE="SOURCE_MANIFEST.txt"
 
 cat > "$MANIFEST_FILE" <<EOF
 # Source File Manifest
-# Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 #
 # Use this to verify GitHub's CDN has the latest version:
 # Compare these checksums with what you see in the raw files on GitHub
