@@ -9,7 +9,11 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
 ### Prerequisites
 
 - **Existing Pop!_OS installation** with EFI System Partition (ESP)
-- **At least 40-60GB of unallocated free space** on your disk
+- **Pre-created partition for Guix** (40-60GB minimum)
+  - Use GParted or similar tool to create the partition
+  - Name the partition `guix-root` (GPT partition label)
+  - Leave it unformatted (script will format as ext4)
+  - Example command: `parted /dev/nvme0n1 name 4 guix-root`
 - **Backup of all important data** before proceeding
 - Running from a **Guix live ISO**
 
