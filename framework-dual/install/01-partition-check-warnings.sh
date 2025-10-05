@@ -147,5 +147,27 @@ if [[ "$confirmation" != "YES" ]]; then
   exit 1
 fi
 
+# Check for a separate home partition
+echo ""
+echo "=== Checking for separate home partition ==="
+# Look for partition mounted at /home or labeled 'home'
+HOME_PARTITION=""
+
+# Check for partition labeled 'home' (case insensitive)
+HOME_PARTNUM=$(parted "$DEVICE" print | grep -i "home" | awk '{print $1}' | head -1)
+if [[ -n "$HOME_PARTNUM" ]]; then
+  if [[ "$DEVICE" == *"nvme"* ]] || [[ "$DEVICE" == *"mmcblk"* ]]; then
+    HOME_PARTITION="${DEVICE}p${HOME_PARTNUM}"
+  else
+    HOME_PARTITION="${DEVICE}${HOME_PARTNUM}"
+  fi
+  echo "Found home partition: $HOME_PARTITION"
+  HOME_SIZE=$(lsblk -b -n -o SIZE "$HOME_PARTITION" 2>/dev/null | awk '{printf "%.1f", $1/1024/1024/1024}')
+  echo "Home partition size: ${HOME_SIZE}GiB"
+  echo "This partition will be mounted at /home and shared between Pop!_OS and Guix"
+else
+  echo "No separate home partition found - home directories will be in root partition"
+fi
+
 # Export variables for the clean script
-export DEVICE EFI
+export DEVICE EFI HOME_PARTITION

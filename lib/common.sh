@@ -70,6 +70,7 @@ generate_minimal_config_scm() {
           (mount-point "/boot/efi")
           (device "REPLACE_WITH_EFI")
           (type "vfat"))
+HOME_FILESYSTEM_PLACEHOLDER
          %base-file-systems))
 
  (users (cons* (user-account
@@ -159,6 +160,15 @@ apply_config_substitutions() {
   local bootloader_esc=$(escape "$BOOTLOADER")
   local targets_esc=$(escape "$TARGETS")
 
+  # Handle optional HOME partition
+  local home_fs_config=""
+  if [[ -n "${HOME_PARTITION:-}" ]]; then
+    local home_uuid=$(blkid -s UUID -o value "$HOME_PARTITION" 2>/dev/null || echo "")
+    if [[ -n "$home_uuid" ]]; then
+      home_fs_config="         (file-system\n          (mount-point \"/home\")\n          (device (uuid \"$home_uuid\" 'ext4))\n          (type \"ext4\"))"
+    fi
+  fi
+
   # Apply substitutions
   sed -i \
     -e "s|REPLACE_WITH_ROOT_UUID|$uuid_esc|g" \
@@ -170,4 +180,11 @@ apply_config_substitutions() {
     -e "s|BOOTLOADER_PLACEHOLDER|$bootloader_esc|g" \
     -e "s|TARGETS_PLACEHOLDER|$targets_esc|g" \
     "$config_file"
+
+  # Replace HOME_FILESYSTEM_PLACEHOLDER with actual config or remove it
+  if [[ -n "$home_fs_config" ]]; then
+    sed -i "s|HOME_FILESYSTEM_PLACEHOLDER|$home_fs_config|g" "$config_file"
+  else
+    sed -i '/HOME_FILESYSTEM_PLACEHOLDER/d' "$config_file"
+  fi
 }

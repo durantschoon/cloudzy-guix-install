@@ -45,6 +45,17 @@ mount $EFI /mnt/boot/efi
 echo "Checking ESP contents..."
 ls -la /mnt/boot/efi/ || true
 
+# Mount home partition if it exists
+if [[ -n "${HOME_PARTITION:-}" ]]; then
+  echo "Mounting home partition: $HOME_PARTITION"
+  mkdir -p /mnt/home
+  mount "$HOME_PARTITION" /mnt/home
+  echo "Home partition mounted successfully"
+  df -h /mnt/home
+else
+  echo "No separate home partition - home directories will be in root partition"
+fi
+
 # Create the bind mount targets and copy the store
 mkdir -p /mnt/gnu /mnt/var/guix
 echo "Copying /gnu/store to /mnt/gnu/store for bind mount..."
