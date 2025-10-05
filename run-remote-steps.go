@@ -21,34 +21,34 @@ const (
 // Script checksums (generated from update-sha256.sh)
 var checksums = map[string]string{
 	// cloudzy platform
-	"cloudzy/install/01-partition-warnings.sh":     "32b81097e203d0e9f6c011a8ea9b02a9d988107b3c8356b788a611a3d009e952",
-	"cloudzy/install/02-mount-bind-warnings.sh":    "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
-	"cloudzy/install/03-config-write-warnings.sh":  "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
-	"cloudzy/install/04-system-init-warnings.sh":   "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"cloudzy/install/01-partition-clean.sh":        "f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1",
-	"cloudzy/install/02-mount-bind-clean.sh":       "6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632",
-	"cloudzy/install/03-config-write-clean.sh":     "149c03c78650835bbddda5d47c6e6afa125bf5c0980278e0537789aaa969cff2",
-	"cloudzy/install/04-system-init-clean.sh":      "45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8",
+	"cloudzy/install/01-partition-warnings.sh": "67212d93cc487ddb0f99d4e2295031c89203e4ef99d7fc928a1c288a264a4b63",
+	"cloudzy/install/02-mount-bind-warnings.sh": "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
+	"cloudzy/install/03-config-write-warnings.sh": "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
+	"cloudzy/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
+	"cloudzy/install/01-partition-clean.sh": "f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1",
+	"cloudzy/install/02-mount-bind-clean.sh": "6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632",
+	"cloudzy/install/03-config-write-clean.sh": "149c03c78650835bbddda5d47c6e6afa125bf5c0980278e0537789aaa969cff2",
+	"cloudzy/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework platform
-	"framework/install/01-partition-warnings.sh":   "32b81097e203d0e9f6c011a8ea9b02a9d988107b3c8356b788a611a3d009e952",
-	"framework/install/02-mount-bind-warnings.sh":  "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
+	"framework/install/01-partition-warnings.sh": "67212d93cc487ddb0f99d4e2295031c89203e4ef99d7fc928a1c288a264a4b63",
+	"framework/install/02-mount-bind-warnings.sh": "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
 	"framework/install/03-config-write-warnings.sh": "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
 	"framework/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"framework/install/01-partition-clean.sh":      "f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1",
-	"framework/install/02-mount-bind-clean.sh":     "6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632",
-	"framework/install/03-config-write-clean.sh":   "149c03c78650835bbddda5d47c6e6afa125bf5c0980278e0537789aaa969cff2",
-	"framework/install/04-system-init-clean.sh":    "45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8",
+	"framework/install/01-partition-clean.sh": "f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1",
+	"framework/install/02-mount-bind-clean.sh": "6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632",
+	"framework/install/03-config-write-clean.sh": "149c03c78650835bbddda5d47c6e6afa125bf5c0980278e0537789aaa969cff2",
+	"framework/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework-dual platform
-	"framework-dual/install/01-partition-check-warnings.sh": "d139a00815eb00637c808d8fa243c92b7b922639255b99c50ecbc40e12d4bff1",
-	"framework-dual/install/02-mount-existing-warnings.sh":  "3a67c43528660ced1e27040c31a16669e56ef6676811f53ac1ef71c534555fda",
-	"framework-dual/install/03-config-dual-boot-warnings.sh": "689a61109a9da4a4dab494d201ff359c25dc7b61cdbf6a3bf1b7fc3156d872eb",
-	"framework-dual/install/04-system-init-warnings.sh":     "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"framework-dual/install/01-partition-check-clean.sh":    "5a72ac5478b3e83a9cd4a3acce160f78efabedb40eea6543760fda66e3ddb84b",
-	"framework-dual/install/02-mount-existing-clean.sh":     "88b350588411e7a2239c5849bb7b963037e8347e040efd0a6efaf1d21b1f339d",
-	"framework-dual/install/03-config-dual-boot-clean.sh":   "280831ca3d56e207391b6b9a33bde7990d7393586891a7cfdb723339c1d5c151",
-	"framework-dual/install/04-system-init-clean.sh":        "45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8",
+	"framework-dual/install/01-partition-check-warnings.sh": "f372c4bbf736e21efd1442071a1864797e7af1667efd4fc440262017b55651e5",
+	"framework-dual/install/02-mount-existing-warnings.sh": "05d1d21c317e22e5d241cfadbc02b78c465e4cdd06abb6195974fe16689ae841",
+	"framework-dual/install/03-config-dual-boot-warnings.sh": "656b5c2722eae551c576c1086077f98a28762c8024e2d36dfe0b53f786be48e0",
+	"framework-dual/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
+	"framework-dual/install/01-partition-check-clean.sh": "0bacae30cc1f8f733e8f77d18f6ac32bcf8bbaff8f598e60022e325a58df86bf",
+	"framework-dual/install/02-mount-existing-clean.sh": "b35a06c588988fca71a3f9c3384fcc2a59e770661b7d5d5923ba14ac183d3409",
+	"framework-dual/install/03-config-dual-boot-clean.sh": "8a7f3bd9ff356e4807930278b6c04f1f0d17ec99802e3ee14a35010c900cec50",
+	"framework-dual/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 }
 
 // Platform script sequences
@@ -201,13 +201,11 @@ func fetchFile(cfg Config, relPath string) error {
 		return fmt.Errorf("chmod failed: %w", err)
 	}
 
-	// Verify checksum (skip for main branch)
-	if cfg.Ref != "main" {
-		if expected, ok := checksums[relPath]; ok {
-			actual := fmt.Sprintf("%x", sha256.Sum256(data))
-			if actual != expected {
-				return fmt.Errorf("SHA256 mismatch: expected %s, got %s", expected, actual)
-			}
+	// Verify checksum
+	if expected, ok := checksums[relPath]; ok {
+		actual := fmt.Sprintf("%x", sha256.Sum256(data))
+		if actual != expected {
+			return fmt.Errorf("SHA256 mismatch: expected %s, got %s", expected, actual)
 		}
 	}
 
