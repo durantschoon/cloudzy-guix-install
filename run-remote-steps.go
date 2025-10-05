@@ -93,7 +93,12 @@ func (cw *colorWriter) Write(p []byte) (n int, err error) {
 	// Write color prefix, content, and reset
 	colored := append([]byte(cw.color), p...)
 	colored = append(colored, []byte(cw.reset)...)
-	return cw.w.Write(colored)
+	_, err = cw.w.Write(colored)
+	if err != nil {
+		return 0, err
+	}
+	// Return the length of the original input, not the colored output
+	return len(p), nil
 }
 
 func main() {
