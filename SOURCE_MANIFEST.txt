@@ -1,5 +1,5 @@
 # Source File Manifest
-# Generated: 2025-10-05 21:39:39 UTC
+# Generated: 2025-10-05 21:43:30 UTC
 #
 # Use this to verify GitHub's CDN has the latest version:
 # Compare these checksums with what you see in the raw files on GitHub
@@ -9,7 +9,7 @@
 c48256c0d1bc3295d8fe6f0d346d698600c80df67896d6a813cdc255db2479f5  ./framework-dual/install/01-partition-check.go
 b5defbd32e4e92dd96a00d81c152fde1de39e3caaf625b0eefe4db00df5dc68f  ./framework-dual/install/02-mount-existing.go
 bee73ebf5c0fee5402b5172ddab57644b892083fd32897e7b3e913e54bf491b1  ./framework-dual/install/03-config-dual-boot.go
-edb50a4762c6825e1708b5fccea15beab1f62f950e97f3f49e960064b5ee7ea1  ./framework-dual/install/04-system-init.go
+c26c20fddc5f090c3a128da6dc737c2752b6d89ecc236552ba7fce8b40e34aa3  ./framework-dual/install/04-system-init.go
 eaf7bbbff932a2dbfb04861e44871ee7a537d90ef93014cea8dde564f98e3883  ./framework-dual/install/state.go
 e2a29aaad133ddd4b95f44a0f8a9bafa53413836c6ed49ce7da5ef9fd6cc6116  ./run-remote-steps.go
 

@@ -45,18 +45,32 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		return err
 	}
 
-	// Set up Git environment variables for slow connections
-	os.Setenv("GIT_HTTP_MAX_REQUESTS", "2")
-	os.Setenv("GIT_HTTP_LOW_SPEED_LIMIT", "1000")
-	os.Setenv("GIT_HTTP_LOW_SPEED_TIME", "60")
+	// Optional: guix pull (can skip to save time, do it after first boot)
+	// Set SKIP_GUIX_PULL=1 to skip this step
+	skipPull := getEnv("SKIP_GUIX_PULL", "")
+	if skipPull != "" {
+		fmt.Println("Skipping guix pull (SKIP_GUIX_PULL is set)")
+		fmt.Println("You can run 'guix pull' after first boot")
+	} else {
+		fmt.Println()
+		fmt.Println("=== Guix Pull ===")
+		fmt.Println("Updating Guix to latest version (takes 10-30 minutes)...")
+		fmt.Println("To skip: set SKIP_GUIX_PULL=1 before running installer")
+		fmt.Println()
 
-	// Determine mirror URL
-	guixGitURL := getEnv("GUIX_GIT_URL", "https://git.savannah.gnu.org/git/guix.git")
-	guixVersion := getEnv("GUIX_VERSION", "v1.4.0")
+		// Set up Git environment variables for slow connections
+		os.Setenv("GIT_HTTP_MAX_REQUESTS", "2")
+		os.Setenv("GIT_HTTP_LOW_SPEED_LIMIT", "1000")
+		os.Setenv("GIT_HTTP_LOW_SPEED_TIME", "60")
 
-	fmt.Printf("Pulling Guix from configured mirror: %s\n", guixGitURL)
-	if err := runCommand("guix", "pull", "--url="+guixGitURL, "--commit="+guixVersion); err != nil {
-		return fmt.Errorf("guix pull failed: %w", err)
+		// Determine mirror URL
+		guixGitURL := getEnv("GUIX_GIT_URL", "https://git.savannah.gnu.org/git/guix.git")
+		guixVersion := getEnv("GUIX_VERSION", "v1.4.0")
+
+		fmt.Printf("Pulling Guix from configured mirror: %s\n", guixGitURL)
+		if err := runCommand("guix", "pull", "--url="+guixGitURL, "--commit="+guixVersion); err != nil {
+			return fmt.Errorf("guix pull failed: %w", err)
+		}
 	}
 
 	// Download customization tools
