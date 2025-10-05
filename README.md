@@ -200,18 +200,60 @@ export GUIX_GIT_URL="https://your-mirror.example.com/guix.git"
 
 ## Architecture
 
-Both installation types share a common architecture:
+### Go-Based Installer (framework-dual)
 
-### Script Structure
+The `framework-dual` platform uses a **Go-based installer** for reliability and type safety:
+
+**Benefits:**
+- ✅ No bash variable passing issues
+- ✅ Type-safe error handling
+- ✅ Built-in verification via Git and Go modules
+- ✅ Easier to debug and maintain
+
+**Usage from Guix ISO:**
+
+```bash
+# Quick start - builds from source and verifies integrity
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+```
+
+**Or with specific version:**
+
+```bash
+export GUIX_INSTALL_REF=v0.1.6  # Use a specific tag
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+```
+
+**Verification strategy:**
+1. Git verifies commit/tag integrity when cloning
+2. Go verifies go.mod (and go.sum if external deps exist)
+3. Source compiled locally before execution
+
+**Manual build (for advanced users):**
+
+```bash
+git clone --depth 1 --branch main https://github.com/durantschoon/cloudzy-guix-install.git
+cd cloudzy-guix-install
+go build -o run-remote-steps .
+./run-remote-steps
+```
+
+---
+
+### Bash-Based Installer (cloudzy, framework)
+
+Other platforms still use bash scripts with SHA256 verification:
+
+**Script Structure:**
 
 Each installation step has two parts:
 
 - **`*-warnings.sh`**: Pre-flight checks, variable validation, user confirmation
 - **`*-clean.sh`**: Actual implementation (partition, mount, configure, install)
 
-### Shared Components
+**Shared Components:**
 
-Scripts 04-06 are identical across platforms (symlinked in `framework-dual/`):
+Scripts 04-06 are identical across platforms:
 
 - `04-system-init`: Swap setup, Guix pull (with mirror optimization), system initialization
 - `05-postinstall-console`: Root password, SSH setup
