@@ -285,7 +285,8 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
 	if capturedVars != "" {
 		// Export INCOMING_VARS as the captured variable string
-		bashCmd = fmt.Sprintf("export INCOMING_VARS=%q && %s", capturedVars, bashCmd)
+		// Use ; instead of && so export doesn't stop execution if it "fails"
+		bashCmd = fmt.Sprintf("export INCOMING_VARS=%q; %s", capturedVars, bashCmd)
 		fmt.Printf("Running with incoming vars: %s\n", capturedVars)
 	}
 	fmt.Printf("DEBUG: Full bash command: %s\n", bashCmd)
