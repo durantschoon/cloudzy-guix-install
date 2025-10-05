@@ -258,18 +258,29 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 
 	fmt.Printf("Executing script pair in same bash session...\n")
 
+	// Capture output to parse variables
+	var outputBuf strings.Builder
+	multiWriter := io.MultiWriter(os.Stdout, logFile, &outputBuf)
+
 	// Run both scripts in same bash session using source
-	// This preserves exports from warnings script for clean script
+	// Prepend any captured variables from previous script pair
 	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
+	if capturedVars != "" {
+		bashCmd = capturedVars + " " + bashCmd
+		fmt.Printf("Running with captured vars: %s\n", capturedVars)
+	}
 	cmd := exec.Command("bash", "-c", bashCmd)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+	cmd.Stdout = multiWriter
 	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
 
 	// Inherit environment variables
 	cmd.Env = os.Environ()
 
 	err = cmd.Run()
+
+	// Parse output for exported variables
+	parseAndSetVars(outputBuf.String())
 
 	msg("Exit status for script pair: %v", cmd.ProcessState.ExitCode())
 	fmt.Printf("Log saved to: %s\n", logPath)
@@ -282,6 +293,24 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	}
 
 	return err
+}
+
+var capturedVars string
+
+func parseAndSetVars(output string) {
+	// Look for the marker line followed by variable assignments
+	lines := strings.Split(output, "\n")
+
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "###GUIX_INSTALL_VARS###" {
+			// Next line contains the variable assignments
+			if i+1 < len(lines) {
+				capturedVars = strings.TrimSpace(lines[i+1])
+				fmt.Printf("Captured variables: %s\n", capturedVars)
+			}
+			return
+		}
+	}
 }
 
 func runScript(cfg Config, relPath string, isWarning bool) error {
