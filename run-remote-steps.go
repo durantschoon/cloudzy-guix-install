@@ -82,25 +82,6 @@ type Config struct {
 	LogDir    string
 }
 
-// colorWriter wraps an io.Writer to add ANSI color codes
-type colorWriter struct {
-	w     io.Writer
-	color string
-	reset string
-}
-
-func (cw *colorWriter) Write(p []byte) (n int, err error) {
-	// Write color prefix, content, and reset
-	colored := append([]byte(cw.color), p...)
-	colored = append(colored, []byte(cw.reset)...)
-	_, err = cw.w.Write(colored)
-	if err != nil {
-		return 0, err
-	}
-	// Return the length of the original input, not the colored output
-	return len(p), nil
-}
-
 func main() {
 	// Get configuration from environment
 	cfg := Config{
@@ -279,11 +260,7 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	// Capture output to parse variables
 	var outputBuf strings.Builder
 
-	// Color wrapper for script output (cyan)
-	coloredStdout := &colorWriter{w: os.Stdout, color: "\033[0;36m", reset: "\033[0m"}
-	coloredStderr := &colorWriter{w: os.Stderr, color: "\033[0;36m", reset: "\033[0m"}
-
-	multiWriter := io.MultiWriter(coloredStdout, logFile, &outputBuf)
+	multiWriter := io.MultiWriter(os.Stdout, logFile, &outputBuf)
 
 	// Run both scripts in same bash session using source
 	// Set INCOMING_VARS from previous script pair's output
@@ -299,7 +276,7 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	cmd := exec.Command("bash", "-c", bashCmd)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = multiWriter
-	cmd.Stderr = io.MultiWriter(coloredStderr, logFile)
+	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
 
 	// Inherit environment variables
 	cmd.Env = os.Environ()
@@ -331,18 +308,22 @@ func parseAndSetVars(output string) {
 	// Look for the marker line followed by variable assignments
 	lines := strings.Split(output, "\n")
 
+	fmt.Printf("DEBUG: Parsing output, total lines: %d\n", len(lines))
 	for i, line := range lines {
 		if strings.TrimSpace(line) == "###GUIX_INSTALL_VARS###" {
+			fmt.Printf("DEBUG: Found marker at line %d\n", i)
 			// Next line contains the variable assignments
 			if i+1 < len(lines) {
 				// Strip "export " prefix to get just the variable assignments
 				fullLine := strings.TrimSpace(lines[i+1])
+				fmt.Printf("DEBUG: Full line: %q\n", fullLine)
 				capturedVars = strings.TrimPrefix(fullLine, "export ")
 				fmt.Printf("Captured variables: %s\n", capturedVars)
 			}
 			return
 		}
 	}
+	fmt.Printf("DEBUG: Marker not found in output\n")
 }
 
 // removed unused runScript helper (use runScriptPair instead)
