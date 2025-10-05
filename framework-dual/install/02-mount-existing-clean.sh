@@ -72,3 +72,7 @@ mount --bind /mnt/var/guix /var/guix
 df -h /gnu /var/guix
 
 herd start guix-daemon
+
+# Output variables for Go program to capture and pass to next script
+echo "###GUIX_INSTALL_VARS###"
+echo "DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-}"

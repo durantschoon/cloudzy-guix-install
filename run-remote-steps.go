@@ -46,9 +46,10 @@ var checksums = map[string]string{
 	"framework-dual/install/03-config-dual-boot-warnings.sh": "656b5c2722eae551c576c1086077f98a28762c8024e2d36dfe0b53f786be48e0",
 	"framework-dual/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
 	"framework-dual/install/01-partition-check-clean.sh": "0bacae30cc1f8f733e8f77d18f6ac32bcf8bbaff8f598e60022e325a58df86bf",
-	"framework-dual/install/02-mount-existing-clean.sh": "b35a06c588988fca71a3f9c3384fcc2a59e770661b7d5d5923ba14ac183d3409",
+	"framework-dual/install/02-mount-existing-clean.sh": "d1ef8b96efce4c29b28c4cd797475b1f6c911f54104d0fc9a4157a72aa4892c3",
 	"framework-dual/install/03-config-dual-boot-clean.sh": "8a7f3bd9ff356e4807930278b6c04f1f0d17ec99802e3ee14a35010c900cec50",
 	"framework-dual/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
+
 }
 
 // Platform script sequences
