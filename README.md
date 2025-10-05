@@ -307,20 +307,72 @@ You can override with: `GUIX_PLATFORM="framework"` or `GUIX_PLATFORM="framework-
 
 **Note**: Raspberry Pi installation uses a different approach (image-based) and is not supported by this script-based installer.
 
-## Quick Start
+## Quick Start (Go Installer)
 
 **⚠️ READ THE WARNING ABOVE FIRST! This script will destroy all data on the target device.**
 
 ### 1. Prepare Guix Live ISO Environment
 
-First, install required packages in the Guix live ISO (perl is needed for shasum)
-
 ```bash
-guix install curl
-guix install perl
+guix install go curl
 ```
 
-### 2. Set Environment Variables
+### 2. Download and Build Installer
+
+```bash
+# Download source
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.go -o run-remote-steps.go
+
+# Build binary
+go build run-remote-steps.go
+
+# Or use pre-compiled binary (once releases are available):
+# curl -fsSL https://github.com/durantschoon/cloudzy-guix-install/releases/latest/download/run-remote-steps-linux-amd64 -o run-remote-steps
+# chmod +x run-remote-steps
+```
+
+### 3. Set Environment Variables
+
+```bash
+# Required
+export USER_NAME="YOUR_USER_NAME"
+export FULL_NAME="YOUR_FULL_NAME"
+export TIMEZONE="America/New_York"
+export HOST_NAME="guix-vps"
+
+# Optional (with defaults)
+export BOOT_MODE="uefi"         # uefi or bios (auto-detected)
+export SWAP_SIZE="4G"           # 2G, 4G, 8G, etc.
+export GUIX_PLATFORM="cloudzy"  # cloudzy, framework, or framework-dual
+```
+
+### 4. Run Installer
+
+```bash
+# Use latest code from main branch
+GUIX_INSTALL_REF=main ./run-remote-steps
+
+# Or use a specific release tag
+GUIX_INSTALL_REF=v0.2.0 ./run-remote-steps
+```
+
+**Done!** The installer handles all downloads, checksums, and script execution automatically.
+
+---
+
+## Bash Script Documentation (Legacy)
+
+The original bash script is still available but the Go version is recommended for reliability.
+
+#### 1. Prepare Guix Live ISO Environment
+
+Install required packages:
+
+```bash
+guix install curl perl
+```
+
+#### 2. Set Environment Variables
 
 First, configure your installation variables (the second group contains optional variables (with defaults)):
 
