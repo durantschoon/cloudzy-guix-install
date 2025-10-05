@@ -205,6 +205,7 @@ export GUIX_GIT_URL="https://your-mirror.example.com/guix.git"
 The `framework-dual` platform uses a **Go-based installer** for reliability and type safety:
 
 **Benefits:**
+
 - ✅ No bash variable passing issues
 - ✅ Type-safe error handling
 - ✅ Built-in verification via Git and Go modules
@@ -225,6 +226,7 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 ```
 
 **Verification strategy:**
+
 1. Git verifies commit/tag integrity when cloning
 2. Go verifies go.mod (and go.sum if external deps exist)
 3. Source compiled locally before execution
