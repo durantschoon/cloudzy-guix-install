@@ -135,6 +135,9 @@ fetch_file(){ # fetch_file path/to/script
   local dest="${WORKDIR}/${rel}"
   mkdir -p "$(dirname "$dest")"
   local url="${RAW_BASE}/${rel}"
+  echo "DEBUG: Fetching URL: $url" >&2
+  echo "DEBUG: RAW_BASE=$RAW_BASE" >&2
+  echo "DEBUG: REF=$REF" >&2
   curl -fsSL "$url?$(date +%s)" -o "$dest" || { err "Download failed: $url"; return 1; }
   chmod +x "$dest"
   # Skip SHA256 verification when using main branch for debugging
