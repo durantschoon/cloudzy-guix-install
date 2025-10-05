@@ -117,3 +117,32 @@ All installation state is managed through a shared `State` struct (in `framework
 3. **Don't use `done < file.txt`** - Use process substitution
 4. **Don't add timestamps to manifest** - Makes hash unstable
 5. **Don't use `exec` in bootstrap** - Breaks stdin for Go installer
+6. **Don't commit without updating manifest** - See below
+
+## Development Workflow
+
+### Before Committing Changes
+
+If you modified any scripts that run on the Guix ISO, you **MUST** update the manifest before committing:
+
+```bash
+./update-manifest.sh
+git add SOURCE_MANIFEST.txt
+git commit -m "Your commit message"
+```
+
+**Files that require manifest update:**
+
+- `bootstrap-installer.sh`
+- `run-remote-steps.go`
+- Any file in `**/install/*.go`
+- Any file in `**/install/*.sh`
+
+**Why:** The manifest contains SHA256 checksums of all source files. Users verify this manifest hash to ensure GitHub's CDN has the latest version. If you don't update it, users will get checksum mismatches when they try to install.
+
+**The update-manifest.sh script:**
+
+- Generates checksums for all Go source files and bootstrap script
+- Writes them to `SOURCE_MANIFEST.txt`
+- Displays the manifest hash for documentation/verification
+- Only changes when actual source files change (no timestamp)
