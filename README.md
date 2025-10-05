@@ -211,6 +211,13 @@ The `framework-dual` platform uses a **Go-based installer** for reliability and 
 - ✅ Built-in verification via Git and Go modules
 - ✅ Easier to debug and maintain
 
+**Prerequisites (install on Guix ISO first):**
+
+```bash
+guix install git go gcc-toolchain curl
+source ~/.guix-profile/etc/profile
+```
+
 **Usage from Guix ISO:**
 
 ```bash
