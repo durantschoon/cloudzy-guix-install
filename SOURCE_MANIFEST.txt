@@ -1,0 +1,18 @@
+# Source File Manifest
+# Generated: 2025-10-05 20:32:06 UTC
+#
+# Use this to verify GitHub's CDN has the latest version:
+# Compare these checksums with what you see in the raw files on GitHub
+
+## Go Source Files
+
+c48256c0d1bc3295d8fe6f0d346d698600c80df67896d6a813cdc255db2479f5  ./framework-dual/install/01-partition-check.go
+b5defbd32e4e92dd96a00d81c152fde1de39e3caaf625b0eefe4db00df5dc68f  ./framework-dual/install/02-mount-existing.go
+bee73ebf5c0fee5402b5172ddab57644b892083fd32897e7b3e913e54bf491b1  ./framework-dual/install/03-config-dual-boot.go
+edb50a4762c6825e1708b5fccea15beab1f62f950e97f3f49e960064b5ee7ea1  ./framework-dual/install/04-system-init.go
+eaf7bbbff932a2dbfb04861e44871ee7a537d90ef93014cea8dde564f98e3883  ./framework-dual/install/state.go
+415a0ae0948aaaef1f8e120010e0ffd07a3050cbe51d0243b1389f77e3a8f94c  ./run-remote-steps.go
+
+## Bootstrap Script
+
+97f4647923ae1f9a58800f2ef177c8090df8e3e62ea5458a78473bcad2ee7828  bootstrap-installer.sh

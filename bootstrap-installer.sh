@@ -35,6 +35,49 @@ echo ""
 echo "Building from commit: $COMMIT"
 echo ""
 
+# Verify source manifest (ensures GitHub CDN has latest version)
+if [[ -f SOURCE_MANIFEST.txt ]]; then
+    echo "Verifying source file checksums..."
+    echo ""
+
+    # Extract and verify Go source files
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^#.*$ ]] && continue
+        [[ -z "$line" ]] && continue
+
+        # Parse "hash  filepath" format
+        expected_hash=$(echo "$line" | awk '{print $1}')
+        filepath=$(echo "$line" | awk '{print $2}')
+
+        # Skip if not a file (might be a header)
+        [[ ! -f "$filepath" ]] && continue
+
+        # Calculate actual hash
+        actual_hash=$(shasum -a 256 "$filepath" | awk '{print $1}')
+
+        if [[ "$actual_hash" != "$expected_hash" ]]; then
+            echo "ERROR: Checksum mismatch for $filepath"
+            echo "  Expected: $expected_hash"
+            echo "  Got:      $actual_hash"
+            echo ""
+            echo "This likely means GitHub's CDN hasn't caught up with the latest push."
+            echo "Wait a few minutes and try again, or check the repo on GitHub."
+            exit 1
+        fi
+
+        echo "✓ $filepath"
+    done < SOURCE_MANIFEST.txt
+
+    echo ""
+    echo "All source files verified!"
+    echo ""
+else
+    echo "Warning: SOURCE_MANIFEST.txt not found. Skipping checksum verification."
+    echo "  (This is okay but means GitHub CDN freshness isn't verified)"
+    echo ""
+fi
+
 # Verify go.mod exists
 if [[ ! -f go.mod ]]; then
     echo "Error: go.mod not found. This doesn't appear to be a Go module."
