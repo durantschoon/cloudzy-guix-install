@@ -41,7 +41,7 @@ var checksums = map[string]string{
 	"framework/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework-dual platform
-	"framework-dual/install/01-partition-check-warnings.sh": "f372c4bbf736e21efd1442071a1864797e7af1667efd4fc440262017b55651e5",
+	"framework-dual/install/01-partition-check-warnings.sh": "2cc6c9a74aa4fbe7b6aa143f95b6935b8903841fddbd06a7651c0c5e3473c430",
 	"framework-dual/install/02-mount-existing-warnings.sh": "05d1d21c317e22e5d241cfadbc02b78c465e4cdd06abb6195974fe16689ae841",
 	"framework-dual/install/03-config-dual-boot-warnings.sh": "656b5c2722eae551c576c1086077f98a28762c8024e2d36dfe0b53f786be48e0",
 	"framework-dual/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",

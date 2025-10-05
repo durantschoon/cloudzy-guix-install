@@ -137,16 +137,6 @@ echo "IMPORTANT: Make sure you have backed up your data!"
 echo "   While this script tries to be safe, disk operations are always risky."
 echo ""
 
-if [[ -n "$GUIX_ROOT_PARTNUM" ]]; then
-  read -p "Type 'YES' to proceed with formatting existing partition: " confirmation
-else
-  read -p "Type 'YES' to proceed with partition creation: " confirmation
-fi
-if [[ "$confirmation" != "YES" ]]; then
-  echo "Aborted by user."
-  exit 1
-fi
-
 # Check for a separate home partition
 echo ""
 echo "=== Checking for separate home partition ==="
