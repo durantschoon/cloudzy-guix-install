@@ -94,6 +94,7 @@ Located in `postinstall/` - Run after booting into installed minimal Guix system
 - Apply changes with system reconfigure
 
 **Usage:**
+
 ```bash
 # After booting into minimal Guix system
 # Copy customize tool to system (via USB or another method)
