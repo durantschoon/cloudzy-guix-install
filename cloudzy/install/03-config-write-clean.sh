@@ -3,7 +3,7 @@ set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failure
 
 # Source common library functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../lib/common.sh"
+source "$SCRIPT_DIR/../../lib/common.sh"
 
 # Get UUID of root partition
 UUID=$(get_root_uuid "$ROOT")

@@ -12,7 +12,7 @@ declare -A SHA256=(
   ["cloudzy/install/04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["cloudzy/install/01-partition-clean.sh"]="f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1"
   ["cloudzy/install/02-mount-bind-clean.sh"]="6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632"
-  ["cloudzy/install/03-config-write-clean.sh"]="5b6bddcadd69d948159d197e45806563bdab563de9032ebe20abe2dbff881120"
+  ["cloudzy/install/03-config-write-clean.sh"]="149c03c78650835bbddda5d47c6e6afa125bf5c0980278e0537789aaa969cff2"
   ["cloudzy/install/04-system-init-clean.sh"]="45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8"
 
   # framework platform
@@ -22,7 +22,7 @@ declare -A SHA256=(
   ["framework/install/04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["framework/install/01-partition-clean.sh"]="f99bdab57a8ef7aa3f6ef83f563524a0fade6b22e07c4914ca58c3381bc05ec1"
   ["framework/install/02-mount-bind-clean.sh"]="6289b50678e9b80fe26181da1400966642f6b12b94523bc3e53b0a7aba80f632"
-  ["framework/install/03-config-write-clean.sh"]="5b6bddcadd69d948159d197e45806563bdab563de9032ebe20abe2dbff881120"
+  ["framework/install/03-config-write-clean.sh"]="149c03c78650835bbddda5d47c6e6afa125bf5c0980278e0537789aaa969cff2"
   ["framework/install/04-system-init-clean.sh"]="45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8"
 
   # framework-dual platform
@@ -32,7 +32,7 @@ declare -A SHA256=(
   ["framework-dual/install/04-system-init-warnings.sh"]="f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea"
   ["framework-dual/install/01-partition-check-clean.sh"]="5a72ac5478b3e83a9cd4a3acce160f78efabedb40eea6543760fda66e3ddb84b"
   ["framework-dual/install/02-mount-existing-clean.sh"]="88b350588411e7a2239c5849bb7b963037e8347e040efd0a6efaf1d21b1f339d"
-  ["framework-dual/install/03-config-dual-boot-clean.sh"]="21eaee5e887cf0cd7aa00e18bfe798510e204769ca83cf214787c4b7bf4bcef8"
+  ["framework-dual/install/03-config-dual-boot-clean.sh"]="280831ca3d56e207391b6b9a33bde7990d7393586891a7cfdb723339c1d5c151"
   ["framework-dual/install/04-system-init-clean.sh"]="45f56ee0002df99f03670f6e59bfde33c2b2ed96ff167c833c02809f17f277f8"
 
 )
