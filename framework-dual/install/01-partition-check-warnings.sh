@@ -79,35 +79,69 @@ lsblk -n -o NAME,FSTYPE,LABEL "$DEVICE" | while read name fstype label; do
   fi
 done
 
-# Show free space
+# Check if a partition named 'guix-root' already exists
 echo ""
-echo "=== Available Free Space ==="
-parted "$DEVICE" unit GiB print free | grep "Free Space" || echo "No unallocated space found"
-echo ""
+echo "=== Checking for existing guix-root partition ==="
+GUIX_ROOT_PARTNUM=$(parted "$DEVICE" print | grep "guix-root" | awk '{print $1}')
 
-# Check if there's sufficient free space (at least 40GB recommended)
-FREE_SPACE_GB=$(parted "$DEVICE" unit GiB print free 2>/dev/null | grep "Free Space" | tail -1 | awk '{print $3}' | sed 's/GiB//' || echo "0")
-if (( $(echo "$FREE_SPACE_GB < 40" | bc -l) )); then
-  echo "WARNING: Less than 40GB of free space available (found: ${FREE_SPACE_GB}GiB)"
-  echo "   Recommended: At least 40-60GB for Guix root partition"
-  echo "   You may need to shrink your Pop!_OS partition first."
+if [[ -n "$GUIX_ROOT_PARTNUM" ]]; then
+  # Found existing guix-root partition
+  if [[ "$DEVICE" == *"nvme"* ]] || [[ "$DEVICE" == *"mmcblk"* ]]; then
+    GUIX_ROOT_PART="${DEVICE}p${GUIX_ROOT_PARTNUM}"
+  else
+    GUIX_ROOT_PART="${DEVICE}${GUIX_ROOT_PARTNUM}"
+  fi
+
+  echo "Found existing partition labeled 'guix-root': $GUIX_ROOT_PART"
+  PART_SIZE=$(lsblk -b -n -o SIZE "$GUIX_ROOT_PART" | awk '{printf "%.1f", $1/1024/1024/1024}')
+  echo "Partition size: ${PART_SIZE}GiB"
   echo ""
-  echo "   Press Ctrl+C to abort, or wait 10 seconds to continue anyway..."
-  sleep 10
+  echo "=== Partition Plan ==="
+  echo "This script will:"
+  echo "  1. Keep existing EFI partition: $EFI"
+  echo "  2. Keep all existing Pop!_OS partitions (untouched)"
+  echo "  3. Format existing guix-root partition: $GUIX_ROOT_PART (${PART_SIZE}GiB)"
+  echo "  4. Install Guix bootloader to ESP (will chain to Pop!_OS)"
+else
+  # No existing guix-root partition, need to create one
+  echo "No partition labeled 'guix-root' found."
+
+  # Show free space
   echo ""
+  echo "=== Available Free Space ==="
+  parted "$DEVICE" unit GiB print free | grep "Free Space" || echo "No unallocated space found"
+  echo ""
+
+  # Check if there's sufficient free space (at least 40GB recommended)
+  FREE_SPACE_GB=$(parted "$DEVICE" unit GiB print free 2>/dev/null | grep "Free Space" | tail -1 | awk '{print $3}' | sed 's/GiB//' || echo "0")
+  if (( $(echo "$FREE_SPACE_GB < 40" | bc -l) )); then
+    echo "WARNING: Less than 40GB of free space available (found: ${FREE_SPACE_GB}GiB)"
+    echo "   Recommended: At least 40-60GB for Guix root partition"
+    echo "   You may need to shrink your Pop!_OS partition first."
+    echo "   OR: Create a partition labeled 'guix-root' using GParted/parted"
+    echo ""
+    echo "   Press Ctrl+C to abort, or wait 10 seconds to continue anyway..."
+    sleep 10
+    echo ""
+  fi
+
+  echo "=== Partition Plan ==="
+  echo "This script will:"
+  echo "  1. Keep existing EFI partition: $EFI"
+  echo "  2. Keep all existing Pop!_OS partitions (untouched)"
+  echo "  3. Create a new partition for Guix in available free space"
+  echo "  4. Install Guix bootloader to ESP (will chain to Pop!_OS)"
 fi
-
-echo "=== Partition Plan ==="
-echo "This script will:"
-echo "  1. Keep existing EFI partition: $EFI"
-echo "  2. Keep all existing Pop!_OS partitions (untouched)"
-echo "  3. Create a new partition for Guix in available free space"
-echo "  4. Install Guix bootloader to ESP (will chain to Pop!_OS)"
 echo ""
 echo "IMPORTANT: Make sure you have backed up your data!"
 echo "   While this script tries to be safe, disk operations are always risky."
 echo ""
-read -p "Type 'YES' to proceed with partition creation: " confirmation
+
+if [[ -n "$GUIX_ROOT_PARTNUM" ]]; then
+  read -p "Type 'YES' to proceed with formatting existing partition: " confirmation
+else
+  read -p "Type 'YES' to proceed with partition creation: " confirmation
+fi
 if [[ "$confirmation" != "YES" ]]; then
   echo "Aborted by user."
   exit 1
