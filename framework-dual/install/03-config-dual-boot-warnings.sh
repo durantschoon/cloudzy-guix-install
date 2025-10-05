@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 
-# Verify configuration variables
+# Verify configuration variables (passed via environment)
 echo "=== System Configuration Setup ==="
 echo ""
 echo "Required environment variables:"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 
-# Verify required variables from previous step
+# Verify required variables from previous step (passed via environment)
 if [[ -z "${ROOT:-}" ]] || [[ -z "${EFI:-}" ]]; then
   echo "Error: Required variables not set (ROOT, EFI)"
   echo "Make sure the partition-check step completed successfully."
