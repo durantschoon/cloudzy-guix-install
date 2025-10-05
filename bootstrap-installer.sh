@@ -15,6 +15,11 @@ echo "Repository: ${REPO_OWNER}"
 echo "Reference: ${REPO_REF}"
 echo ""
 
+# Test that stdin is working before proceeding
+echo "Testing stdin availability..."
+read -p "Press Enter to continue (or Ctrl+C to abort): " -r
+echo ""
+
 # Create temporary directory
 WORK_DIR=$(mktemp -d)
 trap "rm -rf $WORK_DIR" EXIT
