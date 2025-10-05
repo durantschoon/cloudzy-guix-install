@@ -95,8 +95,26 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
     echo "Before proceeding, you should verify this matches the expected hash"
     echo "from the repository documentation or a trusted source."
     echo ""
-    read -p "Does this hash match what you expect? [y/N] " -n 1 -r
-    echo ""
+
+    # Debug: Check if stdin is a terminal
+    if [ -t 0 ]; then
+        echo "[DEBUG] stdin is a terminal (good)"
+    else
+        echo "[DEBUG] stdin is NOT a terminal (problem!)"
+        echo "[DEBUG] stdin file descriptor: $(ls -l /proc/$$/fd/0 2>/dev/null || echo 'cannot check')"
+    fi
+
+    echo "[DEBUG] About to call read..."
+    if read -p "Does this hash match what you expect? [y/N] " -n 1 -r; then
+        echo ""
+        echo "[DEBUG] read succeeded, REPLY='$REPLY'"
+    else
+        echo ""
+        echo "[DEBUG] read failed with exit code $?"
+        echo "ERROR: Cannot read from stdin"
+        exit 1
+    fi
+
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "Installation aborted by user"
         exit 1
