@@ -87,6 +87,11 @@ read -r -a SCRIPT_BASES <<< "$(echo ${PLATFORM_SCRIPTS[$PLATFORM]})"
 
 echo "Selected platform: $PLATFORM"
 echo "Script sequence: ${SCRIPT_BASES[*]}"
+echo "DEBUG: Number of scripts: ${#SCRIPT_BASES[@]}"
+echo "DEBUG: Individual elements:"
+for i in "${!SCRIPT_BASES[@]}"; do
+  echo "  [$i] = '${SCRIPT_BASES[$i]}'"
+done
 
 # 4) Where to store downloads & logs locally
 WORKDIR="$(mktemp -d /tmp/run-steps.XXXXXX)"
