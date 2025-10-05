@@ -288,6 +288,7 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 		bashCmd = fmt.Sprintf("export INCOMING_VARS=%q && %s", capturedVars, bashCmd)
 		fmt.Printf("Running with incoming vars: %s\n", capturedVars)
 	}
+	fmt.Printf("DEBUG: Full bash command: %s\n", bashCmd)
 	cmd := exec.Command("bash", "-c", bashCmd)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = multiWriter
