@@ -36,7 +36,7 @@ These installation scripts are designed for **fresh VPS instances** where you wa
 
 ## Directory Structure
 
-```
+```text
 cloudzy/
 ├── install/          # ISO phase: Minimal Guix installation
 │   ├── 01-partition-{warnings,clean}.sh
@@ -81,6 +81,7 @@ These scripts are called automatically by `run-remote-steps.sh`.
 Located in `postinstall/` - Run after booting into installed minimal Guix system.
 
 **`customize`** - Interactive VPS customization tool:
+
 - Add SSH service (critical for headless VPS)
 - Add common packages (git, vim, emacs, etc.)
 - View/edit config manually

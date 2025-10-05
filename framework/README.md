@@ -37,7 +37,7 @@ These installation scripts are designed for **fresh Framework 13 installations**
 
 ## Directory Structure
 
-```
+```text
 framework/
 ├── install/          # ISO phase: Minimal Guix installation
 │   ├── 01-partition-{warnings,clean}.sh → ../../cloudzy/install/01-*
@@ -84,6 +84,7 @@ These scripts are called automatically by the main installer runner.
 Located in `postinstall/` - Run after booting into installed minimal Guix system.
 
 **`customize`** - Interactive Framework 13 customization tool:
+
 - **Add WiFi/Bluetooth firmware** (critical for Framework 13!)
 - Add desktop environment (GNOME/Xfce/MATE/LXQt)
 - Add SSH service (optional for laptop)

@@ -33,7 +33,7 @@ chmod +x ~/guix-customize
 
 ### Interactive Menu Options
 
-```
+```text
 Services & Features:
   1) Add SSH service
   2) Add desktop environment (GNOME, Xfce, MATE, LXQt)

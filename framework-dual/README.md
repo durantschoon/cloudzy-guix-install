@@ -32,7 +32,7 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
 
 ## Directory Structure
 
-```
+```text
 framework-dual/
 ├── install/          # ISO phase: Minimal Guix dual-boot installation
 │   ├── 01-partition-check-{warnings,clean}.sh
@@ -81,6 +81,7 @@ These scripts are called automatically by the main installer runner.
 Located in `postinstall/` - Run after booting into installed minimal Guix system.
 
 **`customize`** - Interactive Framework 13 customization tool:
+
 - Add WiFi/Bluetooth firmware (critical for Framework 13)
 - Add desktop environment (GNOME/Xfce/MATE/LXQt)
 - Add common packages (git, vim, emacs, etc.)
@@ -154,6 +155,7 @@ If you don't have free space, shrink Pop!_OS first:
 ## Post-Installation
 
 After installation, your GRUB menu should show:
+
 - Guix System (default)
 - Pop!_OS (available via submenu or chainloading)
 
@@ -162,14 +164,17 @@ If Pop!_OS doesn't appear in GRUB, you can manually add it or use `update-grub` 
 ## Troubleshooting
 
 ### "No EFI System Partition found"
+
 - You need to install Pop!_OS first
 - Pop!_OS must be installed in UEFI mode (not legacy BIOS)
 
 ### "Less than 40GB of free space available"
+
 - Use GParted (from Pop!_OS live ISO) to shrink Pop!_OS partition
 - Create at least 40-60GB of unallocated space
 
 ### GRUB doesn't show Pop!_OS
+
 - Boot into Guix
 - Run: `sudo os-prober` (may need to install)
 - Run: `sudo grub-mkconfig -o /boot/grub/grub.cfg`
