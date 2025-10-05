@@ -96,11 +96,20 @@ func askYesNo(prompt string, defaultYes string) bool {
 	fmt.Fprint(os.Stderr, prompt)
 	os.Stderr.Sync() // Ensure prompt is displayed before reading
 
-	reader := bufio.NewReader(os.Stdin)
+	// Open /dev/tty to read directly from terminal (not stdin which may be redirected)
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n[ERROR] Failed to open /dev/tty: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] Cannot proceed safely without user confirmation\n")
+		os.Exit(1)
+	}
+	defer tty.Close()
+
+	reader := bufio.NewReader(tty)
 	answer, err := reader.ReadString('\n')
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n[ERROR] Failed to read from stdin: %v\n", err)
+		fmt.Fprintf(os.Stderr, "\n[ERROR] Failed to read from terminal: %v\n", err)
 		fmt.Fprintf(os.Stderr, "[ERROR] Cannot proceed safely without user confirmation\n")
 		os.Exit(1)
 	}
