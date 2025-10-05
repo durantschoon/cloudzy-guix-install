@@ -82,8 +82,9 @@ if [[ -z "${PLATFORM_SCRIPTS[$PLATFORM]:-}" ]]; then
   exit 1
 fi
 
-# Set script bases for selected platform (strip whitespace and convert to array)
-read -r -a SCRIPT_BASES <<< "$(echo ${PLATFORM_SCRIPTS[$PLATFORM]})"
+# Set script bases for selected platform (use word splitting to create array)
+# shellcheck disable=SC2206
+SCRIPT_BASES=(${PLATFORM_SCRIPTS[$PLATFORM]})
 
 echo "Selected platform: $PLATFORM"
 echo "Script sequence: ${SCRIPT_BASES[*]}"
