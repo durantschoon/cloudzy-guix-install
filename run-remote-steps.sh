@@ -266,9 +266,12 @@ fetch_file "lib/runner-common.sh" || { err "Failed to fetch lib/runner-common.sh
 # No need to clear variables - they're in main context
 
 for base in "${SCRIPT_BASES[@]}"; do
+  echo "DEBUG: Processing base='$base'" >&2
   warning_script="${base}-warnings.sh"
   clean_script="${base}-clean.sh"
-  
+  echo "DEBUG: warning_script='$warning_script'" >&2
+  echo "DEBUG: clean_script='$clean_script'" >&2
+
   msg "Fetch ${warning_script}"
   warning_path="$(fetch_file "$warning_script")" || {
     err "Failed to fetch $warning_script"; exit 1; }
