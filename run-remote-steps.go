@@ -148,16 +148,10 @@ func main() {
 			continue
 		}
 
-		// Run warning script
-		msg("Running warnings for %s", base)
-		if err := runScript(cfg, warningScript, true); err != nil {
-			fatal("Warning script failed: %v", err)
-		}
-
-		// Run clean script
-		msg("Running %s", cleanScript)
-		if err := runScript(cfg, cleanScript, false); err != nil {
-			warn("Clean script returned non-zero: %v", err)
+		// Run warning and clean scripts in same bash session to preserve exports
+		msg("Running warnings and clean scripts for %s", base)
+		if err := runScriptPair(cfg, warningScript, cleanScript); err != nil {
+			warn("Script pair returned non-zero: %v", err)
 		}
 	}
 
@@ -240,6 +234,54 @@ func previewScript(cfg Config, relPath string) {
 	}
 
 	fmt.Println("-----------------------")
+}
+
+func runScriptPair(cfg Config, warningScript, cleanScript string) error {
+	warningPath := filepath.Join(cfg.WorkDir, warningScript)
+	cleanPath := filepath.Join(cfg.WorkDir, cleanScript)
+	logPath := filepath.Join(cfg.LogDir, filepath.Base(cleanScript)+".combined.log")
+
+	// Check if scripts exist
+	if _, err := os.Stat(warningPath); err != nil {
+		return fmt.Errorf("warning script not found: %s (error: %w)", warningPath, err)
+	}
+	if _, err := os.Stat(cleanPath); err != nil {
+		return fmt.Errorf("clean script not found: %s (error: %w)", cleanPath, err)
+	}
+
+	// Create log file
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		return fmt.Errorf("create log failed: %w", err)
+	}
+	defer logFile.Close()
+
+	fmt.Printf("Executing script pair in same bash session...\n")
+
+	// Run both scripts in same bash session using source
+	// This preserves exports from warnings script for clean script
+	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
+	cmd := exec.Command("bash", "-c", bashCmd)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+
+	// Inherit environment variables
+	cmd.Env = os.Environ()
+
+	err = cmd.Run()
+
+	msg("Exit status for script pair: %v", cmd.ProcessState.ExitCode())
+	fmt.Printf("Log saved to: %s\n", logPath)
+
+	// Show last 40 lines of log
+	showLogTail(logPath, 40)
+
+	if !askYes("Continue to next step?") {
+		os.Exit(cmd.ProcessState.ExitCode())
+	}
+
+	return err
 }
 
 func runScript(cfg Config, relPath string, isWarning bool) error {
