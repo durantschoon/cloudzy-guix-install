@@ -265,7 +265,7 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	// Prepend any captured variables from previous script pair
 	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
 	if capturedVars != "" {
-		bashCmd = capturedVars + " " + bashCmd
+		bashCmd = capturedVars + " && " + bashCmd
 		fmt.Printf("Running with captured vars: %s\n", capturedVars)
 	}
 	cmd := exec.Command("bash", "-c", bashCmd)
