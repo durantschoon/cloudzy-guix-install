@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail  # Safety: exit on error, undefined vars, and pipeline failures
 
+# Verify required variables are set
+if [[ -z "${ROOT:-}" ]] || [[ -z "${EFI:-}" ]] || [[ -z "${DEVICE:-}" ]]; then
+  echo "Error: Required variables not set (ROOT, EFI, DEVICE)"
+  echo "Make sure the partition-check step completed successfully."
+  exit 1
+fi
+
 # Mount operations are the same for dual-boot as for clean install
 # The key difference is we're reusing existing ESP instead of creating it
 
@@ -75,4 +82,6 @@ herd start guix-daemon
 
 # Output variables for Go program to capture and pass to next script
 echo "###GUIX_INSTALL_VARS###"
-echo "export DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-}"
+# Build outgoing vars: keep incoming vars and add/update new ones
+OUTGOING_VARS="${INCOMING_VARS:-} DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-}"
+echo "export $OUTGOING_VARS"

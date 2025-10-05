@@ -35,4 +35,6 @@ mkfs.ext4 "$ROOT"
 
 # Output variables for Go program to capture and pass to next script
 echo "###GUIX_INSTALL_VARS###"
-echo "export DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"
+# Build outgoing vars: keep incoming vars and add/update new ones
+OUTGOING_VARS="${INCOMING_VARS:-} DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"
+echo "export $OUTGOING_VARS"

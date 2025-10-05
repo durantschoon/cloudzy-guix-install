@@ -25,9 +25,9 @@ var checksums = map[string]string{
 	"cloudzy/install/02-mount-bind-warnings.sh": "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
 	"cloudzy/install/03-config-write-warnings.sh": "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
 	"cloudzy/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"cloudzy/install/01-partition-clean.sh": "77bd7057c16b90d0a9174ad285f64590e1c68cf7d6f7d76be91c272c99a259a9",
-	"cloudzy/install/02-mount-bind-clean.sh": "4bf7267947e1dea213fae437d96b05cc497bfcc250e2afc3deb00ad7b1b9234d",
-	"cloudzy/install/03-config-write-clean.sh": "38b278a5b066f21b9c8dc71adc42f1d37c020330a1ea4b65bcf19463125f0f3a",
+	"cloudzy/install/01-partition-clean.sh": "a161b8a08fe75f1435425cd342e72c40c53e4b287b3fb9c3bf55e71a93fdcfd3",
+	"cloudzy/install/02-mount-bind-clean.sh": "e9c969f1e5d820bb199558dfcb37c074e24c62cb92a143e7fe3dd0d88fc84d3d",
+	"cloudzy/install/03-config-write-clean.sh": "6d1afef1628719cd5f2a360fd459d6e0577413a6cec9ee19c9e6e1b090ab95d6",
 	"cloudzy/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework platform
@@ -35,9 +35,9 @@ var checksums = map[string]string{
 	"framework/install/02-mount-bind-warnings.sh": "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
 	"framework/install/03-config-write-warnings.sh": "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
 	"framework/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"framework/install/01-partition-clean.sh": "77bd7057c16b90d0a9174ad285f64590e1c68cf7d6f7d76be91c272c99a259a9",
-	"framework/install/02-mount-bind-clean.sh": "4bf7267947e1dea213fae437d96b05cc497bfcc250e2afc3deb00ad7b1b9234d",
-	"framework/install/03-config-write-clean.sh": "38b278a5b066f21b9c8dc71adc42f1d37c020330a1ea4b65bcf19463125f0f3a",
+	"framework/install/01-partition-clean.sh": "a161b8a08fe75f1435425cd342e72c40c53e4b287b3fb9c3bf55e71a93fdcfd3",
+	"framework/install/02-mount-bind-clean.sh": "e9c969f1e5d820bb199558dfcb37c074e24c62cb92a143e7fe3dd0d88fc84d3d",
+	"framework/install/03-config-write-clean.sh": "6d1afef1628719cd5f2a360fd459d6e0577413a6cec9ee19c9e6e1b090ab95d6",
 	"framework/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework-dual platform
@@ -45,9 +45,9 @@ var checksums = map[string]string{
 	"framework-dual/install/02-mount-existing-warnings.sh": "05d1d21c317e22e5d241cfadbc02b78c465e4cdd06abb6195974fe16689ae841",
 	"framework-dual/install/03-config-dual-boot-warnings.sh": "656b5c2722eae551c576c1086077f98a28762c8024e2d36dfe0b53f786be48e0",
 	"framework-dual/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"framework-dual/install/01-partition-check-clean.sh": "d1fac6aa5bed38e54cf408e75f2e4d92e26384f41c4fe444802d3fc87813c779",
-	"framework-dual/install/02-mount-existing-clean.sh": "ef36ce4c00c93cb0008f879d91b4e62d3cd58d7ae03827d955912edd76983149",
-	"framework-dual/install/03-config-dual-boot-clean.sh": "190890a38b1c109619f202001bf8ac168fbdc61ce6a82140c428cdbddda7c74f",
+	"framework-dual/install/01-partition-check-clean.sh": "92c9c89603d3f66fe0bfb69746d00ff31c85bbd669dcfa28563b158d907f0ed2",
+	"framework-dual/install/02-mount-existing-clean.sh": "f1384178146c7b946e476673c71879052ba9c9f03cf884b74148ee950bbf1c79",
+	"framework-dual/install/03-config-dual-boot-clean.sh": "146c3ecd6a1c88aa4a4c3bf380f12660d061482582c5dc4aff49e9df7badb1b0",
 	"framework-dual/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 }
@@ -80,6 +80,20 @@ type Config struct {
 	Platform  string
 	WorkDir   string
 	LogDir    string
+}
+
+// colorWriter wraps an io.Writer to add ANSI color codes
+type colorWriter struct {
+	w     io.Writer
+	color string
+	reset string
+}
+
+func (cw *colorWriter) Write(p []byte) (n int, err error) {
+	// Write color prefix, content, and reset
+	colored := append([]byte(cw.color), p...)
+	colored = append(colored, []byte(cw.reset)...)
+	return cw.w.Write(colored)
 }
 
 func main() {
@@ -259,19 +273,24 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 
 	// Capture output to parse variables
 	var outputBuf strings.Builder
-	multiWriter := io.MultiWriter(os.Stdout, logFile, &outputBuf)
+
+	// Color wrapper for script output (cyan)
+	coloredStdout := &colorWriter{w: os.Stdout, color: "\033[0;36m", reset: "\033[0m"}
+	coloredStderr := &colorWriter{w: os.Stderr, color: "\033[0;36m", reset: "\033[0m"}
+
+	multiWriter := io.MultiWriter(coloredStdout, logFile, &outputBuf)
 
 	// Run both scripts in same bash session using source
-	// Prepend any captured variables from previous script pair
+	// Set INCOMING_VARS from previous script pair's output
 	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
 	if capturedVars != "" {
-		bashCmd = capturedVars + " && " + bashCmd
-		fmt.Printf("Running with captured vars: %s\n", capturedVars)
+		bashCmd = fmt.Sprintf("export INCOMING_VARS='%s' && %s", capturedVars, bashCmd)
+		fmt.Printf("Running with incoming vars: %s\n", capturedVars)
 	}
 	cmd := exec.Command("bash", "-c", bashCmd)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = multiWriter
-	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+	cmd.Stderr = io.MultiWriter(coloredStderr, logFile)
 
 	// Inherit environment variables
 	cmd.Env = os.Environ()
@@ -304,7 +323,9 @@ func parseAndSetVars(output string) {
 		if strings.TrimSpace(line) == "###GUIX_INSTALL_VARS###" {
 			// Next line contains the variable assignments
 			if i+1 < len(lines) {
-				capturedVars = strings.TrimSpace(lines[i+1])
+				// Strip "export " prefix to get just the variable assignments
+				fullLine := strings.TrimSpace(lines[i+1])
+				capturedVars = strings.TrimPrefix(fullLine, "export ")
 				fmt.Printf("Captured variables: %s\n", capturedVars)
 			}
 			return
