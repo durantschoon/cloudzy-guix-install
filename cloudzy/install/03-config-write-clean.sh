@@ -43,4 +43,4 @@ cat /mnt/etc/config.scm
 
 # Output variables for Go program to capture and pass to next script
 echo "###GUIX_INSTALL_VARS###"
-echo "DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"
+echo "export DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"

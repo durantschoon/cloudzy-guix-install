@@ -25,9 +25,9 @@ var checksums = map[string]string{
 	"cloudzy/install/02-mount-bind-warnings.sh": "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
 	"cloudzy/install/03-config-write-warnings.sh": "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
 	"cloudzy/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"cloudzy/install/01-partition-clean.sh": "0c9176577e789160f782552da3c4bbea4c316ca04134b5a3404d4f6a203f4400",
-	"cloudzy/install/02-mount-bind-clean.sh": "22497d1e5f1fba0dea713acaf71068b69de57846d1be295fcd578515feacff4f",
-	"cloudzy/install/03-config-write-clean.sh": "3c39311c1fd168ee2c28ab90bdafc7d5a2da4cf5960b27499a634acfbf4b6e54",
+	"cloudzy/install/01-partition-clean.sh": "77bd7057c16b90d0a9174ad285f64590e1c68cf7d6f7d76be91c272c99a259a9",
+	"cloudzy/install/02-mount-bind-clean.sh": "4bf7267947e1dea213fae437d96b05cc497bfcc250e2afc3deb00ad7b1b9234d",
+	"cloudzy/install/03-config-write-clean.sh": "38b278a5b066f21b9c8dc71adc42f1d37c020330a1ea4b65bcf19463125f0f3a",
 	"cloudzy/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework platform
@@ -35,9 +35,9 @@ var checksums = map[string]string{
 	"framework/install/02-mount-bind-warnings.sh": "bbe6b045f4ce8a66378825c2668b0a3de9c442fc1cc6e0708d4bb325c26797de",
 	"framework/install/03-config-write-warnings.sh": "c15c7748692bc2455e22db8e04e196b7f83fc41800140bd33311dc69c06d2cf8",
 	"framework/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"framework/install/01-partition-clean.sh": "0c9176577e789160f782552da3c4bbea4c316ca04134b5a3404d4f6a203f4400",
-	"framework/install/02-mount-bind-clean.sh": "22497d1e5f1fba0dea713acaf71068b69de57846d1be295fcd578515feacff4f",
-	"framework/install/03-config-write-clean.sh": "3c39311c1fd168ee2c28ab90bdafc7d5a2da4cf5960b27499a634acfbf4b6e54",
+	"framework/install/01-partition-clean.sh": "77bd7057c16b90d0a9174ad285f64590e1c68cf7d6f7d76be91c272c99a259a9",
+	"framework/install/02-mount-bind-clean.sh": "4bf7267947e1dea213fae437d96b05cc497bfcc250e2afc3deb00ad7b1b9234d",
+	"framework/install/03-config-write-clean.sh": "38b278a5b066f21b9c8dc71adc42f1d37c020330a1ea4b65bcf19463125f0f3a",
 	"framework/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 	// framework-dual platform
@@ -45,9 +45,9 @@ var checksums = map[string]string{
 	"framework-dual/install/02-mount-existing-warnings.sh": "05d1d21c317e22e5d241cfadbc02b78c465e4cdd06abb6195974fe16689ae841",
 	"framework-dual/install/03-config-dual-boot-warnings.sh": "656b5c2722eae551c576c1086077f98a28762c8024e2d36dfe0b53f786be48e0",
 	"framework-dual/install/04-system-init-warnings.sh": "f9ce166f0b36201cc366ad224860f26f951bb228583704c2b9effdf7eb00a4ea",
-	"framework-dual/install/01-partition-check-clean.sh": "0bacae30cc1f8f733e8f77d18f6ac32bcf8bbaff8f598e60022e325a58df86bf",
-	"framework-dual/install/02-mount-existing-clean.sh": "d1ef8b96efce4c29b28c4cd797475b1f6c911f54104d0fc9a4157a72aa4892c3",
-	"framework-dual/install/03-config-dual-boot-clean.sh": "1f54a9728d18ed42cb1f660c394c4ac4c6d30ad49395c11e1476617b5d1c3076",
+	"framework-dual/install/01-partition-check-clean.sh": "d1fac6aa5bed38e54cf408e75f2e4d92e26384f41c4fe444802d3fc87813c779",
+	"framework-dual/install/02-mount-existing-clean.sh": "ef36ce4c00c93cb0008f879d91b4e62d3cd58d7ae03827d955912edd76983149",
+	"framework-dual/install/03-config-dual-boot-clean.sh": "190890a38b1c109619f202001bf8ac168fbdc61ce6a82140c428cdbddda7c74f",
 	"framework-dual/install/04-system-init-clean.sh": "dbb6273402eea33040d7766317f8c4bb4fa8833e58cccaf8c80364507595db91",
 
 }

@@ -84,6 +84,6 @@ echo "ROOT is $ROOT and EFI is $EFI"
 
 # Output variables for Go program to capture and pass to next script
 echo "###GUIX_INSTALL_VARS###"
-echo "DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-}"
+echo "export DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-}"
 
 # Script completed successfully - variables are now available in main context
