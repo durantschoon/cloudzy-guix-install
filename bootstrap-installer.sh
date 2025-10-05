@@ -107,4 +107,4 @@ fi
 echo ""
 echo "Starting installation..."
 echo ""
-exec ./run-remote-steps
+./run-remote-steps

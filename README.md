@@ -220,16 +220,26 @@ source ~/.guix-profile/etc/profile
 
 **Usage from Guix ISO:**
 
+Step 1: Verify the manifest checksum (get this from your local machine after running `./update-manifest.sh`):
+
 ```bash
-# Quick start - builds from source and verifies integrity
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256
+# Should output: 3834036f9b6bd4ecc2503ea74b729901942f1ed0df00a0e74182e797af86ec31
 ```
 
-**Or with specific version:**
+Step 2: Download and run the bootstrap:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh -o bootstrap.sh
+bash bootstrap.sh
+```
+
+**For specific version:**
 
 ```bash
 export GUIX_INSTALL_REF=v0.1.6  # Use a specific tag
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/${GUIX_INSTALL_REF}/bootstrap-installer.sh -o bootstrap.sh
+bash bootstrap.sh
 ```
 
 **Verification strategy:**
