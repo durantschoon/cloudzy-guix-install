@@ -84,7 +84,8 @@ echo "ROOT is $ROOT and EFI is $EFI"
 
 # Output variables for Go program to capture and pass to next script
 # Build outgoing vars: keep incoming vars and add/update new ones
-OUTGOING_VARS="${INCOMING_VARS:-} DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-}"
+# Include user environment variables even if not used in this step
+OUTGOING_VARS="${INCOMING_VARS:-} DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT HOME_PARTITION=${HOME_PARTITION:-} USER_NAME=${USER_NAME:-} FULL_NAME=${FULL_NAME:-} TIMEZONE=${TIMEZONE:-} HOST_NAME=${HOST_NAME:-} BOOT_MODE=${BOOT_MODE:-} SWAP_SIZE=${SWAP_SIZE:-}"
 echo "###GUIX_INSTALL_VARS###"
 echo "export $OUTGOING_VARS"
 

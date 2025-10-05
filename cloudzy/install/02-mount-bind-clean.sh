@@ -56,5 +56,5 @@ herd start guix-daemon
 # Output variables for Go program to capture and pass to next script
 echo "###GUIX_INSTALL_VARS###"
 # Build outgoing vars: keep incoming vars and add/update new ones
-OUTGOING_VARS="${INCOMING_VARS:-} DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT"
+OUTGOING_VARS="${INCOMING_VARS:-} DEVICE=$DEVICE EFI=$EFI ROOT=$ROOT USER_NAME=${USER_NAME:-} FULL_NAME=${FULL_NAME:-} TIMEZONE=${TIMEZONE:-} HOST_NAME=${HOST_NAME:-} BOOT_MODE=${BOOT_MODE:-} SWAP_SIZE=${SWAP_SIZE:-}"
 echo "export $OUTGOING_VARS"
