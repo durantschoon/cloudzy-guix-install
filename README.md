@@ -380,6 +380,17 @@ GUIX_INSTALL_REF=main ./run-remote-steps
 
 ## Development
 
+### Variable Passing Between Steps
+
+The installer automatically passes variables between steps using the `INCOMING_VARS` pattern:
+
+- Each script outputs variables via `###GUIX_INSTALL_VARS###` marker
+- Variables include both disk-related (DEVICE, EFI, ROOT) and user config (USER_NAME, FULL_NAME, etc.)
+- **All variables are passed forward**, even if a step doesn't use them
+- This allows **skipping steps** without breaking downstream steps
+
+When you skip a step, the variables from the previous step are automatically passed to the next step.
+
 ### Updating Checksums
 
 After modifying any installation scripts, update the checksums:

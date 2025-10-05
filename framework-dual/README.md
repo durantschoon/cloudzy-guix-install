@@ -157,6 +157,21 @@ If you don't have free space, shrink Pop!_OS first:
 | **Confirmation** | Optional | Explicit "YES" required |
 | **Target** | Fresh VPS | Existing laptop dual-boot |
 
+## Skipping Installation Steps
+
+You can safely skip steps during installation (e.g., if you've already
+created partitions):
+
+- **Variables automatically pass through** - Disk info (DEVICE, EFI, ROOT)
+  and user config (USER_NAME, FULL_NAME) carry forward
+- **Skipping is safe** - Downstream steps receive all necessary variables
+  even when earlier steps are skipped
+- **Example**: Skip step 01 if partition already formatted, variables from
+  user environment still flow to step 03
+
+The installer uses an `INCOMING_VARS` pattern where each step passes all
+variables forward, not just the ones it uses.
+
 ## Post-Installation
 
 After installation, your GRUB menu should show:
