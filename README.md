@@ -320,15 +320,24 @@ guix install go curl
 ### 2. Download and Build Installer
 
 ```bash
-# Download source
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.go -o run-remote-steps.go
+# Download source (use timestamp to bypass CDN cache)
+curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.go?$(date +%s)" -o run-remote-steps.go
+
+# Verify checksum (get expected checksum from your local machine first)
+shasum -a 256 run-remote-steps.go
+# Compare with expected value to ensure you have the latest version
 
 # Build binary
 go build run-remote-steps.go
+```
 
-# Or use pre-compiled binary (once releases are available):
-# curl -fsSL https://github.com/durantschoon/cloudzy-guix-install/releases/latest/download/run-remote-steps-linux-amd64 -o run-remote-steps
-# chmod +x run-remote-steps
+**To get the expected checksum on your local machine:**
+
+```bash
+# On your Mac/local machine where repo is cloned
+cd /path/to/cloudzy-guix-install
+shasum -a 256 run-remote-steps.go
+# Copy this value and compare with the output on Guix ISO
 ```
 
 ### 3. Set Environment Variables
@@ -398,7 +407,7 @@ GUIX_PLATFORM="cloudzy" # Options: cloudzy, framework, framework-dual
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
 
 # For stable version (specific tag)
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/v0.1.3/run-remote-steps.sh -o run-remote-steps.sh
+
 ```
 
 **Pro tip: Use environment variables for easy switching:**
