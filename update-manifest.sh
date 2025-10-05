@@ -35,5 +35,20 @@ echo "$hash  bootstrap-installer.sh" >> "$MANIFEST_FILE"
 echo ""
 echo "Manifest written to $MANIFEST_FILE"
 echo ""
+
+# Calculate and display the manifest checksum itself
+MANIFEST_HASH=$(shasum -a 256 "$MANIFEST_FILE" | awk '{print $1}')
+
+echo "================================================================"
+echo "MANIFEST CHECKSUM (verify this on Guix ISO before running):"
+echo ""
+echo "  $MANIFEST_HASH"
+echo ""
+echo "On Guix ISO, verify with:"
+echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256"
+echo ""
+echo "If checksums match, GitHub CDN has the latest version."
+echo "================================================================"
+echo ""
 echo "File checksums:"
 cat "$MANIFEST_FILE"

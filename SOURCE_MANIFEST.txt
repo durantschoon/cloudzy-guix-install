@@ -1,5 +1,5 @@
 # Source File Manifest
-# Generated: 2025-10-05 20:32:06 UTC
+# Generated: 2025-10-05 20:34:47 UTC
 #
 # Use this to verify GitHub's CDN has the latest version:
 # Compare these checksums with what you see in the raw files on GitHub
@@ -15,4 +15,4 @@ eaf7bbbff932a2dbfb04861e44871ee7a537d90ef93014cea8dde564f98e3883  ./framework-du
 
 ## Bootstrap Script
 
-97f4647923ae1f9a58800f2ef177c8090df8e3e62ea5458a78473bcad2ee7828  bootstrap-installer.sh
+996b514ec2991bcc94f9d1b55d08f28d2a5fcca8a89d336770a8f9d79ab323b4  bootstrap-installer.sh
