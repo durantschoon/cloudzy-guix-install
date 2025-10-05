@@ -333,47 +333,7 @@ func parseAndSetVars(output string) {
 	}
 }
 
-func runScript(cfg Config, relPath string, isWarning bool) error {
-	scriptPath := filepath.Join(cfg.WorkDir, relPath)
-	logPath := filepath.Join(cfg.LogDir, filepath.Base(relPath)+".log")
-
-	// Check if script exists
-	if _, err := os.Stat(scriptPath); err != nil {
-		return fmt.Errorf("script not found: %s (error: %w)", scriptPath, err)
-	}
-
-	// Create log file
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		return fmt.Errorf("create log failed: %w", err)
-	}
-	defer logFile.Close()
-
-	fmt.Printf("Executing: bash %s\n", scriptPath)
-
-	// Run script with bash (use PATH to find bash, not hardcoded /bin/bash)
-	cmd := exec.Command("bash", scriptPath)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
-	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
-
-	// Inherit environment variables
-	cmd.Env = os.Environ()
-
-	err = cmd.Run()
-
-	msg("Exit status for %s: %v", filepath.Base(relPath), cmd.ProcessState.ExitCode())
-	fmt.Printf("Log saved to: %s\n", logPath)
-
-	// Show last 40 lines of log
-	showLogTail(logPath, 40)
-
-	if !askYes("Continue to next step?") {
-		os.Exit(cmd.ProcessState.ExitCode())
-	}
-
-	return err
-}
+// removed unused runScript helper (use runScriptPair instead)
 
 func showLogTail(logPath string, lines int) {
 	fmt.Println("---- last 40 lines ----")
