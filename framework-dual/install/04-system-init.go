@@ -137,6 +137,14 @@ func (s *Step04SystemInit) createSwapFile(state *State) error {
 		sizeBytes = int64(sizeNum) * 1024
 	}
 
+	// Remove existing swapfile if present (from previous run)
+	if _, err := os.Stat("/mnt/swapfile"); err == nil {
+		fmt.Println("Removing existing swap file from previous run...")
+		// Turn off swap if it's active
+		exec.Command("swapoff", "/mnt/swapfile").Run()
+		os.Remove("/mnt/swapfile")
+	}
+
 	fmt.Printf("Creating %s swap file...\n", swapSize)
 
 	// Try fallocate first, fall back to dd

@@ -9,22 +9,26 @@ This document contains important notes for AI assistants (like Claude Code) work
 **DO NOT use Unicode characters in scripts that run on the Guix ISO.**
 
 The Guix ISO terminal has limited Unicode support and will display broken characters for:
+
 - Checkmarks: ✓ ✅ ❌
 - Emojis: 🚀 💻 🥧 ⚡ etc.
 - Special symbols: ⚠️ 🛡️ etc.
 
 **Affected files:**
+
 - `bootstrap-installer.sh` - Runs on Guix ISO
 - `run-remote-steps.go` - Runs on Guix ISO (compiled and executed during install)
 - Any `**/install/*.sh` or `**/install/*.go` files
 
 **Use instead:**
+
 - `[OK]` instead of ✓
 - `[ERROR]` instead of ❌
 - `[WARN]` or `WARNING:` instead of ⚠️
 - Plain text descriptions
 
 **OK to use Unicode:**
+
 - README.md and other documentation (viewed in browsers/editors)
 - `**/postinstall/**` scripts (run after booting into installed Guix system)
 - Scripts run on modern terminals outside the ISO
@@ -36,11 +40,13 @@ The Guix ISO terminal has limited Unicode support and will display broken charac
 Always read from `/dev/tty` instead of stdin when prompting for user input:
 
 **Bash:**
+
 ```bash
 read -p "Continue? [Y/n] " -r </dev/tty
 ```
 
 **Go:**
+
 ```go
 tty, err := os.Open("/dev/tty")
 if err != nil {
@@ -58,6 +64,7 @@ answer, err := reader.ReadString('\n')
 When reading files in loops, use process substitution to avoid consuming stdin:
 
 **Correct:**
+
 ```bash
 while IFS= read -r line; do
     # process line
@@ -65,6 +72,7 @@ done < <(cat SOURCE_MANIFEST.txt)
 ```
 
 **Incorrect (breaks stdin for later reads):**
+
 ```bash
 while IFS= read -r line; do
     # process line
@@ -90,6 +98,7 @@ done < SOURCE_MANIFEST.txt
 ### State Management
 
 All installation state is managed through a shared `State` struct (in `framework-dual/install/state.go`):
+
 - No bash variable passing between scripts
 - Type-safe, centralized configuration
 - Passed as pointer to each step
