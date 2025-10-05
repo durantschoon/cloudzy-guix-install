@@ -77,6 +77,26 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
     echo ""
     echo "All source files verified!"
     echo ""
+
+    # Calculate manifest hash and ask user to verify
+    MANIFEST_HASH=$(shasum -a 256 SOURCE_MANIFEST.txt | awk '{print $1}')
+    echo "================================================================"
+    echo "MANIFEST HASH VERIFICATION"
+    echo "================================================================"
+    echo ""
+    echo "The manifest hash for this download is:"
+    echo "  $MANIFEST_HASH"
+    echo ""
+    echo "Before proceeding, you should verify this matches the expected hash"
+    echo "from the repository documentation or a trusted source."
+    echo ""
+    read -p "Does this hash match what you expect? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Installation aborted by user"
+        exit 1
+    fi
+    echo ""
 else
     echo "Warning: SOURCE_MANIFEST.txt not found. Skipping checksum verification."
     echo "  (This is okay but means GitHub CDN freshness isn't verified)"
