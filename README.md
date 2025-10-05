@@ -314,7 +314,7 @@ You can override with: `GUIX_PLATFORM="framework"` or `GUIX_PLATFORM="framework-
 ### 1. Prepare Guix Live ISO Environment
 
 ```bash
-guix install go gcc-toolchain glibc curl
+guix install go gcc-toolchain glibc curl bc
 GUIX_PROFILE="$HOME/.guix-profile"
 source "$GUIX_PROFILE/etc/profile"
 ```
