@@ -78,7 +78,7 @@ func runFrameworkDual() {
 			}
 		}
 
-		fmt.Printf("\n✓ %s completed\n", step.name)
+		fmt.Printf("\n[OK] %s completed\n", step.name)
 
 		// Don't ask to continue after the last step (system-init will reboot)
 		if i < len(steps)-1 {

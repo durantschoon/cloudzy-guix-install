@@ -76,7 +76,7 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
             exit 1
         fi
 
-        echo "✓ $filepath"
+        echo "[OK] $filepath"
     done < <(cat SOURCE_MANIFEST.txt)
 
     echo ""

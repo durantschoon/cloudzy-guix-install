@@ -10,8 +10,8 @@ b5defbd32e4e92dd96a00d81c152fde1de39e3caaf625b0eefe4db00df5dc68f  ./framework-du
 bee73ebf5c0fee5402b5172ddab57644b892083fd32897e7b3e913e54bf491b1  ./framework-dual/install/03-config-dual-boot.go
 9e6991f35df8257d789b6d0de81e5130fe71249cbc274841b6f65f11f7b4102a  ./framework-dual/install/04-system-init.go
 eaf7bbbff932a2dbfb04861e44871ee7a537d90ef93014cea8dde564f98e3883  ./framework-dual/install/state.go
-fa2cb169f2e19c5f9b5cda7440dc145cc295203558db06c8f43d40b97c39047f  ./run-remote-steps.go
+ad28425468e9088f7594184a522504d51e7ac1a3f2f9e205b135f006660860dd  ./run-remote-steps.go
 
 ## Bootstrap Script
 
-bbbb77cd4bbc88ef76d758f37cc897ac07d7f18b273b21e3e4dc81f78102e757  bootstrap-installer.sh
+6c0501929b6e183c686690014cbd6b866684e5a6f9845416088d6056477a81ce  bootstrap-installer.sh
