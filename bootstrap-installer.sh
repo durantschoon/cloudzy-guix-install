@@ -17,7 +17,7 @@ echo ""
 
 # Test that stdin is working before proceeding
 echo "Testing stdin availability..."
-read -p "Press Enter to continue (or Ctrl+C to abort): " -r
+read -p "Press Enter to continue (or Ctrl+C to abort): " -r </dev/tty
 echo ""
 
 # Create temporary directory
@@ -105,7 +105,7 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
     fi
 
     echo "[DEBUG] About to call read..."
-    if read -p "Does this hash match what you expect? [y/N] " -n 1 -r; then
+    if read -p "Does this hash match what you expect? [y/N] " -n 1 -r </dev/tty; then
         echo ""
         echo "[DEBUG] read succeeded, REPLY='$REPLY'"
     else
