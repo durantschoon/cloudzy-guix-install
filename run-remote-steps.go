@@ -89,13 +89,13 @@ func main() {
 		Platform:  getEnv("GUIX_PLATFORM", "cloudzy"),
 	}
 
-	// Create working directories
-	workDir, err := os.MkdirTemp("/tmp", "run-steps.*")
+	// Create working directories in current directory
+	cwd, err := os.Getwd()
 	if err != nil {
-		fatal("Failed to create temp directory: %v", err)
+		fatal("Failed to get current directory: %v", err)
 	}
-	cfg.WorkDir = workDir
-	cfg.LogDir = filepath.Join(workDir, "logs")
+	cfg.WorkDir = filepath.Join(cwd, "guix-install-scripts")
+	cfg.LogDir = filepath.Join(cfg.WorkDir, "logs")
 
 	if err := os.MkdirAll(cfg.LogDir, 0755); err != nil {
 		fatal("Failed to create log directory: %v", err)
