@@ -14,6 +14,11 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
   - Name the partition `guix-root` (GPT partition label)
   - Leave it unformatted (script will format as ext4)
   - Example command: `parted /dev/nvme0n1 name 4 guix-root`
+- **Optional: Separate home partition**
+  - If you have a separate home partition to share between Pop!_OS and Guix
+  - Name the partition `home` (GPT partition label)
+  - Example command: `parted /dev/nvme0n1 name 5 home`
+  - Script will auto-detect and mount at /home
 - **Backup of all important data** before proceeding
 - Running from a **Guix live ISO**
 
