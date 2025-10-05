@@ -104,49 +104,45 @@ sudo dhclient  # For DHCP
 
 Now you're booted into your minimal Guix installation. Time to add features!
 
-### Option A: Interactive Customization Tool
+**✨ Good news:** The customize tool is pre-installed at `~/guix-customize/` so you can use it immediately after first boot, even without network access!
 
-```bash
-# Download the tool
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/guix-customize -o ~/guix-customize
-chmod +x ~/guix-customize
+### Option A: Manual Customization (Works for all platforms)
 
-# Run interactive menu
-./guix-customize
-```
-
-Use the menu to add:
-- SSH service
-- Desktop environment (GNOME, Xfce, MATE, LXQt)
-- Common packages (git, vim, emacs, etc.)
-- Framework 13 hardware support
-- Nonguix channel info
-
-After making changes, select `r` to reconfigure.
-
-### Option B: Manual Customization
-
-Edit the config directly:
+This is the most reliable method and works without network access:
 
 ```bash
 sudo nano /etc/config.scm
 ```
 
-Add features (see CUSTOMIZATION.md for examples):
+Add features you need (see examples below and CUSTOMIZATION.md for more).
 
-**Add SSH:**
+**Step 1: Add SSH (Critical for VPS!)**
+
 ```scheme
+;; Add to use-modules section (near top of file)
 (use-modules (gnu)
              (gnu system nss)
-             (gnu services ssh))  ; Add this
+             (gnu services ssh))  ; Add this line
 
+;; Replace the services section
 (services
   (append
    (list (service openssh-service-type))
    %base-services))
 ```
 
+Apply changes:
+
+```bash
+sudo guix system reconfigure /etc/config.scm
+```
+
+Now SSH will be running on port 22. You can SSH in from another machine.
+
+**Step 2: Add other features** (optional, can do via SSH now)
+
 **Add Desktop (GNOME):**
+
 ```scheme
 (use-modules (gnu)
              (gnu system nss)
@@ -159,6 +155,7 @@ Add features (see CUSTOMIZATION.md for examples):
 ```
 
 **Add Packages:**
+
 ```scheme
 (packages
   (append (list (specification->package "git")
@@ -167,15 +164,48 @@ Add features (see CUSTOMIZATION.md for examples):
           %base-packages))
 ```
 
-Apply changes:
+For desktop, reboot after reconfiguring:
+
 ```bash
 sudo guix system reconfigure /etc/config.scm
-```
-
-For desktop, reboot after reconfiguring:
-```bash
 sudo reboot
 ```
+
+### Option B: Interactive Customization Tool (Pre-installed!)
+
+The customize tool was automatically installed during setup. Just run it:
+
+```bash
+cd ~/guix-customize
+./customize
+```
+
+The customize tool provides a friendly menu for:
+- Adding SSH service (critical for VPS!)
+- Adding desktop environments
+- Adding common packages
+- Viewing/editing config
+- Running shared recipes (Spacemacs, dev tools, fonts)
+
+After making changes, select `r` to reconfigure.
+
+**Bonus:** Shared recipes are also pre-installed in `~/guix-customize/recipes/`:
+- `add-spacemacs.sh` - Install Spacemacs editor
+- `add-development.sh` - Install dev tools (git, vim, gcc, etc.)
+- `add-fonts.sh` - Install programming fonts
+
+### Option C: Alternative - Download Fresh Copy (if needed)
+
+If you want to update the customize tool to the latest version:
+
+```bash
+# Download fresh copy (requires network)
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/cloudzy/postinstall/customize -o ~/customize-latest
+chmod +x ~/customize-latest
+./customize-latest
+```
+
+Or use USB transfer if no network is available (same method as before).
 
 ---
 
@@ -183,47 +213,64 @@ sudo reboot
 
 ### VPS Server (SSH Only)
 
-```bash
-# After booting into minimal system
-sudo nano /etc/config.scm
-# Add SSH service (see CUSTOMIZATION.md)
-sudo guix system reconfigure /etc/config.scm
+**Step 1: Add SSH at console using customize tool**
 
-# Now you can SSH in
+```bash
+# Login at console after first boot
+cd ~/guix-customize
+./customize
+# Select option 1 to add SSH
+# Select 'r' to reconfigure
+```
+
+Or manually edit config.scm (see "Manual Customization" section above).
+
+**Step 2: Now you can SSH in**
+
+```bash
+# From another machine
 ssh yourname@your-vps-ip
 ```
 
+**Step 3: Add more features via SSH**
+
+Now you can use the customize tool remotely or edit config via SSH.
+
 ### Framework 13 Laptop (Desktop + WiFi)
 
-```bash
-# After booting into minimal system
-sudo nano /etc/config.scm
-# Add:
-#   - GNOME desktop
-#   - linux-firmware (for WiFi)
-#   - Common packages
-# (see CUSTOMIZATION.md for complete example)
+The customize tool is already installed! Just run it:
 
-sudo guix system reconfigure /etc/config.scm
+```bash
+cd ~/guix-customize
+./customize
+# Use menu to add WiFi firmware and desktop
+# Select 'r' to reconfigure
 sudo reboot  # Desktop starts after reboot
 ```
 
+Or manually edit config.scm to add:
+- linux-firmware (for WiFi)
+- Desktop environment (GNOME/Xfce)
+- Common packages
+
+See CUSTOMIZATION.md for complete examples.
+
 ### Development Workstation
 
+Use the pre-installed customize tool:
+
 ```bash
-# After booting into minimal system
-./guix-customize
-# Use menu to add:
-#   - Desktop environment
-#   - Common packages
-# Then manually add development tools:
-
-sudo nano /etc/config.scm
-# Add: gcc-toolchain, make, python, node, docker
-# (see CUSTOMIZATION.md)
-
-sudo guix system reconfigure /etc/config.scm
+cd ~/guix-customize
+./customize
+# Use menu to add desktop and common packages
+# Or run individual recipes:
+./recipes/add-development.sh  # Adds git, vim, gcc, etc.
+./recipes/add-spacemacs.sh    # Adds Spacemacs editor
 ```
+
+Or manually edit /etc/config.scm to add development tools.
+
+See CUSTOMIZATION.md for more recipes and examples.
 
 ---
 

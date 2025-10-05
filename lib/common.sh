@@ -33,41 +33,6 @@ detect_boot_mode() {
   fi
 }
 
-# Configure desktop environment
-# Returns the service type string for config.scm
-configure_desktop() {
-  case "$1" in
-    gnome)
-      echo "gnome-desktop-service-type"
-      ;;
-    xfce)
-      echo "xfce-desktop-service-type"
-      ;;
-    mate)
-      echo "mate-desktop-service-type"
-      ;;
-    lxqt)
-      echo "lxqt-desktop-service-type"
-      ;;
-    none)
-      echo ""
-      ;;
-    *)
-      echo "Error: Unknown desktop environment '$1'" >&2
-      echo "" >&2
-      echo "Supported desktop environments:" >&2
-      echo "  gnome  - Full-featured, modern desktop (default)" >&2
-      echo "  xfce   - Lightweight, fast, traditional desktop" >&2
-      echo "  mate   - Classic GNOME 2 experience" >&2
-      echo "  lxqt   - Very lightweight, minimal resource usage" >&2
-      echo "  none   - Server mode, no desktop environment" >&2
-      echo "" >&2
-      echo "Example: DESKTOP_ENV=\"xfce\"" >&2
-      return 1
-      ;;
-  esac
-}
-
 # Escape special characters for sed
 escape() {
   printf '%s' "$1" | sed -e 's/[\/&]/\\&/g'

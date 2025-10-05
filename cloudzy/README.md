@@ -100,7 +100,6 @@ See `../../CUSTOMIZATION.md` for detailed post-boot customization workflows.
 
 - `DEVICE`: Target storage device (auto-detected if not set)
 - `BOOT_MODE`: "uefi" or "bios" (auto-detected if not set)
-- `DESKTOP_ENV`: "gnome", "xfce", "mate", "lxqt", or "none" (default: gnome)
 - `SWAP_SIZE`: Swap file size (default: 4G)
 - `USER_NAME`: Login username (required)
 - `FULL_NAME`: Full name for user account (required)

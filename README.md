@@ -273,18 +273,6 @@ The `BOOT_MODE` environment variable specifies the boot mode for the system. If 
 
 You can override with: `BOOT_MODE="bios"` or `BOOT_MODE="uefi"`
 
-### DESKTOP_ENV (default: gnome)
-
-The `DESKTOP_ENV` environment variable specifies the desktop environment to install. If not set, defaults to GNOME:
-
-- **`gnome`** (default) - Full-featured, modern desktop environment
-- **`xfce`** - Lightweight, fast, traditional desktop feel
-- **`mate`** - Classic GNOME 2 experience, traditional layout
-- **`lxqt`** - Very lightweight, minimal resource usage
-- **`none`** - Server mode, no desktop environment
-
-You can override with: `DESKTOP_ENV="xfce"` or `DESKTOP_ENV="none"`
-
 ### SWAP_SIZE (default: 4G)
 
 The `SWAP_SIZE` environment variable controls the size of the swap file created during installation. The default of 4G is chosen because:
@@ -343,15 +331,7 @@ FULL_NAME="YOUR_FULL_NAME"
 TIMEZONE="America/New_York"
 HOST_NAME="guix-vps"
 
-DESKTOP_ENV="gnome"
-BOOT_MODE="uefi"
-SWAP_SIZE="4G"
-```
-
-#### Options
-
-```bash
-DESKTOP_ENV="gnome"     # Options: gnome, xfce, mate, lxqt, none
+# Optional variables (with defaults)
 BOOT_MODE="uefi"        # Options: uefi, bios (auto-detected)
 SWAP_SIZE="4G"          # Options: 2G, 4G, 8G, etc.
 GUIX_PLATFORM="cloudzy" # Options: cloudzy, framework, framework-dual

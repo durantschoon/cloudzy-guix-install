@@ -107,7 +107,6 @@ export TIMEZONE="America/New_York"
 export HOST_NAME="framework-guix"
 
 # Optional configuration
-export DESKTOP_ENV="gnome"  # Options: gnome, xfce, mate, lxqt, none
 export SWAP_SIZE="4G"       # Default: 4G
 ```
 
