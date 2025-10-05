@@ -105,10 +105,6 @@ func askYesNo(prompt string, defaultYes string) bool {
 	return answer == "y" || answer == "yes"
 }
 
-func msg(format string, args ...any) {
-	fmt.Printf("\n\033[1;34m==> "+format+"\033[0m\n", args...)
-}
-
 func warn(format string, args ...any) {
 	fmt.Printf("\n\033[1;33m[warn]\033[0m "+format+"\n", args...)
 }
