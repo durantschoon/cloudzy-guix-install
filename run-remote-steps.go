@@ -284,7 +284,8 @@ func runScriptPair(cfg Config, warningScript, cleanScript string) error {
 	// Set INCOMING_VARS from previous script pair's output
 	bashCmd := fmt.Sprintf("source %s && source %s", warningPath, cleanPath)
 	if capturedVars != "" {
-		bashCmd = fmt.Sprintf("export INCOMING_VARS='%s' && %s", capturedVars, bashCmd)
+		// Export INCOMING_VARS as the captured variable string
+		bashCmd = fmt.Sprintf("export INCOMING_VARS=%q && %s", capturedVars, bashCmd)
 		fmt.Printf("Running with incoming vars: %s\n", capturedVars)
 	}
 	cmd := exec.Command("bash", "-c", bashCmd)
