@@ -53,6 +53,7 @@ echo "=== Installing Customization Tools ==="
 echo "Copying customize script and recipes to /mnt/root/guix-customize/"
 echo ""
 
+
 # Determine platform (default to cloudzy if not set)
 INSTALL_PLATFORM="${GUIX_PLATFORM:-cloudzy}"
 

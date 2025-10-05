@@ -93,9 +93,18 @@ func runFrameworkDual() {
 }
 
 func askYesNo(prompt string, defaultYes string) bool {
-	fmt.Print(prompt)
+	fmt.Fprint(os.Stderr, prompt)
+	os.Stderr.Sync() // Ensure prompt is displayed before reading
+
 	reader := bufio.NewReader(os.Stdin)
-	answer, _ := reader.ReadString('\n')
+	answer, err := reader.ReadString('\n')
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n[ERROR] Failed to read from stdin: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] Cannot proceed safely without user confirmation\n")
+		os.Exit(1)
+	}
+
 	answer = strings.TrimSpace(strings.ToLower(answer))
 
 	if answer == "" {
