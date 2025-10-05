@@ -258,10 +258,10 @@ func runScript(cfg Config, relPath string, isWarning bool) error {
 	}
 	defer logFile.Close()
 
-	fmt.Printf("Executing: /bin/bash %s\n", scriptPath)
+	fmt.Printf("Executing: bash %s\n", scriptPath)
 
-	// Run script with bash
-	cmd := exec.Command("/bin/bash", scriptPath)
+	// Run script with bash (use PATH to find bash, not hardcoded /bin/bash)
+	cmd := exec.Command("bash", scriptPath)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
 	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
