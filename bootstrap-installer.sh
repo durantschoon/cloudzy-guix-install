@@ -45,6 +45,7 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
     echo ""
 
     # Extract and verify Go source files
+    # Use process substitution to avoid stdin redirection issues
     while IFS= read -r line; do
         # Skip comments and empty lines
         [[ "$line" =~ ^#.*$ ]] && continue
@@ -71,7 +72,7 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
         fi
 
         echo "✓ $filepath"
-    done < SOURCE_MANIFEST.txt
+    done < <(cat SOURCE_MANIFEST.txt)
 
     echo ""
     echo "All source files verified!"
