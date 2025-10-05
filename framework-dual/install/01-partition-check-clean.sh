@@ -12,9 +12,14 @@ fi
 
 # Check if a partition named 'guix-root' already exists
 echo "Looking for existing partition labeled 'guix-root'..."
+echo "DEBUG: Running: parted $DEVICE print | grep guix-root"
+parted "$DEVICE" print | grep "guix-root" || echo "DEBUG: grep found nothing"
 GUIX_ROOT_PARTNUM=$(parted "$DEVICE" print | grep "guix-root" | awk '{print $1}')
+echo "DEBUG: GUIX_ROOT_PARTNUM='$GUIX_ROOT_PARTNUM'"
+echo "DEBUG: Testing if non-empty: [[ -n '$GUIX_ROOT_PARTNUM' ]]"
 
 if [[ -n "$GUIX_ROOT_PARTNUM" ]]; then
+  echo "DEBUG: Partition found, entering IF branch"
   # Found existing guix-root partition
   if [[ "$DEVICE" == *"nvme"* ]] || [[ "$DEVICE" == *"mmcblk"* ]]; then
     ROOT="${DEVICE}p${GUIX_ROOT_PARTNUM}"
@@ -36,6 +41,7 @@ if [[ -n "$GUIX_ROOT_PARTNUM" ]]; then
   mkfs.ext4 -F "$ROOT"
 else
   # No existing guix-root partition, create a new one
+  echo "DEBUG: Partition NOT found, entering ELSE branch"
   echo "No partition labeled 'guix-root' found."
   echo "Creating new Guix partition on $DEVICE"
   echo "Existing EFI partition: $EFI (will be reused)"
