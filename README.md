@@ -369,6 +369,13 @@ GUIX_INSTALL_REF=v0.2.0 ./run-remote-steps
 
 **Done!** The installer handles all downloads, checksums, and script execution automatically.
 
+**Note for development/testing:** If you're testing changes and re-running the installer, delete the `guix-install-scripts/` directory first to ensure fresh downloads:
+
+```bash
+rm -rf guix-install-scripts/
+GUIX_INSTALL_REF=main ./run-remote-steps
+```
+
 ---
 
 ## Bash Script Documentation (Legacy)
