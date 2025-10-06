@@ -5,10 +5,10 @@
 
 ## Go Source Files
 
-0e4a3e95d27ba033b067ab67f9e67d02b24e132feb76384adbdff28c60d108af  ./framework-dual/install/01-partition-check.go
-a193474c09361d30a939f836cf7836dd797bdcad49ba25ea0c09169fc1699e75  ./framework-dual/install/02-mount-existing.go
-7285850ea6aed7db4d5ec871328f738267dfdb5d0dfe2d3c76bb117f36f98891  ./framework-dual/install/03-config-dual-boot.go
-701e5ede2262e7a21d2380e5700f2589a7a442ccebcd32c2b3d5c9b2cef82a83  ./framework-dual/install/04-system-init.go
+418ba7d5807ae7fc8639862711e9731c01f67514a7b41e516ab81bbc61bd193d  ./framework-dual/install/01-partition-check.go
+0c2e81e6233408ecd135412c3d92ef1fe279bc1f54cb9d2e6cf39d38d93f189b  ./framework-dual/install/02-mount-existing.go
+766bf9d2eccbd5aeb51c05d1d16dc0df94b267b7e234e58c08c24d490e850882  ./framework-dual/install/03-config-dual-boot.go
+5f691c5ac9f5748beba1ea09b8ce7150246d576760739274abfb6eddf170a5fd  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
 ad28425468e9088f7594184a522504d51e7ac1a3f2f9e205b135f006660860dd  ./run-remote-steps.go
 

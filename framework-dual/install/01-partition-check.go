@@ -14,8 +14,20 @@ import (
 type Step01PartitionCheck struct{}
 
 func (s *Step01PartitionCheck) RunWarnings(state *State) error {
-	fmt.Println("=== Guix Dual-Boot Installation (Framework 13) ===")
-	fmt.Println("This script will create a new partition for Guix alongside Pop!_OS")
+	fmt.Println("=== Step 1: Partition Check ===")
+	fmt.Println()
+	fmt.Println("This step will:")
+	fmt.Println("  1. Detect your disk device (or use DEVICE env var if set)")
+	fmt.Println("  2. Find your existing EFI partition (sets EFI env var)")
+	fmt.Println("  3. Check for existing 'guix-root' partition")
+	fmt.Println("  4. Format guix-root OR create new partition in free space")
+	fmt.Println("  5. Detect separate home partition if it exists (sets HOME_PARTITION)")
+	fmt.Println()
+	fmt.Println("Environment variables set by this step:")
+	fmt.Println("  DEVICE        - Block device (e.g., /dev/nvme0n1)")
+	fmt.Println("  EFI           - EFI System Partition (e.g., /dev/nvme0n1p1)")
+	fmt.Println("  ROOT          - Guix root partition (e.g., /dev/nvme0n1p4)")
+	fmt.Println("  HOME_PARTITION - Separate home partition if found (optional)")
 	fmt.Println()
 
 	// Check if running from Guix live ISO

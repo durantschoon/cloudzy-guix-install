@@ -35,9 +35,29 @@ func (s *Step03ConfigDualBoot) RunWarnings(state *State) error {
 		return fmt.Errorf("required variables not set (ROOT, EFI, DEVICE). Please run previous steps or set environment variables")
 	}
 
-	fmt.Println("=== Configuration Generation ===")
-	fmt.Println("This script will generate a minimal Guix system configuration")
-	fmt.Println("The configuration will be written to /mnt/etc/config.scm")
+	fmt.Println("=== Step 3: Configuration Generation ===")
+	fmt.Println()
+	fmt.Println("This step will:")
+	fmt.Println("  1. Get UUID of root partition")
+	fmt.Println("  2. Get UUID of home partition (if HOME_PARTITION is set)")
+	fmt.Println("  3. Generate minimal Guix system configuration")
+	fmt.Println("  4. Write configuration to /mnt/etc/config.scm")
+	fmt.Println()
+	fmt.Println("Environment variables used by this step:")
+	fmt.Printf("  ROOT          - %s (from Step01)\n", state.Root)
+	fmt.Printf("  EFI           - %s (from Step01)\n", state.EFI)
+	if state.HomePartition != "" {
+		fmt.Printf("  HOME_PARTITION - %s (from Step01)\n", state.HomePartition)
+	}
+	fmt.Println()
+	fmt.Println("Optional environment variables (with defaults):")
+	fmt.Printf("  USER_NAME     - %s (default: guix)\n", getEnvOrDefault(state.UserName, "guix"))
+	fmt.Printf("  FULL_NAME     - %s (default: Guix User)\n", getEnvOrDefault(state.FullName, "Guix User"))
+	fmt.Printf("  TIMEZONE      - %s (default: America/New_York)\n", getEnvOrDefault(state.Timezone, "America/New_York"))
+	fmt.Printf("  HOST_NAME     - %s (default: guix-system)\n", getEnvOrDefault(state.HostName, "guix-system"))
+	fmt.Println()
+	fmt.Println("The generated config is minimal - customize after installation.")
+	fmt.Println("Idempotency: Skips generation if /mnt/etc/config.scm already exists")
 	fmt.Println()
 
 	return nil
@@ -309,4 +329,11 @@ func (s *Step03ConfigDualBoot) makePartitionPath(device, partNum string) string 
 		return fmt.Sprintf("%sp%s", device, partNum)
 	}
 	return device + partNum
+}
+
+func getEnvOrDefault(value, defaultValue string) string {
+	if value != "" {
+		return value
+	}
+	return defaultValue
 }

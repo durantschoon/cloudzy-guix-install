@@ -36,15 +36,28 @@ func (s *Step02MountExisting) RunWarnings(state *State) error {
 		return fmt.Errorf("required variables not set (ROOT, EFI). Please run Step01 first or set DEVICE, ROOT, and EFI environment variables")
 	}
 
-	fmt.Println("=== Mount and Store Setup ===")
-	fmt.Printf("ROOT partition: %s\n", state.Root)
-	fmt.Printf("EFI partition: %s\n", state.EFI)
+	fmt.Println("=== Step 2: Mount and Store Setup ===")
 	fmt.Println()
-	fmt.Println("This script will:")
-	fmt.Println("  1. Mount the new Guix root partition to /mnt")
-	fmt.Println("  2. Mount the existing ESP to /mnt/boot/efi")
-	fmt.Println("  3. Copy Guix store from ISO to target")
-	fmt.Println("  4. Set up bind mounts for /gnu and /var/guix")
+	fmt.Println("This step will:")
+	fmt.Println("  1. Mount Guix root partition to /mnt (if not already mounted)")
+	fmt.Println("  2. Stop guix-daemon temporarily")
+	fmt.Println("  3. Copy Guix store from ISO to /mnt/gnu/store (if not already done)")
+	fmt.Println("  4. Mount EFI partition to /mnt/boot/efi")
+	fmt.Println("  5. Mount home partition to /mnt/home (if HOME_PARTITION is set)")
+	fmt.Println("  6. Set up bind mounts for /gnu and /var/guix")
+	fmt.Println("  7. Restart guix-daemon with new mounts")
+	fmt.Println()
+	fmt.Println("Environment variables used by this step:")
+	fmt.Printf("  ROOT          - %s (from Step01)\n", state.Root)
+	fmt.Printf("  EFI           - %s (from Step01)\n", state.EFI)
+	fmt.Printf("  DEVICE        - %s (from Step01)\n", state.Device)
+	if state.HomePartition != "" {
+		fmt.Printf("  HOME_PARTITION - %s (from Step01)\n", state.HomePartition)
+	} else {
+		fmt.Println("  HOME_PARTITION - (not set, home will be in root)")
+	}
+	fmt.Println()
+	fmt.Println("Idempotency: Skips store copy if /mnt/gnu/store already populated")
 	fmt.Println()
 
 	return nil
