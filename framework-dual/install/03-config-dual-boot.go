@@ -49,6 +49,17 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 		return fmt.Errorf("required variables not set (ROOT, EFI, DEVICE)")
 	}
 
+	// Check if config already exists (idempotency)
+	configPath := "/mnt/etc/config.scm"
+	if _, err := os.Stat(configPath); err == nil {
+		fmt.Printf("Configuration file %s already exists\n", configPath)
+		fmt.Println("Skipping config generation (idempotent - safe for reruns)")
+		fmt.Println()
+		fmt.Println("To regenerate config, remove the file first:")
+		fmt.Printf("  rm %s\n", configPath)
+		return nil
+	}
+
 	// Get UUID of root partition
 	uuid, err := getRootUUID(state.Root)
 	if err != nil {

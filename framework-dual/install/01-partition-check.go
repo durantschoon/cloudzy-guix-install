@@ -129,11 +129,20 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 	}
 
 	if guixRootPartNum != "" {
-		// Format existing partition
+		// Found existing partition
 		root := s.makePartitionPath(state.Device, guixRootPartNum)
 		state.Root = root
 
 		fmt.Printf("Found existing partition labeled 'guix-root': %s\n", root)
+
+		// Check if partition is already formatted
+		if s.isPartitionFormatted(root) {
+			fmt.Println("Partition is already formatted as ext4")
+			fmt.Println("Skipping format step (idempotent - safe for reruns)")
+			fmt.Printf("ROOT is %s and EFI is %s\n", state.Root, state.EFI)
+			return nil
+		}
+
 		fmt.Println("This partition will be formatted (all data will be lost)")
 		fmt.Println()
 
@@ -422,4 +431,14 @@ func askYesNo(prompt string, expected string) bool {
 	answer, _ := reader.ReadString('\n')
 	answer = strings.TrimSpace(answer)
 	return answer == expected
+}
+
+func (s *Step01PartitionCheck) isPartitionFormatted(partition string) bool {
+	cmd := exec.Command("blkid", "-s", "TYPE", "-o", "value", partition)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	fsType := strings.TrimSpace(string(output))
+	return fsType == "ext4"
 }

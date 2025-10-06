@@ -248,6 +248,19 @@ bash bootstrap.sh
 2. Go verifies go.mod (and go.sum if external deps exist)
 3. Source compiled locally before execution
 
+**Interactive installation flow:**
+
+The installer prompts before each step:
+- Answer **"Y"** (yes) to run the step - idempotent design skips already-completed work
+- Answer **"n"** (no) to skip and exit - useful for pausing installation
+
+**Idempotency for safe reruns:**
+- Step 1: Skips formatting if partition already has ext4 filesystem
+- Step 2: Skips store sync if /mnt is mounted and populated
+- Step 3: Skips config generation if /mnt/etc/config.scm exists
+
+This means you can safely rerun after interruptions - answer "yes" to all steps and only incomplete work will be performed.
+
 **Manual build (for advanced users):**
 
 ```bash
