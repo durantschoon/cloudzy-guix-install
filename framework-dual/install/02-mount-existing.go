@@ -42,10 +42,9 @@ func (s *Step02MountExisting) RunWarnings(state *State) error {
 	fmt.Println("  1. Mount Guix root partition to /mnt (if not already mounted)")
 	fmt.Println("  2. Stop guix-daemon temporarily")
 	fmt.Println("  3. Copy Guix store from ISO to /mnt/gnu/store (if not already done)")
-	fmt.Println("  4. Mount EFI partition to /mnt/boot/efi")
-	fmt.Println("  5. Mount home partition to /mnt/home (if HOME_PARTITION is set)")
-	fmt.Println("  6. Set up bind mounts for /gnu and /var/guix")
-	fmt.Println("  7. Restart guix-daemon with new mounts")
+	fmt.Println("  4. Copy /var/guix database to /mnt/var/guix")
+	fmt.Println("  5. Mount EFI partition to /mnt/boot/efi")
+	fmt.Println("  6. Mount home partition to /mnt/home (if HOME_PARTITION is set)")
 	fmt.Println()
 	fmt.Println("Environment variables used by this step:")
 	fmt.Printf("  ROOT          - %s (from Step01)\n", state.Root)
@@ -73,12 +72,6 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	if isMounted("/mnt") && s.isStorePopulated() {
 		fmt.Println("/mnt is already mounted and /mnt/gnu/store is populated")
 		fmt.Println("Skipping mount and store sync (idempotent - safe for reruns)")
-
-		// Ensure bind mounts are set up
-		if err := s.ensureBindMounts(); err != nil {
-			return err
-		}
-
 		return nil
 	}
 
@@ -129,6 +122,12 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	elapsed := time.Since(start)
 	fmt.Printf("Time taken: %.0f seconds\n", elapsed.Seconds())
 
+	// Copy /var/guix for database consistency
+	fmt.Println("Copying /var/guix to /mnt/var/guix...")
+	if err := runCommand("cp", "-a", "/var/guix", "/mnt/var/"); err != nil {
+		return fmt.Errorf("failed to copy /var/guix: %w", err)
+	}
+
 	// Mount ESP
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
 		return err
@@ -157,39 +156,8 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 		fmt.Println("No separate home partition - home directories will be in root partition")
 	}
 
-	// Copy store and var/guix for bind mounts
-	fmt.Println("Copying /gnu/store to /mnt/gnu/store for bind mount...")
-	if err := runCommand("cp", "-a", "/gnu/store", "/mnt/gnu/"); err != nil {
-		return err
-	}
-
-	fmt.Println("Copying /var/guix to /mnt/var/guix for bind mount...")
-	if err := runCommand("cp", "-a", "/var/guix", "/mnt/var/"); err != nil {
-		return err
-	}
-
-	if commandExists("herd") {
-		runCommand("herd", "stop", "guix-daemon")
-	}
-
-	// Set up bind mounts
-	fmt.Println("Setting up bind mounts...")
-	if err := runCommand("mount", "--bind", "/mnt/gnu", "/gnu"); err != nil {
-		return err
-	}
-	if err := runCommand("mount", "--bind", "/mnt/var/guix", "/var/guix"); err != nil {
-		return err
-	}
-
-	runCommand("df", "-h", "/gnu", "/var/guix")
-
-	// Restart guix-daemon
-	if commandExists("herd") {
-		if err := runCommand("herd", "start", "guix-daemon"); err != nil {
-			return err
-		}
-	}
-
+	fmt.Println()
+	fmt.Println("Mount setup complete. Ready for system initialization.")
 	return nil
 }
 
@@ -311,50 +279,4 @@ func (s *Step02MountExisting) isStorePopulated() bool {
 	}
 	// Store should have many entries if populated
 	return len(entries) > 10
-}
-
-func (s *Step02MountExisting) ensureBindMounts() error {
-	fmt.Println("Ensuring bind mounts are set up...")
-
-	// Check and set up /gnu bind mount
-	if !isMounted("/gnu") || !s.isBindMountCorrect("/gnu", "/mnt/gnu") {
-		fmt.Println("Setting up /gnu bind mount...")
-		exec.Command("umount", "/gnu").Run() // Try to unmount if exists
-		if err := runCommand("mount", "--bind", "/mnt/gnu", "/gnu"); err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("/gnu bind mount already correct")
-	}
-
-	// Check and set up /var/guix bind mount
-	if !isMounted("/var/guix") || !s.isBindMountCorrect("/var/guix", "/mnt/var/guix") {
-		fmt.Println("Setting up /var/guix bind mount...")
-		exec.Command("umount", "/var/guix").Run() // Try to unmount if exists
-		if err := runCommand("mount", "--bind", "/mnt/var/guix", "/var/guix"); err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("/var/guix bind mount already correct")
-	}
-
-	// Restart guix-daemon if available
-	if commandExists("herd") {
-		exec.Command("herd", "stop", "guix-daemon").Run()
-		if err := runCommand("herd", "start", "guix-daemon"); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *Step02MountExisting) isBindMountCorrect(mountPoint, expectedSource string) bool {
-	cmd := exec.Command("findmnt", "-n", "-o", "SOURCE", mountPoint)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	source := strings.TrimSpace(string(output))
-	return source == expectedSource
 }
