@@ -1,4 +1,4 @@
-#!bash
+#!/run/current-system/profile/bin/bash
 set -euo pipefail
 
 # Bootstrap script to build and run the Guix installer from source
