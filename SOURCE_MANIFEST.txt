@@ -6,12 +6,12 @@
 ## Go Source Files
 
 c48256c0d1bc3295d8fe6f0d346d698600c80df67896d6a813cdc255db2479f5  ./framework-dual/install/01-partition-check.go
-b5defbd32e4e92dd96a00d81c152fde1de39e3caaf625b0eefe4db00df5dc68f  ./framework-dual/install/02-mount-existing.go
-bee73ebf5c0fee5402b5172ddab57644b892083fd32897e7b3e913e54bf491b1  ./framework-dual/install/03-config-dual-boot.go
+8e9eb030e6829f1d56caa2879691e792076e81b67c8ca05240ac67494c1ea56c  ./framework-dual/install/02-mount-existing.go
+64c650fb7457c71594452a146ff700e1c2e0bbd9ad4b260cf9041c4c307a5c12  ./framework-dual/install/03-config-dual-boot.go
 701e5ede2262e7a21d2380e5700f2589a7a442ccebcd32c2b3d5c9b2cef82a83  ./framework-dual/install/04-system-init.go
-eaf7bbbff932a2dbfb04861e44871ee7a537d90ef93014cea8dde564f98e3883  ./framework-dual/install/state.go
+d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
 ad28425468e9088f7594184a522504d51e7ac1a3f2f9e205b135f006660860dd  ./run-remote-steps.go
 
 ## Bootstrap Script
 
-6c0501929b6e183c686690014cbd6b866684e5a6f9845416088d6056477a81ce  bootstrap-installer.sh
+a960a8609476d483aad2f3a2169c71155800f3217073d1cda05a304213fbd11a  bootstrap-installer.sh

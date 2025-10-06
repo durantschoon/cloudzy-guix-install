@@ -25,6 +25,9 @@ type State struct {
 // NewState creates a new State from environment variables
 func NewState() *State {
 	return &State{
+		Device:        os.Getenv("DEVICE"),
+		EFI:           os.Getenv("EFI"),
+		Root:          os.Getenv("ROOT"),
 		HomePartition: os.Getenv("HOME_PARTITION"),
 		UserName:      os.Getenv("USER_NAME"),
 		FullName:      os.Getenv("FULL_NAME"),

@@ -12,9 +12,28 @@ import (
 type Step02MountExisting struct{}
 
 func (s *Step02MountExisting) RunWarnings(state *State) error {
+	// Auto-detect missing variables if Step01 was skipped
+	if state.Device == "" {
+		if err := s.detectDevice(state); err != nil {
+			return err
+		}
+	}
+
+	if state.EFI == "" {
+		if err := s.findEFIPartition(state); err != nil {
+			return err
+		}
+	}
+
+	if state.Root == "" {
+		if err := s.findGuixRootPartition(state); err != nil {
+			return err
+		}
+	}
+
 	// Verify required variables
 	if state.Root == "" || state.EFI == "" {
-		return fmt.Errorf("required variables not set (ROOT, EFI)")
+		return fmt.Errorf("required variables not set (ROOT, EFI). Please run Step01 first or set DEVICE, ROOT, and EFI environment variables")
 	}
 
 	fmt.Println("=== Mount and Store Setup ===")
@@ -147,6 +166,100 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 }
 
 // Helper functions
+
+func (s *Step02MountExisting) detectDevice(state *State) error {
+	// Auto-detect
+	candidates := []string{"/dev/nvme0n1", "/dev/nvme1n1", "/dev/sda"}
+	for _, d := range candidates {
+		if _, err := os.Stat(d); err == nil {
+			state.Device = d
+			fmt.Printf("Auto-detected device: %s\n", d)
+			return nil
+		}
+	}
+	return fmt.Errorf("no suitable block device found. Please set DEVICE environment variable")
+}
+
+func (s *Step02MountExisting) findEFIPartition(state *State) error {
+	if state.Device == "" {
+		return fmt.Errorf("DEVICE not set")
+	}
+
+	// Find EFI partition by GPT type GUID
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME,PARTTYPE", state.Device)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to list partitions: %w", err)
+	}
+
+	var efiPartName string
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.Contains(strings.ToLower(line), "c12a7328-f81f-11d2-ba4b-00a0c93ec93b") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 {
+				efiPartName = fields[0]
+				break
+			}
+		}
+	}
+
+	if efiPartName == "" {
+		return fmt.Errorf("no EFI System Partition found")
+	}
+
+	// Convert partition name to device path
+	if strings.Contains(state.Device, "nvme") {
+		// Extract partition number from nvme0n1p1
+		parts := strings.Split(efiPartName, "p")
+		if len(parts) >= 2 {
+			state.EFI = state.Device + "p" + parts[len(parts)-1]
+		}
+	} else {
+		// SATA: extract number from sda1
+		for i := len(efiPartName) - 1; i >= 0; i-- {
+			if efiPartName[i] < '0' || efiPartName[i] > '9' {
+				state.EFI = state.Device + efiPartName[i+1:]
+				break
+			}
+		}
+	}
+
+	fmt.Printf("Found EFI partition: %s\n", state.EFI)
+	return nil
+}
+
+func (s *Step02MountExisting) findGuixRootPartition(state *State) error {
+	if state.Device == "" {
+		return fmt.Errorf("DEVICE not set")
+	}
+
+	cmd := exec.Command("parted", state.Device, "print")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to read partition table: %w", err)
+	}
+
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.Contains(line, "guix-root") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 {
+				partNum := fields[0]
+				state.Root = s.makePartitionPath(state.Device, partNum)
+				fmt.Printf("Found guix-root partition: %s\n", state.Root)
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("no partition labeled 'guix-root' found")
+}
+
+func (s *Step02MountExisting) makePartitionPath(device, partNum string) string {
+	if strings.Contains(device, "nvme") || strings.Contains(device, "mmcblk") {
+		return fmt.Sprintf("%sp%s", device, partNum)
+	}
+	return device + partNum
+}
 
 func isMounted(path string) bool {
 	cmd := exec.Command("mount")
