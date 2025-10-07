@@ -100,8 +100,16 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println("  You can manually download them after first boot")
 	}
 
-	// Run guix system init with retry logic
+	// Start cow-store to redirect store writes to target disk
 	fmt.Println()
+	fmt.Println("=== Starting cow-store ===")
+	fmt.Println("Redirecting store writes to /mnt to avoid filling ISO space...")
+	if err := runCommand("herd", "start", "cow-store", "/mnt"); err != nil {
+		return fmt.Errorf("failed to start cow-store: %w", err)
+	}
+	fmt.Println()
+
+	// Run guix system init with retry logic
 	fmt.Println("=== Running guix system init ===")
 	fmt.Println("This will take several minutes...")
 	fmt.Println()
