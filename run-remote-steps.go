@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
+	cloudzyi "github.com/durantschoon/cloudzy-guix-install/cloudzy/install"
+	frameworki "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
 )
 
 func main() {
@@ -14,9 +15,84 @@ func main() {
 
 	if platform == "framework-dual" {
 		runFrameworkDual()
+	} else if platform == "cloudzy" {
+		runCloudzy()
 	} else {
-		fatal("Only framework-dual platform is currently supported in Go version.\nFor other platforms, use the bash version.")
+		fatal("Unsupported platform: %s\nSupported: cloudzy, framework-dual", platform)
 	}
+}
+
+func runCloudzy() {
+	fmt.Println("=== Guix Installation for Cloudzy VPS ===")
+	fmt.Println()
+
+	// Create state to hold all installation variables
+	state := cloudzyi.NewState()
+
+	// Define installation steps
+	steps := []struct {
+		name    string
+		warning func(*cloudzyi.State) error
+		clean   func(*cloudzyi.State) error
+	}{
+		{
+			name:    "Partition",
+			warning: (&cloudzyi.Step01Partition{}).RunWarnings,
+			clean:   (&cloudzyi.Step01Partition{}).RunClean,
+		},
+		{
+			name:    "Mount",
+			warning: (&cloudzyi.Step02Mount{}).RunWarnings,
+			clean:   (&cloudzyi.Step02Mount{}).RunClean,
+		},
+		{
+			name:    "Config",
+			warning: (&cloudzyi.Step03Config{}).RunWarnings,
+			clean:   (&cloudzyi.Step03Config{}).RunClean,
+		},
+		{
+			name:    "System Init",
+			warning: (&cloudzyi.Step04SystemInit{}).RunWarnings,
+			clean:   (&cloudzyi.Step04SystemInit{}).RunClean,
+		},
+	}
+
+	// Run each step
+	for i, step := range steps {
+		fmt.Printf("\n=== Step %d/%d: %s ===\n\n", i+1, len(steps), step.name)
+
+		// Run warnings
+		if err := step.warning(state); err != nil {
+			fatal("Warnings failed for %s: %v", step.name, err)
+		}
+
+		// Ask user if they want to run this step
+		if !askYesNo(fmt.Sprintf("\nRun %s step now? [Y/n] ", step.name), "Y") {
+			fmt.Printf("Skipping %s per user request\n", step.name)
+			continue
+		}
+
+		// Run clean script
+		fmt.Printf("\nRunning %s...\n", step.name)
+		if err := step.clean(state); err != nil {
+			warn("Step %s returned error: %v", step.name, err)
+			if !askYesNo("\nContinue to next step anyway? [y/N] ", "y") {
+				fatal("Installation aborted by user")
+			}
+		}
+
+		fmt.Printf("\n[OK] %s completed\n", step.name)
+
+		// Don't ask to continue after the last step (system-init will reboot)
+		if i < len(steps)-1 {
+			if !askYesNo("\nContinue to next step? [Y/n] ", "Y") {
+				fmt.Println("Installation paused. Run again to continue.")
+				os.Exit(0)
+			}
+		}
+	}
+
+	fmt.Println("\n=== All installation steps completed ===")
 }
 
 func runFrameworkDual() {
@@ -24,33 +100,33 @@ func runFrameworkDual() {
 	fmt.Println()
 
 	// Create state to hold all installation variables
-	state := install.NewState()
+	state := frameworki.NewState()
 
 	// Define installation steps
 	steps := []struct {
 		name    string
-		warning func(*install.State) error
-		clean   func(*install.State) error
+		warning func(*frameworki.State) error
+		clean   func(*frameworki.State) error
 	}{
 		{
 			name:    "Partition Check",
-			warning: (&install.Step01PartitionCheck{}).RunWarnings,
-			clean:   (&install.Step01PartitionCheck{}).RunClean,
+			warning: (&frameworki.Step01PartitionCheck{}).RunWarnings,
+			clean:   (&frameworki.Step01PartitionCheck{}).RunClean,
 		},
 		{
 			name:    "Mount Existing",
-			warning: (&install.Step02MountExisting{}).RunWarnings,
-			clean:   (&install.Step02MountExisting{}).RunClean,
+			warning: (&frameworki.Step02MountExisting{}).RunWarnings,
+			clean:   (&frameworki.Step02MountExisting{}).RunClean,
 		},
 		{
 			name:    "Config Dual-Boot",
-			warning: (&install.Step03ConfigDualBoot{}).RunWarnings,
-			clean:   (&install.Step03ConfigDualBoot{}).RunClean,
+			warning: (&frameworki.Step03ConfigDualBoot{}).RunWarnings,
+			clean:   (&frameworki.Step03ConfigDualBoot{}).RunClean,
 		},
 		{
 			name:    "System Init",
-			warning: (&install.Step04SystemInit{}).RunWarnings,
-			clean:   (&install.Step04SystemInit{}).RunClean,
+			warning: (&frameworki.Step04SystemInit{}).RunWarnings,
+			clean:   (&frameworki.Step04SystemInit{}).RunClean,
 		},
 	}
 

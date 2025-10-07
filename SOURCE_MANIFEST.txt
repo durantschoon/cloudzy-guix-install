@@ -5,12 +5,17 @@
 
 ## Go Source Files
 
+5e137fc679ece43c5c9d6ac9661da5a76684538a5099806b775d41f6743a58de  ./cloudzy/install/01-partition.go
+aeac354b0deb5799b47c13a8e6fc06003fb78e8d6769b5b11862db497f58ec42  ./cloudzy/install/02-mount.go
+1dcbb236e2d2dd1e3dd6620a499b14d25b565db8444ef9eff72bf516f0468d81  ./cloudzy/install/03-config.go
+5f691c5ac9f5748beba1ea09b8ce7150246d576760739274abfb6eddf170a5fd  ./cloudzy/install/04-system-init.go
+1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
 418ba7d5807ae7fc8639862711e9731c01f67514a7b41e516ab81bbc61bd193d  ./framework-dual/install/01-partition-check.go
 1db13d82c1765ab60c49b01fb073c0fd153f8be0aa2f38b631aa9ed585a18ae0  ./framework-dual/install/02-mount-existing.go
 766bf9d2eccbd5aeb51c05d1d16dc0df94b267b7e234e58c08c24d490e850882  ./framework-dual/install/03-config-dual-boot.go
 5f691c5ac9f5748beba1ea09b8ce7150246d576760739274abfb6eddf170a5fd  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
-ad28425468e9088f7594184a522504d51e7ac1a3f2f9e205b135f006660860dd  ./run-remote-steps.go
+3555ad1f0c9706d43ecaf0c0ab6e7dadf945e4759691ac5a39737e9b8d85f4d8  ./run-remote-steps.go
 
 ## Bootstrap Script
 
