@@ -19,4 +19,4 @@ d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-du
 
 ## Bootstrap Script
 
-dc175d493d0bca71b63491e74cbddc5e6e3204074b0258ed474ad8480abbd12e  bootstrap-installer.sh
+53b49d6b68109bfffdc9557cc8171364fcd90624564f4c94cb27d9ec1c93263a  bootstrap-installer.sh

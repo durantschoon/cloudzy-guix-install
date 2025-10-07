@@ -125,6 +125,12 @@ fi
 # Note: We have no external dependencies, so go.sum won't exist
 # Go will still verify the build matches go.mod
 echo "Building installer from source..."
+
+# Use /tmp for Go cache to avoid filling up the ISO's limited space
+# /tmp on Guix ISO is typically a tmpfs with more space available
+export GOCACHE=/tmp/go-cache
+export GOTMPDIR=/tmp/go-tmp
+
 if ! go build -o run-remote-steps .; then
     echo "Error: Build failed"
     exit 1
