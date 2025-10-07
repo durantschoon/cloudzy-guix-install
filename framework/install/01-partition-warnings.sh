@@ -1,1 +1,0 @@
-../../cloudzy/install/01-partition-warnings.sh

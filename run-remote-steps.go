@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	cloudzyi "github.com/durantschoon/cloudzy-guix-install/cloudzy/install"
-	frameworki "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
+	frameworki "github.com/durantschoon/cloudzy-guix-install/framework/install"
+	frameworkduali "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
 )
 
 func main() {
@@ -16,10 +17,12 @@ func main() {
 	switch platform {
 	case "framework-dual":
 		runFrameworkDual()
+	case "framework":
+		runFramework()
 	case "cloudzy":
 		runCloudzy()
 	default:
-		fatal("Unsupported platform: %s\nSupported: cloudzy, framework-dual", platform)
+		fatal("Unsupported platform: %s\nSupported: cloudzy, framework, framework-dual", platform)
 	}
 }
 
@@ -96,8 +99,8 @@ func runCloudzy() {
 	fmt.Println("\n=== All installation steps completed ===")
 }
 
-func runFrameworkDual() {
-	fmt.Println("=== Guix Installation for Framework 13 (Dual-Boot) ===")
+func runFramework() {
+	fmt.Println("=== Guix Installation for Framework 13 ===")
 	fmt.Println()
 
 	// Create state to hold all installation variables
@@ -110,24 +113,97 @@ func runFrameworkDual() {
 		clean   func(*frameworki.State) error
 	}{
 		{
-			name:    "Partition Check",
-			warning: (&frameworki.Step01PartitionCheck{}).RunWarnings,
-			clean:   (&frameworki.Step01PartitionCheck{}).RunClean,
+			name:    "Partition",
+			warning: (&frameworki.Step01Partition{}).RunWarnings,
+			clean:   (&frameworki.Step01Partition{}).RunClean,
 		},
 		{
-			name:    "Mount Existing",
-			warning: (&frameworki.Step02MountExisting{}).RunWarnings,
-			clean:   (&frameworki.Step02MountExisting{}).RunClean,
+			name:    "Mount",
+			warning: (&frameworki.Step02Mount{}).RunWarnings,
+			clean:   (&frameworki.Step02Mount{}).RunClean,
 		},
 		{
-			name:    "Config Dual-Boot",
-			warning: (&frameworki.Step03ConfigDualBoot{}).RunWarnings,
-			clean:   (&frameworki.Step03ConfigDualBoot{}).RunClean,
+			name:    "Config",
+			warning: (&frameworki.Step03Config{}).RunWarnings,
+			clean:   (&frameworki.Step03Config{}).RunClean,
 		},
 		{
 			name:    "System Init",
 			warning: (&frameworki.Step04SystemInit{}).RunWarnings,
 			clean:   (&frameworki.Step04SystemInit{}).RunClean,
+		},
+	}
+
+	// Run each step
+	for i, step := range steps {
+		fmt.Printf("\n=== Step %d/%d: %s ===\n\n", i+1, len(steps), step.name)
+
+		// Run warnings
+		if err := step.warning(state); err != nil {
+			fatal("Warnings failed for %s: %v", step.name, err)
+		}
+
+		// Ask user if they want to run this step
+		if !askYesNo(fmt.Sprintf("\nRun %s step now? [Y/n] ", step.name), "Y") {
+			fmt.Printf("Skipping %s per user request\n", step.name)
+			continue
+		}
+
+		// Run clean script
+		fmt.Printf("\nRunning %s...\n", step.name)
+		if err := step.clean(state); err != nil {
+			warn("Step %s returned error: %v", step.name, err)
+			if !askYesNo("\nContinue to next step anyway? [y/N] ", "y") {
+				fatal("Installation aborted by user")
+			}
+		}
+
+		fmt.Printf("\n[OK] %s completed\n", step.name)
+
+		// Don't ask to continue after the last step (system-init will reboot)
+		if i < len(steps)-1 {
+			if !askYesNo("\nContinue to next step? [Y/n] ", "Y") {
+				fmt.Println("Installation paused. Run again to continue.")
+				os.Exit(0)
+			}
+		}
+	}
+
+	fmt.Println("\n=== All installation steps completed ===")
+}
+
+func runFrameworkDual() {
+	fmt.Println("=== Guix Installation for Framework 13 (Dual-Boot) ===")
+	fmt.Println()
+
+	// Create state to hold all installation variables
+	state := frameworkduali.NewState()
+
+	// Define installation steps
+	steps := []struct {
+		name    string
+		warning func(*frameworkduali.State) error
+		clean   func(*frameworkduali.State) error
+	}{
+		{
+			name:    "Partition Check",
+			warning: (&frameworkduali.Step01PartitionCheck{}).RunWarnings,
+			clean:   (&frameworkduali.Step01PartitionCheck{}).RunClean,
+		},
+		{
+			name:    "Mount Existing",
+			warning: (&frameworkduali.Step02MountExisting{}).RunWarnings,
+			clean:   (&frameworkduali.Step02MountExisting{}).RunClean,
+		},
+		{
+			name:    "Config Dual-Boot",
+			warning: (&frameworkduali.Step03ConfigDualBoot{}).RunWarnings,
+			clean:   (&frameworkduali.Step03ConfigDualBoot{}).RunClean,
+		},
+		{
+			name:    "System Init",
+			warning: (&frameworkduali.Step04SystemInit{}).RunWarnings,
+			clean:   (&frameworkduali.Step04SystemInit{}).RunClean,
 		},
 	}
 

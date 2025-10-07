@@ -1,1 +1,0 @@
-../../cloudzy/install/04-system-init-warnings.sh

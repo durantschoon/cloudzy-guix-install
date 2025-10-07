@@ -15,7 +15,12 @@ dd6c5f295579493cef10f2a59c1ad7147b979e7fbfa7d68ed86b8d149737913f  ./cloudzy/inst
 766bf9d2eccbd5aeb51c05d1d16dc0df94b267b7e234e58c08c24d490e850882  ./framework-dual/install/03-config-dual-boot.go
 dd6c5f295579493cef10f2a59c1ad7147b979e7fbfa7d68ed86b8d149737913f  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
-95e88ab6d4a216cee4fec9b19d3a488c04fab238602dcf7b2803282fa85ba3a3  ./run-remote-steps.go
+30eca6147185ae0141fdd2f79052858e589cdcedffd153994cec2dff6cf47d97  ./framework/install/01-partition.go
+b65a5148e6a876aaa466f5369e053583f9d18fe72ffafee04ca03b7fe66dfe04  ./framework/install/02-mount.go
+1a43c7ac32aa1fa3ead2f23ef843ddb060190d0211805e42c87439629e10edf0  ./framework/install/03-config.go
+fa9a7fdc022221dfc4dbf064121a68ba5565728a8caa195bdf13bf7c53c6b881  ./framework/install/04-system-init.go
+dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
+2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script
 

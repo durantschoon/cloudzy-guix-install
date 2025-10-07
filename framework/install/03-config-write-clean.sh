@@ -1,1 +1,0 @@
-../../cloudzy/install/03-config-write-clean.sh
