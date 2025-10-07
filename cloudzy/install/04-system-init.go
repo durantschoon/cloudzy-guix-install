@@ -42,12 +42,19 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 }
 
 func (s *Step04SystemInit) RunClean(state *State) error {
-	// Set up temporary directory
+	// Set up temporary directory on the target partition (has more space than ISO)
 	tmpDir := "/mnt/var/tmp"
 	if err := os.MkdirAll(tmpDir, 0777); err != nil {
 		return err
 	}
 	os.Setenv("TMPDIR", tmpDir)
+
+	// Also set XDG_CACHE_HOME to avoid filling up ISO's limited space
+	cacheDir := "/mnt/var/cache"
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return err
+	}
+	os.Setenv("XDG_CACHE_HOME", cacheDir)
 
 	// Clear substitute cache
 	exec.Command("rm", "-rf", "/var/guix/substitute-cache/").Run()
