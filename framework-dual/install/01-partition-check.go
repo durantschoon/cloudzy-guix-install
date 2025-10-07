@@ -19,8 +19,8 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	fmt.Println("This step will:")
 	fmt.Println("  1. Detect your disk device (or use DEVICE env var if set)")
 	fmt.Println("  2. Find your existing EFI partition (sets EFI env var)")
-	fmt.Println("  3. Check for existing 'guix-root' partition")
-	fmt.Println("  4. Format guix-root OR create new partition in free space")
+	fmt.Println("  3. Check for existing 'GUIX_ROOT' partition")
+	fmt.Println("  4. Format GUIX_ROOT OR create new partition in free space")
 	fmt.Println("  5. Detect separate home partition if it exists (sets HOME_PARTITION)")
 	fmt.Println()
 	fmt.Println("Environment variables set by this step:")
@@ -62,31 +62,31 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	fmt.Println("=== Checking for Pop!_OS installation ===")
 	s.checkPopOS(state)
 
-	// Check for existing guix-root partition
+	// Check for existing GUIX_ROOT partition
 	fmt.Println()
-	fmt.Println("=== Checking for existing guix-root partition ===")
+	fmt.Println("=== Checking for existing GUIX_ROOT partition ===")
 	guixRootPartNum, err := s.findGuixRootPartition(state)
 	if err != nil {
 		return err
 	}
 
 	if guixRootPartNum != "" {
-		// Existing guix-root partition
+		// Existing GUIX_ROOT partition
 		guixRootPart := s.makePartitionPath(state.Device, guixRootPartNum)
 		partSize := getPartitionSizeGiB(guixRootPart)
 
-		fmt.Printf("Found existing partition labeled 'guix-root': %s\n", guixRootPart)
+		fmt.Printf("Found existing partition labeled 'GUIX_ROOT': %s\n", guixRootPart)
 		fmt.Printf("Partition size: %.1fGiB\n", partSize)
 		fmt.Println()
 		fmt.Println("=== Partition Plan ===")
 		fmt.Println("This script will:")
 		fmt.Printf("  1. Keep existing EFI partition: %s\n", state.EFI)
 		fmt.Println("  2. Keep all existing Pop!_OS partitions (untouched)")
-		fmt.Printf("  3. Format existing guix-root partition: %s (%.1fGiB)\n", guixRootPart, partSize)
+		fmt.Printf("  3. Format existing GUIX_ROOT partition: %s (%.1fGiB)\n", guixRootPart, partSize)
 		fmt.Println("  4. Install Guix bootloader to ESP (will chain to Pop!_OS)")
 	} else {
 		// Need to create new partition
-		fmt.Println("No partition labeled 'guix-root' found.")
+		fmt.Println("No partition labeled 'GUIX_ROOT' found.")
 
 		// Show free space
 		fmt.Println()
@@ -100,7 +100,7 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 			fmt.Printf("WARNING: Less than 40GB of free space available (found: %.1fGiB)\n", freeSpaceGB)
 			fmt.Println("   Recommended: At least 40-60GB for Guix root partition")
 			fmt.Println("   You may need to shrink your Pop!_OS partition first.")
-			fmt.Println("   OR: Create a partition labeled 'guix-root' using GParted/parted")
+			fmt.Println("   OR: Create a partition labeled 'GUIX_ROOT' using GParted/parted")
 			fmt.Println()
 			fmt.Println("   Press Ctrl+C to abort, or wait 10 seconds to continue anyway...")
 			time.Sleep(10 * time.Second)
@@ -134,7 +134,7 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 		return fmt.Errorf("required variables not set (DEVICE, EFI)")
 	}
 
-	fmt.Println("Looking for existing partition labeled 'guix-root'...")
+	fmt.Println("Looking for existing partition labeled 'GUIX_ROOT'...")
 	guixRootPartNum, err := s.findGuixRootPartition(state)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 		root := s.makePartitionPath(state.Device, guixRootPartNum)
 		state.Root = root
 
-		fmt.Printf("Found existing partition labeled 'guix-root': %s\n", root)
+		fmt.Printf("Found existing partition labeled 'GUIX_ROOT': %s\n", root)
 
 		// Check if partition is already formatted
 		if s.isPartitionFormatted(root) {
@@ -168,7 +168,7 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 		}
 	} else {
 		// Create new partition
-		fmt.Println("No partition labeled 'guix-root' found.")
+		fmt.Println("No partition labeled 'GUIX_ROOT' found.")
 		fmt.Printf("Creating new Guix partition on %s\n", state.Device)
 		fmt.Printf("Existing EFI partition: %s (will be reused)\n", state.EFI)
 
@@ -180,7 +180,7 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 
 		fmt.Printf("Creating Guix root partition starting at %dMiB\n", freeStartMiB)
 		if err := runCommand("parted", "--script", state.Device,
-			"mkpart", "guix-root", "ext4", fmt.Sprintf("%dMiB", freeStartMiB), "100%"); err != nil {
+			"mkpart", "GUIX_ROOT", "ext4", fmt.Sprintf("%dMiB", freeStartMiB), "100%"); err != nil {
 			return err
 		}
 
@@ -305,7 +305,7 @@ func (s *Step01PartitionCheck) findGuixRootPartition(state *State) (string, erro
 	}
 
 	for _, line := range strings.Split(string(output), "\n") {
-		if strings.Contains(line, "guix-root") {
+		if strings.Contains(line, "GUIX_ROOT") {
 			fields := strings.Fields(line)
 			if len(fields) > 0 {
 				return fields[0], nil

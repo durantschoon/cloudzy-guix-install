@@ -95,7 +95,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	}
 
 	// Set partition names
-	if err := runCommand("parted", "-s", state.Device, "name", "2", "guix-root"); err != nil {
+	if err := runCommand("parted", "-s", state.Device, "name", "2", "GUIX_ROOT"); err != nil {
 		return err
 	}
 
@@ -127,7 +127,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	}
 
 	fmt.Printf("Formatting root partition: %s\n", state.Root)
-	if err := runCommand("mkfs.ext4", "-L", "guix-root", state.Root); err != nil {
+	if err := runCommand("mkfs.ext4", "-L", "GUIX_ROOT", state.Root); err != nil {
 		return err
 	}
 

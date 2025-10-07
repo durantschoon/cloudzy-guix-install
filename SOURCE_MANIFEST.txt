@@ -10,12 +10,12 @@
 1dcbb236e2d2dd1e3dd6620a499b14d25b565db8444ef9eff72bf516f0468d81  ./cloudzy/install/03-config.go
 672d5c3ad9ba69f628028df0572c698a835d25ac3823227dd1af8e49cd6a9335  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
-418ba7d5807ae7fc8639862711e9731c01f67514a7b41e516ab81bbc61bd193d  ./framework-dual/install/01-partition-check.go
+cb916860330eeec5c6fcc43775f322dddbf95bbb7fe86258e551bbbad7e4823e  ./framework-dual/install/01-partition-check.go
 9a62071d22af31ff3351f6a14f4f191851bfc9c261083688579f9d2bcb530fb5  ./framework-dual/install/02-mount-existing.go
 766bf9d2eccbd5aeb51c05d1d16dc0df94b267b7e234e58c08c24d490e850882  ./framework-dual/install/03-config-dual-boot.go
 672d5c3ad9ba69f628028df0572c698a835d25ac3823227dd1af8e49cd6a9335  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
-30eca6147185ae0141fdd2f79052858e589cdcedffd153994cec2dff6cf47d97  ./framework/install/01-partition.go
+38cf69eaf6c0b1d8a6d90fc1f133080827f9c2931664b22b1d6d5f617bd8c8ca  ./framework/install/01-partition.go
 f19940f764a55111f5a9ece15dfceeb5b1dcffac80ad0339b8502a2d247981aa  ./framework/install/02-mount.go
 1a43c7ac32aa1fa3ead2f23ef843ddb060190d0211805e42c87439629e10edf0  ./framework/install/03-config.go
 4aa1a4ee2882376c2a0df4da590766e9ccc1610ede36822b6dcff192c13d9c4e  ./framework/install/04-system-init.go
