@@ -214,7 +214,7 @@ The `framework-dual` platform uses a **Go-based installer** for reliability and 
 **Prerequisites (install on Guix ISO first):**
 
 ```bash
-guix install go gcc-toolchain curl perl
+guix install go gcc-toolchain curl perl rsync
 source ~/.guix-profile/etc/profile
 ```
 
