@@ -37,8 +37,13 @@ func (s *Step02Mount) RunWarnings(state *State) error {
 	fmt.Println("  2. Stop guix-daemon temporarily")
 	fmt.Println("  3. Copy Guix store from ISO to /mnt/gnu/store (if not already done)")
 	fmt.Println("  4. Copy /var/guix database to /mnt/var/guix")
-	fmt.Println("  5. Mount EFI partition to /mnt/boot/efi")
-	fmt.Println("  6. Restart guix-daemon")
+	fmt.Println("  5. Bind mount /mnt/gnu to /gnu (use disk instead of RAM)")
+	fmt.Println("  6. Bind mount /mnt/var/guix to /var/guix (use disk instead of RAM)")
+	fmt.Println("  7. Restart guix-daemon with disk-backed mounts")
+	fmt.Println("  8. Mount EFI partition to /mnt/boot/efi")
+	fmt.Println()
+	fmt.Println("Note: Bind mounts are critical to avoid 'no space left' errors.")
+	fmt.Println("      The ISO's RAM filesystem is tiny - we use your disk instead!")
 	fmt.Println()
 	fmt.Println("Environment variables used by this step:")
 	fmt.Printf("  ROOT   - %s (from Step01)\n", state.Root)
@@ -117,13 +122,30 @@ func (s *Step02Mount) RunClean(state *State) error {
 		return fmt.Errorf("failed to copy /var/guix: %w", err)
 	}
 
-	// Restart guix-daemon
-	fmt.Println("Restarting guix-daemon...")
+	// Set up bind mounts to use disk instead of RAM for /gnu and /var/guix
+	// This is CRITICAL to avoid "no space left on device" during guix system init
+	fmt.Println()
+	fmt.Println("Setting up bind mounts to use disk-backed storage...")
+	if err := runCommand("mount", "--bind", "/mnt/gnu", "/gnu"); err != nil {
+		return fmt.Errorf("failed to bind mount /gnu: %w", err)
+	}
+	if err := runCommand("mount", "--bind", "/mnt/var/guix", "/var/guix"); err != nil {
+		return fmt.Errorf("failed to bind mount /var/guix: %w", err)
+	}
+
+	// Restart guix-daemon with new mounts
+	fmt.Println("Restarting guix-daemon with disk-backed mounts...")
 	if commandExists("herd") {
+		runCommand("herd", "stop", "guix-daemon")
 		if err := runCommand("herd", "start", "guix-daemon"); err != nil {
 			fmt.Printf("Warning: Failed to restart guix-daemon: %v\n", err)
 		}
 	}
+
+	// Verify the mounts have space
+	fmt.Println()
+	fmt.Println("Verifying disk space on bind mounts:")
+	runCommand("df", "-h", "/gnu", "/var/guix")
 
 	// Mount ESP
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
