@@ -135,17 +135,31 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	}
 
 	// Ensure critical directories exist in /mnt/var/guix
-	// guix system init will try to create these
+	// guix system init will try to create these and will fail if they can't be created
+	fmt.Println()
+	fmt.Println("Pre-creating critical /var/guix directories...")
 	criticalDirs := []string{
 		"/mnt/var/guix/profiles",
 		"/mnt/var/guix/gcroots",
 		"/mnt/var/guix/userpool",
 	}
 	for _, dir := range criticalDirs {
+		fmt.Printf("  Creating %s...", dir)
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			fmt.Printf("Warning: Failed to create %s: %v\n", dir, err)
+			fmt.Printf(" [FAILED]: %v\n", err)
+			return fmt.Errorf("failed to create critical directory %s: %w", dir, err)
 		}
+		// Verify it was created and is accessible
+		if stat, err := os.Stat(dir); err != nil {
+			fmt.Printf(" [VERIFY FAILED]: %v\n", err)
+			return fmt.Errorf("created directory %s cannot be verified: %w", dir, err)
+		} else if !stat.IsDir() {
+			fmt.Printf(" [NOT A DIRECTORY]\n")
+			return fmt.Errorf("%s exists but is not a directory", dir)
+		}
+		fmt.Printf(" [OK]\n")
 	}
+	fmt.Println("All critical directories created successfully")
 
 	// Set up bind mounts to use disk instead of RAM for /gnu and /var/guix
 	// This is CRITICAL to avoid "no space left on device" during guix system init

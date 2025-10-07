@@ -100,12 +100,43 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println("  You can manually download them after first boot")
 	}
 
-	// Run guix system init
+	// Run guix system init with retry logic
 	fmt.Println()
 	fmt.Println("=== Running guix system init ===")
 	fmt.Println("This will take several minutes...")
-	if err := runCommand("guix", "system", "init", "/mnt/etc/config.scm", "/mnt"); err != nil {
-		return fmt.Errorf("guix system init failed: %w", err)
+	fmt.Println()
+
+	maxRetries := 3
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			fmt.Printf("\n[RETRY %d/%d] Retrying guix system init after substitute failure...\n", attempt, maxRetries)
+			fmt.Println("Waiting 10 seconds before retry...")
+			fmt.Println()
+			exec.Command("sleep", "10").Run()
+		}
+
+		if err := runCommand("guix", "system", "init", "/mnt/etc/config.scm", "/mnt"); err != nil {
+			lastErr = err
+			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
+			if attempt < maxRetries {
+				fmt.Println("This is often caused by temporary substitute server issues.")
+				fmt.Println("The command will automatically retry...")
+			}
+			continue
+		}
+
+		// Success
+		lastErr = nil
+		break
+	}
+
+	if lastErr != nil {
+		fmt.Println()
+		fmt.Println("All retry attempts failed. You can:")
+		fmt.Println("  1. Wait a few minutes and run: guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  2. Try with --fallback to build from source: guix system init --fallback /mnt/etc/config.scm /mnt")
+		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
 
 	// Sync and unmount
