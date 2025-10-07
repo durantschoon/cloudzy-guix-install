@@ -116,7 +116,7 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 			exec.Command("sleep", "10").Run()
 		}
 
-		if err := runCommand("guix", "system", "init", "/mnt/etc/config.scm", "/mnt"); err != nil {
+		if err := runCommand("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			if attempt < maxRetries {
