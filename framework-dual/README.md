@@ -129,11 +129,11 @@ This is a suggested partition layout for dual-booting Guix with Pop!_OS on Frame
 
 | Partition | Size | Filesystem | Purpose |
 |-----------|------|------------|---------|
-| **EFI System Partition (ESP)** | 512 MB–1 GB | FAT32 | Shared UEFI bootloader (Pop!_OS creates, Guix adds entries) |
-| **Pop!_OS Root (`/`)** | 60–100 GB | ext4 | Pop!_OS system files |
-| **Guix Root (`/`)** | 40–60 GB | ext4/btrfs | Guix system files |
-| **Swap** | 8–32 GB | swap | Suspend-to-disk/extra memory (can be shared) |
-| **Home / Data** | Remainder | ext4/btrfs | Shared personal files (optional) |
+| p1 **EFI System Partition (ESP)** | 512 MB–1 GB | FAT32 | Shared UEFI bootloader (Pop!_OS creates, Guix adds entries) |
+| p2 **Swap** | 8–32 GB | swap | Suspend-to-disk/extra memory (can be shared) |
+| p3 **Pop!_OS Root (`/`)** | 60–100 GB | ext4 | Pop!_OS system files |
+| p4 **Guix Root (`/`)** | 40–60 GB | ext4/btrfs | Guix system files |
+| p5 **Home / Data** | Remainder | ext4/btrfs | Shared personal files (optional) |
 | _(Optional)_ Boot (`/boot`) | 1–2 GB | ext4 | Separate kernel storage if needed |
 
 ### Manual Partition Resizing
