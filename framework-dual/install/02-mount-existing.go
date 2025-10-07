@@ -128,6 +128,14 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 		return fmt.Errorf("failed to copy /var/guix: %w", err)
 	}
 
+	// Restart guix-daemon
+	fmt.Println("Restarting guix-daemon...")
+	if commandExists("herd") {
+		if err := runCommand("herd", "start", "guix-daemon"); err != nil {
+			fmt.Printf("Warning: Failed to restart guix-daemon: %v\n", err)
+		}
+	}
+
 	// Mount ESP
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
 		return err
