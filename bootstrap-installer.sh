@@ -128,6 +128,7 @@ echo "Building installer from source..."
 
 # Use /tmp for Go cache to avoid filling up the ISO's limited space
 # /tmp on Guix ISO is typically a tmpfs with more space available
+mkdir -p /tmp/go-cache /tmp/go-tmp
 export GOCACHE=/tmp/go-cache
 export GOTMPDIR=/tmp/go-tmp
 
