@@ -15,7 +15,7 @@ aeac354b0deb5799b47c13a8e6fc06003fb78e8d6769b5b11862db497f58ec42  ./cloudzy/inst
 766bf9d2eccbd5aeb51c05d1d16dc0df94b267b7e234e58c08c24d490e850882  ./framework-dual/install/03-config-dual-boot.go
 5f691c5ac9f5748beba1ea09b8ce7150246d576760739274abfb6eddf170a5fd  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
-3555ad1f0c9706d43ecaf0c0ab6e7dadf945e4759691ac5a39737e9b8d85f4d8  ./run-remote-steps.go
+95e88ab6d4a216cee4fec9b19d3a488c04fab238602dcf7b2803282fa85ba3a3  ./run-remote-steps.go
 
 ## Bootstrap Script
 
