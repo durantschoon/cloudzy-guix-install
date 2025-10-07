@@ -134,6 +134,19 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 		return fmt.Errorf("failed to copy /var/guix: %w", err)
 	}
 
+	// Ensure critical directories exist in /mnt/var/guix
+	// guix system init will try to create these
+	criticalDirs := []string{
+		"/mnt/var/guix/profiles",
+		"/mnt/var/guix/gcroots",
+		"/mnt/var/guix/userpool",
+	}
+	for _, dir := range criticalDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Printf("Warning: Failed to create %s: %v\n", dir, err)
+		}
+	}
+
 	// Set up bind mounts to use disk instead of RAM for /gnu and /var/guix
 	// This is CRITICAL to avoid "no space left on device" during guix system init
 	fmt.Println()
