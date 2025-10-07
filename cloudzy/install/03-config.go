@@ -158,6 +158,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
   (bootloader-configuration
    (bootloader %s)
    (targets '%s)
+   (timeout 5)
    (keyboard-layout (keyboard-layout "us"))))
 
  (file-systems

@@ -177,6 +177,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
   (bootloader-configuration
    (bootloader %s)
    (targets '%s)
+   (timeout 5)
    (keyboard-layout (keyboard-layout "us"))))
 
  (file-systems
