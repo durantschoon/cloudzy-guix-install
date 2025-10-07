@@ -161,31 +161,6 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	}
 	fmt.Println("All critical directories created successfully")
 
-	// Set up bind mounts to use disk instead of RAM for /gnu and /var/guix
-	// This is CRITICAL to avoid "no space left on device" during guix system init
-	fmt.Println()
-	fmt.Println("Setting up bind mounts to use disk-backed storage...")
-	if err := runCommand("mount", "--bind", "/mnt/gnu", "/gnu"); err != nil {
-		return fmt.Errorf("failed to bind mount /gnu: %w", err)
-	}
-	if err := runCommand("mount", "--bind", "/mnt/var/guix", "/var/guix"); err != nil {
-		return fmt.Errorf("failed to bind mount /var/guix: %w", err)
-	}
-
-	// Restart guix-daemon with new mounts
-	fmt.Println("Restarting guix-daemon with disk-backed mounts...")
-	if commandExists("herd") {
-		runCommand("herd", "stop", "guix-daemon")
-		if err := runCommand("herd", "start", "guix-daemon"); err != nil {
-			fmt.Printf("Warning: Failed to restart guix-daemon: %v\n", err)
-		}
-	}
-
-	// Verify the mounts have space
-	fmt.Println()
-	fmt.Println("Verifying disk space on bind mounts:")
-	runCommand("df", "-h", "/gnu", "/var/guix")
-
 	// Mount ESP
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
 		return err
