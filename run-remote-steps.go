@@ -13,11 +13,12 @@ import (
 func main() {
 	platform := getEnv("GUIX_PLATFORM", "cloudzy")
 
-	if platform == "framework-dual" {
+	switch platform {
+	case "framework-dual":
 		runFrameworkDual()
-	} else if platform == "cloudzy" {
+	case "cloudzy":
 		runCloudzy()
-	} else {
+	default:
 		fatal("Unsupported platform: %s\nSupported: cloudzy, framework-dual", platform)
 	}
 }
