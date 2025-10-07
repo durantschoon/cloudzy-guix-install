@@ -87,14 +87,14 @@ func (s *Step01Partition) RunClean(state *State) error {
 	fmt.Printf("EFI is %s and ROOT is %s\n", state.EFI, state.Root)
 	fmt.Println()
 
-	// Format partitions
-	fmt.Printf("Formatting %s as FAT32...\n", state.EFI)
-	if err := runCommand("mkfs.vfat", "-F32", state.EFI); err != nil {
+	// Format partitions with labels
+	fmt.Printf("Formatting %s as FAT32 with label EFI...\n", state.EFI)
+	if err := runCommand("mkfs.vfat", "-F32", "-n", "EFI", state.EFI); err != nil {
 		return err
 	}
 
-	fmt.Printf("Formatting %s as ext4...\n", state.Root)
-	if err := runCommand("mkfs.ext4", "-F", state.Root); err != nil {
+	fmt.Printf("Formatting %s as ext4 with label GUIX_ROOT...\n", state.Root)
+	if err := runCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", state.Root); err != nil {
 		return err
 	}
 

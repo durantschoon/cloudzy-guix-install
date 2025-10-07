@@ -81,10 +81,10 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 		return nil
 	}
 
-	// Mount root partition if not mounted
+	// Mount root partition by label if not mounted
 	if !isMounted("/mnt") {
-		fmt.Printf("Mounting %s to /mnt\n", state.Root)
-		if err := runCommand("mount", state.Root, "/mnt"); err != nil {
+		fmt.Println("Mounting GUIX_ROOT to /mnt")
+		if err := runCommand("mount", "/dev/disk/by-label/GUIX_ROOT", "/mnt"); err != nil {
 			return err
 		}
 	} else {
@@ -165,8 +165,8 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
 		return err
 	}
-	fmt.Printf("Mounting existing ESP: %s\n", state.EFI)
-	if err := runCommand("mount", state.EFI, "/mnt/boot/efi"); err != nil {
+	fmt.Println("Mounting EFI to /mnt/boot/efi")
+	if err := runCommand("mount", "/dev/disk/by-label/EFI", "/mnt/boot/efi"); err != nil {
 		return err
 	}
 

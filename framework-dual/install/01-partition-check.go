@@ -162,8 +162,8 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 			return fmt.Errorf("aborted by user")
 		}
 
-		fmt.Printf("Formatting %s as ext4...\n", root)
-		if err := runCommand("mkfs.ext4", "-F", root); err != nil {
+		fmt.Printf("Formatting %s as ext4 with label GUIX_ROOT...\n", root)
+		if err := runCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", root); err != nil {
 			return err
 		}
 	} else {
@@ -193,9 +193,9 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 
 		fmt.Printf("Created Guix root partition: %s\n", root)
 
-		// Format it
-		fmt.Printf("Formatting %s as ext4...\n", root)
-		if err := runCommand("mkfs.ext4", "-F", root); err != nil {
+		// Format it with label
+		fmt.Printf("Formatting %s as ext4 with label GUIX_ROOT...\n", root)
+		if err := runCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", root); err != nil {
 			return err
 		}
 	}

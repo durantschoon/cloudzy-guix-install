@@ -69,10 +69,10 @@ func (s *Step02Mount) RunClean(state *State) error {
 		return nil
 	}
 
-	// Mount root partition if not mounted
+	// Mount root partition by label if not mounted
 	if !isMounted("/mnt") {
-		fmt.Printf("Mounting %s to /mnt\n", state.Root)
-		if err := runCommand("mount", state.Root, "/mnt"); err != nil {
+		fmt.Println("Mounting GUIX_ROOT to /mnt")
+		if err := runCommand("mount", "/dev/disk/by-label/GUIX_ROOT", "/mnt"); err != nil {
 			return err
 		}
 	} else {
@@ -149,12 +149,12 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 	fmt.Println("All critical directories created successfully")
 
-	// Mount ESP
+	// Mount ESP by label
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
 		return err
 	}
-	fmt.Printf("Mounting EFI partition: %s\n", state.EFI)
-	if err := runCommand("mount", state.EFI, "/mnt/boot/efi"); err != nil {
+	fmt.Println("Mounting EFI to /mnt/boot/efi")
+	if err := runCommand("mount", "/dev/disk/by-label/EFI", "/mnt/boot/efi"); err != nil {
 		return err
 	}
 

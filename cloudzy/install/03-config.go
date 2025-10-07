@@ -167,7 +167,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
           (type "ext4"))
          (file-system
           (mount-point "/boot/efi")
-          (device "%s")
+          (device (file-system-label "EFI"))
           (type "vfat"))
          %%base-file-systems))
 
@@ -190,7 +190,6 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
 		bootloader,
 		targets,
 		uuid,
-		state.EFI,
 		state.UserName,
 		state.FullName,
 		state.UserName,

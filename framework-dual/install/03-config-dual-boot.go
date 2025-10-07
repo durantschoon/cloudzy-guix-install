@@ -186,7 +186,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
           (type "ext4"))
          (file-system
           (mount-point "/boot/efi")
-          (device "%s")
+          (device (file-system-label "EFI"))
           (type "vfat"))
 %s         %%base-file-systems))
 
@@ -209,7 +209,6 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
 		bootloader,
 		targets,
 		uuid,
-		state.EFI,
 		homeFS,
 		state.UserName,
 		state.FullName,
