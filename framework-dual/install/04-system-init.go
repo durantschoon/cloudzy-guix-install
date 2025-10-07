@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // Step04SystemInit performs the final system initialization
@@ -100,8 +101,25 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println("  You can manually download them after first boot")
 	}
 
-	// Start cow-store to redirect store writes to target disk
+	// Verify ESP is properly mounted as vfat
 	fmt.Println()
+	fmt.Println("=== Verifying EFI System Partition ===")
+	cmd := exec.Command("df", "-T", "/mnt/boot/efi")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to check ESP: %w", err)
+	}
+	if !strings.Contains(string(output), "vfat") {
+		fmt.Println("ERROR: /mnt/boot/efi is not mounted as vfat filesystem")
+		fmt.Println("Current mount info:")
+		runCommand("df", "-T", "/mnt/boot/efi")
+		runCommand("mount", "|", "grep", "/mnt/boot/efi")
+		return fmt.Errorf("ESP verification failed: not a vfat filesystem")
+	}
+	fmt.Println("[OK] ESP is correctly mounted as vfat")
+	fmt.Println()
+
+	// Start cow-store to redirect store writes to target disk
 	fmt.Println("=== Starting cow-store ===")
 	fmt.Println("Redirecting store writes to /mnt to avoid filling ISO space...")
 	if err := runCommand("herd", "start", "cow-store", "/mnt"); err != nil {
@@ -146,6 +164,72 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println("  2. Try with --fallback to build from source: guix system init --fallback /mnt/etc/config.scm /mnt")
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
+
+	// Verify installation succeeded
+	fmt.Println()
+	fmt.Println("=== Verifying Installation ===")
+	allGood := true
+
+	// Check for kernel
+	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
+	if len(kernels) == 0 {
+		fmt.Println("[WARN] No kernel found in /mnt/boot/vmlinuz-*")
+		allGood = false
+	} else {
+		fmt.Printf("[OK] Kernel installed: %s\n", filepath.Base(kernels[0]))
+	}
+
+	// Check for initrd
+	initrds, _ := filepath.Glob("/mnt/boot/initrd-*")
+	if len(initrds) == 0 {
+		fmt.Println("[WARN] No initrd found in /mnt/boot/initrd-*")
+		allGood = false
+	} else {
+		fmt.Printf("[OK] Initrd installed: %s\n", filepath.Base(initrds[0]))
+	}
+
+	// Check for GRUB config
+	if _, err := os.Stat("/mnt/boot/grub/grub.cfg"); err != nil {
+		fmt.Println("[WARN] No GRUB config at /mnt/boot/grub/grub.cfg")
+		allGood = false
+	} else {
+		fmt.Println("[OK] GRUB config installed")
+	}
+
+	// Check for GRUB EFI binary
+	if _, err := os.Stat("/mnt/boot/efi/EFI/guix/grubx64.efi"); err != nil {
+		fmt.Println("[WARN] No GRUB EFI binary at /mnt/boot/efi/EFI/guix/grubx64.efi")
+		allGood = false
+	} else {
+		fmt.Println("[OK] GRUB EFI binary installed")
+	}
+
+	// Check for EFI GRUB config
+	if _, err := os.Stat("/mnt/boot/efi/EFI/guix/grub.cfg"); err != nil {
+		fmt.Println("[WARN] No EFI GRUB config at /mnt/boot/efi/EFI/guix/grub.cfg")
+		allGood = false
+	} else {
+		fmt.Println("[OK] EFI GRUB config installed")
+	}
+
+	if !allGood {
+		fmt.Println()
+		fmt.Println("WARNING: Installation may be incomplete!")
+		fmt.Println("Missing files detected. System may not boot properly.")
+		fmt.Println("You can try re-running: guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println()
+		fmt.Print("Continue anyway? [y/N] ")
+
+		var response string
+		fmt.Scanln(&response)
+		if response != "y" && response != "Y" {
+			return fmt.Errorf("installation verification failed, aborting")
+		}
+	} else {
+		fmt.Println()
+		fmt.Println("[OK] All critical files verified successfully!")
+	}
+	fmt.Println()
 
 	// Sync and unmount
 	fmt.Println("Syncing filesystems...")
