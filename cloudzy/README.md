@@ -57,10 +57,11 @@ Located in `install/` - Run from Guix live ISO to create minimal bootable system
 1. **`01-partition-{warnings,clean}.sh`**: Device detection and partitioning
    - Auto-detects primary storage device or uses `DEVICE` env var
    - Creates GPT partition table with EFI (512MB) and root (remaining)
+   - Formats partitions with labels: `EFI` (FAT32) and `GUIX_ROOT` (ext4)
    - Validates device exists before proceeding
 
 2. **`02-mount-bind-{warnings,clean}.sh`**: Mount setup and store copy
-   - Mounts root partition
+   - Mounts partitions by label: `/dev/disk/by-label/GUIX_ROOT` and `/dev/disk/by-label/EFI`
    - Copies Guix store from ISO to target
    - Sets up bind mounts for `/gnu` and `/var/guix`
 
