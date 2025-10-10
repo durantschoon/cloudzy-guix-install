@@ -9,15 +9,16 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
 ### Prerequisites
 
 - **Existing Pop!_OS installation** with EFI System Partition (ESP)
+- **Labeled partitions** (filesystem labels in UPPERCASE, set during/after partition creation):
+  - ESP labeled as `EFI` (set with: `fatlabel /dev/nvme0n1p1 EFI`)
+  - Pop!_OS root optionally labeled as `POPOS_ROOT` (set with: `e2label /dev/nvme0n1pX POPOS_ROOT`)
 - **Pre-created partition for Guix** (40-60GB minimum)
-  - Use GParted or similar tool to create the partition
-  - Name the partition `guix-root` (GPT partition label)
+  - Use GParted or `parted` to create the partition
   - Leave it unformatted (script will format as ext4)
-  - Example command: `parted /dev/nvme0n1 name 4 guix-root`
+  - **Label it `GUIX_ROOT` after formatting** (script does this automatically)
 - **Optional: Separate home partition**
   - If you have a separate home partition to share between Pop!_OS and Guix
-  - Name the partition `home` (GPT partition label)
-  - Example command: `parted /dev/nvme0n1 name 5 home`
+  - **Label the partition `HOME`** (set with: `e2label /dev/nvme0n1pY HOME`)
   - Script will auto-detect and mount at /home
 - **Backup of all important data** before proceeding
 - Running from a **Guix live ISO**
@@ -127,14 +128,20 @@ export SWAP_SIZE="4G"       # Default: 4G
 
 This is a suggested partition layout for dual-booting Guix with Pop!_OS on Framework 13:
 
-| Partition | Size | Filesystem | Purpose |
-|-----------|------|------------|---------|
-| p1 **EFI System Partition (ESP)** | 512 MB–1 GB | FAT32 | Shared UEFI bootloader (Pop!_OS creates, Guix adds entries) |
-| p2 **Swap** | 8–32 GB | swap | Suspend-to-disk/extra memory (can be shared) |
-| p3 **Pop!_OS Root (`/`)** | 60–100 GB | ext4 | Pop!_OS system files |
-| p4 **Guix Root (`/`)** | 40–60 GB | ext4/btrfs | Guix system files |
-| p5 **Home / Data** | Remainder | ext4/btrfs | Shared personal files (optional) |
-| _(Optional)_ Boot (`/boot`) | 1–2 GB | ext4 | Separate kernel storage if needed |
+| Partition | Size | Filesystem | Label | Set Label Command | Purpose |
+|-----------|------|------------|-------|-------------------|---------|
+| p1 **EFI System Partition (ESP)** | 512 MB–1 GB | FAT32 | `EFI` | `fatlabel /dev/nvme0n1p1 EFI` | Shared UEFI bootloader (Pop!_OS creates, Guix adds entries) |
+| p2 **Swap** | 8–32 GB | swap | _(none)_ | N/A | Suspend-to-disk/extra memory (can be shared) |
+| p3 **Pop!_OS Root (`/`)** | 60–100 GB | ext4 | `POPOS_ROOT` | `e2label /dev/nvme0n1p3 POPOS_ROOT` | Pop!_OS system files |
+| p4 **Guix Root (`/`)** | 40–60 GB | ext4/btrfs | `GUIX_ROOT` | `e2label /dev/nvme0n1p4 GUIX_ROOT` | Guix system files |
+| p5 **Home / Data** | Remainder | ext4/btrfs | `HOME` | `e2label /dev/nvme0n1p5 HOME` | Shared personal files (optional) |
+| _(Optional)_ Boot (`/boot`) | 1–2 GB | ext4 | `BOOT` | `e2label /dev/nvme0n1pX BOOT` | Separate kernel storage if needed |
+
+**Verify labels:**
+
+```bash
+lsblk -o NAME,SIZE,FSTYPE,LABEL
+```
 
 ### Manual Partition Resizing
 
