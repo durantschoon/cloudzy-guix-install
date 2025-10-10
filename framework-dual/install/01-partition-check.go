@@ -317,25 +317,27 @@ func (s *Step01PartitionCheck) findGuixRootPartition(state *State) (string, erro
 }
 
 func (s *Step01PartitionCheck) findHomePartition(state *State) {
-	cmd := exec.Command("parted", state.Device, "print")
+	// Search for partition with filesystem label "DATA"
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME,LABEL", state.Device)
 	output, _ := cmd.Output()
 
 	for _, line := range strings.Split(string(output), "\n") {
-		if strings.Contains(strings.ToLower(line), "home") {
+		if strings.Contains(line, "DATA") {
 			fields := strings.Fields(line)
-			if len(fields) > 0 {
-				partNum := fields[0]
-				state.HomePartition = s.makePartitionPath(state.Device, partNum)
+			if len(fields) >= 2 && fields[1] == "DATA" {
+				// Extract full device path from partition name
+				partName := fields[0]
+				state.HomePartition = "/dev/" + partName
 				homeSize := getPartitionSizeGiB(state.HomePartition)
-				fmt.Printf("Found home partition: %s\n", state.HomePartition)
-				fmt.Printf("Home partition size: %.1fGiB\n", homeSize)
+				fmt.Printf("Found DATA partition: %s\n", state.HomePartition)
+				fmt.Printf("DATA partition size: %.1fGiB\n", homeSize)
 				fmt.Println("This partition will be mounted at /home and shared between Pop!_OS and Guix")
 				return
 			}
 		}
 	}
 
-	fmt.Println("No separate home partition found - home directories will be in root partition")
+	fmt.Println("No separate DATA partition found - home directories will be in root partition")
 }
 
 func (s *Step01PartitionCheck) makePartitionPath(device, partNum string) string {

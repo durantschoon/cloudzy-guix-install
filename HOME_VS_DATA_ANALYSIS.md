@@ -97,9 +97,10 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 **Current state:**
 ```
 /dev/nvme0n1p1  → EFI (shared)
-/dev/nvme0n1p2  → Pop!_OS root
-/dev/nvme0n1p3  → /home (shared) ← PROBLEM
+/dev/nvme0n1p2  → Swap
+/dev/nvme0n1p3  → Pop!_OS root
 /dev/nvme0n1p4  → Guix root
+/dev/nvme0n1p5  → /home or DATA (shared) ← DECISION POINT
 ```
 
 **Migration path to /data:**
@@ -108,13 +109,17 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 
 2. **Boot Pop!_OS, create /data partition** (if space available):
    ```bash
-   # Shrink home partition
-   sudo resize2fs /dev/nvme0n1p3 50G  # Keep 50G for /home
-   sudo parted /dev/nvme0n1 resizepart 3 50G
+   # If p5 is your old home partition, you can relabel it
+   # OR shrink it and create a new DATA partition
 
-   # Create new /data partition
+   # Option 1: Relabel existing home partition as DATA
+   sudo e2label /dev/nvme0n1p5 DATA
+
+   # Option 2: Shrink and create new
+   sudo resize2fs /dev/nvme0n1p5 50G
+   sudo parted /dev/nvme0n1 resizepart 5 50G
    sudo parted /dev/nvme0n1 mkpart DATA ext4 XXXGiB 100%
-   sudo mkfs.ext4 -L DATA /dev/nvme0n1pX
+   sudo mkfs.ext4 -L DATA /dev/nvme0n1p6
    ```
 
 3. **Move data from /home to /data:**
@@ -163,8 +168,9 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 **Current state:**
 ```
 /dev/nvme0n1p1  → EFI (shared)
-/dev/nvme0n1p2  → Pop!_OS root (includes /home)
-/dev/nvme0n1p3  → Guix root (will include /home)
+/dev/nvme0n1p2  → Swap
+/dev/nvme0n1p3  → Pop!_OS root (includes /home)
+/dev/nvme0n1p4  → Guix root (will include /home)
 ```
 
 **Two options:**
@@ -174,7 +180,7 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 1. **Create /data partition in free space:**
    ```bash
    sudo parted /dev/nvme0n1 mkpart DATA ext4 XXXGiB YYYGiB
-   sudo mkfs.ext4 -L DATA /dev/nvme0n1pX
+   sudo mkfs.ext4 -L DATA /dev/nvme0n1p5
    ```
 
 2. **Move shared data to /data:**
@@ -186,11 +192,11 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 
 **Option B: Share /home (CURRENT FRAMEWORK-DUAL BEHAVIOR)**
 
-Just create a partition labeled "home" before running installer:
+Just create a partition labeled "DATA" before running installer:
 ```bash
-sudo parted /dev/nvme0n1 mkpart home ext4 XXXGiB YYYGiB
-sudo mkfs.ext4 -L home /dev/nvme0n1pX
-e2label /dev/nvme0n1pX home  # Installer searches for this
+sudo parted /dev/nvme0n1 mkpart DATA ext4 XXXGiB YYYGiB
+sudo mkfs.ext4 -L DATA /dev/nvme0n1pX
+e2label /dev/nvme0n1pX DATA  # Installer searches for this
 ```
 
 Installer will detect it and mount at /home in both OSes.
@@ -250,11 +256,11 @@ export SHARED_PARTITION_MOUNT=/data  # or "/home"
 **Option 3: Detect both, ask user in interactive mode**
 ```
 Found shared partitions:
-  1. /dev/nvme0n1p3 labeled "home" (50GB)
+  1. /dev/nvme0n1p3 labeled "SHARED" (50GB)
   2. /dev/nvme0n1p5 labeled "DATA" (200GB)
 
 How should these be mounted in Guix?
-  [1] Mount "home" at /home (share home directory)
+  [1] Mount "SHARED" at /home (share home directory)
   [2] Mount "DATA" at /data (use symlinks for sharing)
   [3] Don't mount either (Guix uses own /home)
 ```
