@@ -65,14 +65,13 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	// Check for existing GUIX_ROOT partition
 	fmt.Println()
 	fmt.Println("=== Checking for existing GUIX_ROOT partition ===")
-	guixRootPartNum, err := s.findGuixRootPartition(state)
+	guixRootPart, err := s.findGuixRootPartition(state)
 	if err != nil {
 		return err
 	}
 
-	if guixRootPartNum != "" {
+	if guixRootPart != "" {
 		// Existing GUIX_ROOT partition
-		guixRootPart := s.makePartitionPath(state.Device, guixRootPartNum)
 		partSize := getPartitionSizeGiB(guixRootPart)
 
 		fmt.Printf("Found existing partition labeled 'GUIX_ROOT': %s\n", guixRootPart)
@@ -135,14 +134,13 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 	}
 
 	fmt.Println("Looking for existing partition labeled 'GUIX_ROOT'...")
-	guixRootPartNum, err := s.findGuixRootPartition(state)
+	root, err := s.findGuixRootPartition(state)
 	if err != nil {
 		return err
 	}
 
-	if guixRootPartNum != "" {
+	if root != "" {
 		// Found existing partition
-		root := s.makePartitionPath(state.Device, guixRootPartNum)
 		state.Root = root
 
 		fmt.Printf("Found existing partition labeled 'GUIX_ROOT': %s\n", root)
