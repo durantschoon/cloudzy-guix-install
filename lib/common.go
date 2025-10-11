@@ -120,7 +120,7 @@ func EnsureGuixDaemonRunning() error {
 		cmd := exec.Command("herd", "status", "guix-daemon")
 		output, err := cmd.Output()
 
-		if err == nil && strings.Contains(string(output), "running") {
+		if err == nil && strings.Contains(string(output), "It is started") {
 			fmt.Println("[OK] guix-daemon process is running")
 
 			// Additional check: verify daemon is actually responsive
@@ -165,7 +165,7 @@ func EnsureGuixDaemonRunning() error {
 	// Final check
 	cmd := exec.Command("herd", "status", "guix-daemon")
 	output, err := cmd.Output()
-	if err != nil || !strings.Contains(string(output), "running") {
+	if err != nil || !strings.Contains(string(output), "It is started") {
 		fmt.Println()
 		fmt.Println("[ERROR] Failed to start guix-daemon after multiple attempts")
 		fmt.Println()
