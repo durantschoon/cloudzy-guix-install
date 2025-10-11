@@ -308,11 +308,10 @@ func (s *Step01PartitionCheck) findGuixRootPartition(state *State) (string, erro
 		if strings.Contains(line, "GUIX_ROOT") {
 			fields := strings.Fields(line)
 			if len(fields) >= 2 && fields[1] == "GUIX_ROOT" {
-				// Extract partition name and construct full device path
+				// Extract partition name (strip any tree characters)
 				partName := fields[0]
-				if strings.HasPrefix(state.Device, "/dev/nvme") || strings.HasPrefix(state.Device, "/dev/mmcblk") {
-					return "/dev/" + partName, nil
-				}
+				// Remove tree branch characters like ├─ └─ │
+				partName = strings.TrimLeft(partName, "├─└─│ ")
 				return "/dev/" + partName, nil
 			}
 		}
@@ -330,8 +329,9 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 		if strings.Contains(line, "DATA") {
 			fields := strings.Fields(line)
 			if len(fields) >= 2 && fields[1] == "DATA" {
-				// Extract full device path from partition name
+				// Extract full device path from partition name (strip tree characters)
 				partName := fields[0]
+				partName = strings.TrimLeft(partName, "├─└─│ ")
 				state.HomePartition = "/dev/" + partName
 				homeSize := getPartitionSizeGiB(state.HomePartition)
 				fmt.Printf("Found DATA partition: %s\n", state.HomePartition)
