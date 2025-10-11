@@ -121,16 +121,16 @@ func EnsureGuixDaemonRunning() error {
 		output, err := cmd.Output()
 
 		if err == nil && strings.Contains(string(output), "running") {
-			fmt.Println("[OK] guix-daemon is running")
+			fmt.Println("[OK] guix-daemon process is running")
 
 			// Additional check: verify daemon is actually responsive
 			fmt.Println("Verifying daemon is responsive...")
 			testCmd := exec.Command("guix", "build", "--version")
 			if err := testCmd.Run(); err == nil {
-				fmt.Println("[OK] guix-daemon is responsive")
+				fmt.Println("[OK] guix-daemon is responsive and ready")
 				return nil
 			}
-			fmt.Println("Daemon status shows running but not responsive yet, waiting...")
+			fmt.Println("Daemon process is running but not responsive yet, waiting...")
 		}
 
 		if attempts == 0 {
@@ -144,17 +144,22 @@ func EnsureGuixDaemonRunning() error {
 		fmt.Println("Stopping guix-daemon (if running)...")
 		exec.Command("herd", "stop", "guix-daemon").Run()
 		exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
-		time.Sleep(2 * time.Second)
+		exec.Command("pkill", "-KILL", "-x", "guix-daemon").Run() // Force kill if needed
+		time.Sleep(3 * time.Second)
 
 		// Start the daemon (cow-store handles store redirection)
 		fmt.Println("Starting guix-daemon...")
 		if err := RunCommand("herd", "start", "guix-daemon"); err != nil {
 			fmt.Printf("Warning: herd start failed: %v\n", err)
+			// Try alternative startup method
+			fmt.Println("Trying alternative daemon startup...")
+			exec.Command("guix-daemon", "--build-users-group=guixbuild").Start()
+			time.Sleep(2 * time.Second)
 		}
 
 		// Wait longer for daemon to be ready
-		fmt.Println("Waiting 5 seconds for daemon to initialize...")
-		time.Sleep(5 * time.Second)
+		fmt.Println("Waiting 8 seconds for daemon to initialize...")
+		time.Sleep(8 * time.Second)
 	}
 
 	// Final check
@@ -163,12 +168,18 @@ func EnsureGuixDaemonRunning() error {
 	if err != nil || !strings.Contains(string(output), "running") {
 		fmt.Println()
 		fmt.Println("[ERROR] Failed to start guix-daemon after multiple attempts")
-		fmt.Println("Please manually run:")
+		fmt.Println()
+		fmt.Println("Please manually run these commands:")
 		fmt.Println("  herd start guix-daemon")
 		fmt.Println("  herd status guix-daemon")
 		fmt.Println()
+		fmt.Println("Once the daemon is running, continue with:")
+		fmt.Println("  guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  # OR if substitutes fail:")
+		fmt.Println("  guix system init --fallback /mnt/etc/config.scm /mnt")
+		fmt.Println()
 		fmt.Println("NOTE: cow-store should already be running. Do NOT bind mount /mnt/gnu!")
-		return fmt.Errorf("guix-daemon is not running")
+		return fmt.Errorf("guix-daemon is not running - please start manually and run guix system init")
 	}
 
 	fmt.Println()
@@ -498,7 +509,7 @@ func AskYesNo(prompt string, expected string) bool {
 	var response string
 	fmt.Scanln(&response)
 	
-	return strings.ToLower(strings.TrimSpace(response)) == strings.ToLower(expected)
+	return strings.EqualFold(strings.TrimSpace(response), expected)
 }
 
 // DownloadCustomizationTools downloads customization tools to /mnt/root/guix-customize/
