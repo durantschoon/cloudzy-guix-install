@@ -195,14 +195,13 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
  ;; Minimal services - add SSH, desktop, etc. after installation
  (services %%base-services))
 `,
-		state.HostName,
-		state.Timezone,
-		bootloader,
-		targets,
-		uuid,
-		state.UserName,
-		state.FullName,
-		state.UserName,
+		state.HostName,    // host-name
+		state.Timezone,    // timezone
+		targets,           // targets
+		uuid,              // device uuid
+		state.UserName,    // name
+		state.FullName,    // comment
+		state.UserName,    // home-directory
 	)
 
 	return config

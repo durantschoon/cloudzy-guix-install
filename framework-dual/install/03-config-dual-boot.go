@@ -215,15 +215,14 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
  ;; Minimal services - add SSH, desktop, etc. after installation
  (services %%base-services))
 `,
-		state.HostName,
-		state.Timezone,
-		bootloader,
-		targets,
-		uuid,
-		homeFS,
-		state.UserName,
-		state.FullName,
-		state.UserName,
+		uuid,              // root device uuid
+		state.HostName,    // host-name
+		state.Timezone,    // timezone
+		targets,           // targets
+		uuid,              // home device uuid (same as root for now)
+		homeFS,            // home filesystem conditional
+		state.UserName,    // name
+		state.FullName,    // comment
 	)
 
 	return config
