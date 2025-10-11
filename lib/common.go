@@ -218,8 +218,54 @@ func StartCowStore() error {
 	return nil
 }
 
+// ValidateGuixConfig validates the config file for common issues
+func ValidateGuixConfig(configPath string) error {
+	fmt.Println("=== Validating Guix Configuration ===")
+	fmt.Printf("Checking config file: %s\n", configPath)
+	
+	// Check if config file exists
+	if _, err := os.Stat(configPath); err != nil {
+		return fmt.Errorf("config file does not exist: %s", configPath)
+	}
+	
+	// Try to load the config to check for syntax errors and unbound variables
+	fmt.Println("Validating config syntax and checking for unbound variables...")
+	cmd := exec.Command("guix", "system", "reconfigure", "--dry-run", configPath)
+	output, err := cmd.CombinedOutput()
+	
+	if err != nil {
+		// Check for common unbound variable errors
+		outputStr := string(output)
+		if strings.Contains(outputStr, "unbound variable") {
+			fmt.Println()
+			fmt.Println("[ERROR] Unbound variable detected in config file!")
+			fmt.Println("Common issues and fixes:")
+			fmt.Println("  - 'linux-libre' should be 'linux'")
+			fmt.Println("  - 'microcode-initrd' should be removed")
+			fmt.Println("  - Check for typos in package names")
+			fmt.Println()
+			fmt.Printf("Full error output:\n%s\n", outputStr)
+			return fmt.Errorf("unbound variable in config: %s", outputStr)
+		}
+		
+		// Other syntax errors
+		fmt.Printf("[ERROR] Config validation failed:\n%s\n", outputStr)
+		return fmt.Errorf("config validation failed: %w", err)
+	}
+	
+	fmt.Println("[OK] Config file validation passed")
+	fmt.Println()
+	return nil
+}
+
 // RunGuixSystemInit runs guix system init with retry logic
 func RunGuixSystemInit() error {
+	// Validate config first to catch issues early
+	configPath := "/mnt/etc/config.scm"
+	if err := ValidateGuixConfig(configPath); err != nil {
+		return fmt.Errorf("config validation failed: %w", err)
+	}
+	
 	fmt.Println("=== Running guix system init ===")
 	fmt.Println("This will take several minutes...")
 	fmt.Println()

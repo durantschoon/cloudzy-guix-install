@@ -168,6 +168,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
 ;; Customize after installation using: guix-customize
 
 (use-modules (gnu)
+             (gnu packages linux)
              (gnu system nss))
 
 (operating-system
