@@ -72,6 +72,22 @@ Mount by label for reliability:
 - Prevents "unbound variable" errors during `guix system init`
 - Makes the configuration self-documenting
 
+### GRUB EFI Bootloader Issues
+
+**Common Problem**: `guix system init` looks for `/mnt/boot/efi/Guix/grub.cfg` but GRUB EFI creates `/mnt/boot/efi/Guix/grubx64.efi`.
+
+**Solution**: Create a symlink before running `guix system init`:
+```bash
+# Create symlink from EFI directory to actual grub.cfg location
+ln -sf ../../boot/grub/grub.cfg /mnt/boot/efi/Guix/grub.cfg
+```
+
+**Why This Happens**:
+- GRUB EFI bootloader creates `grubx64.efi` in `/boot/efi/Guix/`
+- But the installer expects to find `grub.cfg` in the same directory
+- The actual `grub.cfg` is located at `/boot/grub/grub.cfg`
+- Symlink bridges this gap for the installer
+
 ## ⚙️ Mount Order & Verification
 
 ### Correct Mount Sequence
