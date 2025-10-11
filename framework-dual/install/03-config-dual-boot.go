@@ -176,7 +176,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
  (timezone "%s")
  (locale "en_US.utf8")
 
- ;; Use linux-libre kernel
+ ;; Explicitly specify kernel (required)
  (kernel linux-libre)
 
  (bootloader

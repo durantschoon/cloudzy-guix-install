@@ -21,11 +21,13 @@ This document captures critical lessons learned from real-world Guix OS installa
 ### Label Convention
 
 Use **UPPERCASE with underscores** for all partition labels:
+
 - `EFI` → FAT32 ESP → mounted at `/boot/efi`
 - `GUIX_ROOT` → ext4 → mounted at `/`
 - `DATA` (optional) → ext4/btrfs → mounted at `/home` or `/data`
 
 Verify labels:
+
 ```bash
 e2label /dev/nvme0n1pX         # ext4 labels
 fatlabel /dev/nvme0n1pY        # FAT labels
@@ -33,10 +35,42 @@ parted /dev/nvme0n1 print      # GPT partition names
 ```
 
 Mount by label for reliability:
+
 ```bash
 /dev/disk/by-label/GUIX_ROOT
 /dev/disk/by-label/EFI
 ```
+
+## 🐧 Kernel Configuration
+
+### Always Specify the Kernel Explicitly
+
+**Critical**: Always specify the kernel in your `config.scm` file. Do not rely on defaults.
+
+```scheme
+(use-modules (gnu)
+             (gnu packages linux)  ; Required for kernel packages
+             (gnu system nss))
+
+(operating-system
+  ;; ... other fields ...
+  (kernel linux-libre)  ; Explicitly specify kernel
+  ;; ... rest of config ...
+)
+```
+
+### Common Kernel Issues
+
+- **"linux is unbound"**: Need to import `(gnu packages linux)` module
+- **"linux-libre is unbound"**: The package name is correct, ensure module import
+- **Default kernel**: Never omit the kernel field - always specify explicitly
+
+### Why Explicit Kernel Specification Matters
+
+- Guix defaults can change between versions
+- Explicit specification ensures reproducible builds
+- Prevents "unbound variable" errors during `guix system init`
+- Makes the configuration self-documenting
 
 ## ⚙️ Mount Order & Verification
 
@@ -59,6 +93,7 @@ swapon /dev/nvme0n1p2
 ### Pre-Installation Verification
 
 Always verify ESP is correctly mounted:
+
 ```bash
 df -T /mnt/boot/efi | grep -q vfat || { echo "ERROR: EFI not FAT32"; exit 1; }
 mount | grep "/mnt/boot/efi"
@@ -101,6 +136,7 @@ guix system init /mnt/etc/config.scm /mnt \
 ```
 
 **Fix checklist:**
+
 1. Ensure FAT32 format: `mkfs.vfat -F32 /dev/nvme0n1p1`
 2. Verify correct flags: `parted /dev/nvme0n1 set 1 esp on`
 3. Ensure empty mount point before mounting
@@ -119,6 +155,7 @@ After successful installation, `/mnt/boot` should contain:
 ```
 
 **Warning signs:**
+
 - Only `grubx64.efi` present (no `grub.cfg` or kernel) → Installation incomplete, re-run
 - Empty `/boot/efi` before init → ✅ Normal
 - Empty `/boot/efi` after init → ❌ Installation failed
@@ -129,6 +166,7 @@ After successful installation, `/mnt/boot` should contain:
 
 - Pop!_OS uses `systemd-boot`, Guix uses `GRUB` — they coexist peacefully in `/boot/efi/EFI/`
 - Directory structure:
+
   ```
   /boot/efi/EFI/
   ├── Boot/           # Fallback bootloader
@@ -145,11 +183,13 @@ After successful installation, `/mnt/boot` should contain:
 ### Accessing Pop!_OS from Guix
 
 **Method 1:** Firmware boot menu
+
 ```bash
 # During boot, press F12 → select "Pop!_OS" entry
 ```
 
 **Method 2:** One-time boot from Guix
+
 ```bash
 sudo efibootmgr -n <PopEntry>  # Boot Pop!_OS next time only
 sudo reboot
@@ -158,6 +198,7 @@ sudo reboot
 ### Making GRUB Menu Visible
 
 Add to `bootloader-configuration` in `/etc/config.scm`:
+
 ```scheme
 (bootloader-configuration
   (bootloader grub-efi-bootloader)
@@ -250,6 +291,7 @@ guix system init /mnt/etc/config.scm /mnt \
 ### Network Issues
 
 For slow/unreliable connections, set Git environment variables:
+
 ```bash
 export GIT_HTTP_MAX_REQUESTS=2
 export GIT_HTTP_LOW_SPEED_LIMIT=1000
@@ -259,6 +301,7 @@ export GIT_HTTP_LOW_SPEED_TIME=60
 ### Retry Logic
 
 Installation can fail due to temporary network issues. Always implement retry logic:
+
 ```bash
 for attempt in {1..3}; do
   if guix system init /mnt/etc/config.scm /mnt --fallback; then
