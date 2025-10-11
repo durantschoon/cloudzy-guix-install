@@ -218,36 +218,32 @@ func StartCowStore() error {
 	return nil
 }
 
-// SetupGRUBEFI creates necessary symlinks for GRUB EFI bootloader
+// SetupGRUBEFI creates necessary directories and symlinks for GRUB EFI bootloader
 func SetupGRUBEFI() error {
 	fmt.Println("=== Setting up GRUB EFI bootloader ===")
 	
-	// Check if we're using GRUB EFI
+	// Ensure the EFI directory structure exists
+	guixEfiDir := "/mnt/boot/efi/Guix"
+	
+	// Create directories if they don't exist
+	if err := os.MkdirAll(guixEfiDir, 0755); err != nil {
+		return fmt.Errorf("failed to create EFI directory: %w", err)
+	}
+	
+	// Check if we already have GRUB EFI files (from previous failed attempts)
 	grubEfiFile := "/mnt/boot/efi/Guix/grubx64.efi"
 	grubCfgLink := "/mnt/boot/efi/Guix/grub.cfg"
 	
-	// Check if GRUB EFI files exist
-	if _, err := os.Stat(grubEfiFile); err != nil {
-		fmt.Println("GRUB EFI files not found yet, will be created during guix system init")
-		return nil
-	}
-	
-	// Create symlink from grub.cfg to the actual grub.cfg location
-	actualGrubCfg := "/mnt/boot/grub/grub.cfg"
-	if _, err := os.Stat(actualGrubCfg); err == nil {
-		fmt.Println("Creating symlink for GRUB configuration...")
-		// Remove existing link if it exists
+	if _, err := os.Stat(grubEfiFile); err == nil {
+		fmt.Println("GRUB EFI files already exist, cleaning up...")
+		// Remove existing files to ensure clean installation
+		os.Remove(grubEfiFile)
 		os.Remove(grubCfgLink)
-		
-		// Create relative symlink
-		if err := os.Symlink("../../boot/grub/grub.cfg", grubCfgLink); err != nil {
-			return fmt.Errorf("failed to create GRUB config symlink: %w", err)
-		}
-		fmt.Println("[OK] GRUB configuration symlink created")
-	} else {
-		fmt.Println("GRUB configuration not found yet, will be created during guix system init")
+		fmt.Println("[OK] Cleaned up existing GRUB EFI files")
 	}
 	
+	fmt.Println("EFI directory structure ready for guix system init")
+	fmt.Println("GRUB EFI files will be created during guix system init")
 	fmt.Println()
 	return nil
 }

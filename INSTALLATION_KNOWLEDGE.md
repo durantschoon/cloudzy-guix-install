@@ -74,19 +74,27 @@ Mount by label for reliability:
 
 ### GRUB EFI Bootloader Issues
 
-**Common Problem**: `guix system init` looks for `/mnt/boot/efi/Guix/grub.cfg` but GRUB EFI creates `/mnt/boot/efi/Guix/grubx64.efi`.
+**Common Problem**: `guix system init` fails because it can't find GRUB EFI files (`grubx64.efi`, `grub.cfg`) or kernel files (`vmlinuz*`, `initrd*`) that don't exist yet.
 
-**Solution**: Create a symlink before running `guix system init`:
+**Root Cause**: This is a chicken-and-egg problem - `guix system init` is supposed to *create* these files, but it's looking for them before they exist.
+
+**Solution**: Ensure proper directory structure exists before running `guix system init`:
+
 ```bash
-# Create symlink from EFI directory to actual grub.cfg location
-ln -sf ../../boot/grub/grub.cfg /mnt/boot/efi/Guix/grub.cfg
+# Create EFI directory structure
+mkdir -p /mnt/boot/efi/Guix
+
+# Clean up any existing files from previous failed attempts
+rm -f /mnt/boot/efi/Guix/grubx64.efi
+rm -f /mnt/boot/efi/Guix/grub.cfg
 ```
 
 **Why This Happens**:
-- GRUB EFI bootloader creates `grubx64.efi` in `/boot/efi/Guix/`
-- But the installer expects to find `grub.cfg` in the same directory
-- The actual `grub.cfg` is located at `/boot/grub/grub.cfg`
-- Symlink bridges this gap for the installer
+
+- `guix system init` needs to create GRUB EFI files in `/boot/efi/Guix/`
+- It also needs to create kernel files (`vmlinuz*`, `initrd*`) in `/boot/`
+- If the directory structure doesn't exist, the installation fails
+- Previous failed attempts may leave partial files that cause conflicts
 
 ## ⚙️ Mount Order & Verification
 
