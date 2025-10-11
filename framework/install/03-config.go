@@ -154,6 +154,10 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
  (timezone "%s")
  (locale "en_US.utf8")
 
+ ;; Explicitly specify kernel and initrd
+ (kernel linux-libre)
+ (initrd microcode-initrd)
+
  (bootloader
   (bootloader-configuration
    (bootloader %s)
