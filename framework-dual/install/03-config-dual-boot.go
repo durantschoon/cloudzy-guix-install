@@ -95,10 +95,10 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 	}
 
 	bootloader := ""
-	targets := ""
+	target := ""
 	if state.BootMode == "uefi" {
 		bootloader = "grub-efi-bootloader"
-		targets = `("/boot/efi")`
+		target = `"/boot/efi"`
 		fmt.Println("UEFI boot mode - using grub-efi-bootloader")
 	} else {
 		return fmt.Errorf("dual-boot configuration requires UEFI mode")
@@ -129,7 +129,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 	}
 
 	// Generate config
-	config := s.generateMinimalConfig(state, uuid, bootloader, targets)
+	config := s.generateMinimalConfig(state, uuid, bootloader, target)
 
 	// Write to file
 	if err := os.MkdirAll("/mnt/etc", 0755); err != nil {
@@ -150,7 +150,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 	return nil
 }
 
-func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloader, targets string) string {
+func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloader, target string) string {
 	homeFS := ""
 	if state.HomePartition != "" {
 		homeUUID, err := lib.GetUUID(state.HomePartition)
@@ -186,7 +186,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
  (bootloader
   (bootloader-configuration
    (bootloader grub-efi-bootloader)
-   (targets "/boot/efi")
+   (target %s)
    (timeout 5)
    (keyboard-layout (keyboard-layout "us"))))
 
@@ -217,6 +217,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
 `,
 		state.HostName,    // host-name
 		state.Timezone,    // timezone
+		target,            // target
 		uuid,              // root device uuid
 		homeFS,            // home filesystem conditional
 		state.UserName,    // name
