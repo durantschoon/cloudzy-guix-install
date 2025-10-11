@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 // Step03ConfigDualBoot generates the Guix system configuration
@@ -51,10 +53,10 @@ func (s *Step03ConfigDualBoot) RunWarnings(state *State) error {
 	}
 	fmt.Println()
 	fmt.Println("Optional environment variables (with defaults):")
-	fmt.Printf("  USER_NAME     - %s (default: guix)\n", getEnvOrDefault(state.UserName, "guix"))
-	fmt.Printf("  FULL_NAME     - %s (default: Guix User)\n", getEnvOrDefault(state.FullName, "Guix User"))
-	fmt.Printf("  TIMEZONE      - %s (default: America/New_York)\n", getEnvOrDefault(state.Timezone, "America/New_York"))
-	fmt.Printf("  HOST_NAME     - %s (default: guix-system)\n", getEnvOrDefault(state.HostName, "guix-system"))
+	fmt.Printf("  USER_NAME     - %s (default: guix)\n", lib.GetEnvOrDefault(state.UserName, "guix"))
+	fmt.Printf("  FULL_NAME     - %s (default: Guix User)\n", lib.GetEnvOrDefault(state.FullName, "Guix User"))
+	fmt.Printf("  TIMEZONE      - %s (default: America/New_York)\n", lib.GetEnvOrDefault(state.Timezone, "America/New_York"))
+	fmt.Printf("  HOST_NAME     - %s (default: guix-system)\n", lib.GetEnvOrDefault(state.HostName, "guix-system"))
 	fmt.Println()
 	fmt.Println("The generated config is minimal - customize after installation.")
 	fmt.Println("Idempotency: Skips generation if /mnt/etc/config.scm already exists")
@@ -81,7 +83,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 	}
 
 	// Get UUID of root partition
-	uuid, err := getRootUUID(state.Root)
+	uuid, err := lib.GetRootUUID(state.Root)
 	if err != nil {
 		return fmt.Errorf("failed to get root UUID: %w", err)
 	}
@@ -151,7 +153,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloader, targets string) string {
 	homeFS := ""
 	if state.HomePartition != "" {
-		homeUUID, err := getUUID(state.HomePartition)
+		homeUUID, err := lib.GetUUID(state.HomePartition)
 		if err == nil && homeUUID != "" {
 			homeFS = fmt.Sprintf(`         (file-system
           (mount-point "/home")
@@ -223,23 +225,6 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
 	return config
 }
 
-func getRootUUID(device string) (string, error) {
-	cmd := exec.Command("blkid", "-s", "UUID", "-o", "value", device)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(output)), nil
-}
-
-func getUUID(device string) (string, error) {
-	cmd := exec.Command("blkid", "-s", "UUID", "-o", "value", device)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(output)), nil
-}
 
 func (s *Step03ConfigDualBoot) detectDevice(state *State) error {
 	// Auto-detect
@@ -335,9 +320,3 @@ func (s *Step03ConfigDualBoot) makePartitionPath(device, partNum string) string 
 	return device + partNum
 }
 
-func getEnvOrDefault(value, defaultValue string) string {
-	if value != "" {
-		return value
-	}
-	return defaultValue
-}

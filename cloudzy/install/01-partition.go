@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 // Step01Partition performs disk partitioning for clean VPS install
@@ -28,7 +30,7 @@ func (s *Step01Partition) RunWarnings(state *State) error {
 	fmt.Println()
 
 	// Check if running from Guix live ISO
-	if !isGuixLiveISO() {
+	if !lib.IsGuixLiveISO() {
 		fmt.Println("WARNING: This doesn't appear to be a Guix live ISO environment!")
 		fmt.Println("   This script is designed to run from a Guix live ISO.")
 		fmt.Println("   If you're not sure you're in the right environment, STOP NOW!")
@@ -46,7 +48,7 @@ func (s *Step01Partition) RunWarnings(state *State) error {
 	// Show current state
 	fmt.Println()
 	fmt.Println("=== Current Disk State ===")
-	runCommand("lsblk", state.Device, "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT")
+	lib.RunCommand("lsblk", state.Device, "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT")
 	fmt.Println()
 
 	fmt.Println("WARNING: This script will DESTROY ALL DATA on", state.Device)
@@ -72,7 +74,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	fmt.Println()
 
 	// Partition the disk
-	if err := runCommand("parted", "--script", state.Device,
+	if err := lib.RunCommand("parted", "--script", state.Device,
 		"mklabel", "gpt",
 		"mkpart", "ESP", "fat32", "1MiB", "513MiB",
 		"set", "1", "esp", "on",
@@ -89,12 +91,12 @@ func (s *Step01Partition) RunClean(state *State) error {
 
 	// Format partitions with labels
 	fmt.Printf("Formatting %s as FAT32 with label EFI...\n", state.EFI)
-	if err := runCommand("mkfs.vfat", "-F32", "-n", "EFI", state.EFI); err != nil {
+	if err := lib.RunCommand("mkfs.vfat", "-F32", "-n", "EFI", state.EFI); err != nil {
 		return err
 	}
 
 	fmt.Printf("Formatting %s as ext4 with label GUIX_ROOT...\n", state.Root)
-	if err := runCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", state.Root); err != nil {
+	if err := lib.RunCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", state.Root); err != nil {
 		return err
 	}
 
@@ -127,7 +129,7 @@ func (s *Step01Partition) detectDevice(state *State) error {
 
 	fmt.Println("Error: No suitable block device found.")
 	fmt.Println("Available block devices:")
-	runCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
+	lib.RunCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
 	return fmt.Errorf("no suitable block device found")
 }
 
@@ -147,20 +149,3 @@ func (s *Step01Partition) makePartitionPath(device, partNum string) string {
 	return device + partNum
 }
 
-// Utility functions
-
-func isGuixLiveISO() bool {
-	data, err := os.ReadFile("/etc/os-release")
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(data), "Guix")
-}
-
-func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
-}

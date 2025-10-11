@@ -1,13 +1,13 @@
 package install
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 // Step01PartitionCheck performs partition detection and setup
@@ -31,7 +31,7 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	fmt.Println()
 
 	// Check if running from Guix live ISO
-	if !isGuixLiveISO() {
+	if !lib.IsGuixLiveISO() {
 		fmt.Println("WARNING: This doesn't appear to be a Guix live ISO environment!")
 		fmt.Println("   This script is designed to run from a Guix live ISO.")
 		fmt.Println("   If you're not sure you're in the right environment, STOP NOW!")
@@ -49,7 +49,7 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	// Show current partition layout
 	fmt.Println()
 	fmt.Println("=== Current Partition Layout ===")
-	runCommand("lsblk", state.Device, "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,LABEL")
+	lib.RunCommand("lsblk", state.Device, "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,LABEL")
 	fmt.Println()
 
 	// Find EFI partition
@@ -72,7 +72,7 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 
 	if guixRootPart != "" {
 		// Existing GUIX_ROOT partition
-		partSize := getPartitionSizeGiB(guixRootPart)
+		partSize := lib.GetPartitionSizeGiB(guixRootPart)
 
 		fmt.Printf("Found existing partition labeled 'GUIX_ROOT': %s\n", guixRootPart)
 		fmt.Printf("Partition size: %.1fGiB\n", partSize)
@@ -90,11 +90,11 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 		// Show free space
 		fmt.Println()
 		fmt.Println("=== Available Free Space ===")
-		runCommand("parted", state.Device, "unit", "GiB", "print", "free")
+		lib.RunCommand("parted", state.Device, "unit", "GiB", "print", "free")
 		fmt.Println()
 
 		// Check free space
-		freeSpaceGB := getFreeSpaceGiB(state.Device)
+		freeSpaceGB := lib.GetFreeSpaceGiB(state.Device)
 		if freeSpaceGB < 40 {
 			fmt.Printf("WARNING: Less than 40GB of free space available (found: %.1fGiB)\n", freeSpaceGB)
 			fmt.Println("   Recommended: At least 40-60GB for Guix root partition")
@@ -156,12 +156,12 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 		fmt.Println("This partition will be formatted (all data will be lost)")
 		fmt.Println()
 
-		if !askYesNo(fmt.Sprintf("Type 'YES' to format %s: ", root), "YES") {
+		if !lib.AskYesNo(fmt.Sprintf("Type 'YES' to format %s: ", root), "YES") {
 			return fmt.Errorf("aborted by user")
 		}
 
 		fmt.Printf("Formatting %s as ext4 with label GUIX_ROOT...\n", root)
-		if err := runCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", root); err != nil {
+		if err := lib.RunCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", root); err != nil {
 			return err
 		}
 	} else {
@@ -171,19 +171,19 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 		fmt.Printf("Existing EFI partition: %s (will be reused)\n", state.EFI)
 
 		// Find free space
-		freeStartMiB, err := findFreeSpaceStart(state.Device)
+		freeStartMiB, err := lib.FindFreeSpaceStart(state.Device)
 		if err != nil {
 			return err
 		}
 
 		fmt.Printf("Creating Guix root partition starting at %dMiB\n", freeStartMiB)
-		if err := runCommand("parted", "--script", state.Device,
+		if err := lib.RunCommand("parted", "--script", state.Device,
 			"mkpart", "GUIX_ROOT", "ext4", fmt.Sprintf("%dMiB", freeStartMiB), "100%"); err != nil {
 			return err
 		}
 
 		// Find the partition that was just created
-		root, err := getLastPartition(state.Device)
+		root, err := lib.GetLastPartition(state.Device)
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 
 		// Format it with label
 		fmt.Printf("Formatting %s as ext4 with label GUIX_ROOT...\n", root)
-		if err := runCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", root); err != nil {
+		if err := lib.RunCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", root); err != nil {
 			return err
 		}
 	}
@@ -226,7 +226,7 @@ func (s *Step01PartitionCheck) detectDevice(state *State) error {
 
 	fmt.Println("Error: No suitable block device found. Expected one of: /dev/nvme0n1, /dev/nvme1n1, /dev/sda")
 	fmt.Println("Available block devices:")
-	runCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
+	lib.RunCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
 	return fmt.Errorf("no suitable block device found")
 }
 
@@ -331,7 +331,7 @@ func (s *Step01PartitionCheck) findHomePartition(state *State) {
 				partName := fields[0]
 				partName = strings.TrimLeft(partName, "├─└─│ ")
 				state.HomePartition = "/dev/" + partName
-				homeSize := getPartitionSizeGiB(state.HomePartition)
+				homeSize := lib.GetPartitionSizeGiB(state.HomePartition)
 				fmt.Printf("Found DATA partition: %s\n", state.HomePartition)
 				fmt.Printf("DATA partition size: %.1fGiB\n", homeSize)
 				fmt.Println("This partition will be mounted at /home and shared between Pop!_OS and Guix")
@@ -350,105 +350,6 @@ func (s *Step01PartitionCheck) makePartitionPath(device, partNum string) string 
 	return device + partNum
 }
 
-// Utility functions
-
-func isGuixLiveISO() bool {
-	data, err := os.ReadFile("/etc/os-release")
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(data), "Guix")
-}
-
-func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
-}
-
-func getPartitionSizeGiB(partition string) float64 {
-	cmd := exec.Command("lsblk", "-b", "-n", "-o", "SIZE", partition)
-	output, err := cmd.Output()
-	if err != nil {
-		return 0
-	}
-	sizeBytes, _ := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
-	return sizeBytes / 1024 / 1024 / 1024
-}
-
-func getFreeSpaceGiB(device string) float64 {
-	cmd := exec.Command("parted", device, "unit", "GiB", "print", "free")
-	output, _ := cmd.Output()
-
-	var maxFree float64
-	for _, line := range strings.Split(string(output), "\n") {
-		if strings.Contains(line, "Free Space") {
-			fields := strings.Fields(line)
-			for _, f := range fields {
-				if strings.HasSuffix(f, "GiB") {
-					val, _ := strconv.ParseFloat(strings.TrimSuffix(f, "GiB"), 64)
-					if val > maxFree {
-						maxFree = val
-					}
-				}
-			}
-		}
-	}
-	return maxFree
-}
-
-func findFreeSpaceStart(device string) (int, error) {
-	cmd := exec.Command("parted", device, "unit", "MiB", "print", "free")
-	output, err := cmd.Output()
-	if err != nil {
-		return 0, fmt.Errorf("failed to find free space: %w", err)
-	}
-
-	for _, line := range strings.Split(string(output), "\n") {
-		if strings.Contains(line, "Free Space") {
-			fields := strings.Fields(line)
-			if len(fields) >= 3 {
-				// Check size (field 2)
-				sizeStr := strings.TrimSuffix(fields[2], "MiB")
-				size, _ := strconv.ParseFloat(sizeStr, 64)
-				if size > 40000 { // At least 40GB
-					// Return start position (field 0)
-					startStr := strings.TrimSuffix(fields[0], "MiB")
-					start, _ := strconv.Atoi(startStr)
-					return start, nil
-				}
-			}
-		}
-	}
-
-	return 0, fmt.Errorf("could not find suitable free space (need at least 40GB)")
-}
-
-func getLastPartition(device string) (string, error) {
-	cmd := exec.Command("lsblk", "-n", "-o", "NAME", device)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(lines) < 2 {
-		return "", fmt.Errorf("no partitions found")
-	}
-
-	lastPartName := strings.TrimSpace(lines[len(lines)-1])
-	return "/dev/" + lastPartName, nil
-}
-
-func askYesNo(prompt string, expected string) bool {
-	fmt.Print(prompt)
-	reader := bufio.NewReader(os.Stdin)
-	answer, _ := reader.ReadString('\n')
-	answer = strings.TrimSpace(answer)
-	return answer == expected
-}
 
 func (s *Step01PartitionCheck) isPartitionFormatted(partition string) bool {
 	cmd := exec.Command("blkid", "-s", "TYPE", "-o", "value", partition)

@@ -3,8 +3,9 @@ package install
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 // Step03Config generates the Guix system configuration
@@ -42,11 +43,11 @@ func (s *Step03Config) RunWarnings(state *State) error {
 	fmt.Printf("  EFI      - %s (from Step01)\n", state.EFI)
 	fmt.Println()
 	fmt.Println("Optional environment variables (with defaults):")
-	fmt.Printf("  USER_NAME - %s (default: guix)\n", getEnvOrDefault(state.UserName, "guix"))
-	fmt.Printf("  FULL_NAME - %s (default: Guix User)\n", getEnvOrDefault(state.FullName, "Guix User"))
-	fmt.Printf("  TIMEZONE  - %s (default: America/New_York)\n", getEnvOrDefault(state.Timezone, "America/New_York"))
-	fmt.Printf("  HOST_NAME - %s (default: guix-system)\n", getEnvOrDefault(state.HostName, "guix-system"))
-	fmt.Printf("  BOOT_MODE - %s (default: auto-detect)\n", getEnvOrDefault(state.BootMode, "auto-detect"))
+	fmt.Printf("  USER_NAME - %s (default: guix)\n", lib.GetEnvOrDefault(state.UserName, "guix"))
+	fmt.Printf("  FULL_NAME - %s (default: Guix User)\n", lib.GetEnvOrDefault(state.FullName, "Guix User"))
+	fmt.Printf("  TIMEZONE  - %s (default: America/New_York)\n", lib.GetEnvOrDefault(state.Timezone, "America/New_York"))
+	fmt.Printf("  HOST_NAME - %s (default: guix-system)\n", lib.GetEnvOrDefault(state.HostName, "guix-system"))
+	fmt.Printf("  BOOT_MODE - %s (default: auto-detect)\n", lib.GetEnvOrDefault(state.BootMode, "auto-detect"))
 	fmt.Println()
 	fmt.Println("The generated config is minimal - customize after installation.")
 	fmt.Println("Idempotency: Skips generation if /mnt/etc/config.scm already exists")
@@ -73,7 +74,7 @@ func (s *Step03Config) RunClean(state *State) error {
 	}
 
 	// Get UUID of root partition
-	uuid, err := getRootUUID(state.Root)
+	uuid, err := lib.GetRootUUID(state.Root)
 	if err != nil {
 		return fmt.Errorf("failed to get root UUID: %w", err)
 	}
@@ -246,18 +247,3 @@ func (s *Step03Config) makePartitionPath(device, partNum string) string {
 	return device + partNum
 }
 
-func getRootUUID(device string) (string, error) {
-	cmd := exec.Command("blkid", "-s", "UUID", "-o", "value", device)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(output)), nil
-}
-
-func getEnvOrDefault(value, defaultValue string) string {
-	if value != "" {
-		return value
-	}
-	return defaultValue
-}

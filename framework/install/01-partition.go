@@ -6,14 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-)
 
-func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
+	"github.com/durantschoon/cloudzy-guix-install/lib"
+)
 
 // Step01Partition handles partitioning for Framework laptop
 type Step01Partition struct{}
@@ -52,7 +47,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 
 	// Show current partition table
 	fmt.Printf("Current partition table for %s:\n", state.Device)
-	runCommand("parted", state.Device, "print")
+	lib.RunCommand("parted", state.Device, "print")
 	fmt.Println()
 
 	// Confirm before proceeding
@@ -77,25 +72,25 @@ func (s *Step01Partition) RunClean(state *State) error {
 
 	// Create partitions
 	fmt.Println("Creating GPT partition table...")
-	if err := runCommand("parted", "-s", state.Device, "mklabel", "gpt"); err != nil {
+	if err := lib.RunCommand("parted", "-s", state.Device, "mklabel", "gpt"); err != nil {
 		return err
 	}
 
 	fmt.Println("Creating EFI partition (512MB)...")
-	if err := runCommand("parted", "-s", state.Device, "mkpart", "ESP", "fat32", "1MiB", "513MiB"); err != nil {
+	if err := lib.RunCommand("parted", "-s", state.Device, "mkpart", "ESP", "fat32", "1MiB", "513MiB"); err != nil {
 		return err
 	}
-	if err := runCommand("parted", "-s", state.Device, "set", "1", "esp", "on"); err != nil {
+	if err := lib.RunCommand("parted", "-s", state.Device, "set", "1", "esp", "on"); err != nil {
 		return err
 	}
 
 	fmt.Println("Creating root partition (remaining space)...")
-	if err := runCommand("parted", "-s", state.Device, "mkpart", "primary", "ext4", "513MiB", "100%"); err != nil {
+	if err := lib.RunCommand("parted", "-s", state.Device, "mkpart", "primary", "ext4", "513MiB", "100%"); err != nil {
 		return err
 	}
 
 	// Set partition names
-	if err := runCommand("parted", "-s", state.Device, "name", "2", "GUIX_ROOT"); err != nil {
+	if err := lib.RunCommand("parted", "-s", state.Device, "name", "2", "GUIX_ROOT"); err != nil {
 		return err
 	}
 
@@ -110,8 +105,8 @@ func (s *Step01Partition) RunClean(state *State) error {
 
 	// Wait for partitions to appear
 	fmt.Println("Waiting for kernel to recognize partitions...")
-	runCommand("partprobe", state.Device)
-	runCommand("sleep", "2")
+	lib.RunCommand("partprobe", state.Device)
+	lib.RunCommand("sleep", "2")
 
 	// Check if already formatted (idempotency)
 	if s.isPartitionFormatted(state.Root) {
@@ -122,12 +117,12 @@ func (s *Step01Partition) RunClean(state *State) error {
 
 	// Format partitions
 	fmt.Printf("Formatting EFI partition: %s\n", state.EFI)
-	if err := runCommand("mkfs.vfat", "-F", "32", "-n", "EFI", state.EFI); err != nil {
+	if err := lib.RunCommand("mkfs.vfat", "-F", "32", "-n", "EFI", state.EFI); err != nil {
 		return err
 	}
 
 	fmt.Printf("Formatting root partition: %s\n", state.Root)
-	if err := runCommand("mkfs.ext4", "-L", "GUIX_ROOT", state.Root); err != nil {
+	if err := lib.RunCommand("mkfs.ext4", "-L", "GUIX_ROOT", state.Root); err != nil {
 		return err
 	}
 

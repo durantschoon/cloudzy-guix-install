@@ -341,6 +341,166 @@ func DownloadFile(url, dest string) error {
 	return err
 }
 
+// IsMounted checks if a path is mounted
+func IsMounted(path string) bool {
+	cmd := exec.Command("mountpoint", "-q", path)
+	return cmd.Run() == nil
+}
+
+// CommandExists checks if a command exists in PATH
+func CommandExists(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
+// GetRootUUID gets the UUID of a partition
+func GetRootUUID(device string) (string, error) {
+	cmd := exec.Command("blkid", "-s", "UUID", "-o", "value", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// GetUUID gets the UUID of a partition (alias for GetRootUUID)
+func GetUUID(device string) (string, error) {
+	return GetRootUUID(device)
+}
+
+// IsGuixLiveISO checks if we're running from a Guix live ISO
+func IsGuixLiveISO() bool {
+	// Check for common Guix live ISO indicators
+	indicators := []string{
+		"/etc/guix-release",
+		"/run/current-system/profile/bin/guix",
+	}
+	
+	for _, indicator := range indicators {
+		if _, err := os.Stat(indicator); err == nil {
+			return true
+		}
+	}
+	
+	// Check if guix command is available and we're in a live environment
+	if CommandExists("guix") {
+		cmd := exec.Command("guix", "describe")
+		if err := cmd.Run(); err == nil {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// GetPartitionSizeGiB gets the size of a partition in GiB
+func GetPartitionSizeGiB(partition string) float64 {
+	cmd := exec.Command("lsblk", "-b", "-n", "-o", "SIZE", partition)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	
+	sizeStr := strings.TrimSpace(string(output))
+	size, err := strconv.ParseFloat(sizeStr, 64)
+	if err != nil {
+		return 0
+	}
+	
+	// Convert bytes to GiB
+	return size / (1024 * 1024 * 1024)
+}
+
+// GetFreeSpaceGiB gets the free space on a device in GiB
+func GetFreeSpaceGiB(device string) float64 {
+	cmd := exec.Command("parted", device, "print", "free")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Free Space") {
+			// Parse the free space line
+			fields := strings.Fields(line)
+			if len(fields) >= 4 {
+				sizeStr := fields[2] // Size field
+				if strings.HasSuffix(sizeStr, "GiB") {
+					sizeStr = strings.TrimSuffix(sizeStr, "GiB")
+					if size, err := strconv.ParseFloat(sizeStr, 64); err == nil {
+						return size
+					}
+				}
+			}
+		}
+	}
+	
+	return 0
+}
+
+// FindFreeSpaceStart finds the start sector for free space on a device
+func FindFreeSpaceStart(device string) (int, error) {
+	cmd := exec.Command("parted", device, "print", "free")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+	
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Free Space") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				startStr := fields[1]
+				if start, err := strconv.Atoi(startStr); err == nil {
+					return start, nil
+				}
+			}
+		}
+	}
+	
+	return 0, fmt.Errorf("no free space found")
+}
+
+// GetLastPartition gets the last partition number on a device
+func GetLastPartition(device string) (string, error) {
+	cmd := exec.Command("parted", device, "print")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	
+	lines := strings.Split(string(output), "\n")
+	var lastPartition string
+	
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) >= 1 {
+			// Check if this line contains a partition number
+			if _, err := strconv.Atoi(fields[0]); err == nil {
+				lastPartition = fields[0]
+			}
+		}
+	}
+	
+	if lastPartition == "" {
+		return "", fmt.Errorf("no partitions found")
+	}
+	
+	return lastPartition, nil
+}
+
+// AskYesNo prompts the user for yes/no input
+func AskYesNo(prompt string, expected string) bool {
+	fmt.Print(prompt)
+	
+	var response string
+	fmt.Scanln(&response)
+	
+	return strings.ToLower(strings.TrimSpace(response)) == strings.ToLower(expected)
+}
+
 // DownloadCustomizationTools downloads customization tools to /mnt/root/guix-customize/
 func DownloadCustomizationTools(platform string) error {
 	fmt.Println()

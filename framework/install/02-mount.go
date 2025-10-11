@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 // Step02Mount mounts partitions and sets up store
@@ -61,16 +63,16 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 
 	// Check if already mounted and populated (idempotency)
-	if isMounted("/mnt") && s.isStorePopulated() {
+	if lib.IsMounted("/mnt") && s.isStorePopulated() {
 		fmt.Println("/mnt is already mounted and /mnt/gnu/store is populated")
 		fmt.Println("Skipping mount and store sync (idempotent - safe for reruns)")
 		return nil
 	}
 
 	// Mount root partition by label if not mounted
-	if !isMounted("/mnt") {
+	if !lib.IsMounted("/mnt") {
 		fmt.Println("Mounting GUIX_ROOT to /mnt")
-		if err := runCommand("mount", "/dev/disk/by-label/GUIX_ROOT", "/mnt"); err != nil {
+		if err := lib.RunCommand("mount", "/dev/disk/by-label/GUIX_ROOT", "/mnt"); err != nil {
 			return err
 		}
 	} else {
@@ -87,8 +89,8 @@ func (s *Step02Mount) RunClean(state *State) error {
 
 	// Stop guix-daemon
 	fmt.Println("Stopping guix-daemon...")
-	if commandExists("herd") {
-		runCommand("herd", "stop", "guix-daemon")
+	if lib.CommandExists("herd") {
+		lib.RunCommand("herd", "stop", "guix-daemon")
 	} else {
 		exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
 	}
@@ -97,15 +99,15 @@ func (s *Step02Mount) RunClean(state *State) error {
 	start := time.Now()
 	fmt.Println("Syncing /gnu/store to /mnt/gnu/store...")
 
-	if commandExists("rsync") {
+	if lib.CommandExists("rsync") {
 		fmt.Println("Using rsync...")
-		if err := runCommand("rsync", "-aHAX", "--info=progress2,stats", "/gnu/store/.", "/mnt/gnu/store/."); err != nil {
+		if err := lib.RunCommand("rsync", "-aHAX", "--info=progress2,stats", "/gnu/store/.", "/mnt/gnu/store/."); err != nil {
 			return fmt.Errorf("rsync failed: %w", err)
 		}
 		fmt.Println("rsync completed successfully")
 	} else {
 		fmt.Println("rsync not available, using cp instead...")
-		if err := runCommand("cp", "-a", "/gnu/store/.", "/mnt/gnu/store/"); err != nil {
+		if err := lib.RunCommand("cp", "-a", "/gnu/store/.", "/mnt/gnu/store/"); err != nil {
 			return fmt.Errorf("cp failed: %w", err)
 		}
 		fmt.Println("cp completed successfully")
@@ -116,7 +118,7 @@ func (s *Step02Mount) RunClean(state *State) error {
 
 	// Copy /var/guix for database consistency
 	fmt.Println("Copying /var/guix to /mnt/var/guix...")
-	if err := runCommand("cp", "-a", "/var/guix", "/mnt/var/"); err != nil {
+	if err := lib.RunCommand("cp", "-a", "/var/guix", "/mnt/var/"); err != nil {
 		return fmt.Errorf("failed to copy /var/guix: %w", err)
 	}
 
@@ -152,13 +154,13 @@ func (s *Step02Mount) RunClean(state *State) error {
 		return err
 	}
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
-	if err := runCommand("mount", "/dev/disk/by-label/EFI", "/mnt/boot/efi"); err != nil {
+	if err := lib.RunCommand("mount", "/dev/disk/by-label/EFI", "/mnt/boot/efi"); err != nil {
 		return err
 	}
 
 	// Verify ESP contents
 	fmt.Println("Checking ESP contents...")
-	runCommand("ls", "-la", "/mnt/boot/efi/")
+	lib.RunCommand("ls", "-la", "/mnt/boot/efi/")
 
 	fmt.Println()
 	fmt.Println("Mount setup complete. Ready for system initialization.")
@@ -212,16 +214,3 @@ func (s *Step02Mount) isStorePopulated() bool {
 	return len(entries) > 10
 }
 
-func isMounted(path string) bool {
-	cmd := exec.Command("mount")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(output), " on "+path+" ")
-}
-
-func commandExists(name string) bool {
-	_, err := exec.LookPath(name)
-	return err == nil
-}
