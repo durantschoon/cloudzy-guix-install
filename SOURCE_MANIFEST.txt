@@ -20,7 +20,7 @@ d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-du
 0c27b68a4dc2c5a1374b05b531cc151c3117bb579e8784bdddfbd9236d98f10e  ./framework/install/03-config.go
 7b1be42d25b18685b44296c46cee9a1b36f85b1a66b39a1409ed3e7a6aaff986  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
-caf0ffd9d7fa3764ac97c3cb27f72c3bb3fcfe1b3030f966f5e98adbcf989528  ./lib/common.go
+205d353e1112ef35ea5ad0b290d7b3a6706c7ad7b00bbf35bf619d725267b8af  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script

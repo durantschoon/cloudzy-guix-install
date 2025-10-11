@@ -114,27 +114,35 @@ func EnsureGuixDaemonRunning() error {
 	fmt.Println("=== Ensuring guix-daemon is running ===")
 
 	// Check if daemon is running
-	for attempts := 0; attempts < 3; attempts++ {
+	for attempts := 0; attempts < 5; attempts++ {
 		cmd := exec.Command("herd", "status", "guix-daemon")
 		output, err := cmd.Output()
 
 		if err == nil && strings.Contains(string(output), "running") {
 			fmt.Println("[OK] guix-daemon is running")
-			return nil
+
+			// Additional check: verify daemon is actually responsive
+			fmt.Println("Verifying daemon is responsive...")
+			testCmd := exec.Command("guix", "build", "--version")
+			if err := testCmd.Run(); err == nil {
+				fmt.Println("[OK] guix-daemon is responsive")
+				return nil
+			}
+			fmt.Println("Daemon status shows running but not responsive yet, waiting...")
 		}
 
 		if attempts == 0 {
 			fmt.Println("guix-daemon is not running, setting up bind mounts and starting daemon...")
 			fmt.Println()
 		} else {
-			fmt.Printf("Attempt %d: Daemon not running, retrying setup...\n", attempts+1)
+			fmt.Printf("Attempt %d/%d: Daemon not running or not responsive, retrying setup...\n", attempts+1, 5)
 		}
 
 		// Stop daemon if it exists but not running properly
 		fmt.Println("Stopping guix-daemon (if running)...")
 		exec.Command("herd", "stop", "guix-daemon").Run()
 		exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 		// Set up bind mounts (idempotent - won't fail if already mounted)
 		fmt.Println("Setting up bind mounts...")
@@ -151,8 +159,9 @@ func EnsureGuixDaemonRunning() error {
 			fmt.Printf("Warning: herd start failed: %v\n", err)
 		}
 
-		// Wait for daemon to be ready
-		time.Sleep(2 * time.Second)
+		// Wait longer for daemon to be ready
+		fmt.Println("Waiting 5 seconds for daemon to initialize...")
+		time.Sleep(5 * time.Second)
 	}
 
 	// Final check
@@ -165,6 +174,7 @@ func EnsureGuixDaemonRunning() error {
 		fmt.Println("  mount --bind /mnt/gnu /gnu")
 		fmt.Println("  mount --bind /mnt/var/guix /var/guix")
 		fmt.Println("  herd start guix-daemon")
+		fmt.Println("  herd status guix-daemon")
 		return fmt.Errorf("guix-daemon is not running")
 	}
 
