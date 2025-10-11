@@ -8,18 +8,19 @@
 400a38ef36cee6bd0569934edf2bb7f7a8d53df3f7fb607c86b17985b6bb7044  ./cloudzy/install/01-partition.go
 4dc02189004f1b2a9e8cc29b0b873757354b2db9d68c483ded43bf94f646ccbd  ./cloudzy/install/02-mount.go
 2da2f16b2d96a0d2e3c3083e28ca0d41fb88d78b94c94f38ece37c87f022116a  ./cloudzy/install/03-config.go
-d2f328801cee9598c783bd18d87b34e4b447f3887ff3fb6a2e1add32f58fce28  ./cloudzy/install/04-system-init.go
+7b1be42d25b18685b44296c46cee9a1b36f85b1a66b39a1409ed3e7a6aaff986  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
 36a6ff2c15a01b30dd4cd70cdfcbfeae5052ab9690b88ed1ef6d15f7dc255113  ./framework-dual/install/01-partition-check.go
 0164e1929772aecbe7f921ba6b28ae979f6c63cab22fd6c23932119ff310bab5  ./framework-dual/install/02-mount-existing.go
 4cf89fdde3331b81b1188a66b0f9861f6faaf618fdb53a688e2e336518f2d6b4  ./framework-dual/install/03-config-dual-boot.go
-d2f328801cee9598c783bd18d87b34e4b447f3887ff3fb6a2e1add32f58fce28  ./framework-dual/install/04-system-init.go
+7b1be42d25b18685b44296c46cee9a1b36f85b1a66b39a1409ed3e7a6aaff986  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
 38cf69eaf6c0b1d8a6d90fc1f133080827f9c2931664b22b1d6d5f617bd8c8ca  ./framework/install/01-partition.go
 3c2aec812a80b5f39f7158ecfaa37f77ca7214b65838c4d95c775d01130fe462  ./framework/install/02-mount.go
 14789f5356139e0b255bf7caef49280307ba21aa92d295c66e9e277f4a68ae31  ./framework/install/03-config.go
-e361812c2990dfdedfdfac8d46916005da15919afa2333429315136c12c6f433  ./framework/install/04-system-init.go
+7b1be42d25b18685b44296c46cee9a1b36f85b1a66b39a1409ed3e7a6aaff986  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
+caf0ffd9d7fa3764ac97c3cb27f72c3bb3fcfe1b3030f966f5e98adbcf989528  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script

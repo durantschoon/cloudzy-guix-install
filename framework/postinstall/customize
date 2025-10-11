@@ -145,10 +145,10 @@ add_nonguix_info() {
   info "  - Non-free software (Steam, Discord, etc.)"
   echo ""
 
-  # Source mirror configuration
+  # Source postinstall library
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ -f "$SCRIPT_DIR/../../lib/common.sh" ]]; then
-    source "$SCRIPT_DIR/../../lib/common.sh"
+  if [[ -f "$SCRIPT_DIR/../../lib/postinstall.sh" ]]; then
+    source "$SCRIPT_DIR/../../lib/postinstall.sh"
   fi
 
   # Generate channels.scm with regional mirrors
