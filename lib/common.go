@@ -109,7 +109,9 @@ func CreateSwapFile(swapSize string) error {
 	return nil
 }
 
-// EnsureGuixDaemonRunning ensures the guix-daemon is running with bind mounts
+// EnsureGuixDaemonRunning ensures the guix-daemon is running
+// NOTE: Do NOT use bind mounts! cow-store handles store writes correctly.
+// Bind mounting /mnt/gnu to /gnu shadows the live system's store and breaks guix.
 func EnsureGuixDaemonRunning() error {
 	fmt.Println("=== Ensuring guix-daemon is running ===")
 
@@ -132,10 +134,10 @@ func EnsureGuixDaemonRunning() error {
 		}
 
 		if attempts == 0 {
-			fmt.Println("guix-daemon is not running, setting up bind mounts and starting daemon...")
+			fmt.Println("guix-daemon is not running, starting daemon...")
 			fmt.Println()
 		} else {
-			fmt.Printf("Attempt %d/%d: Daemon not running or not responsive, retrying setup...\n", attempts+1, 5)
+			fmt.Printf("Attempt %d/%d: Daemon not running or not responsive, retrying...\n", attempts+1, 5)
 		}
 
 		// Stop daemon if it exists but not running properly
@@ -144,16 +146,7 @@ func EnsureGuixDaemonRunning() error {
 		exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
 		time.Sleep(2 * time.Second)
 
-		// Set up bind mounts (idempotent - won't fail if already mounted)
-		fmt.Println("Setting up bind mounts...")
-		if err := RunCommand("mount", "--bind", "/mnt/gnu", "/gnu"); err != nil {
-			fmt.Println("Note: /gnu bind mount may already exist")
-		}
-		if err := RunCommand("mount", "--bind", "/mnt/var/guix", "/var/guix"); err != nil {
-			fmt.Println("Note: /var/guix bind mount may already exist")
-		}
-
-		// Start the daemon
+		// Start the daemon (cow-store handles store redirection)
 		fmt.Println("Starting guix-daemon...")
 		if err := RunCommand("herd", "start", "guix-daemon"); err != nil {
 			fmt.Printf("Warning: herd start failed: %v\n", err)
@@ -171,10 +164,10 @@ func EnsureGuixDaemonRunning() error {
 		fmt.Println()
 		fmt.Println("[ERROR] Failed to start guix-daemon after multiple attempts")
 		fmt.Println("Please manually run:")
-		fmt.Println("  mount --bind /mnt/gnu /gnu")
-		fmt.Println("  mount --bind /mnt/var/guix /var/guix")
 		fmt.Println("  herd start guix-daemon")
 		fmt.Println("  herd status guix-daemon")
+		fmt.Println()
+		fmt.Println("NOTE: cow-store should already be running. Do NOT bind mount /mnt/gnu!")
 		return fmt.Errorf("guix-daemon is not running")
 	}
 
