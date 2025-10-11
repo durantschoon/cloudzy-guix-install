@@ -89,11 +89,11 @@ func (s *Step03Config) RunClean(state *State) error {
 	targets := ""
 	if state.BootMode == "uefi" {
 		bootloader = "grub-efi-bootloader"
-		targets = `("/boot/efi")`
+		targets = `'("/boot/efi")`
 		fmt.Println("UEFI boot mode - using grub-efi-bootloader")
 	} else {
 		bootloader = "grub-bootloader"
-		targets = fmt.Sprintf(`("%s")`, state.Device)
+		targets = fmt.Sprintf(`'("%s")`, state.Device)
 		fmt.Printf("BIOS boot mode - using grub-bootloader on %s\n", state.Device)
 	}
 
