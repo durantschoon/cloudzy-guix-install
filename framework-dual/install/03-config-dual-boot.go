@@ -186,7 +186,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
  (bootloader
   (bootloader-configuration
    (bootloader grub-efi-bootloader)
-   (targets ("/boot/efi"))
+   (targets "/boot/efi")
    (timeout 5)
    (keyboard-layout (keyboard-layout "us"))))
 
