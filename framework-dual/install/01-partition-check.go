@@ -298,7 +298,7 @@ func (s *Step01PartitionCheck) checkPopOS(state *State) {
 }
 
 func (s *Step01PartitionCheck) findGuixRootPartition(state *State) (string, error) {
-	cmd := exec.Command("parted", state.Device, "print")
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME,LABEL", state.Device)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to read partition table: %w", err)
@@ -307,8 +307,13 @@ func (s *Step01PartitionCheck) findGuixRootPartition(state *State) (string, erro
 	for _, line := range strings.Split(string(output), "\n") {
 		if strings.Contains(line, "GUIX_ROOT") {
 			fields := strings.Fields(line)
-			if len(fields) > 0 {
-				return fields[0], nil
+			if len(fields) >= 2 && fields[1] == "GUIX_ROOT" {
+				// Extract partition name and construct full device path
+				partName := fields[0]
+				if strings.HasPrefix(state.Device, "/dev/nvme") || strings.HasPrefix(state.Device, "/dev/mmcblk") {
+					return "/dev/" + partName, nil
+				}
+				return "/dev/" + partName, nil
 			}
 		}
 	}
