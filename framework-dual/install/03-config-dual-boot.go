@@ -218,11 +218,11 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
 		uuid,              // root device uuid
 		state.HostName,    // host-name
 		state.Timezone,    // timezone
-		targets,           // targets
 		uuid,              // home device uuid (same as root for now)
 		homeFS,            // home filesystem conditional
 		state.UserName,    // name
 		state.FullName,    // comment
+		state.UserName,    // home-directory
 	)
 
 	return config
