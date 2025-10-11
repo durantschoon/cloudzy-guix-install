@@ -186,7 +186,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
  (bootloader
   (bootloader-configuration
    (bootloader grub-efi-bootloader)
-   (targets %s)
+   (targets ("/boot/efi"))
    (timeout 5)
    (keyboard-layout (keyboard-layout "us"))))
 
@@ -215,14 +215,13 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
  ;; Minimal services - add SSH, desktop, etc. after installation
  (services %%base-services))
 `,
-		uuid,              // root device uuid
 		state.HostName,    // host-name
 		state.Timezone,    // timezone
-		uuid,              // home device uuid (same as root for now)
+		uuid,              // root device uuid
 		homeFS,            // home filesystem conditional
 		state.UserName,    // name
 		state.FullName,    // comment
-		state.UserName,    // home-directory
+		state.UserName,    // for home-directory
 	)
 
 	return config
