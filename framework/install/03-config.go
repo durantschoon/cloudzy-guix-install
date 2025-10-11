@@ -158,10 +158,14 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
 
  ;; Explicitly specify kernel (required)
  (kernel linux-libre)
+ 
+ ;; Explicitly specify initrd
+ (initrd (lambda (fs . rest)
+           (base-initrd fs rest)))
 
  (bootloader
   (bootloader-configuration
-   (bootloader %s)
+   (bootloader grub-efi-bootloader)
    (targets '%s)
    (timeout 5)
    (keyboard-layout (keyboard-layout "us"))))

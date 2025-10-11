@@ -72,6 +72,47 @@ Mount by label for reliability:
 - Prevents "unbound variable" errors during `guix system init`
 - Makes the configuration self-documenting
 
+### Initrd Configuration
+
+**Critical**: Always specify the initrd explicitly in your `config.scm` file.
+
+```scheme
+(operating-system
+  ;; ... other fields ...
+  (kernel linux-libre)
+  (initrd (lambda (fs . rest)
+            (base-initrd fs rest)))
+  ;; ... rest of config ...
+)
+```
+
+**Why Explicit Initrd Specification Matters**:
+
+- Ensures proper initrd generation for your specific filesystem setup
+- Prevents boot failures due to missing initrd files
+- Makes the configuration explicit and reproducible
+- Required for proper kernel initialization
+
+### GRUB EFI Bootloader Configuration
+
+**Critical**: Always specify `grub-efi-bootloader` explicitly in your `config.scm` file.
+
+```scheme
+(bootloader
+  (bootloader-configuration
+    (bootloader grub-efi-bootloader)
+    (targets '("/boot/efi"))
+    (timeout 5)
+    (keyboard-layout (keyboard-layout "us"))))
+```
+
+**Why Explicit GRUB EFI Specification Matters**:
+
+- Ensures consistent bootloader installation across different systems
+- Prevents confusion between GRUB legacy and GRUB EFI
+- Makes the configuration explicit and reproducible
+- Required for proper EFI boot setup
+
 ### GRUB EFI Bootloader Issues
 
 **Common Problem**: `guix system init` fails because it can't find GRUB EFI files (`grubx64.efi`, `grub.cfg`) or kernel files (`vmlinuz*`, `initrd*`) that don't exist yet.
