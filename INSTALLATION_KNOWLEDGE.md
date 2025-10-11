@@ -106,6 +106,14 @@ Mount by label for reliability:
     (keyboard-layout (keyboard-layout "us"))))
 ```
 
+**Critical Targets Syntax Convention**:
+
+- **Correct**: `(targets '("/boot/efi"))` - Note the single quote `'` before the parentheses
+- **Incorrect**: `(targets "/boot/efi")` - Missing the quote mark
+- **Incorrect**: `(targets ("/boot/efi"))` - Missing the quote mark
+
+The single quote `'` is required in Scheme to properly quote the list. This applies to both UEFI (`'("/boot/efi")`) and BIOS (`'("/dev/sda")`) configurations.
+
 **Why Explicit GRUB EFI Specification Matters**:
 
 - Ensures consistent bootloader installation across different systems
