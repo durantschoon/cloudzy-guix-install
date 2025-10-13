@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -107,19 +106,19 @@ func (s *Step01Partition) RunClean(state *State) error {
 	// Check if device is mounted and unmount for idempotency
 	if s.isDeviceMounted(state.Device) {
 		fmt.Printf("Device %s is currently mounted. Unmounting for idempotency...\n", state.Device)
-		if err := s.unmountDevice(state.Device); err != nil {
+		if err := lib.UnmountDevice(state.Device); err != nil {
 			return fmt.Errorf("failed to unmount device %s: %w", state.Device, err)
 		}
 		fmt.Println("Device unmounted successfully")
 	}
 
 	// Check available space on device
-	if err := s.checkDeviceSpace(state.Device); err != nil {
+	if err := lib.CheckDeviceSpace(state.Device, 40.0); err != nil {
 		return err
 	}
 
 	// Check if partitions already exist and are formatted (idempotency)
-	if s.hasExistingPartitions(state.Device) {
+	if lib.HasExistingPartitions(state.Device) {
 		fmt.Println("Partitions already exist, checking if formatted...")
 		
 		// Set partition paths
@@ -127,7 +126,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 		state.Root = s.makePartitionPath(state.Device, "2")
 		
 		// Check if partitions are already formatted
-		if s.isPartitionFormatted(state.EFI) && s.isPartitionFormatted(state.Root) {
+		if lib.IsPartitionFormatted(state.EFI, "vfat") && lib.IsPartitionFormatted(state.Root, "ext4") {
 			fmt.Println("Partitions are already formatted")
 			fmt.Println("Skipping partitioning and formatting (idempotent - safe for reruns)")
 			fmt.Printf("EFI is %s and ROOT is %s\n", state.EFI, state.Root)
@@ -302,55 +301,3 @@ func (s *Step01Partition) unmountDeviceAlternative(device string) error {
 }
 
 
-func (s *Step01Partition) hasExistingPartitions(device string) bool {
-	// Check if device has any partitions
-	cmd := exec.Command("lsblk", "-n", "-o", "NAME", device)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	// If we have more than 1 line (device + partitions), there are existing partitions
-	return len(lines) > 1
-}
-
-func (s *Step01Partition) isPartitionFormatted(partition string) bool {
-	cmd := exec.Command("blkid", "-s", "TYPE", "-o", "value", partition)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	fsType := strings.TrimSpace(string(output))
-	// Check for both ext4 and vfat filesystems
-	return fsType == "ext4" || fsType == "vfat"
-}
-
-func (s *Step01Partition) checkDeviceSpace(device string) error {
-	// Get device size in bytes
-	cmd := exec.Command("lsblk", "-b", "-n", "-o", "SIZE", device)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to get device size: %w", err)
-	}
-	
-	sizeStr := strings.TrimSpace(string(output))
-	sizeBytes, err := strconv.ParseInt(sizeStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse device size: %w", err)
-	}
-	
-	// Convert to GiB
-	sizeGiB := float64(sizeBytes) / (1024 * 1024 * 1024)
-	
-	fmt.Printf("Device %s size: %.1f GiB\n", device, sizeGiB)
-	
-	// Warn if device is smaller than 40 GiB
-	if sizeGiB < 40 {
-		fmt.Printf("WARNING: Device is only %.1f GiB. Installation may fail due to low space.\n", sizeGiB)
-		fmt.Println("Recommended: 40GB+ for comfortable usage")
-		fmt.Println()
-	}
-	
-	return nil
-}

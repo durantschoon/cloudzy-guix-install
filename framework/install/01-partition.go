@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/durantschoon/cloudzy-guix-install/lib"
@@ -40,9 +39,16 @@ func (s *Step01Partition) RunWarnings(state *State) error {
 func (s *Step01Partition) RunClean(state *State) error {
 	// Auto-detect device if not set
 	if state.Device == "" {
-		if err := s.detectDevice(state); err != nil {
+		device, err := lib.DetectDevice("framework")
+		if err != nil {
 			return err
 		}
+		state.Device = device
+	}
+
+	// Check available space on device
+	if err := lib.CheckDeviceSpace(state.Device, 40.0); err != nil {
+		return err
 	}
 
 	// Show current partition table
@@ -109,7 +115,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	lib.RunCommand("sleep", "2")
 
 	// Check if already formatted (idempotency)
-	if s.isPartitionFormatted(state.Root) {
+	if lib.IsPartitionFormatted(state.Root, "ext4") {
 		fmt.Println("Partitions are already formatted")
 		fmt.Println("Skipping format step (idempotent - safe for reruns)")
 		return nil
@@ -140,25 +146,3 @@ func (s *Step01Partition) RunClean(state *State) error {
 	return nil
 }
 
-func (s *Step01Partition) detectDevice(state *State) error {
-	// Framework laptops typically use NVMe or SATA
-	candidates := []string{"/dev/nvme0n1", "/dev/nvme1n1", "/dev/sda"}
-	for _, d := range candidates {
-		if _, err := os.Stat(d); err == nil {
-			state.Device = d
-			fmt.Printf("Auto-detected device: %s\n", d)
-			return nil
-		}
-	}
-	return fmt.Errorf("no suitable block device found. Please set DEVICE environment variable")
-}
-
-func (s *Step01Partition) isPartitionFormatted(partition string) bool {
-	cmd := exec.Command("blkid", partition)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	// If blkid returns output, the partition has a filesystem
-	return len(output) > 0
-}

@@ -1205,3 +1205,179 @@ func SetUserPassword(username string) error {
 
 	return nil
 }
+
+// Device detection and validation functions
+
+// DetectDevice auto-detects the appropriate block device for the platform
+func DetectDevice(platform string) (string, error) {
+	var candidates []string
+	
+	switch platform {
+	case "cloudzy":
+		// VPS platforms typically use these devices
+		candidates = []string{"/dev/vda", "/dev/sda", "/dev/nvme0n1"}
+	case "framework", "framework-dual":
+		// Framework laptops typically use NVMe or SATA
+		candidates = []string{"/dev/nvme0n1", "/dev/nvme1n1", "/dev/sda"}
+	default:
+		// Generic fallback
+		candidates = []string{"/dev/nvme0n1", "/dev/sda", "/dev/vda"}
+	}
+	
+	for _, device := range candidates {
+		if _, err := os.Stat(device); err == nil {
+			fmt.Printf("Auto-detected device: %s\n", device)
+			return device, nil
+		}
+	}
+	
+	fmt.Println("Error: No suitable block device found.")
+	fmt.Println("Available block devices:")
+	RunCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
+	return "", fmt.Errorf("no suitable block device found")
+}
+
+// IsPartitionFormatted checks if a partition has a filesystem
+func IsPartitionFormatted(partition string, fsTypes ...string) bool {
+	cmd := exec.Command("blkid", "-s", "TYPE", "-o", "value", partition)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	
+	actualFsType := strings.TrimSpace(string(output))
+	
+	// If no specific types requested, check if any filesystem exists
+	if len(fsTypes) == 0 {
+		return actualFsType != ""
+	}
+	
+	// Check if actual type matches any of the requested types
+	for _, fsType := range fsTypes {
+		if actualFsType == fsType {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// IsStorePopulated checks if the Guix store is already populated
+func IsStorePopulated() bool {
+	// Check if /mnt/gnu/store has contents
+	entries, err := os.ReadDir("/mnt/gnu/store")
+	if err != nil {
+		return false
+	}
+	// Store should have many entries if populated
+	return len(entries) > 10
+}
+
+// CheckDeviceSpace validates device size and warns if too small
+func CheckDeviceSpace(device string, minSizeGiB float64) error {
+	// Get device size in bytes
+	cmd := exec.Command("lsblk", "-b", "-n", "-o", "SIZE", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get device size: %w", err)
+	}
+	
+	sizeStr := strings.TrimSpace(string(output))
+	sizeBytes, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse device size: %w", err)
+	}
+	
+	// Convert to GiB
+	sizeGiB := float64(sizeBytes) / (1024 * 1024 * 1024)
+	
+	fmt.Printf("Device %s size: %.1f GiB\n", device, sizeGiB)
+	
+	// Warn if device is smaller than minimum
+	if sizeGiB < minSizeGiB {
+		fmt.Printf("WARNING: Device is only %.1f GiB. Installation may fail due to low space.\n", sizeGiB)
+		fmt.Printf("Recommended: %.0fGB+ for comfortable usage\n", minSizeGiB)
+		fmt.Println()
+	}
+	
+	return nil
+}
+
+// HasExistingPartitions checks if a device has any partitions
+func HasExistingPartitions(device string) bool {
+	// Check if device has any partitions
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	// If we have more than 1 line (device + partitions), there are existing partitions
+	return len(lines) > 1
+}
+
+// UnmountDevice unmounts all mount points for a device
+func UnmountDevice(device string) error {
+	// Get all mount points for this device and its partitions
+	cmd := exec.Command("findmnt", "-n", "-o", "TARGET", device)
+	output, err := cmd.Output()
+	if err != nil {
+		// findmnt might not be available, try alternative method
+		return UnmountDeviceAlternative(device)
+	}
+	
+	mountPoints := strings.Split(strings.TrimSpace(string(output)), "\n")
+	
+	// Unmount all mount points in reverse order (deepest first)
+	for i := len(mountPoints) - 1; i >= 0; i-- {
+		mountPoint := strings.TrimSpace(mountPoints[i])
+		if mountPoint == "" {
+			continue
+		}
+		
+		fmt.Printf("Unmounting %s...\n", mountPoint)
+		if err := RunCommand("umount", mountPoint); err != nil {
+			fmt.Printf("Warning: Failed to unmount %s: %v\n", mountPoint, err)
+			// Try lazy unmount as fallback
+			RunCommand("umount", "-l", mountPoint)
+		}
+	}
+	
+	return nil
+}
+
+// UnmountDeviceAlternative uses mount command parsing as fallback
+func UnmountDeviceAlternative(device string) error {
+	// Alternative method using mount command and grep
+	cmd := exec.Command("mount")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get mount information: %w", err)
+	}
+	
+	lines := strings.Split(string(output), "\n")
+	var mountPoints []string
+	
+	for _, line := range lines {
+		if strings.Contains(line, device) {
+			// Extract mount point (second field)
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				mountPoints = append(mountPoints, fields[1])
+			}
+		}
+	}
+	
+	// Unmount all found mount points
+	for _, mountPoint := range mountPoints {
+		fmt.Printf("Unmounting %s...\n", mountPoint)
+		if err := RunCommand("umount", mountPoint); err != nil {
+			fmt.Printf("Warning: Failed to unmount %s: %v\n", mountPoint, err)
+			// Try lazy unmount as fallback
+			RunCommand("umount", "-l", mountPoint)
+		}
+	}
+	
+	return nil
+}

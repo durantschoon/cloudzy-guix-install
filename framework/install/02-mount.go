@@ -64,7 +64,7 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 
 	// Check if already mounted and populated (idempotency)
-	if lib.IsMounted("/mnt") && s.isStorePopulated() {
+	if lib.IsMounted("/mnt") && lib.IsStorePopulated() {
 		fmt.Println("/mnt is already mounted and /mnt/gnu/store is populated")
 		fmt.Println("Skipping mount and store sync (idempotent - safe for reruns)")
 		return nil
@@ -213,13 +213,4 @@ func (s *Step02Mount) makePartitionPath(device, partNum string) string {
 	return device + partNum
 }
 
-func (s *Step02Mount) isStorePopulated() bool {
-	// Check if /mnt/gnu/store has contents
-	entries, err := os.ReadDir("/mnt/gnu/store")
-	if err != nil {
-		return false
-	}
-	// Store should have many entries if populated
-	return len(entries) > 10
-}
 
