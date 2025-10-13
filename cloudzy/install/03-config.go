@@ -157,10 +157,6 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
 
  ;; Free software kernel (linux-libre)
  (kernel linux-libre)
- 
- ;; Explicitly specify initrd
- (initrd (lambda (fs . rest)
-           (base-initrd fs rest)))
 
  (bootloader
   (bootloader-configuration
