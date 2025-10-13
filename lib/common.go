@@ -447,19 +447,17 @@ func SetupNonguixChannel() error {
 		}
 	}
 	
-	// Pull with nonguix channel
-	fmt.Println("Pulling Guix with nonguix channel...")
-	if err := RunCommand("guix", "pull", "-C", channelsPath); err != nil {
-		return fmt.Errorf("failed to pull with nonguix channel: %w", err)
-	}
+	// NOTE: We do NOT run 'guix pull' here because:
+	// 1. It can cause glibc version mismatches on older ISOs
+	// 2. It's not needed - 'guix time-machine' will fetch channels independently
+	// 3. The channels.scm file is all time-machine needs
 
-	// Get and record channel commits for reproducibility
-	if err := RecordChannelCommits(); err != nil {
-		fmt.Printf("Warning: Could not record channel commits: %v\n", err)
-	}
-
-	fmt.Println("[OK] Nonguix channel setup complete")
 	fmt.Println()
+	fmt.Println("[OK] Nonguix channel setup complete")
+	fmt.Println("    Channel file created: /tmp/channels.scm")
+	fmt.Println("    Will be used by 'guix time-machine' during system init")
+	fmt.Println()
+
 	return nil
 }
 
