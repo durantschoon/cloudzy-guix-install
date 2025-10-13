@@ -106,12 +106,7 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		return err
 	}
 
-	// Ensure guix-daemon is running with bind mounts
-	if err := lib.EnsureGuixDaemonRunning(); err != nil {
-		return err
-	}
-
-	// Run guix system init with retry logic
+	// Run guix system init with retry logic (includes daemon startup)
 	if err := lib.RunGuixSystemInit(); err != nil {
 		return err
 	}

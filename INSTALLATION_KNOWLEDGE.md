@@ -523,7 +523,45 @@ watch -n 1 'du -sh /var/guix/substitute-cache'
 # Check GRUB installation
 grub-install --version
 ls -la /boot/efi/EFI/*/
+
+# Check Guix daemon status
+herd status guix-daemon
+guix build --version  # Test daemon connectivity
 ```
+
+## 🔧 Common Issues and Fixes
+
+### Daemon Connection Issues
+
+**Problem:** "cannot connect to daemon-socket" error during config validation
+
+**Root Cause:** The `ValidateGuixConfig()` function was being called before `EnsureGuixDaemonRunning()`, causing validation to fail when the daemon wasn't ready.
+
+**Fix Applied:** Moved daemon startup before config validation in `RunGuixSystemInit()`:
+
+1. `EnsureGuixDaemonRunning()` starts and verifies the daemon
+2. `ValidateGuixConfig()` can successfully connect to the daemon
+3. Installation proceeds normally
+
+**Manual Recovery:** If you encounter this issue:
+
+```bash
+# Start the daemon manually
+herd start guix-daemon
+
+# Wait for it to be ready (test connectivity)
+guix build --version
+
+# Then continue with system init
+guix system init /mnt/etc/config.scm /mnt
+```
+
+**Daemon Restart Loop:** The installer includes a robust daemon restart mechanism:
+
+- 5 retry attempts with proper daemon stopping/starting
+- Uses `herd` service manager with fallback to direct `guix-daemon` startup
+- Tests daemon responsiveness with `guix build --version`
+- 8-second wait periods for daemon initialization
 
 ## 💻 Code Structure and Development
 

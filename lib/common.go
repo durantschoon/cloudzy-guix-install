@@ -606,6 +606,14 @@ func ValidateGuixConfig(configPath string) error {
 	RunCommand("tail", "-10", configPath)
 	fmt.Println()
 	
+	// First check if daemon is responsive
+	fmt.Println("Checking daemon connectivity...")
+	testCmd := exec.Command("guix", "build", "--version")
+	if err := testCmd.Run(); err != nil {
+		return fmt.Errorf("daemon is not responsive - ensure guix-daemon is running: %w", err)
+	}
+	fmt.Println("[OK] Daemon is responsive")
+	
 	// Try to load the config to check for syntax errors and unbound variables
 	fmt.Println("Validating config syntax and checking for unbound variables...")
 	cmd := exec.Command("guix", "system", "reconfigure", "--dry-run", configPath)
@@ -652,7 +660,12 @@ func ValidateGuixConfig(configPath string) error {
 
 // RunGuixSystemInit runs guix system init with retry logic
 func RunGuixSystemInit() error {
-	// Validate config first to catch issues early
+	// Ensure daemon is running before validation (validation needs daemon)
+	if err := EnsureGuixDaemonRunning(); err != nil {
+		return fmt.Errorf("failed to ensure guix-daemon is running: %w", err)
+	}
+	
+	// Validate config after daemon is confirmed running
 	configPath := "/mnt/etc/config.scm"
 	if err := ValidateGuixConfig(configPath); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
