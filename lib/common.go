@@ -350,6 +350,38 @@ func SetupGRUBEFI() error {
 	return nil
 }
 
+// SetupNonguixChannel sets up the nonguix channel for proprietary firmware and kernel
+func SetupNonguixChannel() error {
+	fmt.Println("=== Setting up nonguix channel ===")
+	
+	// Create channels.scm file
+	channelsContent := `(cons* (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix"))
+       %default-channels)`
+	
+	channelsPath := "/tmp/channels.scm"
+	if err := os.WriteFile(channelsPath, []byte(channelsContent), 0644); err != nil {
+		return fmt.Errorf("failed to create channels.scm: %w", err)
+	}
+	
+	// Authorize nonguix substitutes
+	fmt.Println("Authorizing nonguix substitutes...")
+	if err := RunCommand("wget", "-qO-", "https://substitutes.nonguix.org/signing-key.pub", "|", "guix", "archive", "--authorize"); err != nil {
+		fmt.Println("Warning: Could not authorize nonguix substitutes (may need manual setup)")
+	}
+	
+	// Pull with nonguix channel
+	fmt.Println("Pulling Guix with nonguix channel...")
+	if err := RunCommand("guix", "pull", "-C", channelsPath); err != nil {
+		return fmt.Errorf("failed to pull with nonguix channel: %w", err)
+	}
+	
+	fmt.Println("[OK] Nonguix channel setup complete")
+	fmt.Println()
+	return nil
+}
+
 // ValidateGuixConfig validates the config file for common issues
 func ValidateGuixConfig(configPath string) error {
 	fmt.Println("=== Validating Guix Configuration ===")
@@ -435,7 +467,9 @@ func RunGuixSystemInit() error {
 			time.Sleep(10 * time.Second)
 		}
 
-		if err := RunCommand("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt"); err != nil {
+		// Use time-machine with nonguix channel for system init
+		channelsPath := "/tmp/channels.scm"
+		if err := RunCommand("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			if attempt < maxRetries {
@@ -453,8 +487,8 @@ func RunGuixSystemInit() error {
 	if lastErr != nil {
 		fmt.Println()
 		fmt.Println("All retry attempts failed. You can:")
-		fmt.Println("  1. Wait a few minutes and run: guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  2. Try with --fallback to build from source: guix system init --fallback /mnt/etc/config.scm /mnt")
+		fmt.Println("  1. Wait a few minutes and run: guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  2. Try with --fallback to build from source: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
 

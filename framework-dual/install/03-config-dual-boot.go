@@ -122,6 +122,11 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
     state.HostName = "guix-system"
   }
 
+  // Setup nonguix channel for proprietary firmware and kernel
+  if err := lib.SetupNonguixChannel(); err != nil {
+    return fmt.Errorf("failed to setup nonguix channel: %w", err)
+  }
+
   // Generate config
   config := s.generateMinimalConfig(state, bootloader, targets)
 
@@ -145,12 +150,13 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 }
 
 func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, targets string) string {
-  homeFS := ""
+  dataFS := ""
   if state.HomePartition != "" {
-    homeFS = `         (file-system
-          (mount-point "/home")
+    dataFS = `         (file-system
+          (mount-point "/data")
           (device (file-system-label "DATA"))
-          (type "ext4"))
+          (type "ext4")
+          (options "defaults,noatime"))
 `
   }
 
@@ -219,7 +225,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
     state.HostName,    // host-name
     state.Timezone,    // timezone
     targets,           // targets
-    homeFS,            // home filesystem conditional
+    dataFS,            // data filesystem conditional
     state.UserName,    // name
     state.FullName,    // comment
     state.UserName,    // for home-directory

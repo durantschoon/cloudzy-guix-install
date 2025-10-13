@@ -115,6 +115,11 @@ func (s *Step03Config) RunClean(state *State) error {
 		state.HostName = "guix-system"
 	}
 
+	// Setup nonguix channel for proprietary firmware and kernel
+	if err := lib.SetupNonguixChannel(); err != nil {
+		return fmt.Errorf("failed to setup nonguix channel: %w", err)
+	}
+
 	// Generate config
 	config := s.generateMinimalConfig(state, bootloader, targets)
 
