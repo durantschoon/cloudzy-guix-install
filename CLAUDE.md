@@ -169,3 +169,20 @@ After implementing user-visible behavior or flow changes, update the docs in the
 - Platform readmes under `framework*/README.md` or `raspberry-pi/**` where applicable
 
 Docs should reflect new safety checks, logging, and any changed commands or defaults.
+
+### Checklist-Driven Workflow
+
+We work from `CHECKLIST.md` and track progress explicitly:
+
+- Before starting a feature, review the relevant checklist items
+- Implement changes, then immediately update `CHECKLIST.md` statuses
+- Keep commits aligned with checklist items so changes are auditable
+- If items spawn new sub-tasks, add them to the checklist and complete them before closing the parent
+
+### Resolve Design Conflicts Early
+
+If you encounter a potential conflict between existing code, documentation, or stated design goals:
+
+- Do not guess; add a brief note in the commit or PR description
+- Alert the user promptly to discuss the trade-offs and pick a direction
+- Once resolved, update code and docs together to reflect the agreed design
