@@ -630,7 +630,7 @@ func DownloadCustomizationTools(platform string, username string) error {
 
 	// Download shared recipes
 	fmt.Println("Downloading shared recipes...")
-	recipes := []string{"add-spacemacs.sh", "add-development.sh", "add-fonts.sh"}
+	recipes := []string{"add-spacemacs.sh", "add-doom-emacs.sh", "add-vanilla-emacs.sh", "add-development.sh", "add-fonts.sh"}
 	for _, recipe := range recipes {
 		recipeURL := fmt.Sprintf("%s/postinstall/recipes/%s", rawBase, recipe)
 		recipePath := filepath.Join(destDir, "recipes", recipe)
@@ -670,13 +670,15 @@ You can also edit /etc/config.scm directly:
 ## Shared Recipes
 
 The recipes/ directory contains modular scripts:
-- add-spacemacs.sh - Install Spacemacs editor
+- add-spacemacs.sh - Install Spacemacs (Emacs distribution with Vim keybindings)
+- add-doom-emacs.sh - Install Doom Emacs (modern, fast Emacs framework)
+- add-vanilla-emacs.sh - Install vanilla Emacs with minimal configuration
 - add-development.sh - Install dev tools (git, vim, gcc, etc.)
 - add-fonts.sh - Install programming and system fonts
 
 Run them individually:
 
-    ./recipes/add-spacemacs.sh
+    ./recipes/add-doom-emacs.sh
 
 ## Documentation
 
