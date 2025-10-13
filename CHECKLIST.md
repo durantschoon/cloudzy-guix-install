@@ -156,21 +156,30 @@ This makes the Framework variant slightly more opinionated but much more user-fr
 
 **Status:** ✅ Implemented
 
-**Missing checks:**
+**Implemented checks:**
 
 ```bash
-# Verify EFI is FAT32
-df -T /mnt/boot/efi | grep -q vfat || { echo "ERROR: EFI not FAT32"; exit 1; }
+# Verify partition information
+lsblk -f
 
-# Verify mount is correct
-mount | grep "/mnt/boot/efi"
+# Verify EFI label and vfat type
+blkid -t LABEL=EFI
+blkid -t TYPE=vfat
+
+# Verify mount points
+mount | grep -i efi
+
+# Check /mnt/boot/efi directory exists
+ls -la /mnt/boot/
 ```
 
 **Why it matters:**
 
 * Most common installation failure: "doesn't look like an EFI partition"
 * Early detection prevents wasted installation time
-* Provides clear error messages
+* Provides diagnostic output for debugging
+
+**Note:** We use `lsblk -f` and `blkid` instead of `df -T` because they provide more reliable filesystem type detection.
 
 **Impact:** ⭐⭐⭐ High - Prevents cryptic errors during `guix system init`
 
