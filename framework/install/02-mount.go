@@ -161,11 +161,26 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 	fmt.Println("All critical directories created successfully")
 
-    // Mount EFI
+    // Mount EFI - try different possible labels
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
-    if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
-		return err
-	}
+    efiLabels := []string{"EFI", "efi", "ESP", "esp", "BOOT", "boot"}
+    var mountErr error
+    
+    for _, label := range efiLabels {
+        fmt.Printf("Trying to mount EFI with label: %s\n", label)
+        if err := lib.MountByLabel(label, "/mnt/boot/efi"); err != nil {
+            mountErr = err
+            fmt.Printf("Failed to mount with label '%s': %v\n", label, err)
+            continue
+        }
+        fmt.Printf("Successfully mounted EFI with label: %s\n", label)
+        mountErr = nil
+        break
+    }
+    
+    if mountErr != nil {
+        return fmt.Errorf("failed to mount EFI partition with any known label: %w", mountErr)
+    }
 
 	// Verify EFI contents
 	fmt.Println("Checking EFI contents...")
