@@ -8,10 +8,11 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 .
 ├── cloudzy/                    # VPS Platform (Cloudzy, DigitalOcean, AWS, etc.)
 │   ├── install/               # ISO phase: Minimal Guix installation
-│   │   ├── 01-partition-*.sh
-│   │   ├── 02-mount-bind-*.sh
-│   │   ├── 03-config-write-*.sh
-│   │   └── 04-system-init-*.sh
+│   │   ├── 01-partition.go
+│   │   ├── 02-mount.go
+│   │   ├── 03-config.go
+│   │   ├── 04-system-init.go
+│   │   └── state.go
 │   │
 │   ├── postinstall/           # Post-boot phase: VPS-specific customization
 │   │   ├── customize          # Interactive tool (SSH-first, server-focused)
@@ -22,10 +23,11 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 │
 ├── framework/                  # Framework 13 Laptop (Single-boot, Guix only)
 │   ├── install/               # ISO phase: Minimal Guix installation
-│   │   ├── 01-partition-*.sh → ../../cloudzy/install/01-*
-│   │   ├── 02-mount-bind-*.sh → ../../cloudzy/install/02-*
-│   │   ├── 03-config-write-*.sh → ../../cloudzy/install/03-*
-│   │   └── 04-system-init-*.sh → ../../cloudzy/install/04-*
+│   │   ├── 01-partition.go
+│   │   ├── 02-mount.go
+│   │   ├── 03-config.go
+│   │   ├── 04-system-init.go
+│   │   └── state.go
 │   │
 │   ├── postinstall/           # Post-boot phase: Laptop-specific customization
 │   │   ├── customize          # Interactive tool (WiFi-first, desktop-focused)
@@ -36,10 +38,11 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 │
 ├── framework-dual/             # Framework 13 Laptop (Dual-boot with Pop!_OS)
 │   ├── install/               # ISO phase: Minimal Guix dual-boot installation
-│   │   ├── 01-partition-check-*.sh
-│   │   ├── 02-mount-existing-*.sh
-│   │   ├── 03-config-dual-boot-*.sh
-│   │   └── 04-system-init-*.sh → ../../cloudzy/install/04-*
+│   │   ├── 01-partition-check.go
+│   │   ├── 02-mount-existing.go
+│   │   ├── 03-config-dual-boot.go
+│   │   ├── 04-system-init.go
+│   │   └── state.go
 │   │
 │   ├── postinstall/           # Post-boot phase: Laptop-specific customization
 │   │   ├── customize          # Interactive tool (WiFi-first, desktop-focused)
@@ -49,17 +52,14 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 │   └── README.md
 │
 ├── lib/                        # Shared installation libraries
-│   ├── common.sh              # Config generation, UUID handling, desktop selector
+│   ├── common.go              # Shared Go functions (password setup, downloads, etc.)
+│   ├── postinstall.sh         # Post-boot helper functions
 │   ├── mirrors.sh             # Regional mirror detection and configuration
-│   ├── mirrors.md             # Mirror configuration documentation
-│   └── runner-common.sh       # Runner utilities (msg, fetch_file, etc.)
+│   └── mirrors.md             # Mirror configuration documentation
 │
-├── deprecated/                 # Archived old scripts
-│   ├── cloudzy/05-06-*.sh     # Old postinstall scripts (ISO-based, non-minimal)
-│   └── framework-dual/        # Old symlinks
-│
-├── run-remote-steps.sh         # Main installer (cloudzy platform)
-├── update-sha256.sh            # Checksum generator
+├── bootstrap-installer.sh      # Bootstrap script (downloads, verifies, builds installer)
+├── run-remote-steps.go         # Main Go installer entry point
+├── update-manifest.sh          # Manifest checksum generator
 │
 └── Documentation
     ├── README.md               # Main entry point
@@ -78,8 +78,9 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 **Duration:** ~10-15 minutes
 **Result:**
 - Bootable system
-- User account (no password set)
+- User account with password
 - Network support
+- Customize tool in ~/guix-customize/
 - NO desktop, NO SSH, NO extras
 
 ### Phase 2: Boot
@@ -143,29 +144,30 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 
 ## Shared vs Platform-Specific
 
-### Shared (via lib/)
-- UUID extraction
-- Boot mode detection
-- Config.scm generation
-- Desktop environment selector
-- Variable substitution
+### Shared (via lib/common.go)
+- Password setup (SetUserPassword)
+- Customization tool download (DownloadCustomizationTools)
+- Swap file creation (CreateSwapFile)
+- System initialization (RunGuixSystemInit)
+- Installation verification (VerifyInstallation)
+- UUID extraction (GetUUID, GetRootUUID)
 
 ### Platform-Specific
 
 **cloudzy/install:**
-- Full disk partitioning (`01-partition-*`)
-- Standard mount (`02-mount-bind-*`)
+- Full disk partitioning (`01-partition.go`)
+- Standard mount with bind mounts (`02-mount.go`)
 - Server-oriented defaults
 
 **framework/install:**
-- All scripts symlinked to `cloudzy/install/` (identical process)
-- Full disk partitioning for laptop
+- Full disk partitioning for laptop (`01-partition.go`)
+- Standard mount (`02-mount.go`)
 - UEFI-only (Framework 13 requirement)
 
 **framework-dual/install:**
-- Dual-boot partition check (`01-partition-check-*`)
-- Existing ESP mount (`02-mount-existing-*`)
-- UEFI-only config (`03-config-dual-boot-*`)
+- Dual-boot partition check (`01-partition-check.go`)
+- Existing ESP mount (`02-mount-existing.go`)
+- UEFI-only config (`03-config-dual-boot.go`)
 
 **cloudzy/postinstall:**
 - SSH-first workflow
@@ -220,22 +222,24 @@ To add a new platform (e.g., `raspberry-pi/`):
 
 ---
 
-## Migration from Old Structure
+## Current Architecture
 
-**Old (flat):**
+**Language:** Go with bash helpers
+**Entry point:** `bootstrap-installer.sh` → downloads, verifies, builds → `run-remote-steps.go`
+**Structure:**
 ```
-cloudzy/01-06-*.sh  (install + postinstall mixed)
-```
-
-**New (separated):**
-```
-cloudzy/install/01-04-*.sh      (installation only)
-cloudzy/postinstall/customize   (post-boot customization)
-deprecated/cloudzy/05-06-*.sh   (archived)
+bootstrap-installer.sh          # Downloads tarball, verifies checksums
+    ↓
+run-remote-steps.go            # Builds from source, runs platform steps
+    ↓
+{platform}/install/*.go        # Step implementations (01-04)
+    ↓
+lib/common.go                  # Shared functions
 ```
 
 **Benefits:**
+- ✅ Type-safe installation logic
+- ✅ Verified source checksums (SOURCE_MANIFEST.txt)
 - ✅ Clear phase separation (ISO vs booted system)
 - ✅ Platform-specific customization
-- ✅ No confusion about when to run scripts
 - ✅ Modular, extensible design
