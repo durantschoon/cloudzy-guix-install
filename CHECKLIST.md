@@ -6,15 +6,23 @@ The goal of this project is to create a **reliable, repeatable, and hardware-awa
 
 ## 🔄 Currently Working On
 
-**Status:** In Progress
+**Status:** Recently Completed Major Improvements
 
-**Active Tasks:**
+**Recently Completed:**
+
+1. ✅ **Nonguix channel integration** - Added automatic nonguix channel setup for framework installers
+2. ✅ **DATA partition optimization** - Updated to mount DATA at /data with noatime option
+3. ✅ **Config validation improvements** - Enhanced validation with better error handling
+4. ✅ **EFI verification fixes** - Improved EFI partition detection and diagnostics
+5. ✅ **UUID to file-system-label migration** - Replaced all UUID usage with reliable labels
+
+**Next Priority Tasks:**
 
 1. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
 2. **Channel pinning and trusted substitutes** - Implement opt-in Nonguix trust, channel pinning for reproducible builds
 3. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
 
-**Context:** These are high-priority improvements identified by a seasoned Guix user review. Focus on user experience and reliability enhancements.
+**Context:** Major infrastructure improvements completed. Framework installers now properly handle nonguix channel setup and use reliable label-based mounting.
 
 ---
 

@@ -24,7 +24,7 @@ Use **UPPERCASE with underscores** for all partition labels:
 
 - `EFI` → FAT32 ESP → mounted at `/boot/efi`
 - `GUIX_ROOT` → ext4 → mounted at `/`
-- `DATA` (optional) → ext4/btrfs → mounted at `/home` or `/data`
+- `DATA` (optional) → ext4/btrfs → mounted at `/data` (not `/home`)
 
 Verify labels:
 
@@ -65,6 +65,69 @@ Always use `(file-system-label "LABEL_NAME")` instead of `(uuid "xxxx-xxxx" 'ext
 - **More readable** - Clear partition purpose
 - **More portable** - Works across different systems
 - **Easier debugging** - Can see labels with `lsblk -f`
+
+### DATA Partition Usage
+
+**Important**: The `DATA` partition is mounted at `/data`, not `/home`:
+
+- **`/data`** - Shared data partition for files, documents, media
+- **`/home`** - User home directories remain on the root filesystem
+- **Benefits**: Cleaner separation, easier backup, shared access across systems
+- **Options**: `defaults,noatime` for better performance on data storage
+
+## 🔧 Nonguix Channel Setup
+
+**Critical**: Framework installers require the nonguix channel for proprietary firmware and kernel support.
+
+### Automatic Setup (Recommended)
+
+The framework installers automatically setup the nonguix channel:
+
+```bash
+# Creates /tmp/channels.scm with nonguix channel
+# Authorizes nonguix substitutes
+# Pulls Guix with nonguix channel
+# Uses guix time-machine for system init
+```
+
+### Manual Setup (If Needed)
+
+```bash
+# 1. Create channels.scm
+cat > /tmp/channels.scm <<'EOF'
+(cons* (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix"))
+       %default-channels)
+EOF
+
+# 2. Authorize nonguix substitutes (faster builds)
+wget -qO- https://substitutes.nonguix.org/signing-key.pub | guix archive --authorize
+
+# 3. Pull with nonguix channel
+guix pull -C /tmp/channels.scm
+
+# 4. Use time-machine for system init
+guix time-machine -C /tmp/channels.scm -- \
+  system init /mnt/etc/config.scm /mnt --fallback \
+  --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"
+```
+
+### Why Nonguix Channel is Required
+
+- **Proprietary firmware** - `linux-firmware` package for hardware support
+- **Non-free kernel** - `linux` kernel (not `linux-libre`) for better hardware compatibility
+- **Hardware-specific modules** - AMD GPU, NVMe, USB drivers for Framework 13
+
+### Common Errors Without Nonguix
+
+```
+no code for module (nongnu packages linux)
+unbound variable: linux
+unbound variable: linux-firmware
+```
+
+**Solution**: Ensure nonguix channel is available before config generation.
 
 ## 🐧 Kernel Configuration
 
