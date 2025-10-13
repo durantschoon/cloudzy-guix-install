@@ -1282,10 +1282,16 @@ func CheckDeviceSpace(device string, minSizeGiB float64) error {
 		return fmt.Errorf("failed to get device size: %w", err)
 	}
 	
-	sizeStr := strings.TrimSpace(string(output))
+	// Take only the first line (the device itself, not partitions)
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 0 {
+		return fmt.Errorf("no output from lsblk for device %s", device)
+	}
+	
+	sizeStr := strings.TrimSpace(lines[0])
 	sizeBytes, err := strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
-		return fmt.Errorf("failed to parse device size: %w", err)
+		return fmt.Errorf("failed to parse device size '%s': %w", sizeStr, err)
 	}
 	
 	// Convert to GiB
