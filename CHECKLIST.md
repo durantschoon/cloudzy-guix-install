@@ -9,6 +9,7 @@ The goal of this project is to create a **reliable, repeatable, and hardware-awa
 **Status:** In Progress
 
 **Active Tasks:**
+
 1. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
 2. **Channel pinning and trusted substitutes** - Implement opt-in Nonguix trust, channel pinning for reproducible builds
 3. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration

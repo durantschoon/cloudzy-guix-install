@@ -155,9 +155,15 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
     if state.Device != "" {
         if strings.Contains(state.Device, "nvme") {
             lib.RunCommand("fatlabel", state.Device+"p1")
+            // Check if p2 is ext4 before trying e2label (avoid swap partition warnings)
+            fmt.Println("Checking partition labels...")
+            lib.RunCommand("file", "-s", state.Device+"p2")
             lib.RunCommand("e2label", state.Device+"p2")
         } else {
             lib.RunCommand("fatlabel", state.Device+"1")
+            // Check if partition 2 is ext4 before trying e2label (avoid swap partition warnings)
+            fmt.Println("Checking partition labels...")
+            lib.RunCommand("file", "-s", state.Device+"2")
             lib.RunCommand("e2label", state.Device+"2")
         }
     }
