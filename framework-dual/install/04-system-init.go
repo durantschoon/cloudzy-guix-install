@@ -18,10 +18,11 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 	fmt.Println("  1. Create swap file in /mnt/swapfile (size from SWAP_SIZE env var)")
 	fmt.Println("  2. Activate swap for installation process")
 	fmt.Println("  3. Optionally run 'guix pull' (if RUN_GUIX_PULL env var is set)")
-	fmt.Println("  4. Download customization tools to /mnt/root/guix-customize/")
-	fmt.Println("  5. Run 'guix system init /mnt/etc/config.scm /mnt'")
-	fmt.Println("  6. Unmount all partitions")
-	fmt.Println("  7. Reboot into your new Guix system")
+	fmt.Println("  4. Run 'guix system init /mnt/etc/config.scm /mnt'")
+	fmt.Println("  5. Set user password for first login")
+	fmt.Println("  6. Download customization tools to user's home directory")
+	fmt.Println("  7. Unmount all partitions")
+	fmt.Println("  8. Reboot into your new Guix system")
 	fmt.Println()
 	fmt.Println("Environment variables used by this step:")
 	fmt.Printf("  SWAP_SIZE       - %s (default: 4G)\n", lib.GetEnvOrDefault(state.SwapSize, "4G"))
@@ -31,8 +32,10 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 	fmt.Println()
 	fmt.Println("Estimated time: 5-10 minutes (or 15-30 min if RUN_GUIX_PULL is set)")
 	fmt.Println()
-	fmt.Println("After reboot, you'll have a minimal bootable Guix system.")
-	fmt.Println("Use ~/guix-customize/customize to add SSH, desktop, packages, etc.")
+	fmt.Println("After reboot:")
+	fmt.Println("  1. Log in with your username and password")
+	fmt.Println("  2. Run: ~/guix-customize/customize")
+	fmt.Println("  3. Add SSH, desktop, packages, etc.")
 	fmt.Println()
 
 	return nil
@@ -91,12 +94,6 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println()
 	}
 
-	// Download customization tools
-	if err := lib.DownloadCustomizationTools(state.GuixPlatform); err != nil {
-		fmt.Printf("Warning: Failed to download customization tools: %v\n", err)
-		fmt.Println("  You can manually download them after first boot")
-	}
-
 	// Verify ESP is properly mounted as vfat
 	if err := lib.VerifyESP(); err != nil {
 		return err
@@ -120,6 +117,17 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	// Verify installation succeeded
 	if err := lib.VerifyInstallation(); err != nil {
 		return err
+	}
+
+	// Set user password
+	if err := lib.SetUserPassword(state.UserName); err != nil {
+		return err
+	}
+
+	// Download customization tools to user's home directory
+	if err := lib.DownloadCustomizationTools(state.GuixPlatform, state.UserName); err != nil {
+		fmt.Printf("Warning: Failed to download customization tools: %v\n", err)
+		fmt.Println("  You can manually download them after first boot")
 	}
 
 	// Sync and unmount

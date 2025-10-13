@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 # Framework 13 Laptop Customization Tool
 # Optimized for Framework 13 single-boot (Guix only)
 

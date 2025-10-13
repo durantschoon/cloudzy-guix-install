@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 # Raspberry Pi 4 Customization Tool
 # Optimized for Raspberry Pi 4 (ARMaarch64)
 

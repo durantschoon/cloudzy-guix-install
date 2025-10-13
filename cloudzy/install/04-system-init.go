@@ -91,12 +91,6 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println()
 	}
 
-	// Download customization tools
-	if err := lib.DownloadCustomizationTools(state.GuixPlatform); err != nil {
-		fmt.Printf("Warning: Failed to download customization tools: %v\n", err)
-		fmt.Println("  You can manually download them after first boot")
-	}
-
 	// Verify ESP is properly mounted as vfat
 	if err := lib.VerifyESP(); err != nil {
 		return err
@@ -120,6 +114,17 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	// Verify installation succeeded
 	if err := lib.VerifyInstallation(); err != nil {
 		return err
+	}
+
+	// Set user password
+	if err := lib.SetUserPassword(state.UserName); err != nil {
+		return err
+	}
+
+	// Download customization tools to user's home directory
+	if err := lib.DownloadCustomizationTools(state.GuixPlatform, state.UserName); err != nil {
+		fmt.Printf("Warning: Failed to download customization tools: %v\n", err)
+		fmt.Println("  You can manually download them after first boot")
 	}
 
 	// Sync and unmount

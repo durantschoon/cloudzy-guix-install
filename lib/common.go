@@ -593,23 +593,28 @@ func AskYesNo(prompt string, expected string) bool {
 	return strings.EqualFold(strings.TrimSpace(response), expected)
 }
 
-// DownloadCustomizationTools downloads customization tools to /mnt/root/guix-customize/
-func DownloadCustomizationTools(platform string) error {
+// DownloadCustomizationTools downloads customization tools to user's home directory
+func DownloadCustomizationTools(platform string, username string) error {
 	fmt.Println()
 	fmt.Println("=== Installing Customization Tools ===")
-	fmt.Println("Copying customize script and recipes to /mnt/root/guix-customize/")
-	fmt.Println()
 
 	if platform == "" {
 		platform = "cloudzy"
 	}
+
+	if username == "" {
+		username = "guix"
+	}
+
+	destDir := fmt.Sprintf("/mnt/home/%s/guix-customize", username)
+	fmt.Printf("Copying customize script and recipes to %s/\n", destDir)
+	fmt.Println()
 
 	repoOwner := GetEnv("GUIX_INSTALL_REPO", "durantschoon/cloudzy-guix-install")
 	repoRef := GetEnv("GUIX_INSTALL_REF", "main")
 	rawBase := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s", repoOwner, repoRef)
 
 	// Create destination directory
-	destDir := "/mnt/root/guix-customize"
 	if err := os.MkdirAll(filepath.Join(destDir, "recipes"), 0755); err != nil {
 		return err
 	}
@@ -687,6 +692,28 @@ https://github.com/durantschoon/cloudzy-guix-install/blob/main/CUSTOMIZATION.md
 	fmt.Println("Customization tools installed to /root/guix-customize/")
 	fmt.Println("  After first boot, run: cd ~/guix-customize && ./customize")
 	fmt.Println()
+
+	return nil
+}
+
+// SetUserPassword sets the password for a user in the installed system
+func SetUserPassword(username string) error {
+	fmt.Println()
+	fmt.Println("=== Set User Password ===")
+	fmt.Printf("Setting password for user: %s\n", username)
+	fmt.Println("You will need this password to log in after first boot.")
+	fmt.Println()
+
+	passwdCmd := exec.Command("chroot", "/mnt", "/run/current-system/profile/bin/passwd", username)
+	passwdCmd.Stdin = os.Stdin
+	passwdCmd.Stdout = os.Stdout
+	passwdCmd.Stderr = os.Stderr
+	if err := passwdCmd.Run(); err != nil {
+		return fmt.Errorf("failed to set user password: %w", err)
+	}
+
+	fmt.Println()
+	fmt.Printf("Password set successfully for user: %s\n", username)
 
 	return nil
 }

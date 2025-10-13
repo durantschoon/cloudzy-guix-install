@@ -315,7 +315,7 @@ ls -la /mnt/boot/
 ### Safety Checks Before Installation
 
 ```bash
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 
 # 1. Verify correct mount points
 mount | grep -q "/mnt " || { echo "ERROR: /mnt not mounted"; exit 1; }
@@ -431,6 +431,31 @@ watch -n 1 'du -sh /var/guix/substitute-cache'
 grub-install --version
 ls -la /boot/efi/EFI/*/
 ```
+
+## 💻 Code Structure and Development
+
+### Platform-Specific vs Shared Code
+
+- **Platform-specific code**: Goes in `{platform}/install/*.go` files
+  - Example: `framework-dual/install/01-partition.go`
+  - Contains logic unique to that platform (partition layout, hardware detection, etc.)
+
+- **Shared code for all platforms**: Goes in `lib/common.go`
+  - Example: `DownloadCustomizationTools()`, `CreateSwapFile()`, `RunGuixSystemInit()`
+  - Used by multiple platforms
+  - Should accept parameters for platform-specific values (usernames, paths, etc.)
+
+### When to Factor Code into common.go
+
+Factor code into `lib/common.go` when:
+1. The code is identical across 2+ platforms
+2. The code performs a common operation (mounting, downloading, verification)
+3. The code can be parameterized for platform differences
+
+Keep code platform-specific when:
+1. It's only used by one platform
+2. The logic is fundamentally different per platform
+3. Factoring would make the code harder to understand
 
 ---
 

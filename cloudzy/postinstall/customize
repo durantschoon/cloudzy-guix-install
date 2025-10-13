@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 # VPS Server Customization Tool
 # Optimized for headless VPS/server environments (Cloudzy, DigitalOcean, AWS, etc.)
 
