@@ -186,6 +186,16 @@ Prompt user to explicitly trust Nonguix (or skip), explain pros/cons in output a
 
 **Impact:** ⭐⭐⭐ High - Security transparency and informed consent
 
+---
+
+#### 7. Onboarding Clarity and Data‑Loss Warnings
+
+**Status:** ❌ Not implemented
+
+Add a prominent decision box (cloudzy vs framework vs framework-dual), explicit data‑loss warnings for wipe flows, Secure Boot note for Framework, and minimum disk/RAM guidance.
+
+**Impact:** ⭐⭐⭐ High - Prevents user errors and surprises
+
 #### 2. Post-Installation File Verification
 
 **Status:** ✅ Implemented
@@ -370,6 +380,36 @@ Split `/etc/config.scm` into base OS vs hardware profile; provide a “first rec
 
 **Impact:** ⭐⭐ Medium - Faster, cleaner onboarding
 
+---
+
+#### 19. First‑Boot Expectations and Networking Quick Path
+
+**Status:** ❌ Not implemented
+
+Add a simple “What you’ll see” checklist (console login, password works, Wi‑Fi pending), plus a recommended NetworkManager path and minimal wpa_supplicant fallback snippet.
+
+**Impact:** ⭐⭐ Medium - Reduces confusion at first boot
+
+---
+
+#### 20. Troubleshooting/Rescue Basics
+
+**Status:** ❌ Not implemented
+
+Document where logs/receipts live and add a short chroot/repair/rerun guide when post‑install verification fails.
+
+**Impact:** ⭐⭐ Medium - Speeds recovery
+
+---
+
+#### 21. Time Estimates per Step
+
+**Status:** ❌ Not implemented
+
+Add realistic time ranges for each step in QUICKSTART to set expectations.
+
+**Impact:** ⭐⭐ Medium - Better user expectations
+
 #### 6. Bootloader Timeout Configuration
 
 **Status:** ❌ Not set
@@ -497,6 +537,26 @@ Provide a helper to chroot into `/mnt`, run verification/repairs, and re‑attem
 Add optional image build recipe and Pi‑specific initrd modules/services (chrony, headless SSH with key drop).
 
 **Impact:** ⭐ Low - Broader hardware support
+
+---
+
+#### 15. Labels vs Device Paths Micro‑explanation
+
+**Status:** ❌ Not implemented
+
+Add a one‑sentence explanation and simple diagram where labels first appear.
+
+**Impact:** ⭐ Low - Easier mental model
+
+---
+
+#### 16. Optional Channel Pinning Toggle for New Users
+
+**Status:** ❌ Not implemented
+
+Provide a short on/off toggle doc section; default remains safe/unpinned.
+
+**Impact:** ⭐ Low - Simpler onboarding choice
 
 #### 10. Swap Partition Support
 

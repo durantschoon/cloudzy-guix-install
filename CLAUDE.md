@@ -186,3 +186,21 @@ If you encounter a potential conflict between existing code, documentation, or s
 - Do not guess; add a brief note in the commit or PR description
 - Alert the user promptly to discuss the trade-offs and pick a direction
 - Once resolved, update code and docs together to reflect the agreed design
+
+## Reviewer Personas (Offer These at Milestones)
+
+After a developer completes a milestone, offer to review changes by adopting one of these personas:
+
+1) Mid‑Level Unix User New to Guix
+- Focus: onboarding clarity, data‑loss warnings, Secure Boot notes, first‑boot expectations, networking quick path
+- Goal: ensure the Quickstart and README answer “what do I do next?” with minimal Guix background
+
+2) Seasoned Guix User
+- Focus: channel pinning, substitute trust, receipts/provenance, services (NetworkManager, TLP, time sync, fstrim), storage options (LUKS/btrfs), diagnostics
+- Goal: robustness, reproducibility, and clean Guix idioms
+
+3) Dual‑Boot Laptop Owner
+- Focus: GRUB visibility, chainloading Pop!_OS, keeping existing partitions safe, clear rollback paths
+- Goal: confidence that dual‑boot stays usable and recoverable
+
+How to offer: “Do you want a review as a [Mid‑Level Unix User], [Seasoned Guix User], or [Dual‑Boot Laptop Owner]?”
