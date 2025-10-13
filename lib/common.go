@@ -122,6 +122,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
     spinner := []string{"/", "|", "\\", "-"}
     spinnerIndex := 0
     lastOutputTime := time.Now()
+    spinnerActive := false
     
     go func() {
         ticker := time.NewTicker(200 * time.Millisecond)
@@ -132,16 +133,23 @@ func RunCommandWithSpinner(name string, args ...string) error {
             case <-ticker.C:
                 // Check if we've received output recently
                 if time.Since(lastOutputTime) > 3*time.Second {
-                    // Show spinner
-                    fmt.Printf("\r%s Working... (this may take 5-30 minutes)", spinner[spinnerIndex])
+                    if !spinnerActive {
+                        spinnerActive = true
+                        fmt.Printf("\n") // New line before starting spinner
+                    }
+                    // Hide cursor and show spinner
+                    fmt.Printf("\r\033[?25l%s Working... (this may take 5-30 minutes)", spinner[spinnerIndex])
                     os.Stdout.Sync()
                     spinnerIndex = (spinnerIndex + 1) % len(spinner)
                 }
             case <-outputReceived:
-                // We have output, clear spinner and update time
-                fmt.Printf("\r%s", strings.Repeat(" ", 80)) // Clear line
-                fmt.Printf("\r")
-                os.Stdout.Sync()
+                // We have output, clear spinner and restore cursor
+                if spinnerActive {
+                    fmt.Printf("\r%s", strings.Repeat(" ", 80)) // Clear line
+                    fmt.Printf("\r\033[?25h") // Restore cursor
+                    os.Stdout.Sync()
+                    spinnerActive = false
+                }
                 lastOutputTime = time.Now()
             }
         }
@@ -150,9 +158,9 @@ func RunCommandWithSpinner(name string, args ...string) error {
     // Wait for command to complete
     err = cmd.Wait()
     
-    // Clear any remaining spinner
+    // Clear any remaining spinner and restore cursor
     fmt.Printf("\r%s", strings.Repeat(" ", 80))
-    fmt.Printf("\r")
+    fmt.Printf("\r\033[?25h") // Restore cursor
     os.Stdout.Sync()
     
     return err
