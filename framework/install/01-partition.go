@@ -77,7 +77,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	}
 
 	fmt.Println("Creating EFI partition (512MB)...")
-	if err := lib.RunCommand("parted", "-s", state.Device, "mkpart", "ESP", "fat32", "1MiB", "513MiB"); err != nil {
+	if err := lib.RunCommand("parted", "-s", state.Device, "mkpart", "EFI", "fat32", "1MiB", "513MiB"); err != nil {
 		return err
 	}
 	if err := lib.RunCommand("parted", "-s", state.Device, "set", "1", "esp", "on"); err != nil {

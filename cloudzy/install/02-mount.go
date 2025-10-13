@@ -161,14 +161,14 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 	fmt.Println("All critical directories created successfully")
 
-    // Mount ESP by label
+    // Mount EFI by label
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
     if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
 		return err
 	}
 
-	// Verify ESP contents
-	fmt.Println("Checking ESP contents...")
+	// Verify EFI contents
+	fmt.Println("Checking EFI contents...")
 	lib.RunCommand("ls", "-la", "/mnt/boot/efi/")
 
 	fmt.Println()

@@ -145,7 +145,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
   fmt.Println(config)
   fmt.Println()
   fmt.Println("Configuration written to /mnt/etc/config.scm")
-  fmt.Println("  This will install GRUB to the existing ESP alongside Pop!_OS")
+  fmt.Println("  This will install GRUB to the existing EFI alongside Pop!_OS")
 
   return nil
 }

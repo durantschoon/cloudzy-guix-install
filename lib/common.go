@@ -4,7 +4,6 @@ package lib
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -283,21 +282,30 @@ func EnsureGuixDaemonRunning() error {
 func VerifyESP() error {
 	fmt.Println()
 	fmt.Println("=== Verifying EFI System Partition ===")
+	
+	// First check if /mnt/boot/efi exists and is mounted
 	cmd := exec.Command("df", "-T", "/mnt/boot/efi")
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to check ESP: %w", err)
+		fmt.Println("ERROR: Cannot check /mnt/boot/efi - may not be mounted")
+		fmt.Println("Checking all EFI-related mounts:")
+		RunCommand("mount | grep -i efi")
+		RunCommand("ls -la /mnt/boot/")
+		return fmt.Errorf("failed to check EFI partition: %w", err)
 	}
-	if !strings.Contains(string(output), "vfat") {
+	
+	outputStr := string(output)
+	fmt.Printf("EFI mount info: %s", outputStr)
+	
+	if !strings.Contains(outputStr, "vfat") {
 		fmt.Println("ERROR: /mnt/boot/efi is not mounted as vfat filesystem")
 		fmt.Println("Current mount info:")
-        RunCommand("df", "-T", "/mnt/boot/efi")
-        // Fallback: show mounts and filter client-side
-        mounts, _ := ioutil.ReadFile("/proc/mounts")
-        fmt.Println(string(mounts))
-		return fmt.Errorf("ESP verification failed: not a vfat filesystem")
+		RunCommand("df", "-T", "/mnt/boot/efi")
+		RunCommand("mount | grep -i efi")
+		RunCommand("ls -la /mnt/boot/")
+		return fmt.Errorf("EFI verification failed: not a vfat filesystem")
 	}
-	fmt.Println("[OK] ESP is correctly mounted as vfat")
+	fmt.Println("[OK] EFI partition is correctly mounted as vfat")
 	fmt.Println()
 	return nil
 }

@@ -76,7 +76,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	// Partition the disk
 	if err := lib.RunCommand("parted", "--script", state.Device,
 		"mklabel", "gpt",
-		"mkpart", "ESP", "fat32", "1MiB", "513MiB",
+		"mkpart", "EFI", "fat32", "1MiB", "513MiB",
 		"set", "1", "esp", "on",
 		"mkpart", "root", "ext4", "513MiB", "100%"); err != nil {
 		return fmt.Errorf("partitioning failed: %w", err)

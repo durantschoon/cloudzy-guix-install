@@ -82,7 +82,7 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 		fmt.Printf("  1. Keep existing EFI partition: %s\n", state.EFI)
 		fmt.Println("  2. Keep all existing Pop!_OS partitions (untouched)")
 		fmt.Printf("  3. Format existing GUIX_ROOT partition: %s (%.1fGiB)\n", guixRootPart, partSize)
-		fmt.Println("  4. Install Guix bootloader to ESP (will chain to Pop!_OS)")
+		fmt.Println("  4. Install Guix bootloader to EFI (will chain to Pop!_OS)")
 	} else {
 		// Need to create new partition
 		fmt.Println("No partition labeled 'GUIX_ROOT' found.")
@@ -111,7 +111,7 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 		fmt.Printf("  1. Keep existing EFI partition: %s\n", state.EFI)
 		fmt.Println("  2. Keep all existing Pop!_OS partitions (untouched)")
 		fmt.Println("  3. Create a new partition for Guix in available free space")
-		fmt.Println("  4. Install Guix bootloader to ESP (will chain to Pop!_OS)")
+		fmt.Println("  4. Install Guix bootloader to EFI (will chain to Pop!_OS)")
 	}
 
 	fmt.Println()

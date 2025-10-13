@@ -93,7 +93,7 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println()
 	}
 
-	// Verify ESP is properly mounted as vfat
+	// Verify EFI is properly mounted as vfat
 	if err := lib.VerifyESP(); err != nil {
 		return err
 	}

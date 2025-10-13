@@ -137,7 +137,7 @@ This makes the Framework variant slightly more opinionated but much more user-fr
 **Missing checks:**
 
 ```bash
-# Verify ESP is FAT32
+# Verify EFI is FAT32
 df -T /mnt/boot/efi | grep -q vfat || { echo "ERROR: EFI not FAT32"; exit 1; }
 
 # Verify mount is correct
@@ -646,7 +646,7 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 
 ### Biggest Impact Improvements
 
-1. **ESP verification** (prevents most common error)
+1. **EFI verification** (prevents most common error)
 2. **Post-install checks** (prevents boot failures)
 3. **Label verification** (prevents mount errors)
 4. **User password setup** (prevents login failures)
