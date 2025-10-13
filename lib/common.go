@@ -288,6 +288,7 @@ func VerifyESP() error {
 	RunCommand("lsblk", "-f")
 	
 	// Check if /mnt/boot/efi exists and is mounted
+	fmt.Println("Checking if /mnt/boot/efi is mounted:")
 	cmd := exec.Command("df", "-T", "/mnt/boot/efi")
 	output, err := cmd.Output()
 	if err != nil {
@@ -315,6 +316,7 @@ func VerifyESP() error {
 	
 	if !isVfat {
 		fmt.Println("ERROR: /mnt/boot/efi is not mounted as vfat filesystem")
+		fmt.Println("The EFI partition (p1) should be mounted at /mnt/boot/efi")
 		fmt.Println("Current mount info:")
 		RunCommand("df", "-T", "/mnt/boot/efi")
 		RunCommand("mount | grep -i efi")
@@ -328,7 +330,7 @@ func VerifyESP() error {
 		
 		return fmt.Errorf("EFI verification failed: not a vfat filesystem")
 	}
-	fmt.Println("[OK] EFI partition is correctly mounted as vfat")
+	fmt.Println("[OK] EFI partition (p1) is correctly mounted as vfat at /mnt/boot/efi")
 	fmt.Println()
 	return nil
 }
