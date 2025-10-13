@@ -2,7 +2,7 @@
 
 Modular scripts for installing minimal Guix OS on different platforms with automated hardware detection, safety checks, and guided workflows.
 
-buymeacoffee.com/durantschoon
+buymeacoffee.com/durantschoon (🙏 help support my LLM habit)
 
 ## ⚠️ Choose Your Platform
 
