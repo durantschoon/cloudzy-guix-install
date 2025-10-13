@@ -283,7 +283,11 @@ func VerifyESP() error {
 	fmt.Println()
 	fmt.Println("=== Verifying EFI System Partition ===")
 	
-	// First check if /mnt/boot/efi exists and is mounted
+	// First check partition information with lsblk
+	fmt.Println("Checking partition information:")
+	RunCommand("lsblk", "-f")
+	
+	// Check if /mnt/boot/efi exists and is mounted
 	cmd := exec.Command("df", "-T", "/mnt/boot/efi")
 	output, err := cmd.Output()
 	if err != nil {
