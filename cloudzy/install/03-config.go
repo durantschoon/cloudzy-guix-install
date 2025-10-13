@@ -168,7 +168,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
    (bootloader grub-efi-bootloader)
    (target %s)
    (timeout 5)
-   (keyboard-layout (keyboard-layout "us"))))
+   ))
 
  (file-systems
   (cons* (file-system

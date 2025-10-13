@@ -432,7 +432,7 @@ Add realistic time ranges for each step in QUICKSTART to set expectations.
 (bootloader-configuration
   (bootloader grub-efi-bootloader)
   (targets '("/boot/efi"))
-  (keyboard-layout (keyboard-layout "us")))
+  ))
 ```
 
 **Should include:**
@@ -442,7 +442,7 @@ Add realistic time ranges for each step in QUICKSTART to set expectations.
   (bootloader grub-efi-bootloader)
   (targets '("/boot/efi"))
   (timeout 5)  ; Show menu for 5 seconds
-  (keyboard-layout (keyboard-layout "us")))
+  ))
 ```
 
 **Why it matters:**

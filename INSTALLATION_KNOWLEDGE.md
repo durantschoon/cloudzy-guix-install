@@ -102,9 +102,14 @@ Mount by label for reliability:
   (bootloader-configuration
     (bootloader grub-efi-bootloader)
     (targets '("/boot/efi"))
-    (timeout 5)
-    (keyboard-layout (keyboard-layout "us"))))
+    (timeout 5)))
 ```
+
+**Critical Bootloader Configuration Notes**:
+
+- **DO NOT include `keyboard-layout`** in bootloader-configuration - this causes boot issues
+- **DO NOT include `keyboard-layout`** in the minimal config - add it later if needed
+- **Keep bootloader config minimal** - only essential fields for reliable boot
 
 **Critical Targets Syntax Convention**:
 
