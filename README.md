@@ -1,11 +1,26 @@
 # Guix Installation Scripts
 
-Modular scripts for installing minimal Guix OS on different platforms:
+Modular scripts for installing minimal Guix OS on different platforms with automated hardware detection, safety checks, and guided workflows.
 
-- **`cloudzy/`** - VPS fresh install (Cloudzy and similar providers)
-- **`framework/`** - Framework 13 single-boot (Guix only)
-- **`framework-dual/`** - Framework 13 dual-boot with Pop!_OS
-- **`raspberry-pi/`** - Raspberry Pi 3/4/5 (aarch64, experimental)
+## ⚠️ Choose Your Platform
+
+**Pick the right installer for your use case:**
+
+| Platform | Use Case | Data Safety | Requirements |
+|----------|----------|-------------|--------------|
+| **[`cloudzy`](cloudzy/)** | Fresh VPS (Cloudzy, etc.) | ⚠️ **WIPES ENTIRE DISK** | VPS with Guix ISO access |
+| **[`framework`](framework/)** | Framework 13 single-boot | ⚠️ **WIPES ENTIRE DISK** | Framework 13, no existing OS needed |
+| **[`framework-dual`](framework-dual/)** | Framework 13 dual-boot with Pop!_OS | ✅ **PRESERVES existing OS** | Framework 13 with Pop!_OS already installed |
+| **[`raspberry-pi`](raspberry-pi/)** | Raspberry Pi 3/4/5 | N/A (Image-based) | Apple Silicon Mac for building |
+
+### Hardware Requirements
+
+- **Disk Space**: 40GB minimum (60GB+ recommended)
+- **RAM**: 2GB minimum (4GB+ recommended)
+- **Architecture**: x86_64 (Framework/VPS) or aarch64 (Raspberry Pi)
+- **Secure Boot**: Not supported - disable in BIOS before installation
+
+---
 
 ## Quick Install
 
@@ -16,6 +31,8 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 ```
 
 Replace `<platform>` with: `cloudzy`, `framework`, or `framework-dual`
+
+**⚠️ WARNING:** `cloudzy` and `framework` will **WIPE YOUR ENTIRE DISK**. Only use on fresh systems.
 
 See [`QUICKSTART.md`](QUICKSTART.md) for complete instructions.
 

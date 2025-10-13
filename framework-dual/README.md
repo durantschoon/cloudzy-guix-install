@@ -9,6 +9,10 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
 ### Prerequisites
 
 - **Existing Pop!_OS installation** with EFI System Partition (ESP)
+- **Secure Boot DISABLED** in BIOS
+  - Guix does not support Secure Boot
+  - Press F2 at boot → Security tab → Disable Secure Boot
+  - Framework 13: Boot menu is F12, BIOS is F2
 - **Labeled partitions** (filesystem labels in UPPERCASE, set during/after partition creation):
   - ESP labeled as `EFI` (set with: `fatlabel /dev/nvme0n1p1 EFI`)
   - Pop!_OS root optionally labeled as `POPOS_ROOT` (set with: `e2label /dev/nvme0n1pX POPOS_ROOT`)
@@ -19,9 +23,9 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
 - **Optional: Separate /home or /data partition**
   - If you have a separate partition to share between Pop!_OS and Guix
   - **Label the partition `DATA`** (set with: `e2label /dev/nvme0n1p5 DATA`)
-  - Script will auto-detect and mount at /home
+  - Script will auto-detect and mount at /data
 - **Backup of all important data** before proceeding
-- Running from a **Guix live ISO**
+- **Running from a Guix live ISO** (not Pop!_OS)
 
 ### What These Scripts Do
 
