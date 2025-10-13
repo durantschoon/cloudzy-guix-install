@@ -32,6 +32,7 @@ func GetEnvOrDefault(value, defaultValue string) string {
 }
 
 var commandLogWriter io.Writer
+var commandLogPath string
 
 // EnableCommandLogging enables tee-style logging for external command outputs
 // All outputs from RunCommand will be duplicated to the provided logfile.
@@ -42,6 +43,7 @@ func EnableCommandLogging(logPath string) error {
     }
     // Combine stdout with file for tee behavior
     commandLogWriter = io.MultiWriter(os.Stdout, f)
+    commandLogPath = logPath
     return nil
 }
 
@@ -56,6 +58,77 @@ func RunCommand(name string, args ...string) error {
         cmd.Stderr = os.Stderr
     }
     return cmd.Run()
+}
+
+// WriteInstallReceipt writes a summary of the installation to the target filesystem
+func WriteInstallReceipt(platform string, username string) error {
+    // Ensure destination directory
+    destDir := "/mnt/var/log/guix-install"
+    if err := os.MkdirAll(destDir, 0755); err != nil {
+        return err
+    }
+
+    // Compose receipt
+    timestamp := time.Now().Format(time.RFC3339)
+    receipt := []string{
+        "Guix Installation Receipt",
+        "==========================",
+        fmt.Sprintf("Timestamp: %s", timestamp),
+        fmt.Sprintf("Platform: %s", platform),
+        fmt.Sprintf("User: %s", username),
+        "",
+        "Kernel and initrd present:",
+    }
+
+    // Check kernel/initrd presence
+    if files, _ := filepath.Glob("/mnt/boot/vmlinuz-*"); len(files) > 0 {
+        receipt = append(receipt, fmt.Sprintf("- Kernel: %s", filepath.Base(files[0])))
+    } else {
+        receipt = append(receipt, "- Kernel: MISSING")
+    }
+    if files, _ := filepath.Glob("/mnt/boot/initrd-*"); len(files) > 0 {
+        receipt = append(receipt, fmt.Sprintf("- Initrd: %s", filepath.Base(files[0])))
+    } else {
+        receipt = append(receipt, "- Initrd: MISSING")
+    }
+
+    // GRUB status
+    if _, err := os.Stat("/mnt/boot/grub/grub.cfg"); err == nil {
+        receipt = append(receipt, "- GRUB config: present")
+    } else {
+        receipt = append(receipt, "- GRUB config: MISSING")
+    }
+    if _, err := os.Stat("/mnt/boot/efi/EFI/guix/grubx64.efi"); err == nil {
+        receipt = append(receipt, "- GRUB EFI binary: present")
+    } else {
+        receipt = append(receipt, "- GRUB EFI binary: MISSING")
+    }
+
+    // Write receipt file
+    receiptPath := filepath.Join(destDir, "install-receipt.txt")
+    if err := os.WriteFile(receiptPath, []byte(strings.Join(receipt, "\n")), 0644); err != nil {
+        return err
+    }
+
+    // Copy install log if available
+    if commandLogPath != "" {
+        _ = RunCommand("cp", commandLogPath, filepath.Join(destDir, "install.log"))
+    }
+
+    // Also copy a copy to user's home for convenience (if user exists)
+    if username == "" {
+        username = "guix"
+    }
+    userLogDir := filepath.Join("/mnt/home", username, "guix-install")
+    if err := os.MkdirAll(userLogDir, 0755); err == nil {
+        _ = RunCommand("cp", receiptPath, filepath.Join(userLogDir, "install-receipt.txt"))
+        if commandLogPath != "" {
+            _ = RunCommand("cp", commandLogPath, filepath.Join(userLogDir, "install.log"))
+        }
+    }
+
+    fmt.Printf("Installation receipt written to %s and copied to user's home\n", destDir)
+    return nil
 }
 
 // CreateSwapFile creates and activates a swap file at /mnt/swapfile

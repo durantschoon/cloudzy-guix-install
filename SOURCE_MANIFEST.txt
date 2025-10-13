@@ -8,19 +8,19 @@
 9ac6fdf11e7a5726cae6c23d6e40cb4b710e877b29ceced050c983094b5a6c32  ./cloudzy/install/01-partition.go
 86e3ea6686fce36067a9af868d212a2f07fe408f0a10d2245a96fb87d35275a7  ./cloudzy/install/02-mount.go
 445e65e81ab89bdf85dc2022942b1d72b2e89489ca78fe180c4eb7d53ad1878e  ./cloudzy/install/03-config.go
-cf5ed9b11bc6158229a0873577c63e59256d5bdde3682e5905f5fe07d756b3d4  ./cloudzy/install/04-system-init.go
+6ac0c7231dfbd33a8424c7173bf8ec0bc516632beaa8345240bc89f2d7df9a13  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
 1c79b2ca44dcd90b37bbbdcc1d768510675775c28a25d56be4ce790609ba9074  ./framework-dual/install/01-partition-check.go
 a61d5091611ff9cb3934099d34da1a629c381c678b78e734fb313726dfe5817b  ./framework-dual/install/02-mount-existing.go
 0f9b0e31b51ef3173696395799648ce88900cf2d0786727a580e920c2bac8251  ./framework-dual/install/03-config-dual-boot.go
-c57313bda83056839d659a2b1f8ae41ac4d1915f7cdd5521ed60ac1f435a2a68  ./framework-dual/install/04-system-init.go
+df8ae76b7c4d16f6bfecfeaa040ccfdc62b72adca991f219cae5291ddce13c0f  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
 610ed8d981690af8db391238a6919a4981f9a09fcd59001b77046e1112b2ae19  ./framework/install/01-partition.go
 9d670532b024190b95fc46a4a0840e8a5d720e0c13b2ab216c9f8ed82ca77ecc  ./framework/install/02-mount.go
 886c37261eeaa497237d64bd9fde47f530c7537616386456eb843d5f26469408  ./framework/install/03-config.go
-cf5ed9b11bc6158229a0873577c63e59256d5bdde3682e5905f5fe07d756b3d4  ./framework/install/04-system-init.go
+6ac0c7231dfbd33a8424c7173bf8ec0bc516632beaa8345240bc89f2d7df9a13  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
-3d69fe9ad1146ae1eef02e314b0bfb4a724e320e0c780df6541a33d89a6cb9e3  ./lib/common.go
+35983f114ee1cddaf5857eb139ba3ac7ec9cd3d16dae0f5555f9285a02bebb36  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script

@@ -132,7 +132,12 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println("  You can manually download them after first boot")
 	}
 
-	// Sync and unmount
+    // Write installation receipt and logs
+    if err := lib.WriteInstallReceipt(state.GuixPlatform, state.UserName); err != nil {
+        fmt.Printf("Warning: Failed to write installation receipt: %v\n", err)
+    }
+
+    // Sync and unmount
 	fmt.Println("Syncing filesystems...")
 	lib.RunCommand("sync")
 

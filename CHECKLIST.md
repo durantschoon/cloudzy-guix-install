@@ -424,7 +424,7 @@ parted /dev/nvme0n1 print     # Should show GPT names
 
 12. Swap partition detection/support
 13. Reserved space option
-14. Post-install receipt generation
+14. Post-install receipt generation — ✅ Implemented (writes receipt and installs logs)
 15. Optional: Generate fallback GRUB entry with `nomodeset`
 
 ---
