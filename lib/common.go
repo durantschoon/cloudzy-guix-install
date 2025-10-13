@@ -354,10 +354,15 @@ func SetupGRUBEFI() error {
 func SetupNonguixChannel() error {
 	fmt.Println("=== Setting up nonguix channel ===")
 	
-	// Create channels.scm file
+	// Create channels.scm file with introduction for authenticity
 	channelsContent := `(cons* (channel
         (name 'nonguix)
-        (url "https://gitlab.com/nonguix/nonguix"))
+        (url "https://gitlab.com/nonguix/nonguix")
+        (introduction
+         (make-channel-introduction
+          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+          (openpgp-fingerprint
+           "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
        %default-channels)`
 	
 	channelsPath := "/tmp/channels.scm"
@@ -367,8 +372,28 @@ func SetupNonguixChannel() error {
 	
 	// Authorize nonguix substitutes
 	fmt.Println("Authorizing nonguix substitutes...")
-	if err := RunCommand("wget", "-qO-", "https://substitutes.nonguix.org/signing-key.pub", "|", "guix", "archive", "--authorize"); err != nil {
-		fmt.Println("Warning: Could not authorize nonguix substitutes (may need manual setup)")
+	// Download key and pipe to guix archive
+	wgetCmd := exec.Command("wget", "-qO-", "https://substitutes.nonguix.org/signing-key.pub")
+	guixCmd := exec.Command("guix", "archive", "--authorize")
+
+	// Pipe wget output to guix
+	pipe, err := wgetCmd.StdoutPipe()
+	if err != nil {
+		fmt.Println("Warning: Could not setup pipe for key authorization")
+	} else {
+		guixCmd.Stdin = pipe
+		guixCmd.Stdout = os.Stdout
+		guixCmd.Stderr = os.Stderr
+
+		if err := wgetCmd.Start(); err != nil {
+			fmt.Println("Warning: Could not download nonguix key")
+		} else if err := guixCmd.Run(); err != nil {
+			fmt.Println("Warning: Could not authorize nonguix key")
+		} else if err := wgetCmd.Wait(); err != nil {
+			fmt.Println("Warning: wget failed after authorization")
+		} else {
+			fmt.Println("[OK] Nonguix substitutes authorized")
+		}
 	}
 	
 	// Pull with nonguix channel
