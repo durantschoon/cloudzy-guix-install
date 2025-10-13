@@ -137,8 +137,8 @@ func (s *Step03Config) RunClean(state *State) error {
 }
 
 func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets string) string {
-	config := fmt.Sprintf(`;; Minimal Guix System Configuration
-;; This is the bare minimum to get a bootable system.
+	config := fmt.Sprintf(`;; Minimal Guix System Configuration (Free Software Only)
+;; This is the bare minimum to get a bootable system using only free software.
 ;; Customize after installation using: guix-customize
 
 (use-modules (gnu)
@@ -150,7 +150,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
  (timezone "%s")
  (locale "en_US.utf8")
 
- ;; Explicitly specify kernel (required)
+ ;; Free software kernel (linux-libre)
  (kernel linux-libre)
  
  ;; Explicitly specify initrd
@@ -159,13 +159,12 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
 
  (bootloader
   (bootloader-configuration
-   (bootloader grub-efi-bootloader)
-   (target %s)
-   (timeout 5)
-   ))
+   (bootloader %s)
+   (targets %s)
+   (timeout 5)))
 
  (file-systems
-  (cons*          (file-system
+  (cons* (file-system
           (mount-point "/")
           (device (file-system-label "GUIX_ROOT"))
           (type "ext4"))
@@ -191,6 +190,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
 `,
 		state.HostName,    // host-name
 		state.Timezone,    // timezone
+		bootloader,        // bootloader
 		targets,           // targets
 		state.UserName,    // name
 		state.FullName,    // comment

@@ -48,11 +48,49 @@ func (s *Step01Partition) RunWarnings(state *State) error {
 	// Show current state
 	fmt.Println()
 	fmt.Println("=== Current Disk State ===")
-	lib.RunCommand("lsblk", state.Device, "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT")
+	lib.RunCommand("lsblk", state.Device, "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,LABEL")
 	fmt.Println()
 
-	fmt.Println("WARNING: This script will DESTROY ALL DATA on", state.Device)
-	fmt.Println("   This is a Cloudzy VPS - typically a fresh server.")
+	// Check for existing data
+	fmt.Println("=== Checking for Existing Data ===")
+	if s.hasExistingData(state.Device) {
+		fmt.Println("WARNING: Existing data detected on", state.Device)
+		fmt.Println("   This script will DESTROY ALL DATA on this device!")
+		fmt.Println("   If you have important data, STOP NOW!")
+		fmt.Println()
+		fmt.Println("   Press Ctrl+C to abort, or wait 10 seconds to continue...")
+		time.Sleep(10 * time.Second)
+		fmt.Println()
+	} else {
+		fmt.Println("No existing data detected - safe to proceed")
+		fmt.Println()
+	}
+
+	// Check disk size
+	fmt.Println("=== Checking Disk Size ===")
+	diskSizeGB := lib.GetDiskSizeGiB(state.Device)
+	fmt.Printf("Disk size: %.1fGiB\n", diskSizeGB)
+	
+	if diskSizeGB < 20 {
+		fmt.Printf("WARNING: Disk is very small (%.1fGiB) - may not have enough space for Guix\n", diskSizeGB)
+		fmt.Println("   Recommended minimum: 20GB")
+		fmt.Println("   Press Ctrl+C to abort, or wait 5 seconds to continue...")
+		time.Sleep(5 * time.Second)
+		fmt.Println()
+	} else if diskSizeGB < 40 {
+		fmt.Printf("WARNING: Disk is small (%.1fGiB) - may have limited space for packages\n", diskSizeGB)
+		fmt.Println("   Recommended: 40GB+ for comfortable usage")
+		fmt.Println("   Press Ctrl+C to abort, or wait 5 seconds to continue...")
+		time.Sleep(5 * time.Second)
+		fmt.Println()
+	} else {
+		fmt.Println("Disk size is adequate for Guix installation")
+		fmt.Println()
+	}
+
+	fmt.Println("=== Final Warning ===")
+	fmt.Println("This script will DESTROY ALL DATA on", state.Device)
+	fmt.Println("   This is designed for fresh VPS instances.")
 	fmt.Println("   If you have important data, STOP NOW!")
 	fmt.Println()
 
@@ -152,5 +190,18 @@ func (s *Step01Partition) makePartitionPath(device, partNum string) string {
 		return fmt.Sprintf("%sp%s", device, partNum)
 	}
 	return device + partNum
+}
+
+func (s *Step01Partition) hasExistingData(device string) bool {
+	// Check if device has any partitions
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	// If we have more than 1 line (device + partitions), there's existing data
+	return len(lines) > 1
 }
 

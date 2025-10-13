@@ -889,6 +889,24 @@ func GetPartitionSizeGiB(partition string) float64 {
 	return size / (1024 * 1024 * 1024)
 }
 
+// GetDiskSizeGiB gets the size of a disk device in GiB
+func GetDiskSizeGiB(device string) float64 {
+	cmd := exec.Command("lsblk", "-b", "-d", "-n", "-o", "SIZE", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	
+	sizeStr := strings.TrimSpace(string(output))
+	size, err := strconv.ParseFloat(sizeStr, 64)
+	if err != nil {
+		return 0
+	}
+	
+	// Convert bytes to GiB
+	return size / (1024 * 1024 * 1024)
+}
+
 // GetFreeSpaceGiB gets the free space on a device in GiB
 func GetFreeSpaceGiB(device string) float64 {
 	cmd := exec.Command("parted", device, "print", "free")
