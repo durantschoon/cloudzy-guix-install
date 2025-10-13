@@ -60,6 +60,104 @@ func RunCommand(name string, args ...string) error {
     return cmd.Run()
 }
 
+// RunCommandWithSpinner runs a command with a spinner when output is quiet
+func RunCommandWithSpinner(name string, args ...string) error {
+    cmd := exec.Command(name, args...)
+    
+    // Create pipes for stdout and stderr
+    stdout, err := cmd.StdoutPipe()
+    if err != nil {
+        return err
+    }
+    stderr, err := cmd.StderrPipe()
+    if err != nil {
+        return err
+    }
+    
+    // Start the command
+    if err := cmd.Start(); err != nil {
+        return err
+    }
+    
+    // Channel to signal when we have output
+    outputReceived := make(chan bool, 1)
+    
+    // Goroutine to read stdout
+    go func() {
+        scanner := bufio.NewScanner(stdout)
+        for scanner.Scan() {
+            line := scanner.Text()
+            if commandLogWriter != nil {
+                fmt.Fprintln(commandLogWriter, line)
+            } else {
+                fmt.Println(line)
+            }
+            // Signal that we have output
+            select {
+            case outputReceived <- true:
+            default:
+            }
+        }
+    }()
+    
+    // Goroutine to read stderr
+    go func() {
+        scanner := bufio.NewScanner(stderr)
+        for scanner.Scan() {
+            line := scanner.Text()
+            if commandLogWriter != nil {
+                fmt.Fprintln(commandLogWriter, line)
+            } else {
+                fmt.Fprintln(os.Stderr, line)
+            }
+            // Signal that we have output
+            select {
+            case outputReceived <- true:
+            default:
+            }
+        }
+    }()
+    
+    // Spinner goroutine
+    spinner := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+    spinnerIndex := 0
+    lastOutputTime := time.Now()
+    
+    go func() {
+        ticker := time.NewTicker(200 * time.Millisecond)
+        defer ticker.Stop()
+        
+        for {
+            select {
+            case <-ticker.C:
+                // Check if we've received output recently
+                if time.Since(lastOutputTime) > 3*time.Second {
+                    // Show spinner
+                    fmt.Printf("\r%s Working... (this may take 5-30 minutes)", spinner[spinnerIndex])
+                    os.Stdout.Sync()
+                    spinnerIndex = (spinnerIndex + 1) % len(spinner)
+                }
+            case <-outputReceived:
+                // We have output, clear spinner and update time
+                fmt.Printf("\r%s", strings.Repeat(" ", 80)) // Clear line
+                fmt.Printf("\r")
+                os.Stdout.Sync()
+                lastOutputTime = time.Now()
+            }
+        }
+    }()
+    
+    // Wait for command to complete
+    err = cmd.Wait()
+    
+    // Clear any remaining spinner
+    fmt.Printf("\r%s", strings.Repeat(" ", 80))
+    fmt.Printf("\r")
+    os.Stdout.Sync()
+    
+    return err
+}
+
 // WriteInstallReceipt writes a summary of the installation to the target filesystem
 func WriteInstallReceipt(platform string, username string) error {
     // Ensure destination directory
@@ -577,6 +675,19 @@ func RunGuixSystemInit() error {
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
 	fmt.Println()
+	fmt.Println("NOTE: If you're in screen/tmux and see strange characters, that's normal.")
+	fmt.Println("     Use Ctrl+A+D to detach from screen, or Ctrl+B+D for tmux.")
+	fmt.Println()
+	fmt.Println("If output seems to stop for several minutes, the process is likely still working.")
+	fmt.Println("You can check progress by:")
+	fmt.Println("  1. Press Ctrl+Z to suspend this process")
+	fmt.Println("  2. Run: tail -f /tmp/guix-install.log")
+	fmt.Println("  3. Run: ps aux | grep guix")
+	fmt.Println("  4. Run: fg to resume in foreground, OR bg to continue in background")
+	fmt.Println()
+	fmt.Println("NOTE: If you don't run 'fg' or 'bg', the installer will stay suspended!")
+	fmt.Println("Alternatively, open another terminal and run the same commands.")
+	fmt.Println()
 
 	maxRetries := 3
 	var lastErr error
@@ -590,7 +701,7 @@ func RunGuixSystemInit() error {
 
 		// Use time-machine with nonguix channel for system init
 		channelsPath := "/tmp/channels.scm"
-		if err := RunCommand("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
+		if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			if attempt < maxRetries {
