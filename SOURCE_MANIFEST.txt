@@ -5,7 +5,7 @@
 
 ## Go Source Files
 
-58b61127343b1ff06b47f9c1adae0c3565c6e4b6684024f2c678a4304f5a44a4  ./cloudzy/install/01-partition.go
+c01e7558cdb640e9ced1f4c6616afc5339a6eb50f7cc8e530658f0067d63ba42  ./cloudzy/install/01-partition.go
 09983a5d7929e673dbc647926fbb2c13db65e7007e2be25014a23c1d0016e889  ./cloudzy/install/02-mount.go
 dfa01511568306641c6464b9f30268ab24bb917c12d32a1abfc6aa2f28430a6f  ./cloudzy/install/03-config.go
 fb7593d9966eb3f081e9bb8051051a626140b546d1829d899e3456229f069ab6  ./cloudzy/install/04-system-init.go

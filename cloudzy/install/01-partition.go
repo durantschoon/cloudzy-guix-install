@@ -103,9 +103,13 @@ func (s *Step01Partition) RunClean(state *State) error {
 		return fmt.Errorf("DEVICE not set")
 	}
 
-	// Check if device is mounted
+	// Check if device is mounted and unmount for idempotency
 	if s.isDeviceMounted(state.Device) {
-		return fmt.Errorf("device %s is currently mounted - please unmount first", state.Device)
+		fmt.Printf("Device %s is currently mounted. Unmounting for idempotency...\n", state.Device)
+		if err := s.unmountDevice(state.Device); err != nil {
+			return fmt.Errorf("failed to unmount device %s: %w", state.Device, err)
+		}
+		fmt.Println("Device unmounted successfully")
 	}
 
 	fmt.Println("Creating partitions...")
@@ -203,5 +207,68 @@ func (s *Step01Partition) hasExistingData(device string) bool {
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	// If we have more than 1 line (device + partitions), there's existing data
 	return len(lines) > 1
+}
+
+func (s *Step01Partition) unmountDevice(device string) error {
+	// Get all mount points for this device and its partitions
+	cmd := exec.Command("findmnt", "-n", "-o", "TARGET", device)
+	output, err := cmd.Output()
+	if err != nil {
+		// findmnt might not be available, try alternative method
+		return s.unmountDeviceAlternative(device)
+	}
+	
+	mountPoints := strings.Split(strings.TrimSpace(string(output)), "\n")
+	
+	// Unmount all mount points in reverse order (deepest first)
+	for i := len(mountPoints) - 1; i >= 0; i-- {
+		mountPoint := strings.TrimSpace(mountPoints[i])
+		if mountPoint == "" {
+			continue
+		}
+		
+		fmt.Printf("Unmounting %s...\n", mountPoint)
+		if err := lib.RunCommand("umount", mountPoint); err != nil {
+			fmt.Printf("Warning: Failed to unmount %s: %v\n", mountPoint, err)
+			// Try lazy unmount as fallback
+			lib.RunCommand("umount", "-l", mountPoint)
+		}
+	}
+	
+	return nil
+}
+
+func (s *Step01Partition) unmountDeviceAlternative(device string) error {
+	// Alternative method using mount command and grep
+	cmd := exec.Command("mount")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get mount information: %w", err)
+	}
+	
+	lines := strings.Split(string(output), "\n")
+	var mountPoints []string
+	
+	for _, line := range lines {
+		if strings.Contains(line, device) {
+			// Extract mount point (second field)
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				mountPoints = append(mountPoints, fields[1])
+			}
+		}
+	}
+	
+	// Unmount all found mount points
+	for _, mountPoint := range mountPoints {
+		fmt.Printf("Unmounting %s...\n", mountPoint)
+		if err := lib.RunCommand("umount", mountPoint); err != nil {
+			fmt.Printf("Warning: Failed to unmount %s: %v\n", mountPoint, err)
+			// Try lazy unmount as fallback
+			lib.RunCommand("umount", "-l", mountPoint)
+		}
+	}
+	
+	return nil
 }
 
