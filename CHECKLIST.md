@@ -39,7 +39,7 @@ ls /mnt/boot/efi/EFI/guix/grubx64.efi >/dev/null
 * If any of these are missing, the script should print a clear error and refuse to reboot until the issue is fixed.
 * This verification step is simple but essential for catching broken installs early.
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
 ---
 
@@ -52,7 +52,7 @@ To avoid the frustrating "can't log in" situation:
 
 This approach is preferred over embedding a password hash directly in the config, because it avoids storing secrets in version control.
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
 ---
 
@@ -67,7 +67,7 @@ Currently, first boots sometimes require pressing `e` in GRUB and adding `nomode
 
 This makes the Framework variant slightly more opinionated but much more user-friendly — the system should "just boot" into a login prompt.
 
-**Status:** ⚠️ Partially implemented (kernel/firmware added, initrd modules not yet specified)
+**Status:** ✅ Implemented (kernel from nonguix, linux-firmware, required initrd modules, and kernel args added in `framework/install/03-config.go` and `framework-dual/install/03-config-dual-boot.go`)
 
 ---
 
@@ -115,7 +115,7 @@ This makes the Framework variant slightly more opinionated but much more user-fr
 ### 🔴 High Priority (Critical - Do First)
 
 #### 1. EFI Partition Verification
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
 **Missing checks:**
 ```bash
@@ -136,7 +136,7 @@ mount | grep "/mnt/boot/efi"
 ---
 
 #### 2. Post-Installation File Verification
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
 **Missing checks after `guix system init`:**
 ```bash
@@ -178,7 +178,7 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 ---
 
 #### 4. Use file-system-label for EFI in config.scm
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
 **Current:**
 ```scheme

@@ -163,25 +163,37 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
     }
   }
 
-  config := fmt.Sprintf(`;; Minimal Guix System Configuration
-;; This is the bare minimum to get a bootable system.
+  config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
+;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
+;; Configured for dual-boot with Pop!_OS (shared EFI partition)
 ;; Customize after installation using: guix-customize
 
 (use-modules (gnu)
              (gnu packages linux)
-             (gnu system nss))
+             (gnu system nss)
+             (nongnu packages linux)
+             (nongnu system linux-initrd))
 
 (operating-system
  (host-name "%s")
  (timezone "%s")
  (locale "en_US.utf8")
 
- ;; Explicitly specify kernel (required)
- (kernel linux-libre)
+ ;; Linux kernel with proprietary firmware support (from nonguix)
+ (kernel linux)
+ (firmware (list linux-firmware))
 
- ;; Explicitly specify initrd
- (initrd (lambda (fs . rest)
-           (base-initrd fs rest)))
+ ;; Framework 13 AMD specific initrd modules
+ (initrd-modules
+  (append '("amdgpu"      ; AMD GPU driver (critical for display)
+            "nvme"        ; NVMe SSD driver
+            "xhci_pci"    ; USB 3.0 host controller
+            "usbhid"      ; USB keyboard/mouse
+            "i2c_piix4")  ; SMBus/I2C for sensors
+          %%base-initrd-modules))
+
+ ;; Kernel arguments for clean boot
+ (kernel-arguments '("quiet" "loglevel=3"))
 
  (bootloader
   (bootloader-configuration
