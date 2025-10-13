@@ -4,6 +4,7 @@ package lib
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -30,12 +31,31 @@ func GetEnvOrDefault(value, defaultValue string) string {
 	return defaultValue
 }
 
+var commandLogWriter io.Writer
+
+// EnableCommandLogging enables tee-style logging for external command outputs
+// All outputs from RunCommand will be duplicated to the provided logfile.
+func EnableCommandLogging(logPath string) error {
+    f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        return err
+    }
+    // Combine stdout with file for tee behavior
+    commandLogWriter = io.MultiWriter(os.Stdout, f)
+    return nil
+}
+
 // RunCommand runs a command and returns an error if it fails
 func RunCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+    cmd := exec.Command(name, args...)
+    if commandLogWriter != nil {
+        cmd.Stdout = commandLogWriter
+        cmd.Stderr = commandLogWriter
+    } else {
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+    }
+    return cmd.Run()
 }
 
 // CreateSwapFile creates and activates a swap file at /mnt/swapfile
@@ -198,8 +218,10 @@ func VerifyESP() error {
 	if !strings.Contains(string(output), "vfat") {
 		fmt.Println("ERROR: /mnt/boot/efi is not mounted as vfat filesystem")
 		fmt.Println("Current mount info:")
-		RunCommand("df", "-T", "/mnt/boot/efi")
-		RunCommand("mount", "|", "grep", "/mnt/boot/efi")
+        RunCommand("df", "-T", "/mnt/boot/efi")
+        // Fallback: show mounts and filter client-side
+        mounts, _ := ioutil.ReadFile("/proc/mounts")
+        fmt.Println(string(mounts))
 		return fmt.Errorf("ESP verification failed: not a vfat filesystem")
 	}
 	fmt.Println("[OK] ESP is correctly mounted as vfat")
@@ -529,6 +551,31 @@ func GetFreeSpaceGiB(device string) float64 {
 	}
 	
 	return 0
+}
+
+// GetMountFreeSpaceGiB returns the available space on a mounted path in GiB
+func GetMountFreeSpaceGiB(path string) float64 {
+    cmd := exec.Command("df", "-BG", path)
+    output, err := cmd.Output()
+    if err != nil {
+        return 0
+    }
+    lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+    if len(lines) < 2 {
+        return 0
+    }
+    fields := strings.Fields(lines[len(lines)-1])
+    if len(fields) < 4 {
+        return 0
+    }
+    avail := fields[3]
+    if strings.HasSuffix(avail, "G") {
+        avail = strings.TrimSuffix(avail, "G")
+    }
+    if v, err := strconv.ParseFloat(avail, 64); err == nil {
+        return v
+    }
+    return 0
 }
 
 // FindFreeSpaceStart finds the start sector for free space on a device

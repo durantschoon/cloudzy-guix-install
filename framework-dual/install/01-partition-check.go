@@ -149,8 +149,19 @@ func (s *Step01PartitionCheck) RunClean(state *State) error {
 		if s.isPartitionFormatted(root) {
 			fmt.Println("Partition is already formatted as ext4")
 			fmt.Println("Skipping format step (idempotent - safe for reruns)")
-			fmt.Printf("ROOT is %s and EFI is %s\n", state.Root, state.EFI)
-			return nil
+    fmt.Printf("ROOT is %s and EFI is %s\n", state.Root, state.EFI)
+    fmt.Println()
+    fmt.Println("Verifying partition labels...")
+    if state.Device != "" {
+        if strings.Contains(state.Device, "nvme") {
+            lib.RunCommand("fatlabel", state.Device+"p1")
+            lib.RunCommand("e2label", state.Device+"p2")
+        } else {
+            lib.RunCommand("fatlabel", state.Device+"1")
+            lib.RunCommand("e2label", state.Device+"2")
+        }
+    }
+    return nil
 		}
 
 		fmt.Println("This partition will be formatted (all data will be lost)")

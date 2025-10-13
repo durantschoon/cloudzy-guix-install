@@ -39,6 +39,8 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 }
 
 func (s *Step04SystemInit) RunClean(state *State) error {
+    // Enable command logging
+    lib.EnableCommandLogging("/tmp/guix-install.log")
 	// Set up temporary directory on the target partition (has more space than ISO)
 	tmpDir := "/mnt/var/tmp"
 	if err := os.MkdirAll(tmpDir, 0777); err != nil {

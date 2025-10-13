@@ -34,12 +34,13 @@ func (s *Step02Mount) RunWarnings(state *State) error {
 
 	fmt.Println("=== Step 2: Mount and Store Setup ===")
 	fmt.Println()
-	fmt.Println("This step will:")
+    fmt.Println("This step will:")
 	fmt.Println("  1. Mount root partition to /mnt (if not already mounted)")
 	fmt.Println("  2. Stop guix-daemon temporarily")
 	fmt.Println("  3. Copy Guix store from ISO to /mnt/gnu/store (if not already done)")
 	fmt.Println("  4. Copy /var/guix database to /mnt/var/guix")
-	fmt.Println("  8. Mount EFI partition to /mnt/boot/efi")
+    fmt.Println("  8. Mount EFI partition to /mnt/boot/efi")
+    fmt.Println("  9. Verify labels exist before mounting and warn on low free space")
 	fmt.Println()
 	fmt.Println("Note: Store is copied to disk to avoid 'no space left' errors.")
 	fmt.Println("      The ISO's RAM filesystem is tiny - we use your disk instead!")
@@ -69,7 +70,15 @@ func (s *Step02Mount) RunClean(state *State) error {
 		return nil
 	}
 
-	// Mount root partition by label if not mounted
+    // Basic label existence checks before mount
+    if _, err := os.Stat("/dev/disk/by-label/GUIX_ROOT"); err != nil {
+        return fmt.Errorf("label GUIX_ROOT not found under /dev/disk/by-label")
+    }
+    if _, err := os.Stat("/dev/disk/by-label/EFI"); err != nil {
+        return fmt.Errorf("label EFI not found under /dev/disk/by-label")
+    }
+
+    // Mount root partition by label if not mounted
 	if !lib.IsMounted("/mnt") {
 		fmt.Println("Mounting GUIX_ROOT to /mnt")
 		if err := lib.RunCommand("mount", "/dev/disk/by-label/GUIX_ROOT", "/mnt"); err != nil {
@@ -78,6 +87,12 @@ func (s *Step02Mount) RunClean(state *State) error {
 	} else {
 		fmt.Println("/mnt is already mounted")
 	}
+
+    // Free space check (warn if < 40 GiB available on root after mount)
+    avail := lib.GetMountFreeSpaceGiB("/mnt")
+    if avail > 0 && avail < 40 {
+        fmt.Printf("WARNING: Only %.1fGiB free on /mnt. Installation may fail due to low space.\n", avail)
+    }
 
 	// Create directories
 	dirs := []string{"/mnt/gnu/store", "/mnt/var/guix"}
@@ -149,7 +164,7 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 	fmt.Println("All critical directories created successfully")
 
-	// Mount ESP
+    // Mount ESP
 	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
 		return err
 	}

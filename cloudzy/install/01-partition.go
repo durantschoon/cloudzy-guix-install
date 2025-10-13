@@ -90,7 +90,7 @@ func (s *Step01Partition) RunClean(state *State) error {
 	fmt.Println()
 
 	// Format partitions with labels
-	fmt.Printf("Formatting %s as FAT32 with label EFI...\n", state.EFI)
+    fmt.Printf("Formatting %s as FAT32 with label EFI...\n", state.EFI)
 	if err := lib.RunCommand("mkfs.vfat", "-F32", "-n", "EFI", state.EFI); err != nil {
 		return err
 	}
@@ -99,6 +99,11 @@ func (s *Step01Partition) RunClean(state *State) error {
 	if err := lib.RunCommand("mkfs.ext4", "-F", "-L", "GUIX_ROOT", state.Root); err != nil {
 		return err
 	}
+
+    fmt.Println()
+    fmt.Println("Verifying partition labels...")
+    lib.RunCommand("fatlabel", state.EFI)
+    lib.RunCommand("e2label", state.Root)
 
 	fmt.Println()
 	fmt.Println("Partitioning complete!")

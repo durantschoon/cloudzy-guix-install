@@ -74,39 +74,53 @@ This makes the Framework variant slightly more opinionated but much more user-fr
 ## ✅ What We're Doing Correctly
 
 ### 1. cow-store Usage
-- ✅ **Added `herd start cow-store /mnt` before `guix system init`**
-- ✅ Never using `mount --bind /mnt/gnu /gnu`
+
+* ✅ **Added `herd start cow-store /mnt` before `guix system init`**
+
+* ✅ Never using `mount --bind /mnt/gnu /gnu`
 
 ### 2. Partition Labeling
-- ✅ **Using uppercase labels: `GUIX_ROOT` and `EFI`**
-- ✅ Setting GPT partition names via `parted name`
-- ✅ Setting filesystem labels via `mkfs.ext4 -L` and `mkfs.vfat -n`
+
+* ✅ **Using uppercase labels: `GUIX_ROOT` and `EFI`**
+
+* ✅ Setting GPT partition names via `parted name`
+* ✅ Setting filesystem labels via `mkfs.ext4 -L` and `mkfs.vfat -n`
 
 ### 3. Installation Command
-- ✅ Using `--fallback` flag for local builds
-- ✅ Using multiple substitute URLs for redundancy
-- ✅ Retry logic (3 attempts with 10s delay)
+
+* ✅ Using `--fallback` flag for local builds
+
+* ✅ Using multiple substitute URLs for redundancy
+* ✅ Retry logic (3 attempts with 10s delay)
 
 ### 4. Mount Order
-- ✅ Correct sequence: root first, then EFI at `/mnt/boot/efi`
-- ✅ Creating mount points before mounting
+
+* ✅ Correct sequence: root first, then EFI at `/mnt/boot/efi`
+
+* ✅ Creating mount points before mounting
 
 ### 5. Storage Management
-- ✅ Setting `TMPDIR=/mnt/var/tmp` to use target disk
-- ✅ Setting `XDG_CACHE_HOME=/mnt/var/cache`
-- ✅ Clearing substitute cache
+
+* ✅ Setting `TMPDIR=/mnt/var/tmp` to use target disk
+
+* ✅ Setting `XDG_CACHE_HOME=/mnt/var/cache`
+* ✅ Clearing substitute cache
 
 ### 6. Safety Features
-- ✅ Checking for Guix live ISO environment
-- ✅ Idempotency checks (skip if already formatted)
-- ✅ User confirmation prompts for destructive operations
+
+* ✅ Checking for Guix live ISO environment
+
+* ✅ Idempotency checks (skip if already formatted)
+* ✅ User confirmation prompts for destructive operations
 
 ### 7. Documentation & Meta
-- ✅ Label everything consistently (UPPERCASE: EFI, GUIX_ROOT)
-- ✅ Name consistently across systems
-- ✅ Comment generously
-- ✅ Treat install as idempotent
-- ✅ Document the why (CLAUDE.md, README files)
+
+* ✅ Label everything consistently (UPPERCASE: EFI, GUIX_ROOT)
+
+* ✅ Name consistently across systems
+* ✅ Comment generously
+* ✅ Treat install as idempotent
+* ✅ Document the why (CLAUDE.md, README files)
 
 ---
 
@@ -115,9 +129,11 @@ This makes the Framework variant slightly more opinionated but much more user-fr
 ### 🔴 High Priority (Critical - Do First)
 
 #### 1. EFI Partition Verification
+
 **Status:** ✅ Implemented
 
 **Missing checks:**
+
 ```bash
 # Verify ESP is FAT32
 df -T /mnt/boot/efi | grep -q vfat || { echo "ERROR: EFI not FAT32"; exit 1; }
@@ -127,18 +143,21 @@ mount | grep "/mnt/boot/efi"
 ```
 
 **Why it matters:**
-- Most common installation failure: "doesn't look like an EFI partition"
-- Early detection prevents wasted installation time
-- Provides clear error messages
+
+* Most common installation failure: "doesn't look like an EFI partition"
+* Early detection prevents wasted installation time
+* Provides clear error messages
 
 **Impact:** ⭐⭐⭐ High - Prevents cryptic errors during `guix system init`
 
 ---
 
 #### 2. Post-Installation File Verification
+
 **Status:** ✅ Implemented
 
 **Missing checks after `guix system init`:**
+
 ```bash
 # Verify kernel and initrd
 ls /mnt/boot/vmlinuz-* || echo "ERROR: No kernel"
@@ -151,36 +170,42 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 ```
 
 **Why it matters:**
-- Detects incomplete installations before reboot
-- Prevents "no bootable device" scenarios
-- Allows immediate retry while still in live environment
+
+* Detects incomplete installations before reboot
+* Prevents "no bootable device" scenarios
+* Allows immediate retry while still in live environment
 
 **Impact:** ⭐⭐⭐ High - Prevents failed boot experiences
 
 ---
 
 #### 3. Label Existence Check Before Mount
-**Status:** ❌ Not implemented
+
+**Status:** ✅ Implemented
 
 **Missing checks:**
+
 ```bash
 [ -e /dev/disk/by-label/EFI ] || { echo "ERROR: No EFI label"; exit 1; }
 [ -e /dev/disk/by-label/GUIX_ROOT ] || { echo "ERROR: No GUIX_ROOT label"; exit 1; }
 ```
 
 **Why it matters:**
-- Verifies labels exist before attempting mount
-- Provides clear error if labeling step failed
-- Prevents confusing mount errors
+
+* Verifies labels exist before attempting mount
+* Provides clear error if labeling step failed
+* Prevents confusing mount errors
 
 **Impact:** ⭐⭐⭐ High - Prevents mount failures
 
 ---
 
 #### 4. Use file-system-label for EFI in config.scm
+
 **Status:** ✅ Implemented
 
 **Current:**
+
 ```scheme
 (file-system
   (mount-point "/boot/efi")
@@ -189,6 +214,7 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 ```
 
 **Should be:**
+
 ```scheme
 (file-system
   (mount-point "/boot/efi")
@@ -197,9 +223,10 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 ```
 
 **Why it matters:**
-- Root already uses UUID (good!)
-- EFI should use label for consistency
-- Prevents boot issues if device enumeration changes
+
+* Root already uses UUID (good!)
+* EFI should use label for consistency
+* Prevents boot issues if device enumeration changes
 
 **Impact:** ⭐⭐⭐ Medium-High - Can cause boot failures in some scenarios
 
@@ -208,9 +235,11 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 ### 🟡 Medium Priority
 
 #### 5. Mount by Label in Scripts
-**Status:** ❌ Not implemented
+
+**Status:** ✅ Implemented
 
 **Current approach:**
+
 ```go
 // We mount by device path
 state.EFI = "/dev/nvme0n1p1"
@@ -218,6 +247,7 @@ state.Root = "/dev/nvme0n1p2"
 ```
 
 **Should be:**
+
 ```go
 // Mount by label for reliability
 state.EFI = "/dev/disk/by-label/EFI"
@@ -225,18 +255,21 @@ state.Root = "/dev/disk/by-label/GUIX_ROOT"
 ```
 
 **Why it matters:**
-- Device paths can change between boots (especially with multiple disks)
-- Labels are stable and don't depend on device enumeration order
-- This is especially important for dual-boot scenarios
+
+* Device paths can change between boots (especially with multiple disks)
+* Labels are stable and don't depend on device enumeration order
+* This is especially important for dual-boot scenarios
 
 **Impact:** ⭐⭐ Medium-High - Can cause boot failures if device order changes
 
 ---
 
 #### 6. Bootloader Timeout Configuration
+
 **Status:** ❌ Not set
 
 **Current:**
+
 ```scheme
 (bootloader-configuration
   (bootloader grub-efi-bootloader)
@@ -245,6 +278,7 @@ state.Root = "/dev/disk/by-label/GUIX_ROOT"
 ```
 
 **Should include:**
+
 ```scheme
 (bootloader-configuration
   (bootloader grub-efi-bootloader)
@@ -254,18 +288,21 @@ state.Root = "/dev/disk/by-label/GUIX_ROOT"
 ```
 
 **Why it matters:**
-- Default timeout is 0 (hidden menu) - users can't select OS in dual-boot
-- Framework-dual needs visible menu to access Pop!_OS
-- F12 firmware menu is a workaround, not a solution
+
+* Default timeout is 0 (hidden menu) - users can't select OS in dual-boot
+* Framework-dual needs visible menu to access Pop!_OS
+* F12 firmware menu is a workaround, not a solution
 
 **Impact:** ⭐⭐ Medium - Affects dual-boot usability
 
 ---
 
 #### 7. Free Space Check (All Installers)
-**Status:** ⚠️ Framework-dual only
+
+**Status:** ✅ Implemented (warns if < 40GiB after mount)
 
 **Missing for cloudzy and framework:**
+
 ```bash
 # Check free space before installation
 available=$(df -BG /mnt | tail -1 | awk '{print $4}' | sed 's/G//')
@@ -273,25 +310,29 @@ available=$(df -BG /mnt | tail -1 | awk '{print $4}' | sed 's/G//')
 ```
 
 **Why it matters:**
-- Prevents running out of space during installation
-- Early warning for users
+
+* Prevents running out of space during installation
+* Early warning for users
 
 **Impact:** ⭐⭐ Medium - Installation will fail anyway, but later
 
 ---
 
 #### 8. Installation Logging
-**Status:** ❌ Not implemented
+
+**Status:** ✅ Implemented (tee-style to /tmp/guix-install.log)
 
 **Should add:**
+
 ```bash
 exec > >(tee /tmp/guix-install.log) 2>&1
 ```
 
 **Why it matters:**
-- Helps with debugging failures
-- Provides installation receipt
-- Users can review what happened
+
+* Helps with debugging failures
+* Provides installation receipt
+* Users can review what happened
 
 **Impact:** ⭐⭐ Medium - Improves troubleshooting
 
@@ -300,9 +341,11 @@ exec > >(tee /tmp/guix-install.log) 2>&1
 ### 🟢 Low Priority (Nice to Have)
 
 #### 9. Label Verification Output
+
 **Status:** ❌ Not shown to user
 
 **Should display:**
+
 ```bash
 # Show labels after formatting
 echo "Verifying partition labels..."
@@ -312,15 +355,17 @@ parted /dev/nvme0n1 print     # Should show GPT names
 ```
 
 **Why it matters:**
-- Confirms labels are correctly set
-- Helps users debug if something goes wrong
-- Educational for users learning Guix
+
+* Confirms labels are correctly set
+* Helps users debug if something goes wrong
+* Educational for users learning Guix
 
 **Impact:** ⭐ Low - Nice for debugging
 
 ---
 
 #### 10. Swap Partition Support
+
 **Status:** ⚠️ Only swapfile support
 
 **Current:** Only supports creating swapfile in step 4
@@ -328,23 +373,27 @@ parted /dev/nvme0n1 print     # Should show GPT names
 **Could add:** Detection and use of existing swap partition
 
 **Why it matters:**
-- Some users prefer swap partitions
-- More traditional setup
+
+* Some users prefer swap partitions
+* More traditional setup
 
 **Impact:** ⭐ Low - Swapfile works fine
 
 ---
 
 #### 11. Reserved Disk Space Option
+
 **Status:** ❌ Not implemented
 
 **Could add:**
-- Allow leaving 10-20GB unallocated
-- User configurable via env var
+
+* Allow leaving 10-20GB unallocated
+* User configurable via env var
 
 **Why it matters:**
-- Flexibility for future partitions
-- Some users prefer reserved space
+
+* Flexibility for future partitions
+* Some users prefer reserved space
 
 **Impact:** ⭐ Low - Most users don't need this
 
@@ -353,23 +402,24 @@ parted /dev/nvme0n1 print     # Should show GPT names
 ## 🔧 Recommended Implementation Order
 
 ### Phase 1: Critical Safety Checks (30 min - Do Now)
+
 1. ✅ Add pre-init EFI verification (vfat check)
 2. ✅ Add label existence checks before mount
 3. ✅ Add post-init file verification (kernel, initrd, GRUB)
 4. ✅ Use file-system-label for EFI in config
 
 ### Phase 2: Password & Hardware Defaults (1 hour - Next)
+
 5. ✅ Set user password via chroot before reboot
 6. ✅ Add Framework-specific initrd modules
 7. ✅ Add bootloader timeout for dual-boot
 
 ### Phase 3: Robustness Improvements (1-2 hours - When Time Permits)
-8. Switch to mount-by-label in mount scripts
-9. Add free space checks to all installers
-10. Add installation logging option
-11. Add label verification output
+
+8. Add label verification output
 
 ### Phase 4: Nice-to-Haves (Optional)
+
 12. Swap partition detection/support
 13. Reserved space option
 14. Post-install receipt generation
@@ -391,12 +441,12 @@ parted /dev/nvme0n1 print     # Should show GPT names
 
 ### By Category
 
-- **Partitioning:** 6/7 (86%) ✅
-- **Mounting:** 3/7 (43%) ⚠️ Needs verification checks
-- **Bootloader:** 4/6 (67%) ⚠️ Needs post-install checks
-- **Guix-Specific:** 6/7 (86%) ✅
-- **Automation:** 3/5 (60%) ⚠️ Needs logging and checks
-- **Meta Practices:** 6/6 (100%) ✅
+* **Partitioning:** 6/7 (86%) ✅
+* **Mounting:** 3/7 (43%) ⚠️ Needs verification checks
+* **Bootloader:** 4/6 (67%) ⚠️ Needs post-install checks
+* **Guix-Specific:** 6/7 (86%) ✅
+* **Automation:** 3/5 (60%) ⚠️ Needs logging and checks
+* **Meta Practices:** 6/6 (100%) ✅
 
 **Overall:** ~70% complete
 
