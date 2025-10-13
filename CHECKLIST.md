@@ -4,6 +4,17 @@ Note: This checklist is the source of truth for implementation status. After add
 
 The goal of this project is to create a **reliable, repeatable, and hardware-aware Guix OS installation flow** tailored to the Framework 13 laptop. The installer should maximize success on first boot while remaining portable and adaptable for other systems.
 
+## 🔄 Currently Working On
+
+**Status:** In Progress
+
+**Active Tasks:**
+1. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
+2. **Channel pinning and trusted substitutes** - Implement opt-in Nonguix trust, channel pinning for reproducible builds
+3. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
+
+**Context:** These are high-priority improvements identified by a seasoned Guix user review. Focus on user experience and reliability enhancements.
+
 ---
 
 ## 🧭 Core Design Principles

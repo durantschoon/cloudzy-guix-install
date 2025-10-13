@@ -771,13 +771,34 @@ func DownloadCustomizationTools(platform string, username string) error {
 	}
 
 	// Download customize script
-	fmt.Printf("Downloading %s customize script...\n", platform)
+	customizePath := filepath.Join(destDir, "customize")
 	customizeURL := fmt.Sprintf("%s/%s/postinstall/customize", rawBase, platform)
-	if err := DownloadFile(customizeURL, filepath.Join(destDir, "customize")); err != nil {
-		return fmt.Errorf("failed to download customize script: %w", err)
+	
+	// Check if customize script already exists
+	if _, err := os.Stat(customizePath); err == nil {
+		fmt.Printf("Customize script already exists at %s\n", customizePath)
+		fmt.Print("Do you want to replace it with the latest version? [y/N] ")
+		
+		var response string
+		fmt.Scanln(&response)
+		if response != "y" && response != "Y" {
+			fmt.Println("Keeping existing customize script")
+		} else {
+			fmt.Printf("Downloading %s customize script...\n", platform)
+			if err := DownloadFile(customizeURL, customizePath); err != nil {
+				return fmt.Errorf("failed to download customize script: %w", err)
+			}
+			os.Chmod(customizePath, 0755)
+			fmt.Println("Customize script updated")
+		}
+	} else {
+		fmt.Printf("Downloading %s customize script...\n", platform)
+		if err := DownloadFile(customizeURL, customizePath); err != nil {
+			return fmt.Errorf("failed to download customize script: %w", err)
+		}
+		os.Chmod(customizePath, 0755)
+		fmt.Println("Customize script installed")
 	}
-	os.Chmod(filepath.Join(destDir, "customize"), 0755)
-	fmt.Println("Customize script installed")
 
 	// Download shared recipes
 	fmt.Println("Downloading shared recipes...")
