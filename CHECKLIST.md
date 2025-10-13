@@ -223,9 +223,15 @@ User must explicitly consent before trusting substitutes.nonguix.org.
 
 #### 7. Onboarding Clarity and Data‑Loss Warnings
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Add a prominent decision box (cloudzy vs framework vs framework-dual), explicit data‑loss warnings for wipe flows, Secure Boot note for Framework, and minimum disk/RAM guidance.
+Added to README.md and platform-specific docs:
+
+* Platform decision table with data safety warnings
+* Clear "WIPES ENTIRE DISK" warnings for cloudzy and framework
+* Hardware requirements (40GB+ disk, 2GB+ RAM, x86_64/aarch64)
+* Secure Boot status (not supported - must disable in BIOS)
+* Framework 13 BIOS access instructions (F2=BIOS, F12=Boot menu)
 
 **Impact:** ⭐⭐⭐ High - Prevents user errors and surprises
 
