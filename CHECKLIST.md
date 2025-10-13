@@ -154,6 +154,38 @@ mount | grep "/mnt/boot/efi"
 
 ---
 
+#### 5. Harden Channels and Substitutes
+
+**Status:** ❌ Not implemented
+
+**Add:**
+
+```scheme
+;; /mnt/etc/channels.scm
+(list (channel
+       (name 'guix)
+       (url "https://git.savannah.gnu.org/git/guix.git")
+       (commit "<PINNED-COMMIT>"))
+      (channel
+       (name 'nonguix)
+       (url "https://gitlab.com/nonguix/nonguix")
+       (commit "<PINNED-COMMIT>")))
+```
+
+Persist substitute URLs and authorize keys (e.g., Nonguix key) during install; record pinned commits and keys in the receipt.
+
+**Impact:** ⭐⭐⭐ High - Reproducibility and trust of binaries
+
+---
+
+#### 6. Nonguix Key Trust is Opt‑In
+
+**Status:** ❌ Not implemented
+
+Prompt user to explicitly trust Nonguix (or skip), explain pros/cons in output and docs. Abort if user declines but configuration requires firmware.
+
+**Impact:** ⭐⭐⭐ High - Security transparency and informed consent
+
 #### 2. Post-Installation File Verification
 
 **Status:** ✅ Implemented
@@ -266,6 +298,78 @@ state.Root = "/dev/disk/by-label/GUIX_ROOT"
 
 ---
 
+#### 12. Dual‑Boot UX Improvements
+
+**Status:** ❌ Not implemented
+
+Ensure readable GRUB theme and a visible timeout; add explicit chainloader entry for Pop!_OS in EFI if auto-detection fails.
+
+**Impact:** ⭐⭐ Medium - Smoother dual‑boot selection
+
+---
+
+#### 13. Networking on First Boot
+
+**Status:** ❌ Not implemented
+
+Offer option to add `NetworkManager` service; provide `wpa_supplicant` minimal fallback for headless setups.
+
+**Impact:** ⭐⭐ Medium - Faster path to connectivity
+
+---
+
+#### 14. Power/Time/Maintenance Services
+
+**Status:** ❌ Not implemented
+
+Optional services: `tlp-service-type` (laptops), time sync (NTP/chrony), `fstrim-service-type` for SSDs.
+
+**Impact:** ⭐⭐ Medium - Better battery, accurate time, SSD health
+
+---
+
+#### 15. Entropy Early in Boot
+
+**Status:** ❌ Not implemented
+
+Add `rngd-service-type` post‑install; consider `tpm-rng` in initrd modules for smoother first boots on some hardware.
+
+**Impact:** ⭐⭐ Medium - Reduces stalls waiting for entropy
+
+---
+
+#### 16. Storage Options (LUKS / btrfs / Separate /home)
+
+**Status:** ❌ Not implemented
+
+Provide optional flows for:
+
+* LUKS + ext4 root
+* btrfs with subvolumes and periodic scrub hooks
+* Flag to reserve N GiB unallocated and/or create separate `/home`
+
+**Impact:** ⭐⭐ Medium - Security/flexibility options
+
+---
+
+#### 17. Safer Retries and Diagnostics
+
+**Status:** ❌ Not implemented
+
+Toggle verbose vs quiet logging; capture `guix describe` and `guix weather` summaries into the log and receipt.
+
+**Impact:** ⭐⭐ Medium - Easier troubleshooting
+
+---
+
+#### 18. Post‑Install Customization Profiles
+
+**Status:** ❌ Not implemented
+
+Split `/etc/config.scm` into base OS vs hardware profile; provide a “first reconfigure” profile that adds firmware, NetworkManager, SSH, time sync, and trim in one step.
+
+**Impact:** ⭐⭐ Medium - Faster, cleaner onboarding
+
 #### 6. Bootloader Timeout Configuration
 
 **Status:** ❌ Not set
@@ -365,6 +469,34 @@ parted /dev/nvme0n1 print     # Should show GPT names
 **Impact:** ⭐ Low - Nice for debugging
 
 ---
+
+#### 12. Stronger Receipts
+
+**Status:** ❌ Not implemented
+
+Extend receipt to include channel commit hashes, `/run/current-system` derivation, substitute servers and keys used.
+
+**Impact:** ⭐ Low - Better provenance tracking
+
+---
+
+#### 13. Recovery Helper
+
+**Status:** ❌ Not implemented
+
+Provide a helper to chroot into `/mnt`, run verification/repairs, and re‑attempt `guix system init` if post‑init verification fails.
+
+**Impact:** ⭐ Low - Smoother failure recovery
+
+---
+
+#### 14. Raspberry Pi Track Enhancements
+
+**Status:** ❌ Not implemented
+
+Add optional image build recipe and Pi‑specific initrd modules/services (chrony, headless SSH with key drop).
+
+**Impact:** ⭐ Low - Broader hardware support
 
 #### 10. Swap Partition Support
 
