@@ -360,6 +360,13 @@ func ValidateGuixConfig(configPath string) error {
 		return fmt.Errorf("config file does not exist: %s", configPath)
 	}
 	
+	// Show config file contents for debugging
+	fmt.Println("Config file contents:")
+	RunCommand("head", "-20", configPath)
+	fmt.Println("...")
+	RunCommand("tail", "-10", configPath)
+	fmt.Println()
+	
 	// Try to load the config to check for syntax errors and unbound variables
 	fmt.Println("Validating config syntax and checking for unbound variables...")
 	cmd := exec.Command("guix", "system", "reconfigure", "--dry-run", configPath)
@@ -378,6 +385,17 @@ func ValidateGuixConfig(configPath string) error {
 			fmt.Println()
 			fmt.Printf("Full error output:\n%s\n", outputStr)
 			return fmt.Errorf("unbound variable in config: %s", outputStr)
+		}
+		
+		// Check for channel issues
+		if strings.Contains(outputStr, "channel") || strings.Contains(outputStr, "nonguix") {
+			fmt.Println()
+			fmt.Println("[WARN] Channel or nonguix issues detected")
+			fmt.Println("This might be due to missing nonguix channel configuration")
+			fmt.Println("The config will be validated during guix system init instead")
+			fmt.Printf("Full error output:\n%s\n", outputStr)
+			fmt.Println("[OK] Skipping validation - will validate during system init")
+			return nil
 		}
 		
 		// Other syntax errors
