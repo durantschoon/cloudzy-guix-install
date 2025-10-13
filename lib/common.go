@@ -566,7 +566,16 @@ func RunGuixSystemInit() error {
 	}
 	
 	fmt.Println("=== Running guix system init ===")
-	fmt.Println("This will take several minutes...")
+	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
+	fmt.Println()
+	fmt.Println("You should see:")
+	fmt.Println("  1. time-machine fetching channels (nonguix + guix)")
+	fmt.Println("  2. Downloading/building packages")
+	fmt.Println("  3. Installing bootloader")
+	fmt.Println("  4. Finalizing system")
+	fmt.Println()
+	fmt.Println("Progress output below:")
+	fmt.Println("---")
 	fmt.Println()
 
 	maxRetries := 3
