@@ -1,4 +1,4 @@
-# Guix Installer Design Goals and Roadmap
+# Guix Installer Design Goals and Implementation Checklist
 
 The goal of this project is to create a **reliable, repeatable, and hardware-aware Guix OS installation flow** tailored to the Framework 13 laptop. The installer should maximize success on first boot while remaining portable and adaptable for other systems.
 
@@ -101,13 +101,20 @@ This makes the Framework variant slightly more opinionated but much more user-fr
 - ✅ Idempotency checks (skip if already formatted)
 - ✅ User confirmation prompts for destructive operations
 
+### 7. Documentation & Meta
+- ✅ Label everything consistently (UPPERCASE: EFI, GUIX_ROOT)
+- ✅ Name consistently across systems
+- ✅ Comment generously
+- ✅ Treat install as idempotent
+- ✅ Document the why (CLAUDE.md, README files)
+
 ---
 
 ## 📋 Implementation Gaps and Action Items
 
-### High Priority (Do First)
+### 🔴 High Priority (Critical - Do First)
 
-#### 1. EFI Partition Verification (CRITICAL)
+#### 1. EFI Partition Verification
 **Status:** ❌ Not implemented
 
 **Missing checks:**
@@ -124,11 +131,11 @@ mount | grep "/mnt/boot/efi"
 - Early detection prevents wasted installation time
 - Provides clear error messages
 
-**Impact:** High - Prevents cryptic errors during `guix system init`
+**Impact:** ⭐⭐⭐ High - Prevents cryptic errors during `guix system init`
 
 ---
 
-#### 2. Post-Installation Verification (CRITICAL)
+#### 2. Post-Installation File Verification
 **Status:** ❌ Not implemented
 
 **Missing checks after `guix system init`:**
@@ -148,11 +155,29 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 - Prevents "no bootable device" scenarios
 - Allows immediate retry while still in live environment
 
-**Impact:** High - Prevents failed boot experiences
+**Impact:** ⭐⭐⭐ High - Prevents failed boot experiences
 
 ---
 
-#### 3. Use Mount-by-Label in config.scm for EFI
+#### 3. Label Existence Check Before Mount
+**Status:** ❌ Not implemented
+
+**Missing checks:**
+```bash
+[ -e /dev/disk/by-label/EFI ] || { echo "ERROR: No EFI label"; exit 1; }
+[ -e /dev/disk/by-label/GUIX_ROOT ] || { echo "ERROR: No GUIX_ROOT label"; exit 1; }
+```
+
+**Why it matters:**
+- Verifies labels exist before attempting mount
+- Provides clear error if labeling step failed
+- Prevents confusing mount errors
+
+**Impact:** ⭐⭐⭐ High - Prevents mount failures
+
+---
+
+#### 4. Use file-system-label for EFI in config.scm
 **Status:** ❌ Not implemented
 
 **Current:**
@@ -176,13 +201,13 @@ ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
 - EFI should use label for consistency
 - Prevents boot issues if device enumeration changes
 
-**Impact:** Medium - Can cause boot failures in some scenarios
+**Impact:** ⭐⭐⭐ Medium-High - Can cause boot failures in some scenarios
 
 ---
 
-### Medium Priority
+### 🟡 Medium Priority
 
-#### 4. Mount by Label in Scripts
+#### 5. Mount by Label in Scripts
 **Status:** ❌ Not implemented
 
 **Current approach:**
@@ -204,11 +229,11 @@ state.Root = "/dev/disk/by-label/GUIX_ROOT"
 - Labels are stable and don't depend on device enumeration order
 - This is especially important for dual-boot scenarios
 
-**Impact:** Medium-High - Can cause boot failures if device order changes
+**Impact:** ⭐⭐ Medium-High - Can cause boot failures if device order changes
 
 ---
 
-#### 5. Bootloader Timeout Configuration
+#### 6. Bootloader Timeout Configuration
 **Status:** ❌ Not set
 
 **Current:**
@@ -233,13 +258,48 @@ state.Root = "/dev/disk/by-label/GUIX_ROOT"
 - Framework-dual needs visible menu to access Pop!_OS
 - F12 firmware menu is a workaround, not a solution
 
-**Impact:** Medium - Affects dual-boot usability
+**Impact:** ⭐⭐ Medium - Affects dual-boot usability
 
 ---
 
-### Low Priority (Nice to Have)
+#### 7. Free Space Check (All Installers)
+**Status:** ⚠️ Framework-dual only
 
-#### 6. Label Verification Commands
+**Missing for cloudzy and framework:**
+```bash
+# Check free space before installation
+available=$(df -BG /mnt | tail -1 | awk '{print $4}' | sed 's/G//')
+[[ $available -lt 40 ]] && echo "WARNING: Less than 40GB free"
+```
+
+**Why it matters:**
+- Prevents running out of space during installation
+- Early warning for users
+
+**Impact:** ⭐⭐ Medium - Installation will fail anyway, but later
+
+---
+
+#### 8. Installation Logging
+**Status:** ❌ Not implemented
+
+**Should add:**
+```bash
+exec > >(tee /tmp/guix-install.log) 2>&1
+```
+
+**Why it matters:**
+- Helps with debugging failures
+- Provides installation receipt
+- Users can review what happened
+
+**Impact:** ⭐⭐ Medium - Improves troubleshooting
+
+---
+
+### 🟢 Low Priority (Nice to Have)
+
+#### 9. Label Verification Output
 **Status:** ❌ Not shown to user
 
 **Should display:**
@@ -256,45 +316,64 @@ parted /dev/nvme0n1 print     # Should show GPT names
 - Helps users debug if something goes wrong
 - Educational for users learning Guix
 
-**Impact:** Low - Nice for debugging
+**Impact:** ⭐ Low - Nice for debugging
 
 ---
 
-#### 7. Free Space Verification
-**Status:** ⚠️ Framework-dual only
+#### 10. Swap Partition Support
+**Status:** ⚠️ Only swapfile support
 
-**Missing for cloudzy and framework:**
-```bash
-# Check free space before installation
-available=$(df -BG /mnt | tail -1 | awk '{print $4}' | sed 's/G//')
-[[ $available -lt 40 ]] && echo "WARNING: Less than 40GB free"
-```
+**Current:** Only supports creating swapfile in step 4
+
+**Could add:** Detection and use of existing swap partition
 
 **Why it matters:**
-- Prevents running out of space during installation
-- Early warning for users
+- Some users prefer swap partitions
+- More traditional setup
 
-**Impact:** Low - Installation will fail anyway, but later
+**Impact:** ⭐ Low - Swapfile works fine
+
+---
+
+#### 11. Reserved Disk Space Option
+**Status:** ❌ Not implemented
+
+**Could add:**
+- Allow leaving 10-20GB unallocated
+- User configurable via env var
+
+**Why it matters:**
+- Flexibility for future partitions
+- Some users prefer reserved space
+
+**Impact:** ⭐ Low - Most users don't need this
 
 ---
 
 ## 🔧 Recommended Implementation Order
 
-### Phase 1: Critical Safety Checks (Do Now)
-1. ✅ Add pre-init EFI verification
-2. ✅ Add post-init file verification (kernel, initrd, GRUB)
-3. ✅ Use file-system-label for EFI in config
-4. ✅ Set user password via chroot before reboot
+### Phase 1: Critical Safety Checks (30 min - Do Now)
+1. ✅ Add pre-init EFI verification (vfat check)
+2. ✅ Add label existence checks before mount
+3. ✅ Add post-init file verification (kernel, initrd, GRUB)
+4. ✅ Use file-system-label for EFI in config
 
-### Phase 2: Hardware-Aware Defaults (Next)
-5. ✅ Add Framework-specific initrd modules
-6. ✅ Add bootloader timeout for dual-boot
-7. ✅ Add label verification output
+### Phase 2: Password & Hardware Defaults (1 hour - Next)
+5. ✅ Set user password via chroot before reboot
+6. ✅ Add Framework-specific initrd modules
+7. ✅ Add bootloader timeout for dual-boot
 
-### Phase 3: Robustness Improvements (When Time Permits)
+### Phase 3: Robustness Improvements (1-2 hours - When Time Permits)
 8. Switch to mount-by-label in mount scripts
 9. Add free space checks to all installers
-10. Optional: Generate fallback GRUB entry with `nomodeset`
+10. Add installation logging option
+11. Add label verification output
+
+### Phase 4: Nice-to-Haves (Optional)
+12. Swap partition detection/support
+13. Reserved space option
+14. Post-install receipt generation
+15. Optional: Generate fallback GRUB entry with `nomodeset`
 
 ---
 
@@ -305,6 +384,28 @@ available=$(df -BG /mnt | tail -1 | awk '{print $4}' | sed 's/G//')
 | **Stage 1: Minimal Install**         | Tiny config, password pre-set, kernel/initrd verified | Always boots to a shell  |
 | **Stage 2: Framework Profile**       | Add GPU firmware, essential modules, network, DE      | Boots without GRUB hacks |
 | **Stage 3: Full System Reconfigure** | Add `/data` mounts, services, desktop, dotfiles, etc. | Complete environment     |
+
+---
+
+## 📈 Current Implementation Status
+
+### By Category
+
+- **Partitioning:** 6/7 (86%) ✅
+- **Mounting:** 3/7 (43%) ⚠️ Needs verification checks
+- **Bootloader:** 4/6 (67%) ⚠️ Needs post-install checks
+- **Guix-Specific:** 6/7 (86%) ✅
+- **Automation:** 3/5 (60%) ⚠️ Needs logging and checks
+- **Meta Practices:** 6/6 (100%) ✅
+
+**Overall:** ~70% complete
+
+### Biggest Impact Improvements
+
+1. **ESP verification** (prevents most common error)
+2. **Post-install checks** (prevents boot failures)
+3. **Label verification** (prevents mount errors)
+4. **User password setup** (prevents login failures)
 
 ---
 
