@@ -180,7 +180,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
                 (comment "%s")
                 (group "users")
                 (home-directory "/home/%s")
-                (supplementary-groups '("wheel" "netdev" "audio" "video")))
+                (supplementary-groups '("wheel" "netdev")))
                %%base-user-accounts))
 
  ;; Minimal packages - add more after installation
