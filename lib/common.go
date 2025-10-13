@@ -528,14 +528,17 @@ func ValidateGuixConfig(configPath string) error {
 			return fmt.Errorf("unbound variable in config: %s", outputStr)
 		}
 		
-		// Check for channel issues
-		if strings.Contains(outputStr, "channel") || strings.Contains(outputStr, "nonguix") {
+		// Check for channel or nonguix/nongnu module issues
+		if strings.Contains(outputStr, "channel") ||
+		   strings.Contains(outputStr, "nonguix") ||
+		   strings.Contains(outputStr, "nongnu") ||
+		   strings.Contains(outputStr, "no code for module") {
 			fmt.Println()
-			fmt.Println("[WARN] Channel or nonguix issues detected")
-			fmt.Println("This might be due to missing nonguix channel configuration")
-			fmt.Println("The config will be validated during guix system init instead")
-			fmt.Printf("Full error output:\n%s\n", outputStr)
-			fmt.Println("[OK] Skipping validation - will validate during system init")
+			fmt.Println("[WARN] Channel or nonguix module issues detected")
+			fmt.Println("This is expected - the ISO's Guix doesn't have nonguix channel")
+			fmt.Println("The config will be validated during 'guix time-machine' system init")
+			fmt.Println("[OK] Skipping validation - will validate with time-machine")
+			fmt.Println()
 			return nil
 		}
 		
