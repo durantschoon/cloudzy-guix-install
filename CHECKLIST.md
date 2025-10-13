@@ -1,5 +1,7 @@
 # Guix Installer Design Goals and Implementation Checklist
 
+Note: This checklist is the source of truth for implementation status. After adding features, update statuses here in the same commit. See `CLAUDE.md` for workflow and conventions.
+
 The goal of this project is to create a **reliable, repeatable, and hardware-aware Guix OS installation flow** tailored to the Framework 13 laptop. The installer should maximize success on first boot while remaining portable and adaptable for other systems.
 
 ---
