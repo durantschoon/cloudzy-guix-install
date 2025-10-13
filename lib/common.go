@@ -1001,7 +1001,17 @@ func MountByLabel(label string, mountPoint string) error {
     if err := os.MkdirAll(mountPoint, 0755); err != nil {
         return err
     }
-    return RunCommand("mount", filepath.Join("/dev/disk/by-label", label), mountPoint)
+    
+    // Check if the label exists
+    labelPath := filepath.Join("/dev/disk/by-label", label)
+    if _, err := os.Stat(labelPath); err != nil {
+        // List available labels for debugging
+        fmt.Printf("Label '%s' not found. Available labels:\n", label)
+        RunCommand("ls", "-la", "/dev/disk/by-label/")
+        return fmt.Errorf("label '%s' not found in /dev/disk/by-label", label)
+    }
+    
+    return RunCommand("mount", labelPath, mountPoint)
 }
 
 // FindFreeSpaceStart finds the start sector for free space on a device
