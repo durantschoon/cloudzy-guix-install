@@ -295,6 +295,12 @@ func VerifyESP() error {
 		fmt.Println("Checking all EFI-related mounts:")
 		RunCommand("mount | grep -i efi")
 		RunCommand("ls -la /mnt/boot/")
+		
+		// Try to find EFI partition and check its type directly
+		fmt.Println("Checking EFI partition filesystem type directly:")
+		RunCommand("blkid", "-t", "TYPE=vfat")
+		RunCommand("blkid", "-t", "LABEL=EFI")
+		
 		return fmt.Errorf("failed to check EFI partition: %w", err)
 	}
 	
@@ -317,6 +323,8 @@ func VerifyESP() error {
 		// Additional check: try to read the filesystem type directly
 		fmt.Println("Checking filesystem type directly:")
 		RunCommand("blkid", "/mnt/boot/efi")
+		RunCommand("blkid", "-t", "TYPE=vfat")
+		RunCommand("blkid", "-t", "LABEL=EFI")
 		
 		return fmt.Errorf("EFI verification failed: not a vfat filesystem")
 	}
