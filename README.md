@@ -212,6 +212,13 @@ export GUIX_GIT_URL="https://your-mirror.example.com/guix.git"
 
 ## Architecture
 
+### New Safety Checks and Logging
+
+- Mounts use filesystem labels (`/dev/disk/by-label/GUIX_ROOT` and `EFI`) for reliability
+- Installers verify labels exist before mounting and warn if free space on `/mnt` is < 40GiB
+- Command output is tee-logged to `/tmp/guix-install.log` during system init steps
+- If an install fails, review `/tmp/guix-install.log` for details
+
 ### Go-Based Installer (framework-dual)
 
 The `framework-dual` platform uses a **Go-based installer** for reliability and type safety:

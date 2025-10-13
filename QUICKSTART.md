@@ -13,7 +13,8 @@ Complete installation workflow from ISO to customized system.
 ## Phase 1: Install Minimal Guix (From ISO)
 
 ### 1. Boot Guix Live ISO
-- Download from https://guix.gnu.org/
+
+- Download from <https://guix.gnu.org/>
 - Boot on your VPS or Framework 13
 
 ### 2. Set Installation Variables
@@ -29,16 +30,19 @@ export HOST_NAME="my-guix"
 ### 3. Download and Run Installer
 
 **One command to install:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- <platform>
 ```
 
 **Platforms:**
+
 - `cloudzy` - VPS fresh install (wipes entire disk)
 - `framework` - Framework 13 single-boot (wipes entire disk)
 - `framework-dual` - Framework 13 dual-boot with Pop!_OS (keeps existing OS)
 
 **Examples:**
+
 ```bash
 # VPS installation
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- cloudzy
@@ -48,6 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 ```
 
 **What this does:**
+
 1. Downloads the repository as a tarball
 2. Verifies checksums against SOURCE_MANIFEST.txt
 3. Prompts you to verify the manifest hash
@@ -55,6 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 5. Runs the interactive installation
 
 ### 4. Wait for Installation
+
 - Script runs 4 steps: partition → mount → config → install
 - Takes ~10-15 minutes
 - Creates minimal bootable system
@@ -181,6 +187,7 @@ cd ~/guix-customize
 ```
 
 The customize tool provides a friendly menu for:
+
 - Adding SSH service (critical for VPS!)
 - Adding desktop environments
 - Adding common packages
@@ -190,6 +197,7 @@ The customize tool provides a friendly menu for:
 After making changes, select `r` to reconfigure.
 
 **Bonus:** Shared recipes are also pre-installed in `~/guix-customize/recipes/`:
+
 - `add-spacemacs.sh` - Install Spacemacs (Emacs with Vim keybindings)
 - `add-doom-emacs.sh` - Install Doom Emacs (modern, fast Emacs framework)
 - `add-vanilla-emacs.sh` - Install vanilla Emacs with minimal configuration
@@ -253,6 +261,7 @@ sudo reboot  # Desktop starts after reboot
 ```
 
 Or manually edit config.scm to add:
+
 - linux-firmware (for WiFi)
 - Desktop environment (GNOME/Xfce)
 - Common packages
@@ -285,6 +294,7 @@ See CUSTOMIZATION.md for more recipes and examples.
 **Problem:** No password set during installation
 
 **Solution:**
+
 1. Press `Ctrl+Alt+F2` for root console
 2. Login as `root` (no password)
 3. Set user password: `passwd yourname`
@@ -295,6 +305,7 @@ See CUSTOMIZATION.md for more recipes and examples.
 **Problem:** Network not configured
 
 **Solution:**
+
 ```bash
 # For DHCP
 sudo dhclient
@@ -323,3 +334,10 @@ sudo dhclient eth0
 - Configure dotfiles
 
 Enjoy your minimal Guix system! 🎉
+
+### Notes on Safety Checks and Logs
+
+- Mounts use filesystem labels for reliability; labels must exist before mounting
+- Installer warns if free space on `/mnt` is below 40GiB
+- During system init, command output is logged to `/tmp/guix-install.log`
+- If something fails, check that log first

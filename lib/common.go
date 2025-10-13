@@ -578,6 +578,29 @@ func GetMountFreeSpaceGiB(path string) float64 {
     return 0
 }
 
+// VerifyLabelsExist ensures the provided /dev/disk/by-label/* entries exist
+func VerifyLabelsExist(labels ...string) error {
+    missing := []string{}
+    for _, label := range labels {
+        path := filepath.Join("/dev/disk/by-label", label)
+        if _, err := os.Stat(path); err != nil {
+            missing = append(missing, label)
+        }
+    }
+    if len(missing) > 0 {
+        return fmt.Errorf("missing labels under /dev/disk/by-label: %s", strings.Join(missing, ", "))
+    }
+    return nil
+}
+
+// MountByLabel mounts a filesystem by label to a mount point, creating the mount point if needed
+func MountByLabel(label string, mountPoint string) error {
+    if err := os.MkdirAll(mountPoint, 0755); err != nil {
+        return err
+    }
+    return RunCommand("mount", filepath.Join("/dev/disk/by-label", label), mountPoint)
+}
+
 // FindFreeSpaceStart finds the start sector for free space on a device
 func FindFreeSpaceStart(device string) (int, error) {
 	cmd := exec.Command("parted", device, "print", "free")

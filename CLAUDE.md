@@ -146,3 +146,26 @@ git commit -m "Your commit message"
 - Writes them to `SOURCE_MANIFEST.txt`
 - Displays the manifest hash for documentation/verification
 - Only changes when actual source files change (no timestamp)
+
+## Repository Conventions
+
+### Factor Common Code into lib/common.go
+
+When adding features that are needed in multiple installers (cloudzy, framework, framework-dual, raspberry-pi), extract reusable logic into `lib/common.go` rather than duplicating it. Examples:
+
+- Label checks: use `VerifyLabelsExist(...)`
+- Mount-by-label: use `MountByLabel(label, mountPoint)`
+- Free-space checks: use `GetMountFreeSpaceGiB(path)`
+- Command logging: enable once per step with `EnableCommandLogging("/tmp/guix-install.log")`
+
+This keeps installers small, readable, and consistent.
+
+### Update Documentation After Adding Features
+
+After implementing user-visible behavior or flow changes, update the docs in the same commit:
+
+- `CHECKLIST.md` statuses and guidance
+- `README.md` and `QUICKSTART.md` usage notes
+- Platform readmes under `framework*/README.md` or `raspberry-pi/**` where applicable
+
+Docs should reflect new safety checks, logging, and any changed commands or defaults.

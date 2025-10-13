@@ -83,20 +83,17 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	}
 
     // Basic label existence checks before mount
-    if _, err := os.Stat("/dev/disk/by-label/GUIX_ROOT"); err != nil {
-        return fmt.Errorf("label GUIX_ROOT not found under /dev/disk/by-label")
-    }
-    if _, err := os.Stat("/dev/disk/by-label/EFI"); err != nil {
-        return fmt.Errorf("label EFI not found under /dev/disk/by-label")
+    if err := lib.VerifyLabelsExist("GUIX_ROOT", "EFI"); err != nil {
+        return err
     }
 
     // Mount root partition by label if not mounted
-	if !lib.IsMounted("/mnt") {
-		fmt.Println("Mounting GUIX_ROOT to /mnt")
-		if err := lib.RunCommand("mount", "/dev/disk/by-label/GUIX_ROOT", "/mnt"); err != nil {
-			return err
-		}
-	} else {
+    if !lib.IsMounted("/mnt") {
+        fmt.Println("Mounting GUIX_ROOT to /mnt")
+        if err := lib.MountByLabel("GUIX_ROOT", "/mnt"); err != nil {
+            return err
+        }
+    } else {
 		fmt.Println("/mnt is already mounted")
 	}
 
@@ -177,11 +174,8 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	fmt.Println("All critical directories created successfully")
 
     // Mount ESP
-	if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
-		return err
-	}
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
-	if err := lib.RunCommand("mount", "/dev/disk/by-label/EFI", "/mnt/boot/efi"); err != nil {
+    if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
 		return err
 	}
 
