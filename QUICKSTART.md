@@ -28,23 +28,31 @@ export HOST_NAME="my-guix"
 
 ### 3. Download and Run Installer
 
-**For VPS (Cloudzy):**
+**One command to install:**
 ```bash
-# Install prerequisites
-guix install curl perl
-
-# Download installer
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.sh -o run-remote-steps.sh
-chmod +x run-remote-steps.sh
-
-# Run installer (will install scripts 01-04 only)
-bash run-remote-steps.sh
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- <platform>
 ```
 
-**For Framework 13 Dual-Boot:**
+**Platforms:**
+- `cloudzy` - VPS fresh install (wipes entire disk)
+- `framework` - Framework 13 single-boot (wipes entire disk)
+- `framework-dual` - Framework 13 dual-boot with Pop!_OS (keeps existing OS)
+
+**Examples:**
 ```bash
-# (Coming soon - separate runner for framework-dual/)
+# VPS installation
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- cloudzy
+
+# Framework 13 dual-boot
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- framework-dual
 ```
+
+**What this does:**
+1. Downloads the repository as a tarball
+2. Verifies checksums against SOURCE_MANIFEST.txt
+3. Prompts you to verify the manifest hash
+4. Builds the installer from Go source
+5. Runs the interactive installation
 
 ### 4. Wait for Installation
 - Script runs 4 steps: partition → mount → config → install
@@ -65,21 +73,13 @@ sudo reboot
 
 ### 1. Login at Console
 
-```
+```text
 Guix System
 Login: yourname
-Password: [the password you'll set in a moment]
+Password: [password you set during installation]
 ```
 
-**Wait, I don't have a password yet!**
-
-The installer creates your user account but **doesn't set a password**. You need to:
-
-1. At login prompt, press `Ctrl+Alt+F2` to get root console
-2. Login as `root` (no password yet)
-3. Set your user password: `passwd yourname`
-4. Press `Ctrl+Alt+F1` to return to normal login
-5. Now login with your username and new password
+The installer prompts you to set your user password before the system reboots, so you can log in immediately after first boot.
 
 ### 2. Set Root Password (Optional but Recommended)
 

@@ -7,6 +7,18 @@ Modular scripts for installing minimal Guix OS on different platforms:
 - **`framework-dual/`** - Framework 13 dual-boot with Pop!_OS
 - **`raspberry-pi/`** - Raspberry Pi 3/4/5 (aarch64, experimental)
 
+## Quick Install
+
+**One command from Guix ISO:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- <platform>
+```
+
+Replace `<platform>` with: `cloudzy`, `framework`, or `framework-dual`
+
+See [`QUICKSTART.md`](QUICKSTART.md) for complete instructions.
+
 ## Quick Navigation
 
 - ⚡ **Quick Start Guide**: See [`QUICKSTART.md`](QUICKSTART.md) - Complete workflow from ISO to customized system
