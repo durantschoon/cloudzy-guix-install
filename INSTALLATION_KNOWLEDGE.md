@@ -41,6 +41,30 @@ Mount by label for reliability:
 /dev/disk/by-label/EFI
 ```
 
+**Critical: Use file-system-label instead of UUID in config.scm**
+
+Always use `(file-system-label "LABEL_NAME")` instead of `(uuid "xxxx-xxxx" 'ext4)` in your config.scm:
+
+```scheme
+;; CORRECT - Use file-system-label
+(file-system
+  (mount-point "/")
+  (device (file-system-label "GUIX_ROOT"))
+  (type "ext4"))
+
+;; INCORRECT - Don't use UUID
+(file-system
+  (mount-point "/")
+  (device (uuid "xxxx-xxxx" 'ext4))
+  (type "ext4"))
+```
+
+**Why file-system-label is better:**
+- **More reliable** - Labels don't change between boots
+- **More readable** - Clear partition purpose
+- **More portable** - Works across different systems
+- **Easier debugging** - Can see labels with `lsblk -f`
+
 ## 🐧 Kernel Configuration
 
 ### Always Specify the Kernel Explicitly

@@ -1,12 +1,12 @@
 package install
 
 import (
-  "fmt"
-  "os"
-  "os/exec"
-  "strings"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
-  "github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 // Step03ConfigDualBoot generates the Guix system configuration
@@ -82,12 +82,6 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
     return nil
   }
 
-  // Get UUID of root partition
-  uuid, err := lib.GetRootUUID(state.Root)
-  if err != nil {
-    return fmt.Errorf("failed to get root UUID: %w", err)
-  }
-  fmt.Printf("UUID: %s\n", uuid)
 
   // Framework 13 uses UEFI - force it for dual-boot
   if state.BootMode == "" {
@@ -129,7 +123,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
   }
 
   // Generate config
-  config := s.generateMinimalConfig(state, uuid, bootloader, targets)
+  config := s.generateMinimalConfig(state, bootloader, targets)
 
   // Write to file
   if err := os.MkdirAll("/mnt/etc", 0755); err != nil {
@@ -150,17 +144,14 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
   return nil
 }
 
-func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloader, targets string) string {
+func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, targets string) string {
   homeFS := ""
   if state.HomePartition != "" {
-    homeUUID, err := lib.GetUUID(state.HomePartition)
-    if err == nil && homeUUID != "" {
-      homeFS = fmt.Sprintf(`         (file-system
+    homeFS = `         (file-system
           (mount-point "/home")
-          (device (uuid "%s" 'ext4))
+          (device (file-system-label "DATA"))
           (type "ext4"))
-`, homeUUID)
-    }
+`
   }
 
   config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
@@ -201,9 +192,9 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
    (targets %s)
    (timeout 5)))
  (file-systems
-  (cons* (file-system
+  (cons*          (file-system
           (mount-point "/")
-          (device (uuid "%s" 'ext4))
+          (device (file-system-label "GUIX_ROOT"))
           (type "ext4"))
          (file-system
           (mount-point "/boot/efi")
@@ -228,7 +219,6 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, uuid, bootloa
     state.HostName,    // host-name
     state.Timezone,    // timezone
     targets,           // targets
-    uuid,              // root device uuid
     homeFS,            // home filesystem conditional
     state.UserName,    // name
     state.FullName,    // comment

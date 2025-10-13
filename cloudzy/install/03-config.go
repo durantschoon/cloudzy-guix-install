@@ -73,12 +73,6 @@ func (s *Step03Config) RunClean(state *State) error {
 		return nil
 	}
 
-	// Get UUID of root partition
-	uuid, err := lib.GetRootUUID(state.Root)
-	if err != nil {
-		return fmt.Errorf("failed to get root UUID: %w", err)
-	}
-	fmt.Printf("UUID: %s\n", uuid)
 
 	// Detect boot mode if not set
 	if state.BootMode == "" {
@@ -122,7 +116,7 @@ func (s *Step03Config) RunClean(state *State) error {
 	}
 
 	// Generate config
-	config := s.generateMinimalConfig(state, uuid, bootloader, targets)
+	config := s.generateMinimalConfig(state, bootloader, targets)
 
 	// Write to file
 	if err := os.MkdirAll("/mnt/etc", 0755); err != nil {
@@ -142,7 +136,7 @@ func (s *Step03Config) RunClean(state *State) error {
 	return nil
 }
 
-func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, targets string) string {
+func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets string) string {
 	config := fmt.Sprintf(`;; Minimal Guix System Configuration
 ;; This is the bare minimum to get a bootable system.
 ;; Customize after installation using: guix-customize
@@ -171,9 +165,9 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
    ))
 
  (file-systems
-  (cons* (file-system
+  (cons*          (file-system
           (mount-point "/")
-          (device (uuid "%s" 'ext4))
+          (device (file-system-label "GUIX_ROOT"))
           (type "ext4"))
          (file-system
           (mount-point "/boot/efi")
@@ -198,7 +192,6 @@ func (s *Step03Config) generateMinimalConfig(state *State, uuid, bootloader, tar
 		state.HostName,    // host-name
 		state.Timezone,    // timezone
 		targets,           // targets
-		uuid,              // device uuid
 		state.UserName,    // name
 		state.FullName,    // comment
 		state.UserName,    // home-directory
