@@ -119,7 +119,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
     }()
     
     // Spinner goroutine
-    spinner := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+    spinner := []string{"/", "|", "\\", "-"}
     spinnerIndex := 0
     lastOutputTime := time.Now()
     spinnerActive := false
