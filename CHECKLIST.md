@@ -18,13 +18,16 @@ The goal of this project is to create a **reliable, repeatable, and hardware-awa
 6. ✅ **Nonguix trust prompt** - Added opt-in user consent with security explanation before trusting nonguix
 7. ✅ **Channel pinning** - Record channel commits to /mnt/etc/channels-pinned.scm for reproducible builds
 8. ✅ **Installation receipt improvements** - Include channel commits and substitute servers in receipt
+9. ✅ **Remove guix pull to avoid glibc mismatch** - Skip pull, rely on time-machine for channel fetching
+10. ✅ **Fix validation skip for nongnu modules** - Properly detect and skip validation when nonguix needed
 
 **Next Priority Tasks:**
 
-1. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
-2. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
+1. **Test and validate framework-dual installation** - Verify complete install flow with all recent fixes
+2. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
+3. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
 
-**Context:** Major infrastructure improvements completed. Framework installers now properly handle nonguix channel setup and use reliable label-based mounting.
+**Context:** Major infrastructure and stability improvements completed. Framework installers now use time-machine for nonguix (avoiding glibc issues), validate configs properly, and provide better user prompts.
 
 ---
 
