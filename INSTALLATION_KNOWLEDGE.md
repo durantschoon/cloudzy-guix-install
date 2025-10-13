@@ -563,6 +563,96 @@ guix system init /mnt/etc/config.scm /mnt
 - Tests daemon responsiveness with `guix build --version`
 - 8-second wait periods for daemon initialization
 
+## 🔄 Idempotency Techniques
+
+The installer implements comprehensive idempotency to allow safe reruns and recovery from failures.
+
+### Partition Step Idempotency
+
+**Device Unmounting:**
+
+- Automatically detects if target device is mounted
+- Unmounts all mount points in reverse order (deepest first)
+- Uses `findmnt` with fallback to `mount` command parsing
+- Employs lazy unmount (`umount -l`) for stubborn mounts
+
+**Partition Existence Check:**
+
+- Detects if partitions already exist using `lsblk`
+- Skips partitioning if partitions are already present and formatted
+- Verifies partition labels before proceeding
+
+**Format Check:**
+
+- Uses `blkid` to check if partitions are already formatted
+- Supports both ext4 (root) and vfat (EFI) filesystems
+- Skips formatting if partitions are already properly formatted
+
+**Space Validation:**
+
+- Checks device size before partitioning
+- Warns if device is smaller than 40 GiB
+- Displays actual device size for user awareness
+
+### Mount Step Idempotency
+
+**Mount Status Check:**
+
+- Verifies if `/mnt` is already mounted using `lib.IsMounted()`
+- Skips mount operations if already mounted
+
+**Store Population Check:**
+
+- Checks if `/mnt/gnu/store` has contents (more than 10 entries)
+- Skips store copy if already populated
+- Prevents unnecessary rsync/cp operations
+
+**Label Verification:**
+
+- Verifies required labels (`GUIX_ROOT`, `EFI`) exist before mounting
+- Uses `lib.VerifyLabelsExist()` for consistent checking
+
+### Config Step Idempotency
+
+**Config File Check:**
+
+- Skips config generation if `/mnt/etc/config.scm` already exists
+- Provides clear message about skipping and how to regenerate
+- Allows safe reruns without overwriting existing config
+
+### System Init Step Idempotency
+
+**Daemon Management:**
+
+- Ensures daemon is running before config validation
+- Includes robust restart mechanism with multiple fallback methods
+- Tests daemon responsiveness before proceeding
+
+**Installation Verification:**
+
+- Verifies critical files were installed correctly
+- Provides clear error messages if verification fails
+
+### Safe Rerun Strategy
+
+**Variable Persistence:**
+
+- All environment variables persist between steps
+- Skipping steps doesn't break downstream operations
+- State information flows through all installation phases
+
+**Graceful Degradation:**
+
+- Each step can be run independently
+- Failed steps can be rerun without affecting completed work
+- Clear messaging about what's being skipped and why
+
+**Recovery Instructions:**
+
+- Each step provides clear instructions for manual recovery
+- Error messages include specific commands to run
+- Troubleshooting guidance for common failure scenarios
+
 ## 💻 Code Structure and Development
 
 ### Platform-Specific vs Shared Code

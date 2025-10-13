@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -112,21 +113,49 @@ func (s *Step01Partition) RunClean(state *State) error {
 		fmt.Println("Device unmounted successfully")
 	}
 
-	fmt.Println("Creating partitions...")
-	fmt.Println()
-
-	// Partition the disk
-	if err := lib.RunCommand("parted", "--script", state.Device,
-		"mklabel", "gpt",
-		"mkpart", "EFI", "fat32", "1MiB", "513MiB",
-		"set", "1", "esp", "on",
-		"mkpart", "root", "ext4", "513MiB", "100%"); err != nil {
-		return fmt.Errorf("partitioning failed: %w", err)
+	// Check available space on device
+	if err := s.checkDeviceSpace(state.Device); err != nil {
+		return err
 	}
 
-	// Set partition paths
-	state.EFI = s.makePartitionPath(state.Device, "1")
-	state.Root = s.makePartitionPath(state.Device, "2")
+	// Check if partitions already exist and are formatted (idempotency)
+	if s.hasExistingPartitions(state.Device) {
+		fmt.Println("Partitions already exist, checking if formatted...")
+		
+		// Set partition paths
+		state.EFI = s.makePartitionPath(state.Device, "1")
+		state.Root = s.makePartitionPath(state.Device, "2")
+		
+		// Check if partitions are already formatted
+		if s.isPartitionFormatted(state.EFI) && s.isPartitionFormatted(state.Root) {
+			fmt.Println("Partitions are already formatted")
+			fmt.Println("Skipping partitioning and formatting (idempotent - safe for reruns)")
+			fmt.Printf("EFI is %s and ROOT is %s\n", state.EFI, state.Root)
+			fmt.Println()
+			fmt.Println("Verifying partition labels...")
+			lib.RunCommand("fatlabel", state.EFI)
+			lib.RunCommand("e2label", state.Root)
+			return nil
+		}
+		
+		fmt.Println("Partitions exist but not formatted, proceeding with formatting...")
+	} else {
+		fmt.Println("Creating partitions...")
+		fmt.Println()
+
+		// Partition the disk
+		if err := lib.RunCommand("parted", "--script", state.Device,
+			"mklabel", "gpt",
+			"mkpart", "EFI", "fat32", "1MiB", "513MiB",
+			"set", "1", "esp", "on",
+			"mkpart", "root", "ext4", "513MiB", "100%"); err != nil {
+			return fmt.Errorf("partitioning failed: %w", err)
+		}
+		
+		// Set partition paths
+		state.EFI = s.makePartitionPath(state.Device, "1")
+		state.Root = s.makePartitionPath(state.Device, "2")
+	}
 
 	fmt.Printf("EFI is %s and ROOT is %s\n", state.EFI, state.Root)
 	fmt.Println()
@@ -272,3 +301,56 @@ func (s *Step01Partition) unmountDeviceAlternative(device string) error {
 	return nil
 }
 
+
+func (s *Step01Partition) hasExistingPartitions(device string) bool {
+	// Check if device has any partitions
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	// If we have more than 1 line (device + partitions), there are existing partitions
+	return len(lines) > 1
+}
+
+func (s *Step01Partition) isPartitionFormatted(partition string) bool {
+	cmd := exec.Command("blkid", "-s", "TYPE", "-o", "value", partition)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	fsType := strings.TrimSpace(string(output))
+	// Check for both ext4 and vfat filesystems
+	return fsType == "ext4" || fsType == "vfat"
+}
+
+func (s *Step01Partition) checkDeviceSpace(device string) error {
+	// Get device size in bytes
+	cmd := exec.Command("lsblk", "-b", "-n", "-o", "SIZE", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get device size: %w", err)
+	}
+	
+	sizeStr := strings.TrimSpace(string(output))
+	sizeBytes, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse device size: %w", err)
+	}
+	
+	// Convert to GiB
+	sizeGiB := float64(sizeBytes) / (1024 * 1024 * 1024)
+	
+	fmt.Printf("Device %s size: %.1f GiB\n", device, sizeGiB)
+	
+	// Warn if device is smaller than 40 GiB
+	if sizeGiB < 40 {
+		fmt.Printf("WARNING: Device is only %.1f GiB. Installation may fail due to low space.\n", sizeGiB)
+		fmt.Println("Recommended: 40GB+ for comfortable usage")
+		fmt.Println()
+	}
+	
+	return nil
+}
