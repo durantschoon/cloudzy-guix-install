@@ -2,6 +2,7 @@
 package lib
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net/http"
@@ -102,6 +103,20 @@ func WriteInstallReceipt(platform string, username string) error {
     } else {
         receipt = append(receipt, "- GRUB EFI binary: MISSING")
     }
+
+    // Add channel information for reproducibility
+    receipt = append(receipt, "", "Channel Commits (for reproducibility):")
+    if channelData, err := os.ReadFile("/mnt/etc/channels-pinned.scm"); err == nil {
+        receipt = append(receipt, string(channelData))
+    } else {
+        receipt = append(receipt, "- Channel commits not recorded")
+    }
+
+    // Add substitute servers used
+    receipt = append(receipt, "", "Substitute Servers:")
+    receipt = append(receipt, "- https://substitutes.nonguix.org")
+    receipt = append(receipt, "- https://ci.guix.gnu.org")
+    receipt = append(receipt, "- https://bordeaux.guix.gnu.org")
 
     // Write receipt file
     receiptPath := filepath.Join(destDir, "install-receipt.txt")
@@ -353,7 +368,43 @@ func SetupGRUBEFI() error {
 // SetupNonguixChannel sets up the nonguix channel for proprietary firmware and kernel
 func SetupNonguixChannel() error {
 	fmt.Println("=== Setting up nonguix channel ===")
-	
+	fmt.Println()
+
+	// Prompt user for consent to trust nonguix
+	fmt.Println("The Nonguix channel provides:")
+	fmt.Println("  - Proprietary firmware (WiFi, Bluetooth, GPU drivers)")
+	fmt.Println("  - Non-free Linux kernel (better hardware support)")
+	fmt.Println("  - Binary substitutes from substitutes.nonguix.org")
+	fmt.Println()
+	fmt.Println("SECURITY NOTE:")
+	fmt.Println("  - You will be trusting binaries from substitutes.nonguix.org")
+	fmt.Println("  - This is a third-party server (not official GNU Guix)")
+	fmt.Println("  - Required for Framework 13 WiFi/GPU to work properly")
+	fmt.Println()
+	fmt.Println("Do you want to trust and use Nonguix? [Y/n]")
+
+	// Read user response from /dev/tty (not stdin which may be redirected)
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		return fmt.Errorf("failed to open /dev/tty for user input: %w", err)
+	}
+	defer tty.Close()
+
+	reader := bufio.NewReader(tty)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read user response: %w", err)
+	}
+
+	response = strings.ToLower(strings.TrimSpace(response))
+	if response != "" && response != "y" && response != "yes" {
+		return fmt.Errorf("user declined to trust Nonguix - installation cannot proceed without proprietary firmware")
+	}
+
+	fmt.Println()
+	fmt.Println("[OK] User consented to trust Nonguix")
+	fmt.Println()
+
 	// Create channels.scm file with introduction for authenticity
 	channelsContent := `(cons* (channel
         (name 'nonguix)
@@ -364,12 +415,12 @@ func SetupNonguixChannel() error {
           (openpgp-fingerprint
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
        %default-channels)`
-	
+
 	channelsPath := "/tmp/channels.scm"
 	if err := os.WriteFile(channelsPath, []byte(channelsContent), 0644); err != nil {
 		return fmt.Errorf("failed to create channels.scm: %w", err)
 	}
-	
+
 	// Authorize nonguix substitutes
 	fmt.Println("Authorizing nonguix substitutes...")
 	// Download key and pipe to guix archive
@@ -401,9 +452,44 @@ func SetupNonguixChannel() error {
 	if err := RunCommand("guix", "pull", "-C", channelsPath); err != nil {
 		return fmt.Errorf("failed to pull with nonguix channel: %w", err)
 	}
-	
+
+	// Get and record channel commits for reproducibility
+	if err := RecordChannelCommits(); err != nil {
+		fmt.Printf("Warning: Could not record channel commits: %v\n", err)
+	}
+
 	fmt.Println("[OK] Nonguix channel setup complete")
 	fmt.Println()
+	return nil
+}
+
+// RecordChannelCommits records the current channel commits for reproducibility
+func RecordChannelCommits() error {
+	fmt.Println()
+	fmt.Println("=== Recording Channel Commits for Reproducibility ===")
+
+	// Run guix describe to get commit information
+	cmd := exec.Command("guix", "describe", "--format=channels")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to run guix describe: %w", err)
+	}
+
+	// Save the pinned channels to /mnt/etc/channels-pinned.scm
+	pinnedPath := "/mnt/etc/channels-pinned.scm"
+	if err := os.MkdirAll("/mnt/etc", 0755); err != nil {
+		return fmt.Errorf("failed to create /mnt/etc directory: %w", err)
+	}
+
+	if err := os.WriteFile(pinnedPath, output, 0644); err != nil {
+		return fmt.Errorf("failed to write pinned channels: %w", err)
+	}
+
+	fmt.Printf("[OK] Pinned channels saved to %s\n", pinnedPath)
+	fmt.Println("    Use this file for reproducible builds:")
+	fmt.Printf("    guix pull -C %s\n", pinnedPath)
+	fmt.Println()
+
 	return nil
 }
 

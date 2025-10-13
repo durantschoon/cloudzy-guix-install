@@ -15,12 +15,14 @@ The goal of this project is to create a **reliable, repeatable, and hardware-awa
 3. ✅ **Config validation improvements** - Enhanced validation with better error handling
 4. ✅ **EFI verification fixes** - Improved EFI partition detection and diagnostics
 5. ✅ **UUID to file-system-label migration** - Replaced all UUID usage with reliable labels
+6. ✅ **Nonguix trust prompt** - Added opt-in user consent with security explanation before trusting nonguix
+7. ✅ **Channel pinning** - Record channel commits to /mnt/etc/channels-pinned.scm for reproducible builds
+8. ✅ **Installation receipt improvements** - Include channel commits and substitute servers in receipt
 
 **Next Priority Tasks:**
 
 1. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
-2. **Channel pinning and trusted substitutes** - Implement opt-in Nonguix trust, channel pinning for reproducible builds
-3. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
+2. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
 
 **Context:** Major infrastructure improvements completed. Framework installers now properly handle nonguix channel setup and use reliable label-based mounting.
 
@@ -176,23 +178,15 @@ mount | grep "/mnt/boot/efi"
 
 #### 5. Harden Channels and Substitutes
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-**Add:**
+Channel commits are recorded to `/mnt/etc/channels-pinned.scm` using `guix describe --format=channels`. Installation receipt includes:
 
-```scheme
-;; /mnt/etc/channels.scm
-(list (channel
-       (name 'guix)
-       (url "https://git.savannah.gnu.org/git/guix.git")
-       (commit "<PINNED-COMMIT>"))
-      (channel
-       (name 'nonguix)
-       (url "https://gitlab.com/nonguix/nonguix")
-       (commit "<PINNED-COMMIT>")))
-```
+* Channel commits with full introduction/fingerprint
+* Substitute server URLs used
+* Authorization keys applied
 
-Persist substitute URLs and authorize keys (e.g., Nonguix key) during install; record pinned commits and keys in the receipt.
+Users can reproduce builds with: `guix pull -C /mnt/etc/channels-pinned.scm`
 
 **Impact:** ⭐⭐⭐ High - Reproducibility and trust of binaries
 
@@ -200,9 +194,16 @@ Persist substitute URLs and authorize keys (e.g., Nonguix key) during install; r
 
 #### 6. Nonguix Key Trust is Opt‑In
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Prompt user to explicitly trust Nonguix (or skip), explain pros/cons in output and docs. Abort if user declines but configuration requires firmware.
+Prompts user with clear explanation:
+
+* What Nonguix provides (firmware, kernel, substitutes)
+* Security implications (third-party binaries)
+* Required for Framework 13 WiFi/GPU
+* Aborts if declined
+
+User must explicitly consent before trusting substitutes.nonguix.org.
 
 **Impact:** ⭐⭐⭐ High - Security transparency and informed consent
 
