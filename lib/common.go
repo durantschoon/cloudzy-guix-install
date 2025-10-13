@@ -297,12 +297,23 @@ func VerifyESP() error {
 	outputStr := string(output)
 	fmt.Printf("EFI mount info: %s", outputStr)
 	
-	if !strings.Contains(outputStr, "vfat") {
+	// Check for various vfat filesystem type names
+	isVfat := strings.Contains(outputStr, "vfat") || 
+			  strings.Contains(outputStr, "VFAT") ||
+			  strings.Contains(outputStr, "fat32") ||
+			  strings.Contains(outputStr, "FAT32")
+	
+	if !isVfat {
 		fmt.Println("ERROR: /mnt/boot/efi is not mounted as vfat filesystem")
 		fmt.Println("Current mount info:")
 		RunCommand("df", "-T", "/mnt/boot/efi")
 		RunCommand("mount | grep -i efi")
 		RunCommand("ls -la /mnt/boot/")
+		
+		// Additional check: try to read the filesystem type directly
+		fmt.Println("Checking filesystem type directly:")
+		RunCommand("blkid", "/mnt/boot/efi")
+		
 		return fmt.Errorf("EFI verification failed: not a vfat filesystem")
 	}
 	fmt.Println("[OK] EFI partition is correctly mounted as vfat")
