@@ -20,14 +20,18 @@ add_vanilla_emacs() {
   if ! grep -q "emacs" "$CONFIG_FILE"; then
     info "Adding Emacs package to config.scm..."
 
-    # Add emacs to packages if not present
+    # Add package modules if not present
+    if ! grep -q "gnu packages emacs" "$CONFIG_FILE"; then
+      sed -i '/(use-modules/a\             (gnu packages emacs)\n             (gnu packages version-control))' "$CONFIG_FILE"
+    fi
+
+    # Add emacs to packages
     if grep -q "(packages %base-packages)" "$CONFIG_FILE"; then
-      # Minimal config - need to add packages list
-      sed -i 's|(packages %base-packages)|(packages\n  (append\n   (list (specification->package "emacs")\n         (specification->package "git"))\n   %base-packages))|' "$CONFIG_FILE"
+      # Minimal config - expand to use append
+      sed -i 's|(packages %base-packages)|(packages\n  (append\n   (list emacs\n         git)\n   %base-packages))|' "$CONFIG_FILE"
     else
-      # Already has packages, just add emacs
-      sed -i '/specification->package "emacs"/!{/(packages/a\                (specification->package "emacs")' "$CONFIG_FILE"
-      sed -i '/specification->package "git"/!{/(packages/a\                (specification->package "git")' "$CONFIG_FILE"
+      # Already has packages list, add to it
+      sed -i '/(packages/,/))/ { /list/ { s/list/list emacs\n         git/ } }' "$CONFIG_FILE"
     fi
 
     info "Emacs added to configuration"
@@ -35,24 +39,82 @@ add_vanilla_emacs() {
     info "Emacs already in configuration"
   fi
 
-  # Create minimal Emacs configuration
-  info "Creating minimal Emacs configuration..."
+  # Ask if user wants to import existing config
+  echo ""
+  read -r -p "Do you have an existing vanilla Emacs config to import? [y/N] " import_config </dev/tty
 
-  if [[ -d "$HOME/.emacs.d" ]] || [[ -f "$HOME/.emacs" ]]; then
-    warn "Existing Emacs configuration found"
-    read -r -p "Backup and create minimal config? [y/N] " ans </dev/tty
-    if [[ "$ans" =~ ^[Yy]$ ]]; then
-      [[ -d "$HOME/.emacs.d" ]] && mv "$HOME/.emacs.d" "$HOME/.emacs.d.backup.$(date +%Y%m%d-%H%M%S)"
-      [[ -f "$HOME/.emacs" ]] && mv "$HOME/.emacs" "$HOME/.emacs.backup.$(date +%Y%m%d-%H%M%S)"
-      info "Backed up existing Emacs configuration"
+  if [[ "$import_config" =~ ^[Yy]$ ]]; then
+    echo ""
+    info "Import options:"
+    info "  1. Git repository URL (for .emacs.d or init.el)"
+    info "  2. Skip import (install fresh, import manually later)"
+    echo ""
+    read -r -p "Enter choice [1-2]: " choice </dev/tty
+
+    case "$choice" in
+      1)
+        read -r -p "Enter Git repository URL (e.g., https://github.com/user/emacs-config): " repo_url </dev/tty
+        if [[ -n "$repo_url" ]]; then
+          info "Will import config from: $repo_url"
+          IMPORT_EMACS_CONFIG="$repo_url"
+        else
+          warn "No URL provided, will create default config"
+        fi
+        ;;
+      2)
+        info "Skipping import - you can manually import later"
+        info "See: ~/guix-customize/EMACS_IMPORT_GUIDE.md"
+        ;;
+      *)
+        warn "Invalid choice, will create default config"
+        ;;
+    esac
+  fi
+
+  # Import user's config or create minimal configuration
+  if [[ -n "$IMPORT_EMACS_CONFIG" ]]; then
+    info "Importing your Emacs configuration..."
+
+    if [[ -d "$HOME/.emacs.d" ]] || [[ -f "$HOME/.emacs" ]]; then
+      warn "Existing Emacs configuration found"
+      read -r -p "Backup and replace with imported config? [y/N] " ans </dev/tty
+      if [[ "$ans" =~ ^[Yy]$ ]]; then
+        [[ -d "$HOME/.emacs.d" ]] && mv "$HOME/.emacs.d" "$HOME/.emacs.d.backup.$(date +%Y%m%d-%H%M%S)"
+        [[ -f "$HOME/.emacs" ]] && mv "$HOME/.emacs" "$HOME/.emacs.backup.$(date +%Y%m%d-%H%M%S)"
+        info "Backed up existing Emacs configuration"
+      else
+        info "Keeping existing configuration"
+        return 0
+      fi
+    fi
+
+    if git clone "$IMPORT_EMACS_CONFIG" "$HOME/.emacs.d"; then
+      success "Emacs config imported successfully!"
     else
-      info "Keeping existing configuration"
-      return 0
+      warn "Failed to clone repository, creating default config instead"
+      IMPORT_EMACS_CONFIG=""
     fi
   fi
 
-  # Create init.el with sensible defaults
-  mkdir -p "$HOME/.emacs.d"
+  # Create minimal config if not imported
+  if [[ -z "$IMPORT_EMACS_CONFIG" ]]; then
+    info "Creating minimal Emacs configuration..."
+
+    if [[ -d "$HOME/.emacs.d" ]] || [[ -f "$HOME/.emacs" ]]; then
+      warn "Existing Emacs configuration found"
+      read -r -p "Backup and create minimal config? [y/N] " ans </dev/tty
+      if [[ "$ans" =~ ^[Yy]$ ]]; then
+        [[ -d "$HOME/.emacs.d" ]] && mv "$HOME/.emacs.d" "$HOME/.emacs.d.backup.$(date +%Y%m%d-%H%M%S)"
+        [[ -f "$HOME/.emacs" ]] && mv "$HOME/.emacs" "$HOME/.emacs.backup.$(date +%Y%m%d-%H%M%S)"
+        info "Backed up existing Emacs configuration"
+      else
+        info "Keeping existing configuration"
+        return 0
+      fi
+    fi
+
+    # Create init.el with sensible defaults
+    mkdir -p "$HOME/.emacs.d"
   cat > "$HOME/.emacs.d/init.el" <<'EOF'
 ;;; init.el --- Minimal Emacs configuration -*- lexical-binding: t -*-
 
@@ -123,13 +185,16 @@ add_vanilla_emacs() {
 
 ;;; init.el ends here
 EOF
+  fi
 
   success "Vanilla Emacs configuration created!"
   echo ""
   info "Next steps:"
   info "  1. Apply config: sudo guix system reconfigure /etc/config.scm"
   info "  2. Launch Emacs to start using it"
-  info "  3. Customize ~/.emacs.d/init.el as needed"
+  if [[ -z "$IMPORT_EMACS_CONFIG" ]]; then
+    info "  3. Customize ~/.emacs.d/init.el as needed"
+  fi
   echo ""
   info "Basic Emacs commands:"
   info "  C-x C-f - Find file"
@@ -140,9 +205,13 @@ EOF
   info "  C-x 1   - Close other windows"
   info "  C-x C-c - Quit Emacs"
   echo ""
-  info "To add packages:"
-  info "  M-x package-list-packages"
-  info "  i (mark), x (install), d (mark delete)"
+  if [[ -z "$IMPORT_EMACS_CONFIG" ]]; then
+    info "To add packages:"
+    info "  M-x package-list-packages"
+    info "  i (mark), x (install), d (mark delete)"
+    echo ""
+    info "To import your config later, see: ~/guix-customize/EMACS_IMPORT_GUIDE.md"
+  fi
   echo ""
 }
 
