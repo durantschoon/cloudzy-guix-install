@@ -79,6 +79,11 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
     fmt.Println()
     fmt.Println("To regenerate config, remove the file first:")
     fmt.Printf("  rm %s\n", configPath)
+    fmt.Println()
+    fmt.Println("If you need to pause the installer to do this:")
+    fmt.Println("  1. Press Ctrl+Z to suspend this process")
+    fmt.Println("  2. Run: rm /mnt/etc/config.scm")
+    fmt.Println("  3. Run: fg to resume the installer")
     return nil
   }
 
