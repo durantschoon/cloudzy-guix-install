@@ -60,6 +60,7 @@ Always use `(file-system-label "LABEL_NAME")` instead of `(uuid "xxxx-xxxx" 'ext
 ```
 
 **Why file-system-label is better:**
+
 - **More reliable** - Labels don't change between boots
 - **More readable** - Clear partition purpose
 - **More portable** - Works across different systems
@@ -477,11 +478,13 @@ ls -la /boot/efi/EFI/*/
 ### When to Factor Code into common.go
 
 Factor code into `lib/common.go` when:
+
 1. The code is identical across 2+ platforms
 2. The code performs a common operation (mounting, downloading, verification)
 3. The code can be parameterized for platform differences
 
 Keep code platform-specific when:
+
 1. It's only used by one platform
 2. The logic is fundamentally different per platform
 3. Factoring would make the code harder to understand
