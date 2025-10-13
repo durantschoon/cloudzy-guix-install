@@ -381,7 +381,7 @@ func SetupNonguixChannel() error {
 	fmt.Println("  - This is a third-party server (not official GNU Guix)")
 	fmt.Println("  - Required for Framework 13 WiFi/GPU to work properly")
 	fmt.Println()
-	fmt.Println("Do you want to trust and use Nonguix? [Y/n]")
+	fmt.Print("Do you want to trust and use Nonguix? [Y/n] ")
 
 	// Read user response from /dev/tty (not stdin which may be redirected)
 	tty, err := os.Open("/dev/tty")
