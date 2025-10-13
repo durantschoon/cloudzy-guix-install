@@ -818,6 +818,73 @@ func VerifyInstallation() error {
 	return nil
 }
 
+// RunGuixSystemInitFreeSoftware runs guix system init with only free software (no nonguix)
+func RunGuixSystemInitFreeSoftware() error {
+	// Ensure daemon is running before validation (validation needs daemon)
+	if err := EnsureGuixDaemonRunning(); err != nil {
+		return fmt.Errorf("failed to ensure guix-daemon is running: %w", err)
+	}
+	
+	// Validate config after daemon is confirmed running
+	configPath := "/mnt/etc/config.scm"
+	if err := ValidateGuixConfig(configPath); err != nil {
+		return fmt.Errorf("config validation failed: %w", err)
+	}
+	
+	// Setup GRUB EFI if needed
+	if err := SetupGRUBEFI(); err != nil {
+		return fmt.Errorf("GRUB EFI setup failed: %w", err)
+	}
+	
+	fmt.Println("=== Running guix system init (Free Software Only) ===")
+	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
+	fmt.Println()
+	fmt.Println("You should see:")
+	fmt.Println("  1. Downloading/building packages (free software only)")
+	fmt.Println("  2. Installing bootloader")
+	fmt.Println("  3. Finalizing system")
+	fmt.Println()
+	fmt.Println("Progress output below:")
+	fmt.Println("---")
+	fmt.Println()
+
+	maxRetries := 3
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			fmt.Printf("\n[RETRY %d/%d] Retrying guix system init after substitute failure...\n", attempt, maxRetries)
+			fmt.Println("Waiting 10 seconds before retry...")
+			fmt.Println()
+			time.Sleep(10 * time.Second)
+		}
+
+		// Use standard guix system init (no nonguix channel)
+		if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt"); err != nil {
+			lastErr = err
+			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
+			if attempt < maxRetries {
+				fmt.Println("This is often caused by temporary substitute server issues.")
+				fmt.Println("The command will automatically retry...")
+			}
+			continue
+		}
+
+		// Success
+		lastErr = nil
+		break
+	}
+
+	if lastErr != nil {
+		fmt.Println()
+		fmt.Println("All retry attempts failed. You can:")
+		fmt.Println("  1. Wait a few minutes and run: guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  2. Try with --fallback to build from source: guix system init --fallback /mnt/etc/config.scm /mnt")
+		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
+	}
+
+	return nil
+}
+
 // DownloadFile downloads a file from a URL to a destination path
 func DownloadFile(url, dest string) error {
 	resp, err := http.Get(url)
