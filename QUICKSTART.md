@@ -190,9 +190,13 @@ The customize tool provides a friendly menu for:
 After making changes, select `r` to reconfigure.
 
 **Bonus:** Shared recipes are also pre-installed in `~/guix-customize/recipes/`:
-- `add-spacemacs.sh` - Install Spacemacs editor
+- `add-spacemacs.sh` - Install Spacemacs (Emacs with Vim keybindings)
+- `add-doom-emacs.sh` - Install Doom Emacs (modern, fast Emacs framework)
+- `add-vanilla-emacs.sh` - Install vanilla Emacs with minimal configuration
 - `add-development.sh` - Install dev tools (git, vim, gcc, etc.)
 - `add-fonts.sh` - Install programming fonts
+
+All Emacs recipes support importing your existing config from a Git repository! See `~/guix-customize/EMACS_IMPORT_GUIDE.md` for details.
 
 ### Option C: Alternative - Download Fresh Copy (if needed)
 

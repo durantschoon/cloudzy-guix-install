@@ -257,6 +257,54 @@ guix install steam
 
 ## Common Customization Recipes
 
+### Installing Emacs (Multiple Options)
+
+The guix-customize tool includes three Emacs recipe options pre-installed in `~/guix-customize/recipes/`:
+
+**Option 1: Spacemacs** - Emacs distribution with Vim keybindings and layers
+```bash
+cd ~/guix-customize
+./recipes/add-spacemacs.sh
+```
+
+**Option 2: Doom Emacs** - Modern, fast Emacs framework with great defaults
+```bash
+cd ~/guix-customize
+./recipes/add-doom-emacs.sh
+```
+
+**Option 3: Vanilla Emacs** - Plain Emacs with sensible minimal configuration
+```bash
+cd ~/guix-customize
+./recipes/add-vanilla-emacs.sh
+```
+
+All three recipes:
+- Add Emacs and dependencies to your config.scm using idiomatic Guix style
+- Support importing your existing config from a Git repository
+- Create appropriate configuration files for first-time users
+- Provide clear next steps after installation
+
+**Importing Your Existing Config:**
+
+Each recipe will ask if you want to import an existing configuration from a Git repository. You can:
+- Provide your dotfiles repo URL to import automatically during setup
+- Skip import and do it manually later
+
+For detailed import instructions, see: `~/guix-customize/EMACS_IMPORT_GUIDE.md`
+
+**Example: Importing Doom Emacs config**
+```bash
+# Recipe will prompt for repo URL like:
+# https://github.com/yourusername/doom-config
+
+# Or import manually later:
+git clone https://github.com/yourusername/doom-config ~/.config/doom
+~/.config/emacs/bin/doom sync
+```
+
+---
+
 ### Add User to Docker Group
 
 ```scheme
