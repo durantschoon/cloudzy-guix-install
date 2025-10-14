@@ -18,7 +18,8 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 	fmt.Println("  1. Create swap file in /mnt/swapfile (size from SWAP_SIZE env var)")
 	fmt.Println("  2. Activate swap for installation process")
 	fmt.Println("  3. Optionally run 'guix pull' (if RUN_GUIX_PULL env var is set)")
-	fmt.Println("  4. Run 'guix system init /mnt/etc/config.scm /mnt'")
+    // For framework-dual we require nonguix via time-machine
+    fmt.Println("  4. Run 'guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt'")
 	fmt.Println("  5. Set user password for first login")
 	fmt.Println("  6. Download customization tools to user's home directory")
 	fmt.Println("  7. Unmount all partitions")
@@ -105,6 +106,18 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	if err := lib.StartCowStore(); err != nil {
 		return err
 	}
+
+    // Write the exact time-machine init command to a helper script for the user
+    // Useful if they need to retry manually from the console
+    tmCmd := "guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n"
+    helperPath := "/root/guix-init-time-machine.sh"
+    if err := os.WriteFile(helperPath, []byte("#!/bin/sh\n"+tmCmd), 0755); err == nil {
+        fmt.Printf("Helper script written: %s\n", helperPath)
+        fmt.Println("If the installer aborts, you can rerun the init with:")
+        fmt.Printf("  %s\n", helperPath)
+    } else {
+        fmt.Printf("Warning: Failed to write helper script %s: %v\n", helperPath, err)
+    }
 
 	// Run guix system init with retry logic (includes daemon startup)
 	if err := lib.RunGuixSystemInit(); err != nil {
