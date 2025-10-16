@@ -217,3 +217,4 @@ If Pop!_OS doesn't appear in GRUB, you can manually add it or use `update-grub` 
 - Uses NVMe SSD (typically `/dev/nvme0n1`)
 - Requires UEFI boot (not legacy BIOS)
 - WiFi/Bluetooth firmware needed (add via `postinstall/customize` tool after first boot)
+- **AMD GPU boot issues**: Scripts automatically include `nomodeset acpi=off noapic nolapic` kernel parameters to prevent boot hangs

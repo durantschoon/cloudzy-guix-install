@@ -145,6 +145,14 @@ func (s *Step04SystemInit) RunClean(state *State) error {
         fmt.Printf("Warning: Failed to write installation receipt: %v\n", err)
     }
 
+    // Configure dual-boot GRUB to detect Pop!_OS
+    fmt.Println("Configuring dual-boot GRUB...")
+    if err := s.configureDualBootGRUB(); err != nil {
+        fmt.Printf("Warning: Failed to configure dual-boot GRUB: %v\n", err)
+        fmt.Println("  You can manually fix this after first boot with:")
+        fmt.Println("  sudo os-prober && sudo grub-mkconfig -o /boot/grub/grub.cfg")
+    }
+
     // Sync and unmount
 	fmt.Println("Syncing filesystems...")
 	lib.RunCommand("sync")

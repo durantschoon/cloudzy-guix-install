@@ -326,6 +326,55 @@ After successful installation, `/mnt/boot` should contain:
 - Empty `/boot/efi` before init → ✅ Normal
 - Empty `/boot/efi` after init → ❌ Installation failed
 
+## 🖥️ Framework 13 AMD GPU Boot Issues
+
+### Critical Kernel Parameters
+
+**Framework 13 with AMD GPU requires specific kernel parameters to prevent boot hangs:**
+
+```scheme
+(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=off" "noapic" "nolapic"))
+```
+
+### What These Parameters Do
+
+- **`nomodeset`**: Disables kernel mode setting (fixes AMD GPU display issues)
+- **`acpi=off`**: Disables ACPI (prevents power management conflicts)
+- **`noapic`**: Disables APIC (prevents interrupt controller issues)
+- **`nolapic`**: Disables Local APIC (prevents local interrupt issues)
+
+### Boot Hang Symptoms
+
+- System hangs at "Loading kernel modules..."
+- Repeating "time with localhost and MARK" messages every 20 minutes
+- Never reaches login prompt
+- Ctrl+C doesn't work
+
+### Manual Recovery
+
+If you encounter boot hangs:
+
+1. **At GRUB menu, press 'e' to edit**
+2. **Find the kernel line and add parameters:**
+
+   ```
+   linux /boot/vmlinuz-... quiet splash nomodeset acpi=off noapic nolapic 3
+   ```
+
+3. **Press Ctrl+X or F10 to boot**
+
+### Framework 13 Specific Initrd Modules
+
+```scheme
+(initrd-modules
+ (append '("amdgpu"      ; AMD GPU driver (critical for display)
+           "nvme"        ; NVMe SSD driver
+           "xhci_pci"    ; USB 3.0 host controller
+           "usbhid"      ; USB keyboard/mouse
+           "i2c_piix4")  ; SMBus/I2C for sensors
+         %base-initrd-modules))
+```
+
 ## 🧰 Dual-Boot with Pop!_OS
 
 ### Bootloader Coexistence
@@ -345,6 +394,41 @@ After successful installation, `/mnt/boot` should contain:
 - Whichever OS installs last controls the default boot order
 - Guix's GRUB can detect Pop!_OS (via os-prober)
 - Pop!_OS systemd-boot cannot detect Guix
+
+### Dual-Boot GRUB Configuration
+
+**Critical**: The framework-dual installer must properly configure GRUB to detect Pop!_OS:
+
+```scheme
+(bootloader
+ (bootloader-configuration
+  (bootloader grub-efi-bootloader)
+  (targets '("/boot/efi"))
+  (timeout 5)))
+```
+
+**Common Issue**: If Pop!_OS disappears from boot menu after Guix installation:
+
+1. **Boot from Pop!_OS live ISO**
+2. **Reinstall Pop!_OS GRUB:**
+
+   ```bash
+   sudo mount /dev/nvme0n1p3 /mnt  # Adjust partition number
+   sudo mount /dev/nvme0n1p1 /mnt/boot/efi
+   sudo grub-install --target=x86_64-efi --efi-directory=/mnt/boot/efi --bootloader-id=Pop_OS
+   sudo grub-mkconfig -o /mnt/boot/grub/grub.cfg
+   sudo umount /mnt/boot/efi
+   sudo umount /mnt
+   sudo reboot
+   ```
+
+3. **Or from Guix system:**
+
+   ```bash
+   sudo os-prober
+   sudo grub-mkconfig -o /boot/grub/grub.cfg
+   sudo reboot
+   ```
 
 ### Accessing Pop!_OS from Guix
 

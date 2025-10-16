@@ -194,12 +194,13 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
             "i2c_piix4")  ; SMBus/I2C for sensors
           %%base-initrd-modules))
 
- ;; Kernel arguments for clean boot
- (kernel-arguments '("quiet" "loglevel=3"))
+ ;; Kernel arguments for Framework 13 AMD GPU compatibility
+ ;; Prevents boot hangs and display issues on Framework 13
+ (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=off" "noapic" "nolapic"))
 
  (bootloader
   (bootloader-configuration
-   (bootloader grub-efi-bootloader)
+   (bootloader %s)
    (targets %s)
    (timeout 5)))
  (file-systems
@@ -229,6 +230,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
 `,
     state.HostName,    // host-name
     state.Timezone,    // timezone
+    bootloader,        // bootloader
     targets,           // targets
     dataFS,            // data filesystem conditional
     state.UserName,    // name
