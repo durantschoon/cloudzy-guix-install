@@ -1609,8 +1609,7 @@ func DetectDeviceFromState(device string, platform string) (string, error) {
 		if _, err := os.Stat(device); err != nil {
 			return "", fmt.Errorf("specified device %s is not a block device", device)
 		}
-		fmt.Printf("Using user-specified device: %s
-", device)
+		fmt.Printf("Using user-specified device: %s\n", device)
 		return device, nil
 	}
 

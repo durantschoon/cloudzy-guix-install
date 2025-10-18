@@ -10,8 +10,11 @@ c855a1f0f677a2f9175d014d1d1edf8b489eb3434ed12a58bf81aa2ed18f57e3  ./cloudzy/inst
 ad9fa38430545281ac0eadf3a3078d41368d724000c3f22ce73a57810d7df48d  ./cloudzy/install/03-config.go
 58836f8dc87d6592e6f7f11cdc5f7311e1702e54719acb4d399f99e52394c740  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
+da8cc01c1cd2c763b3c08677008a53637e21a6cd8b92111fcb83299a4a4c066c  ./framework-dual/install/01-partition-check_test.go
 77f9b4115bb1fb2c7375be8737bbf666e80ffc9c192fe0b4e7442554243a39c5  ./framework-dual/install/01-partition-check.go
+3eb1b5b716c03d8b6aacb9064ef8e09e9b15b37998c40c0fdb1a1057e69cbad8  ./framework-dual/install/02-mount-existing_test.go
 3e265a3034d69aa08b1759e23369a66c100d7f63f05a8d7c6539e0ae1bdb750c  ./framework-dual/install/02-mount-existing.go
+d431aa64e43994bdee5585edf6782a9243c28c8b1b0a8464fd4cc8f7b4bf4c8b  ./framework-dual/install/03-config-dual-boot_test.go
 2156d281add810aaddddbd247b9e871dd5e775e37c9babb8b126af6e1c2dc01a  ./framework-dual/install/03-config-dual-boot.go
 8ba0aa6061467a92aeae5c85c9e572a1d8142deb5e08604acfa02cb273875914  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
@@ -20,7 +23,8 @@ d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-du
 3ec941cb4c1ea55dfebf98e50a0e62e22e077ac20c08dcb6dc1a3e4dbad9c4bb  ./framework/install/03-config.go
 fb7593d9966eb3f081e9bb8051051a626140b546d1829d899e3456229f069ab6  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
-3dce8af751055a36f2335f5b8d3d28f4fceccfc64642e8336d1447816715fcbc  ./lib/common.go
+688c0a510ac4c416a3ea47714b3ebe684d9a8370b1429376b2498a971e08418e  ./lib/common_test.go
+45903ff6cf3ee0ef939650b97d4a2cb890d48bccb876c7a793d8e119ebfa8092  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script
