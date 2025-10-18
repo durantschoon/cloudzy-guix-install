@@ -6,7 +6,7 @@ This document contains important notes for AI assistants (like Claude Code) work
 
 - Do not remove code without being told explicitly to do so.
 - It is fin and encouraged to flag code that you think should be removed and let the user decide after your updates to a section of code.
-- Each line/block/unit of code should have at least one purpose (goal it is trying to achieve) and if you need to, create a file ending in <codefilename>_purpose.txt which follows the flow of the code, module by module, function by function, variabl by variable etc. which states the justification the section. For example include reasoning why a certain setting is kept in the bare minimal config.scm file. You can also leave notes in the right areas of the text file to mention statements of omission, for example "although you might be tempted to include setting X, we leave it out because it causes problem Y" (the more specific the better, for example, in version ABC of guix).
+- Each line/block/unit of code should have at least one purpose (goal it is trying to achieve) and if you need to, create a file ending in `codefilename_purpose.txt` which follows the flow of the code, module by module, function by function, variable by variable etc. which states the justification the section. For example include reasoning why a certain setting is kept in the bare minimal config.scm file. You can also leave notes in the right areas of the text file to mention statements of omission, for example "although you might be tempted to include setting X, we leave it out because it causes problem Y" (the more specific the better, for example, in version ABC of guix).
 
 ## Important Constraints
 
@@ -123,17 +123,60 @@ All installation state is managed through a shared `State` struct (in `framework
 3. **Don't use `done < file.txt`** - Use process substitution
 4. **Don't add timestamps to manifest** - Makes hash unstable
 5. **Don't use `exec` in bootstrap** - Breaks stdin for Go installer
-6. **Don't commit without updating manifest** - See below
+6. **Don't commit without running tests** - Always run `./run-tests.sh` first
+7. **Don't commit without updating manifest** - See below
+8. **Don't add new code without tests** - All new functions need corresponding tests
+9. **Don't refactor without integration tests** - Verify functionality after moving code
 
 ## Development Workflow
+
+### Testing After Code Changes
+
+**CRITICAL:** After refactoring or modifying code, you **MUST** run tests and fix any issues before committing:
+
+```bash
+# Run all tests to verify changes work correctly
+./run-tests.sh
+
+# If tests fail, fix the code and re-run tests
+# Only proceed to commit after all tests pass
+```
+
+**Test Coverage Requirements:**
+
+- **New functions** must have corresponding unit tests in `lib/common_test.go`
+- **Refactored code** must have integration tests to verify functionality
+- **String operations** (like partition path generation) must be tested
+- **Error handling** must be tested with invalid inputs
+- **Function signatures** must be verified after refactoring
+
+**Test Files:**
+
+- `lib/common_test.go` - Unit tests for shared functions
+- `framework-dual/install/*_test.go` - Integration tests for install steps
+- `run-tests.sh` - Automated test runner
+
+**Why Testing is Required:**
+
+- Ensures refactored code works correctly
+- Prevents regressions when moving functions to common library
+- Verifies function signatures and accessibility
+- Validates string operations and error handling
+- Maintains code quality and reliability
 
 ### Before Committing Changes
 
 If you modified any scripts that run on the Guix ISO, you **MUST** update the manifest before committing:
 
 ```bash
+# 1. Run tests first (see above)
+./run-tests.sh
+
+# 2. Update manifest with new file checksums
 ./update-manifest.sh
-git add SOURCE_MANIFEST.txt
+
+# 3. Commit all changes including tests and manifest
+git add .
 git commit -m "Your commit message"
 ```
 
@@ -143,6 +186,7 @@ git commit -m "Your commit message"
 - `run-remote-steps.go`
 - Any file in `**/install/*.go`
 - Any file in `**/install/*.sh`
+- Any new test files (`*_test.go`)
 
 **Why:** The manifest contains SHA256 checksums of all source files. Users verify this manifest hash to ensure GitHub's CDN has the latest version. If you don't update it, users will get checksum mismatches when they try to install.
 
@@ -165,6 +209,63 @@ When adding features that are needed in multiple installers (cloudzy, framework,
 - Command logging: enable once per step with `EnableCommandLogging("/tmp/guix-install.log")`
 
 This keeps installers small, readable, and consistent.
+
+### Add Tests for New Code
+
+**MANDATORY:** When adding new functions or features, you **MUST** add corresponding tests:
+
+**For new functions in `lib/common.go`:**
+
+- Add unit tests in `lib/common_test.go`
+- Test with various input combinations
+- Test error conditions and edge cases
+- Test string operations (partition paths, device detection, etc.)
+
+**For new install steps:**
+
+- Add integration tests in `{platform}/install/*_test.go`
+- Test function signatures and accessibility
+- Test state management and persistence
+- Test error handling and recovery
+
+**Test Naming Convention:**
+
+- Unit tests: `TestFunctionName`
+- Integration tests: `TestStepName_Integration`
+- Error tests: `TestFunctionName_ErrorHandling`
+
+**Example test structure:**
+
+```go
+func TestMakePartitionPath(t *testing.T) {
+    testCases := []struct {
+        device   string
+        partNum  string
+        expected string
+    }{
+        {"/dev/nvme0n1", "1", "/dev/nvme0n1p1"},
+        {"/dev/sda", "2", "/dev/sda2"},
+        // ... more test cases
+    }
+    
+    for _, tc := range testCases {
+        t.Run(tc.device+"_"+tc.partNum, func(t *testing.T) {
+            result := MakePartitionPath(tc.device, tc.partNum)
+            if result != tc.expected {
+                t.Errorf("got %s, want %s", result, tc.expected)
+            }
+        })
+    }
+}
+```
+
+**Why tests are required:**
+
+- Ensures new code works correctly
+- Prevents regressions during refactoring
+- Documents expected behavior
+- Enables safe code changes
+- Maintains code quality standards
 
 ### Update Documentation After Adding Features
 
@@ -197,16 +298,16 @@ If you encounter a potential conflict between existing code, documentation, or s
 
 After a developer completes a milestone, offer to review changes by adopting one of these personas:
 
-1) Mid‑Level Unix User New to Guix
-- Focus: onboarding clarity, data‑loss warnings, Secure Boot notes, first‑boot expectations, networking quick path
-- Goal: ensure the Quickstart and README answer “what do I do next?” with minimal Guix background
+1. **Mid‑Level Unix User New to Guix**
+   - Focus: onboarding clarity, data‑loss warnings, Secure Boot notes, first‑boot expectations, networking quick path
+   - Goal: ensure the Quickstart and README answer "what do I do next?" with minimal Guix background
 
-2) Seasoned Guix User
-- Focus: channel pinning, substitute trust, receipts/provenance, services (NetworkManager, TLP, time sync, fstrim), storage options (LUKS/btrfs), diagnostics
-- Goal: robustness, reproducibility, and clean Guix idioms
+2. **Seasoned Guix User**
+   - Focus: channel pinning, substitute trust, receipts/provenance, services (NetworkManager, TLP, time sync, fstrim), storage options (LUKS/btrfs), diagnostics
+   - Goal: robustness, reproducibility, and clean Guix idioms
 
-3) Dual‑Boot Laptop Owner
-- Focus: GRUB visibility, chainloading Pop!_OS, keeping existing partitions safe, clear rollback paths
-- Goal: confidence that dual‑boot stays usable and recoverable
+3. **Dual‑Boot Laptop Owner**
+   - Focus: GRUB visibility, chainloading Pop!_OS, keeping existing partitions safe, clear rollback paths
+   - Goal: confidence that dual‑boot stays usable and recoverable
 
 How to offer: “Do you want a review as a [Mid‑Level Unix User], [Seasoned Guix User], or [Dual‑Boot Laptop Owner]?”
