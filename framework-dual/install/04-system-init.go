@@ -17,7 +17,7 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 	fmt.Println("This step will:")
 	fmt.Println("  1. Create swap file in /mnt/swapfile (size from SWAP_SIZE env var)")
 	fmt.Println("  2. Activate swap for installation process")
-	fmt.Println("  3. Optionally run 'guix pull' (if RUN_GUIX_PULL env var is set)")
+	fmt.Println("  3. Optionally run 'guix pull' (if RUN_GUIX_PULL env var is set, NOT recommended for framework-dual)")
     // For framework-dual we require nonguix via time-machine
     fmt.Println("  4. Run 'guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt'")
 	fmt.Println("  5. Set user password for first login")
@@ -167,5 +167,20 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 
 	lib.RunCommand("reboot")
 
+	return nil
+}
+
+// configureDualBootGRUB configures GRUB to detect and boot Pop!_OS alongside Guix
+func (s *Step04SystemInit) configureDualBootGRUB() error {
+	// Enable os-prober to detect other operating systems
+	if err := lib.RunCommand("chroot", "/mnt", "bash", "-c", "echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub"); err != nil {
+		return fmt.Errorf("failed to enable os-prober: %w", err)
+	}
+	
+	// Update GRUB configuration to include detected OSes
+	if err := lib.RunCommand("chroot", "/mnt", "grub-mkconfig", "-o", "/boot/grub/grub.cfg"); err != nil {
+		return fmt.Errorf("failed to update GRUB config: %w", err)
+	}
+	
 	return nil
 }

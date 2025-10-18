@@ -1472,3 +1472,148 @@ func UnmountDeviceAlternative(device string) error {
 	
 	return nil
 }
+
+
+// MakePartitionPath creates a partition path from device and partition number
+func MakePartitionPath(device, partNum string) string {
+	if strings.Contains(device, "nvme") || strings.Contains(device, "mmcblk") {
+		return fmt.Sprintf("%sp%s", device, partNum)
+	}
+	return device + partNum
+}
+
+// DetectBootMode detects whether the system is running in UEFI or BIOS mode
+func DetectBootMode() string {
+	// Check if /sys/firmware/efi exists
+	if _, err := os.Stat("/sys/firmware/efi"); err == nil {
+		return "uefi"
+	}
+	return "bios"
+}
+
+// DetectPartitions detects the EFI and root partition paths for a device
+func DetectPartitions(device string) (efi string, root string, err error) {
+	if device == "" {
+		return "", "", fmt.Errorf("DEVICE not set")
+	}
+
+	// For standard layouts: partition 1 is EFI, partition 2 is root
+	efi = MakePartitionPath(device, "1")
+	root = MakePartitionPath(device, "2")
+
+	return efi, root, nil
+}
+
+// FindEFIPartition finds the EFI System Partition by GPT type GUID
+func FindEFIPartition(device string) (string, error) {
+	if device == "" {
+		return "", fmt.Errorf("DEVICE not set")
+	}
+
+	// Find EFI partition by GPT type GUID
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME,PARTTYPE", device)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to list partitions: %w", err)
+	}
+
+	var efiPartName string
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.Contains(strings.ToLower(line), "c12a7328-f81f-11d2-ba4b-00a0c93ec93b") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 {
+				efiPartName = fields[0]
+				break
+			}
+		}
+	}
+
+	if efiPartName == "" {
+		return "", fmt.Errorf("no EFI System Partition found")
+	}
+
+	// Convert partition name to device path
+	var efiPath string
+	if strings.Contains(device, "nvme") {
+		// Extract partition number from nvme0n1p1
+		parts := strings.Split(efiPartName, "p")
+		if len(parts) >= 2 {
+			efiPath = device + "p" + parts[len(parts)-1]
+		}
+	} else {
+		// SATA: extract number from sda1
+		for i := len(efiPartName) - 1; i >= 0; i-- {
+			if efiPartName[i] < '0' || efiPartName[i] > '9' {
+				efiPath = device + efiPartName[i+1:]
+				break
+			}
+		}
+	}
+
+	if efiPath == "" {
+		return "", fmt.Errorf("failed to parse EFI partition path from %s", efiPartName)
+	}
+
+	return efiPath, nil
+}
+
+// FindGuixRootPartition finds a partition labeled 'GUIX_ROOT' or 'guix-root'
+func FindGuixRootPartition(device string) (string, error) {
+	if device == "" {
+		return "", fmt.Errorf("DEVICE not set")
+	}
+
+	// Try lsblk first (works with filesystem labels)
+	cmd := exec.Command("lsblk", "-n", "-o", "NAME,LABEL", device)
+	output, err := cmd.Output()
+	if err == nil {
+		for _, line := range strings.Split(string(output), "\n") {
+			if strings.Contains(line, "GUIX_ROOT") {
+				fields := strings.Fields(line)
+				if len(fields) >= 2 && fields[1] == "GUIX_ROOT" {
+					// Extract partition name (strip any tree characters)
+					partName := fields[0]
+					// Remove tree branch characters like ├─ └─ │
+					partName = strings.TrimLeft(partName, "├─└│ ")
+					return "/dev/" + partName, nil
+				}
+			}
+		}
+	}
+
+	// Try parted as fallback (works with partition names)
+	cmd = exec.Command("parted", device, "print")
+	output, err = cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to read partition table: %w", err)
+	}
+
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.Contains(line, "guix-root") || strings.Contains(line, "GUIX_ROOT") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 {
+				partNum := fields[0]
+				return MakePartitionPath(device, partNum), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no partition labeled 'GUIX_ROOT' or 'guix-root' found")
+}
+
+
+// DetectDeviceFromState detects device from state, auto-detecting if not set
+func DetectDeviceFromState(device string, platform string) (string, error) {
+	if device != "" {
+		// User-specified device
+		if _, err := os.Stat(device); err != nil {
+			return "", fmt.Errorf("specified device %s is not a block device", device)
+		}
+		fmt.Printf("Using user-specified device: %s
+", device)
+		return device, nil
+	}
+
+	// Auto-detect using platform-specific candidates
+	return DetectDevice(platform)
+}

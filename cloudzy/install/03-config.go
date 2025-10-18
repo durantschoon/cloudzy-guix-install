@@ -3,7 +3,6 @@ package install
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
@@ -14,15 +13,22 @@ type Step03Config struct{}
 func (s *Step03Config) RunWarnings(state *State) error {
 	// Auto-detect missing variables if previous steps were skipped
 	if state.Device == "" {
-		if err := s.detectDevice(state); err != nil {
+		device, err := lib.DetectDevice("cloudzy")
+		if err != nil {
 			return err
 		}
+		state.Device = device
 	}
 
 	if state.EFI == "" || state.Root == "" {
-		if err := s.detectPartitions(state); err != nil {
+		efi, root, err := lib.DetectPartitions(state.Device)
+		if err != nil {
 			return err
 		}
+		state.EFI = efi
+		state.Root = root
+		fmt.Printf("Detected EFI: %s\n", state.EFI)
+		fmt.Printf("Detected ROOT: %s\n", state.Root)
 	}
 
 	// Verify required variables
@@ -81,7 +87,7 @@ func (s *Step03Config) RunClean(state *State) error {
 
 	// Detect boot mode if not set
 	if state.BootMode == "" {
-		state.BootMode = s.detectBootMode()
+		state.BootMode = lib.DetectBootMode()
 	}
 
 	bootloader := ""
@@ -195,48 +201,5 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
 	)
 
 	return config
-}
-
-func (s *Step03Config) detectBootMode() string {
-	// Check if /sys/firmware/efi exists
-	if _, err := os.Stat("/sys/firmware/efi"); err == nil {
-		return "uefi"
-	}
-	return "bios"
-}
-
-// Helper functions
-
-func (s *Step03Config) detectDevice(state *State) error {
-	candidates := []string{"/dev/vda", "/dev/sda", "/dev/nvme0n1"}
-	for _, d := range candidates {
-		if _, err := os.Stat(d); err == nil {
-			state.Device = d
-			fmt.Printf("Auto-detected device: %s\n", d)
-			return nil
-		}
-	}
-	return fmt.Errorf("no suitable block device found")
-}
-
-func (s *Step03Config) detectPartitions(state *State) error {
-	if state.Device == "" {
-		return fmt.Errorf("DEVICE not set")
-	}
-
-	state.EFI = s.makePartitionPath(state.Device, "1")
-	state.Root = s.makePartitionPath(state.Device, "2")
-
-	fmt.Printf("Detected EFI: %s\n", state.EFI)
-	fmt.Printf("Detected ROOT: %s\n", state.Root)
-
-	return nil
-}
-
-func (s *Step03Config) makePartitionPath(device, partNum string) string {
-	if strings.Contains(device, "nvme") || strings.Contains(device, "mmcblk") {
-		return fmt.Sprintf("%sp%s", device, partNum)
-	}
-	return device + partNum
 }
 

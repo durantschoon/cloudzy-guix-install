@@ -2,6 +2,12 @@
 
 This document contains important notes for AI assistants (like Claude Code) working on this repository.
 
+## Expected behavior when updating the code
+
+- Do not remove code without being told explicitly to do so.
+- It is fin and encouraged to flag code that you think should be removed and let the user decide after your updates to a section of code.
+- Each line/block/unit of code should have at least one purpose (goal it is trying to achieve) and if you need to, create a file ending in <codefilename>_purpose.txt which follows the flow of the code, module by module, function by function, variabl by variable etc. which states the justification the section. For example include reasoning why a certain setting is kept in the bare minimal config.scm file. You can also leave notes in the right areas of the text file to mention statements of omission, for example "although you might be tempted to include setting X, we leave it out because it causes problem Y" (the more specific the better, for example, in version ABC of guix).
+
 ## Important Constraints
 
 ### Guix ISO Terminal Limitations

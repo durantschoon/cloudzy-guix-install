@@ -122,8 +122,8 @@ func (s *Step01Partition) RunClean(state *State) error {
 		fmt.Println("Partitions already exist, checking if formatted...")
 		
 		// Set partition paths
-		state.EFI = s.makePartitionPath(state.Device, "1")
-		state.Root = s.makePartitionPath(state.Device, "2")
+		state.EFI = lib.MakePartitionPath(state.Device, "1")
+		state.Root = lib.MakePartitionPath(state.Device, "2")
 		
 		// Check if partitions are already formatted
 		if lib.IsPartitionFormatted(state.EFI, "vfat") && lib.IsPartitionFormatted(state.Root, "ext4") {
@@ -152,8 +152,8 @@ func (s *Step01Partition) RunClean(state *State) error {
 		}
 		
 		// Set partition paths
-		state.EFI = s.makePartitionPath(state.Device, "1")
-		state.Root = s.makePartitionPath(state.Device, "2")
+		state.EFI = lib.MakePartitionPath(state.Device, "1")
+		state.Root = lib.MakePartitionPath(state.Device, "2")
 	}
 
 	fmt.Printf("EFI is %s and ROOT is %s\n", state.EFI, state.Root)
@@ -217,12 +217,6 @@ func (s *Step01Partition) isDeviceMounted(device string) bool {
 	return strings.Contains(string(output), device)
 }
 
-func (s *Step01Partition) makePartitionPath(device, partNum string) string {
-	if strings.Contains(device, "nvme") || strings.Contains(device, "mmcblk") {
-		return fmt.Sprintf("%sp%s", device, partNum)
-	}
-	return device + partNum
-}
 
 func (s *Step01Partition) hasExistingData(device string) bool {
 	// Check if device has any partitions
@@ -231,73 +225,8 @@ func (s *Step01Partition) hasExistingData(device string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	// If we have more than 1 line (device + partitions), there's existing data
 	return len(lines) > 1
 }
-
-func (s *Step01Partition) unmountDevice(device string) error {
-	// Get all mount points for this device and its partitions
-	cmd := exec.Command("findmnt", "-n", "-o", "TARGET", device)
-	output, err := cmd.Output()
-	if err != nil {
-		// findmnt might not be available, try alternative method
-		return s.unmountDeviceAlternative(device)
-	}
-	
-	mountPoints := strings.Split(strings.TrimSpace(string(output)), "\n")
-	
-	// Unmount all mount points in reverse order (deepest first)
-	for i := len(mountPoints) - 1; i >= 0; i-- {
-		mountPoint := strings.TrimSpace(mountPoints[i])
-		if mountPoint == "" {
-			continue
-		}
-		
-		fmt.Printf("Unmounting %s...\n", mountPoint)
-		if err := lib.RunCommand("umount", mountPoint); err != nil {
-			fmt.Printf("Warning: Failed to unmount %s: %v\n", mountPoint, err)
-			// Try lazy unmount as fallback
-			lib.RunCommand("umount", "-l", mountPoint)
-		}
-	}
-	
-	return nil
-}
-
-func (s *Step01Partition) unmountDeviceAlternative(device string) error {
-	// Alternative method using mount command and grep
-	cmd := exec.Command("mount")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to get mount information: %w", err)
-	}
-	
-	lines := strings.Split(string(output), "\n")
-	var mountPoints []string
-	
-	for _, line := range lines {
-		if strings.Contains(line, device) {
-			// Extract mount point (second field)
-			fields := strings.Fields(line)
-			if len(fields) >= 2 {
-				mountPoints = append(mountPoints, fields[1])
-			}
-		}
-	}
-	
-	// Unmount all found mount points
-	for _, mountPoint := range mountPoints {
-		fmt.Printf("Unmounting %s...\n", mountPoint)
-		if err := lib.RunCommand("umount", mountPoint); err != nil {
-			fmt.Printf("Warning: Failed to unmount %s: %v\n", mountPoint, err)
-			// Try lazy unmount as fallback
-			lib.RunCommand("umount", "-l", mountPoint)
-		}
-	}
-	
-	return nil
-}
-
-

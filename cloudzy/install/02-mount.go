@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/durantschoon/cloudzy-guix-install/lib"
@@ -16,15 +15,22 @@ type Step02Mount struct{}
 func (s *Step02Mount) RunWarnings(state *State) error {
 	// Auto-detect missing variables if Step01 was skipped
 	if state.Device == "" {
-		if err := s.detectDevice(state); err != nil {
+		device, err := lib.DetectDevice("cloudzy")
+		if err != nil {
 			return err
 		}
+		state.Device = device
 	}
 
 	if state.EFI == "" || state.Root == "" {
-		if err := s.detectPartitions(state); err != nil {
+		efi, root, err := lib.DetectPartitions(state.Device)
+		if err != nil {
 			return err
 		}
+		state.EFI = efi
+		state.Root = root
+		fmt.Printf("Detected EFI: %s\n", state.EFI)
+		fmt.Printf("Detected ROOT: %s\n", state.Root)
 	}
 
 	// Verify required variables
@@ -175,42 +181,4 @@ func (s *Step02Mount) RunClean(state *State) error {
 	fmt.Println("Mount setup complete. Ready for system initialization.")
 	return nil
 }
-
-// Helper functions
-
-func (s *Step02Mount) detectDevice(state *State) error {
-	// Auto-detect
-	candidates := []string{"/dev/vda", "/dev/sda", "/dev/nvme0n1"}
-	for _, d := range candidates {
-		if _, err := os.Stat(d); err == nil {
-			state.Device = d
-			fmt.Printf("Auto-detected device: %s\n", d)
-			return nil
-		}
-	}
-	return fmt.Errorf("no suitable block device found. Please set DEVICE environment variable")
-}
-
-func (s *Step02Mount) detectPartitions(state *State) error {
-	if state.Device == "" {
-		return fmt.Errorf("DEVICE not set")
-	}
-
-	// For cloudzy, partitions are straightforward: partition 1 is EFI, partition 2 is root
-	state.EFI = s.makePartitionPath(state.Device, "1")
-	state.Root = s.makePartitionPath(state.Device, "2")
-
-	fmt.Printf("Detected EFI: %s\n", state.EFI)
-	fmt.Printf("Detected ROOT: %s\n", state.Root)
-
-	return nil
-}
-
-func (s *Step02Mount) makePartitionPath(device, partNum string) string {
-	if strings.Contains(device, "nvme") || strings.Contains(device, "mmcblk") {
-		return fmt.Sprintf("%sp%s", device, partNum)
-	}
-	return device + partNum
-}
-
 
