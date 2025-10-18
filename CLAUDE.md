@@ -116,6 +116,39 @@ All installation state is managed through a shared `State` struct (in `framework
 3. User manually verifies manifest hash matches documentation
 4. Go modules provide additional verification (go.mod/go.sum)
 
+## Bash Shebang Paths
+
+**IMPORTANT:** Use the correct shebang based on where the script runs:
+
+### For scripts that run ONLY on Guix ISO:
+```bash
+#!/bin/bash
+```
+Or safer (works everywhere):
+```bash
+#!/usr/bin/env bash
+```
+
+### For scripts that run ONLY on installed Guix system (postinstall):
+```bash
+#!/run/current-system/profile/bin/bash
+```
+
+### For scripts that run in BOTH contexts (ISO and installed):
+```bash
+#!/usr/bin/env bash
+```
+
+**Why:**
+- Guix ISO has bash at `/bin/bash`
+- Installed Guix has bash at `/run/current-system/profile/bin/bash`
+- `#!/usr/bin/env bash` works in both by searching PATH
+
+**Examples:**
+- ISO install scripts: `#!/usr/bin/env bash` (safe for both)
+- Postinstall customization: `#!/run/current-system/profile/bin/bash`
+- Verification script: `#!/usr/bin/env bash` (runs in both contexts)
+
 ## Common Pitfalls
 
 1. **Don't use Unicode in ISO scripts** - See above
@@ -127,6 +160,7 @@ All installation state is managed through a shared `State` struct (in `framework
 7. **Don't commit without updating manifest** - See below
 8. **Don't add new code without tests** - All new functions need corresponding tests
 9. **Don't refactor without integration tests** - Verify functionality after moving code
+10. **Don't use wrong bash shebang** - See "Bash Shebang Paths" above
 
 ## Development Workflow
 

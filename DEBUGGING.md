@@ -254,6 +254,38 @@ EFI boot entries checked with `efibootmgr`:
 
 ---
 
+## Verification Script
+
+A standalone verification script (`verify-guix-install.sh`) has been created to help diagnose installation issues:
+
+**Features:**
+- Works from both Guix ISO (checks `/mnt`) and installed system (checks `/`)
+- Checks all critical boot files (kernel, initrd, GRUB)
+- Verifies user accounts exist
+- Shows file sizes to confirm integrity
+- Color-coded output (errors, warnings, OK)
+- Exit codes: 0=success, 1=failure
+
+**Usage:**
+
+```bash
+# From Guix ISO (before rebooting):
+./verify-guix-install.sh
+
+# From installed Guix system (after boot):
+sudo verify-guix-install
+
+# The script is automatically installed to /usr/local/bin/ during system init
+```
+
+**When to use:**
+1. **Before leaving Guix ISO** - Must pass before rebooting
+2. **After boot** - If system has issues, run to diagnose
+3. **During troubleshooting** - Check state at any point
+4. **After fixes** - Verify problems are resolved
+
+---
+
 ## Files Modified During Debugging
 
 1. **framework-dual/install/03-config-dual-boot.go** - Removed aggressive kernel parameters

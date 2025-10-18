@@ -24,7 +24,7 @@ d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-du
 fb7593d9966eb3f081e9bb8051051a626140b546d1829d899e3456229f069ab6  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
 688c0a510ac4c416a3ea47714b3ebe684d9a8370b1429376b2498a971e08418e  ./lib/common_test.go
-55b557abf366fa56290f3351f5e761aa9b7295fea1e6f1df8554ac6b1ad4e290  ./lib/common.go
+4bd9ee979e96b58a3842d257a8222dd0bd62f6642aa0dc5fb5e6fbab61c4baf1  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script

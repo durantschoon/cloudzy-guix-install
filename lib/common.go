@@ -748,6 +748,34 @@ func RunGuixSystemInit() error {
 	return nil
 }
 
+// InstallVerificationScript installs the verification script to the target system
+func InstallVerificationScript() error {
+	fmt.Println("=== Installing Verification Script ===")
+
+	// Read the verification script from current directory
+	scriptContent, err := os.ReadFile("verify-guix-install.sh")
+	if err != nil {
+		return fmt.Errorf("failed to read verify-guix-install.sh: %w", err)
+	}
+
+	// Install to /mnt/usr/local/bin/
+	targetDir := "/mnt/usr/local/bin"
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("failed to create %s: %w", targetDir, err)
+	}
+
+	targetPath := filepath.Join(targetDir, "verify-guix-install")
+	if err := os.WriteFile(targetPath, scriptContent, 0755); err != nil {
+		return fmt.Errorf("failed to write %s: %w", targetPath, err)
+	}
+
+	fmt.Printf("[OK] Verification script installed to: %s\n", targetPath)
+	fmt.Println("     Run anytime with: sudo verify-guix-install")
+	fmt.Println()
+
+	return nil
+}
+
 // VerifyInstallation verifies that all critical files were installed
 func VerifyInstallation() error {
 	fmt.Println()
@@ -837,6 +865,12 @@ func VerifyInstallation() error {
 		fmt.Println("System should boot properly after reboot.")
 	}
 	fmt.Println()
+
+	// Install verification script for future use
+	if err := InstallVerificationScript(); err != nil {
+		fmt.Printf("[WARN] Failed to install verification script: %v\n", err)
+		fmt.Println("       (This is not critical, continuing...)")
+	}
 
 	return nil
 }
