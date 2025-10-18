@@ -236,37 +236,6 @@ reboot
 - Optionally run again after setting password (safety check)
 - The script will be automatically installed to `/usr/local/bin/verify-guix-install` during init
 
-### Script Improvements Needed
-
-1. **Make VerifyInstallation() fail hard**
-   - Change warnings to errors
-   - Return non-zero exit code
-   - Print clear "DO NOT REBOOT" message
-
-2. **Add pre-reboot confirmation**
-   - Force user to acknowledge kernel/initrd exist
-   - Show file sizes to confirm they're real
-
-3. **Better error visibility**
-   - Highlight failures in red
-   - Summarize errors at end
-   - Log to file for review
-
-4. **Add retry logic**
-   - If verification fails, offer to retry `guix system init`
-   - Don't let user proceed to reboot
-
----
-
-## Boot Menu Cleanup (Secondary Issue)
-
-**Status:** Partially resolved
-
-EFI boot entries checked with `efibootmgr`:
-- Removed clutter entries (Linux Boot Manager, etc.)
-- "EFI Hard Drive" cannot be removed (firmware fallback, auto-regenerated)
-- This is harmless and can be ignored
-
 ---
 
 ## Verification Script
@@ -298,29 +267,6 @@ sudo verify-guix-install
 2. **After boot** - If system has issues, run to diagnose
 3. **During troubleshooting** - Check state at any point
 4. **After fixes** - Verify problems are resolved
-
----
-
-## Files Modified During Debugging
-
-1. **framework-dual/install/03-config-dual-boot.go** - Removed aggressive kernel parameters
-2. **framework/install/03-config.go** - Removed aggressive kernel parameters
-
-Changes:
-```diff
-- (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=off" "noapic" "nolapic"))
-+ (kernel-arguments '("quiet"))
-```
-
----
-
-## Lessons Learned
-
-1. **Always verify kernel/initrd exist before allowing reboot**
-2. **Warnings should be errors for critical missing files**
-3. **Clear "INSTALLATION COMPLETE" vs "INSTALLATION FAILED" messaging**
-4. **Guide user to check logs if init fails**
-5. **"Dirty bit" errors are symptoms, not root causes**
 
 ---
 
