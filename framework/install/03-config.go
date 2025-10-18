@@ -181,9 +181,8 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
             "i2c_piix4")  ; SMBus/I2C for sensors
           %%base-initrd-modules))
 
- ;; Kernel arguments for Framework 13 AMD GPU compatibility
- ;; Prevents boot hangs and display issues on Framework 13
- (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=off" "noapic" "nolapic"))
+ ;; Kernel arguments - minimal for compatibility
+ (kernel-arguments '("quiet"))
 
  (bootloader
   (bootloader-configuration

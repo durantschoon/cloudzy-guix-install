@@ -757,19 +757,29 @@ func VerifyInstallation() error {
 	// Check for kernel
 	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
 	if len(kernels) == 0 {
-		fmt.Println("[WARN] No kernel found in /mnt/boot/vmlinuz-*")
+		fmt.Println("[ERROR] No kernel found in /mnt/boot/vmlinuz-*")
+		fmt.Println("        CRITICAL: System will not boot without a kernel!")
 		allGood = false
 	} else {
 		fmt.Printf("[OK] Kernel installed: %s\n", filepath.Base(kernels[0]))
+		// Show file size to confirm it's real
+		if info, err := os.Stat(kernels[0]); err == nil {
+			fmt.Printf("     Size: %.1f MB\n", float64(info.Size())/1024/1024)
+		}
 	}
 
 	// Check for initrd
 	initrds, _ := filepath.Glob("/mnt/boot/initrd-*")
 	if len(initrds) == 0 {
-		fmt.Println("[WARN] No initrd found in /mnt/boot/initrd-*")
+		fmt.Println("[ERROR] No initrd found in /mnt/boot/initrd-*")
+		fmt.Println("        CRITICAL: System will not boot without an initrd!")
 		allGood = false
 	} else {
 		fmt.Printf("[OK] Initrd installed: %s\n", filepath.Base(initrds[0]))
+		// Show file size to confirm it's real
+		if info, err := os.Stat(initrds[0]); err == nil {
+			fmt.Printf("     Size: %.1f MB\n", float64(info.Size())/1024/1024)
+		}
 	}
 
 	// Check for GRUB config
@@ -798,20 +808,33 @@ func VerifyInstallation() error {
 
 	if !allGood {
 		fmt.Println()
-		fmt.Println("WARNING: Installation may be incomplete!")
-		fmt.Println("Missing files detected. System may not boot properly.")
-		fmt.Println("You can try re-running: guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println("========================================")
+		fmt.Println("  INSTALLATION VERIFICATION FAILED!")
+		fmt.Println("========================================")
 		fmt.Println()
-		fmt.Print("Continue anyway? [y/N] ")
-
-		var response string
-		fmt.Scanln(&response)
-		if response != "y" && response != "Y" {
-			return fmt.Errorf("installation verification failed, aborting")
-		}
+		fmt.Println("Missing critical boot files - system WILL NOT BOOT.")
+		fmt.Println()
+		fmt.Println("DO NOT REBOOT until this is resolved!")
+		fmt.Println()
+		fmt.Println("Recommended action:")
+		fmt.Println("  1. Re-run: guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  2. Wait for it to complete successfully")
+		fmt.Println("  3. Verify files exist: ls /mnt/boot/vmlinuz* /mnt/boot/initrd*")
+		fmt.Println()
+		fmt.Println("If the problem persists, check:")
+		fmt.Println("  - Disk space: df -h /mnt")
+		fmt.Println("  - Error messages in guix system init output")
+		fmt.Println("  - Installation logs")
+		fmt.Println()
+		return fmt.Errorf("installation verification failed - missing critical boot files")
 	} else {
 		fmt.Println()
-		fmt.Println("[OK] All critical files verified successfully!")
+		fmt.Println("========================================")
+		fmt.Println("  INSTALLATION VERIFIED SUCCESSFULLY!")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Println("All critical boot files are present.")
+		fmt.Println("System should boot properly after reboot.")
 	}
 	fmt.Println()
 

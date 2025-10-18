@@ -15,16 +15,16 @@ da8cc01c1cd2c763b3c08677008a53637e21a6cd8b92111fcb83299a4a4c066c  ./framework-du
 3eb1b5b716c03d8b6aacb9064ef8e09e9b15b37998c40c0fdb1a1057e69cbad8  ./framework-dual/install/02-mount-existing_test.go
 3e265a3034d69aa08b1759e23369a66c100d7f63f05a8d7c6539e0ae1bdb750c  ./framework-dual/install/02-mount-existing.go
 d431aa64e43994bdee5585edf6782a9243c28c8b1b0a8464fd4cc8f7b4bf4c8b  ./framework-dual/install/03-config-dual-boot_test.go
-2156d281add810aaddddbd247b9e871dd5e775e37c9babb8b126af6e1c2dc01a  ./framework-dual/install/03-config-dual-boot.go
+5988d10da3054b3592f693afed7c1cb1a5115d273a0d1b27085344a01f128989  ./framework-dual/install/03-config-dual-boot.go
 8ba0aa6061467a92aeae5c85c9e572a1d8142deb5e08604acfa02cb273875914  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
 5b569840941377401c928b119a92fc5a2d6a97766a32f35309620c756a6d48ea  ./framework/install/01-partition.go
 4e27da32ea27e27e70ae7ea479a0022deeed71eba9195797c7e7dc4df1227d5d  ./framework/install/02-mount.go
-3ec941cb4c1ea55dfebf98e50a0e62e22e077ac20c08dcb6dc1a3e4dbad9c4bb  ./framework/install/03-config.go
+2afa1900c77b665243ddaa702a9138d684e972531f33c1678a3f98c47e746e1c  ./framework/install/03-config.go
 fb7593d9966eb3f081e9bb8051051a626140b546d1829d899e3456229f069ab6  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
 688c0a510ac4c416a3ea47714b3ebe684d9a8370b1429376b2498a971e08418e  ./lib/common_test.go
-45903ff6cf3ee0ef939650b97d4a2cb890d48bccb876c7a793d8e119ebfa8092  ./lib/common.go
+55b557abf366fa56290f3351f5e761aa9b7295fea1e6f1df8554ac6b1ad4e290  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
 ## Bootstrap Script
