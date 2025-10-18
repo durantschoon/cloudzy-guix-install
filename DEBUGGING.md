@@ -184,7 +184,7 @@ While `VerifyInstallation()` exists and checks for these files:
 
 ## Next Steps to Resolve
 
-### Immediate Fix (Re-run Installation)
+### Immediate Fix (Re-run Installation with Verification)
 
 From Guix ISO:
 
@@ -197,29 +197,44 @@ mount /dev/nvme0n1p1 /mnt/boot/efi
 cat /mnt/etc/config.scm
 # Check kernel-arguments line - should be: (kernel-arguments '("quiet"))
 
-# 3. Start cow-store
+# 3. RUN VERIFICATION SCRIPT (should fail initially)
+./verify-guix-install.sh
+# Expected: FAIL with missing kernel/initrd errors
+
+# 4. Start cow-store
 herd start cow-store /mnt
 
-# 4. Re-run guix system init (will use existing config)
+# 5. Re-run guix system init (will use existing config)
 guix system init /mnt/etc/config.scm /mnt \
   --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org https://substitutes.nonguix.org'
 
-# 5. Verify installation (CRITICAL)
-ls -la /mnt/boot/vmlinuz* /mnt/boot/initrd*
-# Must see files! If not, DO NOT REBOOT
+# 6. RUN VERIFICATION SCRIPT AGAIN (CRITICAL - must pass!)
+./verify-guix-install.sh
+# Expected: ALL CHECKS PASSED
+# If verification fails, DO NOT REBOOT - review errors and retry step 5
 
-# 6. Set user password
+# 7. Set user password (only if verification passed)
 guix system chroot /mnt
 passwd YOUR_USERNAME  # Use username from config.scm
 exit
 
-# 7. Clean unmount
+# 8. RUN VERIFICATION SCRIPT ONE MORE TIME (optional but recommended)
+./verify-guix-install.sh
+# Confirms nothing broke during password setting
+
+# 9. Clean unmount
 umount /mnt/boot/efi
 umount /mnt
 
-# 8. Reboot
+# 10. Reboot (only if all verifications passed)
 reboot
 ```
+
+**Key Points:**
+- Run `verify-guix-install.sh` **before** `guix system init` (expect failure - baseline)
+- Run `verify-guix-install.sh` **after** `guix system init` (must pass - DO NOT REBOOT if fails)
+- Optionally run again after setting password (safety check)
+- The script will be automatically installed to `/usr/local/bin/verify-guix-install` during init
 
 ### Script Improvements Needed
 

@@ -27,6 +27,15 @@ dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/in
 4bd9ee979e96b58a3842d257a8222dd0bd62f6642aa0dc5fb5e6fbab61c4baf1  ./lib/common.go
 2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
 
-## Bootstrap Script
+## Critical Shell Scripts
 
 19d0b27d5ea29fdced3ca9e65de7e89663f802343499b8e573b07678d3fc63b8  bootstrap-installer.sh
+32ec52345ce9607d31725fda68e7012bee5b580a2f37d23cbebeb9495bcb06b2  verify-guix-install.sh
+f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
+
+## Post-Install Customization Scripts
+
+8ea49311b7d1f6843e63ac80a794229104f6328be84f3ae5d4d14860c225c082  cloudzy/postinstall/customize
+783a7a7e2c176338f82e9a2dc8b62bddd10500af76355a4f8db9533d3b180286  framework-dual/postinstall/customize
+1253983805ae01b5cbb8fb9e5aa2b402e80db4ad589004acb3387d2393354826  framework/postinstall/customize
+5ba8a105a5b41b398ae4486a715bafef19b90e16fcae4266a464c13926b21ae6  raspberry-pi/postinstall/customize

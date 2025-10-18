@@ -26,10 +26,34 @@ find . -name "*.go" -not -path "./vendor/*" -not -path "./.git/*" | sort | while
 done
 
 echo "" >> "$MANIFEST_FILE"
-echo "## Bootstrap Script" >> "$MANIFEST_FILE"
+echo "## Critical Shell Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
+
+# Bootstrap installer (entry point)
 hash=$(shasum -a 256 bootstrap-installer.sh | awk '{print $1}')
 echo "$hash  bootstrap-installer.sh" >> "$MANIFEST_FILE"
+
+# Verification script (diagnostic tool)
+hash=$(shasum -a 256 verify-guix-install.sh | awk '{print $1}')
+echo "$hash  verify-guix-install.sh" >> "$MANIFEST_FILE"
+
+# Post-install library
+if [ -f lib/postinstall.sh ]; then
+    hash=$(shasum -a 256 lib/postinstall.sh | awk '{print $1}')
+    echo "$hash  lib/postinstall.sh" >> "$MANIFEST_FILE"
+fi
+
+echo "" >> "$MANIFEST_FILE"
+echo "## Post-Install Customization Scripts" >> "$MANIFEST_FILE"
+echo "" >> "$MANIFEST_FILE"
+
+# Platform-specific customization tools
+for customize in */postinstall/customize; do
+    if [ -f "$customize" ]; then
+        hash=$(shasum -a 256 "$customize" | awk '{print $1}')
+        echo "$hash  $customize" >> "$MANIFEST_FILE"
+    fi
+done
 
 echo ""
 echo "Manifest written to $MANIFEST_FILE"
