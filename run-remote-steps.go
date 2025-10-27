@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	cloudzyi "github.com/durantschoon/cloudzy-guix-install/cloudzy/install"
-	frameworki "github.com/durantschoon/cloudzy-guix-install/framework/install"
 	frameworkduali "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
+	frameworki "github.com/durantschoon/cloudzy-guix-install/framework/install"
 	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 

@@ -59,6 +59,7 @@ Your repository can have any name (`guix-config`, `guix-channels`, `my-guix-setu
 ### Example Repository Structures
 
 **Option 1: `guix-config` repository (recommended - room to grow)**
+
 ```
 your-guix-config/
 ├── channels/
@@ -73,6 +74,7 @@ your-guix-config/
 ```
 
 **Option 2: `guix-channels` repository (focused on channels only)**
+
 ```
 your-guix-channels/
 ├── channels/
@@ -82,6 +84,7 @@ your-guix-channels/
 ```
 
 **Option 3: Simple structure (channels.scm in root)**
+
 ```
 your-guix-setup/
 ├── channels.scm
@@ -272,17 +275,20 @@ export GUIX_CHANNEL_REPO="https://github.com/yourusername/system-config"
 ## Repository Naming Recommendations
 
 ### **`guix-config` (Recommended)**
+
 - **Best choice** for most users
 - **Room to grow** - can include channels, system configs, services, etc.
 - **Future-proof** - won't need to rename if you add more content
 - **Common convention** - widely used in the Guix community
 
 ### **`guix-channels`**
+
 - **Good choice** if you only plan to manage channels
 - **Clear purpose** - no ambiguity about contents
 - **Focused** - single responsibility
 
 ### **Custom Names**
+
 - **`my-guix-setup`** - Personal preference
 - **`dev-environment`** - Development-focused
 - **`system-config`** - System configuration focused
