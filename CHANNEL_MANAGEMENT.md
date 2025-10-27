@@ -222,6 +222,33 @@ ERROR: channels.scm not found in repository. Tried:
 2. **Test Channels**: Validate channel configurations before installation
 3. **Backup Configurations**: Keep copies of working channel configurations
 4. **Document Dependencies**: Document any special requirements for your channels
+5. **Use Aliases**: Add convenient aliases to your shell profile
+
+### Useful Guix Aliases
+
+Add these to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+
+```bash
+# Guix aliases (g for guix - no conflict with git since you use Magit)
+alias g='guix'
+alias gs='guix shell'
+alias gp='guix pull'
+alias gi='guix install'
+alias gu='guix upgrade'
+alias gr='guix remove'
+alias gd='guix describe'
+alias gt='guix time-machine'
+```
+
+**Usage examples:**
+```bash
+g shell go -- go build
+gp
+gi emacs
+gu
+gd
+gt -- system reconfigure /etc/config.scm
+```
 
 ## Examples
 

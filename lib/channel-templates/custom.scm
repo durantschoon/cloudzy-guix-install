@@ -1,5 +1,15 @@
 ;; Template for custom channel configuration
 ;; Replace the example with your own channels
+;;
+;; Useful aliases (add to your shell profile):
+;; alias g='guix'
+;; alias gs='guix shell'
+;; alias gp='guix pull'
+;; alias gi='guix install'
+;; alias gu='guix upgrade'
+;; alias gr='guix remove'
+;; alias gd='guix describe'
+;; alias gt='guix time-machine'
 
 (cons* 
  ;; Example: Add your custom channel here

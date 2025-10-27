@@ -1,5 +1,15 @@
 ;; Minimal channel configuration for new Guix users
 ;; Includes nonguix for proprietary firmware and non-free software
+;;
+;; Useful aliases (add to your shell profile):
+;; alias g='guix'
+;; alias gs='guix shell'
+;; alias gp='guix pull'
+;; alias gi='guix install'
+;; alias gu='guix upgrade'
+;; alias gr='guix remove'
+;; alias gd='guix describe'
+;; alias gt='guix time-machine'
 
 (cons* (channel
         (name 'nonguix)
