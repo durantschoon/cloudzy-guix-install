@@ -10,9 +10,41 @@ set -euo pipefail
 REPO_OWNER="${GUIX_INSTALL_REPO:-durantschoon/cloudzy-guix-install}"
 REPO_REF="${GUIX_INSTALL_REF:-main}"
 
+# Parse channel arguments
+CHANNEL_REPO=""
+CHANNEL_BRANCH="main"
+CHANNEL_PATH=""
+PLATFORM=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --channel-repo)
+            CHANNEL_REPO="$2"
+            shift 2
+            ;;
+        --channel-branch)
+            CHANNEL_BRANCH="$2"
+            shift 2
+            ;;
+        --channel-path)
+            CHANNEL_PATH="$2"
+            shift 2
+            ;;
+        *)
+            PLATFORM="$1"
+            shift
+            ;;
+    esac
+done
+
 echo "=== Guix Installer Bootstrap ==="
 echo "Repository: ${REPO_OWNER}"
 echo "Reference: ${REPO_REF}"
+if [[ -n "$CHANNEL_REPO" ]]; then
+    echo "Channel Repository: ${CHANNEL_REPO}"
+    echo "Channel Branch: ${CHANNEL_BRANCH}"
+    echo "Channel Path: ${CHANNEL_PATH}"
+fi
 echo ""
 
 # Test that stdin is working before proceeding
@@ -142,6 +174,14 @@ if [[ ! -f run-remote-steps ]]; then
     echo "Error: Binary not created"
     exit 1
 fi
+
+# Export channel info for Go installer
+export GUIX_CHANNEL_REPO="$CHANNEL_REPO"
+export GUIX_CHANNEL_BRANCH="$CHANNEL_BRANCH"
+export GUIX_CHANNEL_PATH="$CHANNEL_PATH"
+
+# Export platform for Go installer
+export GUIX_PLATFORM="$PLATFORM"
 
 # Run the installer
 echo ""

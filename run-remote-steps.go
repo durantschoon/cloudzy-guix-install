@@ -9,10 +9,28 @@ import (
 	cloudzyi "github.com/durantschoon/cloudzy-guix-install/cloudzy/install"
 	frameworki "github.com/durantschoon/cloudzy-guix-install/framework/install"
 	frameworkduali "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
+	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
 
 func main() {
 	platform := getEnv("GUIX_PLATFORM", "cloudzy")
+
+	// Detect and bootstrap user channels
+	fmt.Println("=== Channel Detection ===")
+	channelInfo, err := lib.DetectUserChannels()
+	if err != nil {
+		fatal("Failed to detect user channels: %v", err)
+	}
+
+	if err := lib.BootstrapUserChannels(channelInfo); err != nil {
+		fatal("Failed to bootstrap user channels: %v", err)
+	}
+
+	if err := lib.ValidateChannels(); err != nil {
+		fatal("Failed to validate channels: %v", err)
+	}
+
+	fmt.Println()
 
 	switch platform {
 	case "framework-dual":

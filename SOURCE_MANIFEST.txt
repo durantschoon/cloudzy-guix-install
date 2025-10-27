@@ -24,12 +24,12 @@ d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-du
 fb7593d9966eb3f081e9bb8051051a626140b546d1829d899e3456229f069ab6  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
 688c0a510ac4c416a3ea47714b3ebe684d9a8370b1429376b2498a971e08418e  ./lib/common_test.go
-4bd9ee979e96b58a3842d257a8222dd0bd62f6642aa0dc5fb5e6fbab61c4baf1  ./lib/common.go
-2dc5b216e33529885feaf3965b95dae07070ee7f24e1f322e04c2eabe87afdfa  ./run-remote-steps.go
+96fa012ca7bd1070081d56d30bb448afa07a342860300f1c994e4ef9c684060c  ./lib/common.go
+c7c40890d601ced1363bed8962104f54a420710d755774920453aefce6453bda  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
-19d0b27d5ea29fdced3ca9e65de7e89663f802343499b8e573b07678d3fc63b8  bootstrap-installer.sh
+4344b207a172ae745a9e272222e5d64da2f1e8291be1eb1360384a27b86fe060  bootstrap-installer.sh
 32ec52345ce9607d31725fda68e7012bee5b580a2f37d23cbebeb9495bcb06b2  verify-guix-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 

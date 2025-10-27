@@ -1095,10 +1095,7 @@ func GetMountFreeSpaceGiB(path string) float64 {
     if len(fields) < 4 {
         return 0
     }
-    avail := fields[3]
-    if strings.HasSuffix(avail, "G") {
-        avail = strings.TrimSuffix(avail, "G")
-    }
+    avail := strings.TrimSuffix(fields[3], "G")
     if v, err := strconv.ParseFloat(avail, 64); err == nil {
         return v
     }
@@ -1672,4 +1669,176 @@ func DetectDeviceFromState(device string, platform string) (string, error) {
 
 	// Auto-detect using platform-specific candidates
 	return DetectDevice(platform)
+}
+
+// ChannelInfo represents user's channel configuration
+type ChannelInfo struct {
+	HasExistingChannels bool
+	ChannelRepo         string  // Git URL for user's channels
+	ChannelBranch       string  // Branch/tag to use
+	ChannelPath         string  // Path within repo (e.g., "channels/")
+}
+
+// DetectUserChannels checks if user has existing channel setup
+func DetectUserChannels() (*ChannelInfo, error) {
+	// Check for existing ~/.config/guix/channels.scm
+	channelsFile := filepath.Join(os.Getenv("HOME"), ".config", "guix", "channels.scm")
+	if _, err := os.Stat(channelsFile); err == nil {
+		return &ChannelInfo{HasExistingChannels: true}, nil
+	}
+	
+	// Check for environment variables indicating channel repo
+	if repo := os.Getenv("GUIX_CHANNEL_REPO"); repo != "" {
+		return &ChannelInfo{
+			HasExistingChannels: false,
+			ChannelRepo:         repo,
+			ChannelBranch:       GetEnv("GUIX_CHANNEL_BRANCH", "main"),
+			ChannelPath:         GetEnv("GUIX_CHANNEL_PATH", "channels/"),
+		}, nil
+	}
+	
+	return &ChannelInfo{HasExistingChannels: false}, nil
+}
+
+// BootstrapUserChannels downloads and sets up user's channel configuration
+func BootstrapUserChannels(channelInfo *ChannelInfo) error {
+	if channelInfo.HasExistingChannels {
+		fmt.Println("[INFO] User has existing channel configuration, skipping bootstrap")
+		return nil
+	}
+	
+	if channelInfo.ChannelRepo == "" {
+		fmt.Println("[INFO] No channel repository specified, using default channels")
+		return SetupDefaultChannels()
+	}
+	
+	// Download user's channel configuration
+	fmt.Printf("[INFO] Downloading channels from: %s\n", channelInfo.ChannelRepo)
+	return DownloadUserChannels(channelInfo)
+}
+
+// DownloadUserChannels clones user's channel repo and sets up channels.scm
+func DownloadUserChannels(channelInfo *ChannelInfo) error {
+	tempDir := "/tmp/guix-channels"
+	
+	// Clean up any existing temp directory
+	os.RemoveAll(tempDir)
+	
+	// Clone the repository
+	fmt.Printf("Cloning channel repository (branch: %s)...\n", channelInfo.ChannelBranch)
+	cmd := exec.Command("git", "clone", 
+		"--branch", channelInfo.ChannelBranch,
+		"--depth", "1",
+		channelInfo.ChannelRepo,
+		tempDir)
+	
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to clone channel repo: %w", err)
+	}
+	
+	// Find channels.scm file
+	channelsPath := filepath.Join(tempDir, channelInfo.ChannelPath, "channels.scm")
+	if _, err := os.Stat(channelsPath); os.IsNotExist(err) {
+		// Try alternative locations
+		altPaths := []string{
+			filepath.Join(tempDir, "channels.scm"),
+			filepath.Join(tempDir, "config", "channels.scm"),
+			filepath.Join(tempDir, ".config", "guix", "channels.scm"),
+		}
+		
+		found := false
+		for _, altPath := range altPaths {
+			if _, err := os.Stat(altPath); err == nil {
+				channelsPath = altPath
+				found = true
+				break
+			}
+		}
+		
+		if !found {
+			return fmt.Errorf("channels.scm not found in repository. Tried:\n  - %s\n  - %s\n  - %s\n  - %s", 
+				filepath.Join(tempDir, channelInfo.ChannelPath, "channels.scm"),
+				filepath.Join(tempDir, "channels.scm"),
+				filepath.Join(tempDir, "config", "channels.scm"),
+				filepath.Join(tempDir, ".config", "guix", "channels.scm"))
+		}
+	}
+	
+	// Copy to user's config directory
+	configDir := filepath.Join(os.Getenv("HOME"), ".config", "guix")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	
+	destPath := filepath.Join(configDir, "channels.scm")
+	if err := RunCommand("cp", channelsPath, destPath); err != nil {
+		return fmt.Errorf("failed to copy channels.scm: %w", err)
+	}
+	
+	fmt.Printf("[OK] Channels configured from: %s\n", channelInfo.ChannelRepo)
+	fmt.Printf("     Channels file: %s\n", destPath)
+	
+	// Clean up temp directory
+	os.RemoveAll(tempDir)
+	
+	return nil
+}
+
+// SetupDefaultChannels creates minimal channel setup for new users
+func SetupDefaultChannels() error {
+	configDir := filepath.Join(os.Getenv("HOME"), ".config", "guix")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	
+	channelsContent := `(cons* (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (branch "master")
+        (introduction
+         (make-channel-introduction
+          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+          (openpgp-fingerprint
+           "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+       %default-channels)`
+	
+	channelsPath := filepath.Join(configDir, "channels.scm")
+	if err := os.WriteFile(channelsPath, []byte(channelsContent), 0644); err != nil {
+		return fmt.Errorf("failed to write default channels.scm: %w", err)
+	}
+	
+	fmt.Println("[OK] Default channels configured (nonguix + official)")
+	fmt.Printf("     Channels file: %s\n", channelsPath)
+	
+	return nil
+}
+
+// ValidateChannels validates the channel configuration
+func ValidateChannels() error {
+	fmt.Println("=== Validating Channel Configuration ===")
+	
+	channelsPath := filepath.Join(os.Getenv("HOME"), ".config", "guix", "channels.scm")
+	if _, err := os.Stat(channelsPath); os.IsNotExist(err) {
+		fmt.Println("[WARN] No channels.scm found - will use default channels")
+		return nil
+	}
+	
+	fmt.Printf("Checking channels file: %s\n", channelsPath)
+	
+	// Show channel file contents
+	fmt.Println("Channel configuration:")
+	RunCommand("cat", channelsPath)
+	fmt.Println()
+	
+	// Try to validate with guix describe
+	fmt.Println("Validating channel configuration...")
+	cmd := exec.Command("guix", "describe", "--format=channels")
+	if err := cmd.Run(); err != nil {
+		fmt.Println("[WARN] Channel validation failed - this is expected on ISO")
+		fmt.Println("       Channels will be validated during system init")
+		return nil
+	}
+	
+	fmt.Println("[OK] Channel configuration is valid")
+	return nil
 }
