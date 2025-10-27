@@ -24,11 +24,11 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 
 ### Using Custom Channel Repository
 
-If you have a Git repository with your channel configuration:
+If you have a Git repository with your channel configuration (supports any repository name like `guix-config`, `guix-channels`, `my-guix-setup`, etc.):
 
 ```bash
 # Set environment variables
-export GUIX_CHANNEL_REPO="https://github.com/yourusername/guix-channels"
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/guix-config"
 export GUIX_CHANNEL_BRANCH="main"
 export GUIX_CHANNEL_PATH="channels/"
 
@@ -41,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 ```bash
 # Download and run with channel parameters
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- \
-  --channel-repo "https://github.com/yourusername/guix-channels" \
+  --channel-repo "https://github.com/yourusername/guix-config" \
   --channel-branch "main" \
   --channel-path "channels/" \
   cloudzy
@@ -49,19 +49,42 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 
 ## Channel Repository Structure
 
-Your channel repository should contain a `channels.scm` file. The installer looks for it in these locations:
+Your repository can have any name (`guix-config`, `guix-channels`, `my-guix-setup`, etc.) and should contain a `channels.scm` file. The installer is flexible and looks for it in these locations:
 
 1. `channels/channels.scm` (if `GUIX_CHANNEL_PATH` is set)
 2. `channels.scm` (root of repository)
 3. `config/channels.scm`
 4. `.config/guix/channels.scm`
 
-### Example Repository Structure
+### Example Repository Structures
 
+**Option 1: `guix-config` repository (recommended - room to grow)**
+```
+your-guix-config/
+├── channels/
+│   └── channels.scm
+├── systems/
+│   ├── desktop.scm
+│   └── server.scm
+├── services/
+│   └── ssh.scm
+├── README.md
+└── LICENSE
+```
+
+**Option 2: `guix-channels` repository (focused on channels only)**
 ```
 your-guix-channels/
 ├── channels/
 │   └── channels.scm
+├── README.md
+└── LICENSE
+```
+
+**Option 3: Simple structure (channels.scm in root)**
+```
+your-guix-setup/
+├── channels.scm
 ├── README.md
 └── LICENSE
 ```
@@ -95,21 +118,25 @@ your-guix-channels/
 The installer includes several pre-configured channel templates:
 
 ### Minimal Template
+
 - Official Guix channels
 - Nonguix channel for proprietary firmware
 - Good for basic installations
 
 ### Development Template
+
 - All minimal channels
 - Additional development-focused channels
 - Good for software development
 
 ### Gaming Template
+
 - All minimal channels
 - Gaming-specific channels
 - Good for gaming setups
 
 ### Custom Template
+
 - Template for adding your own channels
 - Includes examples and documentation
 
@@ -124,7 +151,7 @@ The installer includes several pre-configured channel templates:
 
 ## Channel Management Script
 
-The installer includes a channel management utility:
+The installer includes a channel management utility that works with any repository name:
 
 ```bash
 # Show current channel status
@@ -133,8 +160,9 @@ The installer includes a channel management utility:
 # Set up default channels
 ./lib/channel-utils.sh setup-default
 
-# Download channels from repository
-./lib/channel-utils.sh download https://github.com/user/channels main config/
+# Download channels from any repository (guix-config, guix-channels, etc.)
+./lib/channel-utils.sh download https://github.com/user/guix-config main channels/
+./lib/channel-utils.sh download https://github.com/user/my-guix-setup main config/
 
 # Validate channel configuration
 ./lib/channel-utils.sh validate
@@ -204,10 +232,10 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 ### Custom Development Setup
 
 ```bash
-# Set up development channels
-export GUIX_CHANNEL_REPO="https://github.com/yourusername/dev-channels"
+# Set up development channels (using guix-config repository)
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/guix-config"
 export GUIX_CHANNEL_BRANCH="main"
-export GUIX_CHANNEL_PATH="config/"
+export GUIX_CHANNEL_PATH="channels/"
 
 # Run installer
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
@@ -216,12 +244,49 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 ### Framework Laptop with Custom Channels
 
 ```bash
-# Framework laptop with custom channels
+# Framework laptop with custom channels (any repository name works)
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- \
-  --channel-repo "https://github.com/yourusername/framework-channels" \
+  --channel-repo "https://github.com/yourusername/my-guix-setup" \
   --channel-branch "framework-13" \
+  --channel-path "config/" \
   framework
 ```
+
+### Different Repository Naming Patterns
+
+The installer works with any repository name:
+
+```bash
+# guix-config repository (recommended - room to grow)
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/guix-config"
+
+# guix-channels repository (focused on channels)
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/guix-channels"
+
+# Custom naming
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/my-guix-setup"
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/dev-environment"
+export GUIX_CHANNEL_REPO="https://github.com/yourusername/system-config"
+```
+
+## Repository Naming Recommendations
+
+### **`guix-config` (Recommended)**
+- **Best choice** for most users
+- **Room to grow** - can include channels, system configs, services, etc.
+- **Future-proof** - won't need to rename if you add more content
+- **Common convention** - widely used in the Guix community
+
+### **`guix-channels`**
+- **Good choice** if you only plan to manage channels
+- **Clear purpose** - no ambiguity about contents
+- **Focused** - single responsibility
+
+### **Custom Names**
+- **`my-guix-setup`** - Personal preference
+- **`dev-environment`** - Development-focused
+- **`system-config`** - System configuration focused
+- **Any name works** - The installer is flexible!
 
 ## Integration with Existing Workflows
 
