@@ -64,6 +64,7 @@ sudo nano /etc/config.scm
 ```
 
 Add to `use-modules`:
+
 ```scheme
 (use-modules (gnu)
              (gnu system nss)
@@ -71,6 +72,7 @@ Add to `use-modules`:
 ```
 
 Change services:
+
 ```scheme
 (services
   (append
@@ -96,6 +98,7 @@ sudo nano /etc/config.scm
 ```
 
 Add modules:
+
 ```scheme
 (use-modules (gnu)
              (gnu system nss)
@@ -104,6 +107,7 @@ Add modules:
 ```
 
 Add firmware (for WiFi/Bluetooth):
+
 ```scheme
 (operating-system
  (firmware (list linux-firmware))  ; Add this line
@@ -112,6 +116,7 @@ Add firmware (for WiFi/Bluetooth):
 ```
 
 Add desktop and packages:
+
 ```scheme
 (packages
   (append (list (specification->package "emacs")
@@ -128,6 +133,7 @@ Add desktop and packages:
 ```
 
 Apply:
+
 ```bash
 sudo guix system reconfigure /etc/config.scm
 sudo reboot  # Desktop will start on next boot
@@ -144,6 +150,7 @@ sudo nano /etc/config.scm
 ```
 
 Add development packages:
+
 ```scheme
 (packages
   (append (list (specification->package "git")
@@ -159,6 +166,7 @@ Add development packages:
 ```
 
 Add Docker service:
+
 ```scheme
 (use-modules (gnu)
              (gnu system nss)
@@ -218,6 +226,7 @@ guix install steam
 ### Framework 13
 
 **Better battery life:**
+
 ```scheme
 (use-modules (gnu services pm))
 
@@ -228,6 +237,7 @@ guix install steam
 ```
 
 **Better audio:**
+
 ```scheme
 (use-modules (gnu services audio))
 
@@ -240,6 +250,7 @@ guix install steam
 ### VPS/Server
 
 **Faster boot:**
+
 ```scheme
 (bootloader-configuration
  (bootloader grub-efi-bootloader)
@@ -249,6 +260,7 @@ guix install steam
 ```
 
 **Minimal kernel:**
+
 ```scheme
 (kernel linux-libre-minimal)  ; Smaller kernel, faster boot
 ```
@@ -262,24 +274,28 @@ guix install steam
 The guix-customize tool includes three Emacs recipe options pre-installed in `~/guix-customize/recipes/`:
 
 **Option 1: Spacemacs** - Emacs distribution with Vim keybindings and layers
+
 ```bash
 cd ~/guix-customize
 ./recipes/add-spacemacs.sh
 ```
 
 **Option 2: Doom Emacs** - Modern, fast Emacs framework with great defaults
+
 ```bash
 cd ~/guix-customize
 ./recipes/add-doom-emacs.sh
 ```
 
 **Option 3: Vanilla Emacs** - Plain Emacs with sensible minimal configuration
+
 ```bash
 cd ~/guix-customize
 ./recipes/add-vanilla-emacs.sh
 ```
 
 All three recipes:
+
 - Add Emacs and dependencies to your config.scm using idiomatic Guix style
 - Support importing your existing config from a Git repository
 - Create appropriate configuration files for first-time users
@@ -288,12 +304,14 @@ All three recipes:
 **Importing Your Existing Config:**
 
 Each recipe will ask if you want to import an existing configuration from a Git repository. You can:
+
 - Provide your dotfiles repo URL to import automatically during setup
 - Skip import and do it manually later
 
 For detailed import instructions, see: `~/guix-customize/EMACS_IMPORT_GUIDE.md`
 
 **Example: Importing Doom Emacs config**
+
 ```bash
 # Recipe will prompt for repo URL like:
 # https://github.com/yourusername/doom-config
@@ -332,11 +350,169 @@ sudo swapon /swapfile
 ```
 
 Add to config.scm:
+
 ```scheme
 (swap-devices
  (list (swap-space
         (target "/swapfile"))))
 ```
+
+---
+
+## Recommended System Services
+
+### Power Management (Laptops)
+
+**TLP** provides automatic power management for laptops:
+
+```scheme
+(use-modules (gnu)
+             (gnu system nss)
+             (gnu services pm))  ; Add this line
+
+(services
+  (append
+   (list (service tlp-service-type))
+   %base-services))
+```
+
+**Benefits:**
+
+- Automatic battery optimization
+- CPU frequency scaling
+- USB autosuspend
+- Disk power management
+
+**After adding:** `sudo guix system reconfigure /etc/config.scm && sudo reboot`
+
+---
+
+### Time Synchronization
+
+**NTP** keeps your system clock accurate:
+
+```scheme
+(use-modules (gnu)
+             (gnu system nss)
+             (gnu services networking))  ; Add this line
+
+(services
+  (append
+   (list (service ntp-service-type))
+   %base-services))
+```
+
+**Why you need this:**
+
+- SSL/TLS certificates require accurate time
+- Log timestamps will be correct
+- Scheduled tasks run at the right time
+
+**Note:** Most modern systems already include basic time sync in `%base-services`. Only add if you need advanced NTP features.
+
+---
+
+### SSD Maintenance (fstrim)
+
+**Periodic TRIM** keeps SSDs healthy and fast:
+
+```scheme
+(use-modules (gnu)
+             (gnu system nss)
+             (gnu services linux))  ; Add this line
+
+(services
+  (append
+   (list (service fstrim-service-type))
+   %base-services))
+```
+
+**Benefits:**
+
+- Maintains SSD performance
+- Extends SSD lifespan
+- Runs weekly by default
+
+**Recommended for:** Any system with SSD/NVMe storage
+
+---
+
+### Better Entropy (Random Number Generation)
+
+**rngd** provides better entropy for cryptographic operations:
+
+```scheme
+(use-modules (gnu)
+             (gnu system nss)
+             (gnu services base))  ; Add this line
+
+(services
+  (append
+   (list (service rngd-service-type))
+   %base-services))
+```
+
+**Benefits:**
+
+- Faster cryptographic operations
+- Reduces boot delays waiting for entropy
+- Better security for key generation
+
+**Recommended for:** Servers and systems doing crypto operations
+
+---
+
+### Complete Laptop Setup Example
+
+Combining all recommended services for a laptop:
+
+```scheme
+(use-modules (gnu)
+             (gnu packages linux)
+             (gnu system nss)
+             (gnu services desktop)      ; Desktop environment
+             (gnu services pm)           ; Power management
+             (gnu services networking)   ; NetworkManager
+             (gnu services linux)        ; fstrim
+             (nongnu packages linux)     ; Proprietary kernel/firmware
+             (nongnu system linux-initrd))
+
+(operating-system
+ (host-name "framework13")
+ (timezone "America/New_York")
+ (locale "en_US.utf8")
+
+ ;; Hardware support
+ (kernel linux)
+ (firmware (list linux-firmware))
+ (initrd-modules
+  (append '("amdgpu" "nvme" "xhci_pci" "usbhid" "i2c_piix4")
+          %base-initrd-modules))
+
+ ;; ... bootloader and file-systems sections ...
+
+ (services
+  (append
+   (list
+    ;; Desktop
+    (service gnome-desktop-service-type)
+
+    ;; Power management
+    (service tlp-service-type)
+
+    ;; SSD maintenance
+    (service fstrim-service-type)
+
+    ;; Better entropy
+    (service rngd-service-type))
+
+   %desktop-services))  ; Use %desktop-services (includes NetworkManager, time sync, etc.)
+
+ ;; ... users and packages sections ...
+)
+```
+
+**Note:** `%desktop-services` already includes NetworkManager, NTP, and many other useful services. See [official docs](https://guix.gnu.org/manual/en/html_node/Desktop-Services.html) for the full list.
 
 ---
 

@@ -6,7 +6,7 @@ The goal of this project is to create a **reliable, repeatable, and hardware-awa
 
 ## 🔄 Currently Working On
 
-**Status:** Recently Completed Major Improvements
+**Status:** Recently Completed Documentation Improvements
 
 **Recently Completed:**
 
@@ -20,14 +20,18 @@ The goal of this project is to create a **reliable, repeatable, and hardware-awa
 8. ✅ **Installation receipt improvements** - Include channel commits and substitute servers in receipt
 9. ✅ **Remove guix pull to avoid glibc mismatch** - Skip pull, rely on time-machine for channel fetching
 10. ✅ **Fix validation skip for nongnu modules** - Properly detect and skip validation when nonguix needed
+11. ✅ **First-boot expectations** - Added "What to Expect" section to QUICKSTART.md
+12. ✅ **Networking quick path** - Documented DHCP, static IP, WiFi, and NetworkManager setup
+13. ✅ **Time estimates** - Added installation step timing to QUICKSTART.md
+14. ✅ **System services documentation** - Added TLP, NTP, fstrim, rngd to CUSTOMIZATION.md
 
 **Next Priority Tasks:**
 
 1. **Test and validate framework-dual installation** - Verify complete install flow with all recent fixes
-2. **UX/Documentation improvements** - Add onboarding clarity, platform choice guidance, hardware requirements, Secure Boot info
-3. **Dual-boot GRUB UX** - Improve GRUB menu timeout, better dual-boot detection and configuration
+2. **Dual-boot GRUB UX** - Already has timeout=5, verify chainloader detection works
+3. **Storage options** - Document LUKS/btrfs setup options
 
-**Context:** Major infrastructure and stability improvements completed. Framework installers now use time-machine for nonguix (avoiding glibc issues), validate configs properly, and provide better user prompts.
+**Context:** Major infrastructure and stability improvements completed. Documentation significantly improved for first-boot experience and system customization. Framework installers now use time-machine for nonguix (avoiding glibc issues), validate configs properly, and provide better user prompts.
 
 ---
 
@@ -359,9 +363,13 @@ Ensure readable GRUB theme and a visible timeout; add explicit chainloader entry
 
 #### 13. Networking on First Boot
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Offer option to add `NetworkManager` service; provide `wpa_supplicant` minimal fallback for headless setups.
+Added to QUICKSTART.md:
+
+* Quick networking setup guide (DHCP, static IP, WiFi)
+* NetworkManager service documentation with nmtui/nmcli examples
+* wpa_supplicant fallback for WiFi without firmware
 
 **Impact:** ⭐⭐ Medium - Faster path to connectivity
 
@@ -369,9 +377,14 @@ Offer option to add `NetworkManager` service; provide `wpa_supplicant` minimal f
 
 #### 14. Power/Time/Maintenance Services
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Optional services: `tlp-service-type` (laptops), time sync (NTP/chrony), `fstrim-service-type` for SSDs.
+Added to CUSTOMIZATION.md "Recommended System Services" section:
+
+* `tlp-service-type` for laptop power management
+* `ntp-service-type` for time synchronization
+* `fstrim-service-type` for SSD maintenance
+* Complete laptop setup example combining all services
 
 **Impact:** ⭐⭐ Medium - Better battery, accurate time, SSD health
 
@@ -379,9 +392,13 @@ Optional services: `tlp-service-type` (laptops), time sync (NTP/chrony), `fstrim
 
 #### 15. Entropy Early in Boot
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Add `rngd-service-type` post‑install; consider `tpm-rng` in initrd modules for smoother first boots on some hardware.
+Added to CUSTOMIZATION.md:
+
+* `rngd-service-type` documentation with benefits
+* Recommended for servers and crypto operations
+* Included in complete laptop setup example
 
 **Impact:** ⭐⭐ Medium - Reduces stalls waiting for entropy
 
@@ -423,9 +440,14 @@ Split `/etc/config.scm` into base OS vs hardware profile; provide a “first rec
 
 #### 19. First‑Boot Expectations and Networking Quick Path
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Add a simple “What you’ll see” checklist (console login, password works, Wi‑Fi pending), plus a recommended NetworkManager path and minimal wpa_supplicant fallback snippet.
+Added to QUICKSTART.md "What to Expect on First Boot" section:
+
+* Clear checklist of what works immediately (login, sudo, basic utilities)
+* List of what's NOT configured yet (SSH, desktop, WiFi, network)
+* Step-by-step networking setup (DHCP, static IP, WiFi with wpa_supplicant)
+* NetworkManager quick path with nmtui/nmcli examples
 
 **Impact:** ⭐⭐ Medium - Reduces confusion at first boot
 
@@ -443,9 +465,13 @@ Document where logs/receipts live and add a short chroot/repair/rerun guide when
 
 #### 21. Time Estimates per Step
 
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented
 
-Add realistic time ranges for each step in QUICKSTART to set expectations.
+Added to QUICKSTART.md installation section:
+
+* Table with time estimates for all 4 installation steps
+* Total time: 10-25 minutes (network speed dependent)
+* Explanation of what happens during each step
 
 **Impact:** ⭐⭐ Medium - Better user expectations
 

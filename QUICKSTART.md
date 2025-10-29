@@ -61,9 +61,25 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 
 ### 4. Wait for Installation
 
-- Script runs 4 steps: partition → mount → config → install
-- Takes ~10-15 minutes
-- Creates minimal bootable system
+The installer runs 4 main steps with time estimates:
+
+| Step | Description | Estimated Time |
+|------|-------------|----------------|
+| **1. Partition** | Create/verify partitions and labels | 1-2 minutes |
+| **2. Mount** | Mount filesystems and copy store | 2-5 minutes |
+| **3. Config** | Generate system configuration | < 1 minute |
+| **4. Install** | Run `guix system init` | 5-15 minutes |
+
+**Total time: 10-25 minutes** (depends on network speed and whether substitutes are available)
+
+**What happens during Step 4 (Install):**
+
+- Downloads Guix packages (or builds locally with `--fallback`)
+- Installs bootloader (GRUB)
+- Creates kernel and initrd
+- Sets up system profile
+
+You'll see lots of output - this is normal! The installer is downloading and installing packages.
 
 ### 5. Reboot
 
@@ -76,6 +92,32 @@ sudo reboot
 ---
 
 ## Phase 2: First Boot (Free of ISO!)
+
+### What to Expect on First Boot
+
+After rebooting from the installed system, you'll see:
+
+**✅ What Works Immediately:**
+
+- Console login prompt (your password works!)
+- Basic system utilities (`ls`, `cd`, `nano`, etc.)
+- Root access via `sudo`
+- Pre-installed customize tool at `~/guix-customize/`
+
+**⚠️ What's NOT Configured Yet:**
+
+- **No SSH server** - can't SSH in until you add it
+- **No desktop environment** - console only
+- **No WiFi** (Framework 13) - firmware not installed yet
+- **Network may need manual setup** - especially on some VPS providers
+
+**📝 Your Next Steps:**
+
+1. Login at console
+2. Get network working (if needed)
+3. Add SSH (for VPS) or desktop (for laptop)
+
+---
 
 ### 1. Login at Console
 
@@ -93,15 +135,109 @@ The installer prompts you to set your user password before the system reboots, s
 sudo passwd root
 ```
 
-### 3. Verify Network
+### 3. Get Network Working
+
+**Check if network is already working:**
 
 ```bash
-# Check network connectivity
 ping -c 3 guix.gnu.org
+```
 
-# If no network, configure:
-sudo dhclient  # For DHCP
-# or manually configure network
+If this works, skip to Phase 3 (Customize).
+
+**If network doesn't work, try these quick fixes:**
+
+#### Option A: DHCP (Most VPS and Wired Connections)
+
+```bash
+# Check interface name
+ip link show
+
+# Bring up interface and get DHCP
+sudo ip link set eth0 up      # or your interface name (enp0s3, ens3, etc.)
+sudo dhclient eth0
+```
+
+#### Option B: Manual IP Configuration (VPS/Static IP)
+
+```bash
+# Set static IP (example)
+sudo ip addr add 192.168.1.100/24 dev eth0
+sudo ip link set eth0 up
+sudo ip route add default via 192.168.1.1
+
+# Set DNS
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+```
+
+#### Option C: WiFi Setup (Framework 13 - After Adding Firmware)
+
+**Note:** WiFi won't work until you add `linux-firmware` package. You'll need:
+
+- Wired ethernet connection, or
+- USB tethering from phone, or
+- USB WiFi adapter with free drivers
+
+Once you have network via ethernet/USB:
+
+```bash
+cd ~/guix-customize
+./customize
+# Select option to add WiFi firmware
+# Reconfigure and reboot
+```
+
+After reboot with firmware:
+
+```bash
+# Scan for networks
+sudo iwlist wlan0 scan | grep ESSID
+
+# Connect to WPA network
+wpa_passphrase "YourSSID" "YourPassword" | sudo tee /etc/wpa_supplicant.conf
+sudo wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant.conf
+sudo dhclient wlan0
+```
+
+**Better WiFi management:** Add NetworkManager service (see Phase 3 below).
+
+---
+
+### 4. Quick Path: Add NetworkManager (Recommended for Laptops)
+
+NetworkManager provides easy WiFi/network management with a simple command-line interface.
+
+**Add to `/etc/config.scm`:**
+
+```scheme
+;; Add to use-modules section (near top of file)
+(use-modules (gnu)
+             (gnu system nss)
+             (gnu services networking))  ; Add this line
+
+;; Replace the services section
+(services
+  (append
+   (list (service network-manager-service-type))
+   %base-services))
+```
+
+**Reconfigure and reboot:**
+
+```bash
+sudo guix system reconfigure /etc/config.scm
+sudo reboot
+```
+
+**After reboot, connect to WiFi:**
+
+```bash
+# Interactive mode (easiest)
+nmtui
+
+# Or command line
+nmcli device wifi list
+nmcli device wifi connect "YourSSID" password "YourPassword"
 ```
 
 ---
