@@ -24,7 +24,7 @@ d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-du
 fb7593d9966eb3f081e9bb8051051a626140b546d1829d899e3456229f069ab6  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
 688c0a510ac4c416a3ea47714b3ebe684d9a8370b1429376b2498a971e08418e  ./lib/common_test.go
-96fa012ca7bd1070081d56d30bb448afa07a342860300f1c994e4ef9c684060c  ./lib/common.go
+8fb769b7c247e922be2d3884aa440c0a48d505fbf50ae1acb8e12f54e5eb4e91  ./lib/common.go
 af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-steps.go
 
 ## Critical Shell Scripts

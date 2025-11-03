@@ -328,73 +328,98 @@ func CreateSwapFile(swapSize string) error {
 func EnsureGuixDaemonRunning() error {
 	fmt.Println("=== Ensuring guix-daemon is running ===")
 
-	// Check if daemon is running
-	for attempts := 0; attempts < 5; attempts++ {
-		cmd := exec.Command("herd", "status", "guix-daemon")
-		output, err := cmd.Output()
+	// First, check if daemon is already running and responsive
+	cmd := exec.Command("herd", "status", "guix-daemon")
+	output, err := cmd.Output()
 
-		if err == nil && (strings.Contains(string(output), "It is started") || strings.Contains(string(output), "It is enabled")) {
-			fmt.Println("[OK] guix-daemon process is running")
+	if err == nil && (strings.Contains(string(output), "It is started") || strings.Contains(string(output), "It is enabled")) {
+		fmt.Println("guix-daemon is already running, checking if responsive...")
 
-			// Additional check: verify daemon is actually responsive
-			fmt.Println("Verifying daemon is responsive...")
+		// Poll for responsiveness (daemon may be starting up)
+		for i := 0; i < 10; i++ {
 			testCmd := exec.Command("guix", "build", "--version")
 			if err := testCmd.Run(); err == nil {
 				fmt.Println("[OK] guix-daemon is responsive and ready")
 				return nil
 			}
-			fmt.Println("Daemon process is running but not responsive yet, waiting...")
+			if i == 0 {
+				fmt.Println("Daemon is starting up, waiting for it to become responsive...")
+			}
+			fmt.Printf("  Waiting... (%d/10)\n", i+1)
+			time.Sleep(3 * time.Second)
 		}
 
-		if attempts == 0 {
-			fmt.Println("guix-daemon is not running, starting daemon...")
-			fmt.Println()
-		} else {
-			fmt.Printf("Attempt %d/%d: Daemon not running or not responsive, retrying...\n", attempts+1, 5)
-		}
+		// If still not responsive after waiting, we'll restart it below
+		fmt.Println("Daemon not responsive after waiting, will restart...")
+	}
 
-		// Stop daemon if it exists but not running properly
-		fmt.Println("Stopping guix-daemon (if running)...")
-		exec.Command("herd", "stop", "guix-daemon").Run()
-		exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
-		exec.Command("pkill", "-KILL", "-x", "guix-daemon").Run() // Force kill if needed
+	// Daemon not running or not responsive - restart it
+	fmt.Println("Starting guix-daemon...")
+	fmt.Println()
+
+	// Stop any existing daemon processes
+	fmt.Println("Stopping any existing guix-daemon processes...")
+	exec.Command("herd", "stop", "guix-daemon").Run()
+	exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
+	time.Sleep(2 * time.Second)
+	exec.Command("pkill", "-KILL", "-x", "guix-daemon").Run() // Force kill if needed
+	time.Sleep(2 * time.Second)
+
+	// Start the daemon
+	fmt.Println("Starting guix-daemon via herd...")
+	if err := RunCommand("herd", "start", "guix-daemon"); err != nil {
+		fmt.Printf("Warning: herd start failed: %v\n", err)
+		// Try alternative startup method
+		fmt.Println("Trying alternative daemon startup...")
+		exec.Command("guix-daemon", "--build-users-group=guixbuild").Start()
+	}
+
+	// Wait for daemon to become responsive (up to 60 seconds)
+	fmt.Println("Waiting for daemon to become responsive...")
+	for i := 0; i < 20; i++ {
 		time.Sleep(3 * time.Second)
 
-		// Start the daemon (cow-store handles store redirection)
-		fmt.Println("Starting guix-daemon...")
-		if err := RunCommand("herd", "start", "guix-daemon"); err != nil {
-			fmt.Printf("Warning: herd start failed: %v\n", err)
-			// Try alternative startup method
-			fmt.Println("Trying alternative daemon startup...")
-			exec.Command("guix-daemon", "--build-users-group=guixbuild").Start()
-			time.Sleep(2 * time.Second)
+		// Check if process is running
+		statusCmd := exec.Command("herd", "status", "guix-daemon")
+		statusOutput, _ := statusCmd.Output()
+
+		if !strings.Contains(string(statusOutput), "It is started") && !strings.Contains(string(statusOutput), "It is enabled") {
+			fmt.Printf("  Daemon process not started yet... (%d/20)\n", i+1)
+			continue
 		}
 
-		// Wait longer for daemon to be ready
-		fmt.Println("Waiting 8 seconds for daemon to initialize...")
-		time.Sleep(8 * time.Second)
+		// Process is running, check if responsive
+		testCmd := exec.Command("guix", "build", "--version")
+		if err := testCmd.Run(); err == nil {
+			fmt.Println("[OK] guix-daemon is now responsive and ready")
+			fmt.Println()
+			return nil
+		}
+
+		fmt.Printf("  Daemon running but not responsive yet... (%d/20)\n", i+1)
 	}
 
 	// Final check
-	cmd := exec.Command("herd", "status", "guix-daemon")
-	output, err := cmd.Output()
-	if err != nil || (!strings.Contains(string(output), "It is started") && !strings.Contains(string(output), "It is enabled")) {
+	statusCmd := exec.Command("herd", "status", "guix-daemon")
+	finalOutput, err := statusCmd.Output()
+	if err != nil || (!strings.Contains(string(finalOutput), "It is started") && !strings.Contains(string(finalOutput), "It is enabled")) {
 		fmt.Println()
-		fmt.Println("[ERROR] Failed to start guix-daemon after multiple attempts")
+		fmt.Println("[ERROR] Failed to start guix-daemon after 60 seconds")
 		fmt.Println()
 		fmt.Println("Please manually run these commands:")
 		fmt.Println("  herd start guix-daemon")
 		fmt.Println("  herd status guix-daemon")
+		fmt.Println("  guix build --version  # Test if responsive")
 		fmt.Println()
-		fmt.Println("Once the daemon is running, continue with:")
+		fmt.Println("Once the daemon is running and responsive, continue with:")
 		fmt.Println("  guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  # OR if substitutes fail:")
-		fmt.Println("  guix system init --fallback /mnt/etc/config.scm /mnt")
 		fmt.Println()
-		fmt.Println("NOTE: cow-store should already be running. Do NOT bind mount /mnt/gnu!")
-		return fmt.Errorf("guix-daemon is not running - please start manually and run guix system init")
+		return fmt.Errorf("guix-daemon failed to become responsive after 60 seconds")
 	}
 
+	fmt.Println()
+	fmt.Println("[WARN] guix-daemon is running but not fully responsive yet")
+	fmt.Println("       Continuing anyway - it may become responsive during system init")
 	fmt.Println()
 	return nil
 }

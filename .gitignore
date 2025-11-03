@@ -1,2 +1,4 @@
 run-remote-steps
 .claude/
+
+*.iso.*
