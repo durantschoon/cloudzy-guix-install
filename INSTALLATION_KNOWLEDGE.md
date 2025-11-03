@@ -10,6 +10,38 @@ This document captures critical lessons learned from real-world Guix OS installa
 - **Never use `mount --bind /mnt/gnu /gnu`** — this shadows the live system's store and breaks the `guix` command
 - Without cow-store, the ISO's limited tmpfs fills up and the installation fails
 
+## 🐚 Bash Paths in Guix
+
+**Critical: Never use `/bin/bash` in Guix scripts or commands.**
+
+Guix does not have `/bin/bash` (or any binaries in `/bin` except `/bin/sh`). Instead:
+
+**From Live ISO or Installed System:**
+```bash
+# CORRECT - Use the profile path
+/run/current-system/profile/bin/bash
+
+# CORRECT - Use env (finds bash in PATH)
+#!/usr/bin/env bash
+
+# WRONG - Does not exist in Guix
+/bin/bash
+```
+
+**For chroot commands:**
+```bash
+# CORRECT
+chroot /mnt /run/current-system/profile/bin/bash
+
+# WRONG
+chroot /mnt /bin/bash
+```
+
+**Why this matters:**
+- `/bin/bash` does not exist on Guix systems
+- Commands using `/bin/bash` will fail with "No such file or directory"
+- Always use `/run/current-system/profile/bin/bash` or `#!/usr/bin/env bash`
+
 ## 🧩 Partitioning & Filesystems
 
 ### Partition Table Requirements
