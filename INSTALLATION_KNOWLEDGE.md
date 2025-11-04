@@ -243,23 +243,28 @@ rm /mnt/etc/config.scm /tmp/channels.scm
 
 ## 🚀 Installer Best Practices
 
-### Always Specify Platform Argument
+### Always Specify Platform
 
-**Critical**: Always pass the platform name to bootstrap.sh
+**Critical**: Always specify the platform either as an argument or environment variable
 
 ```bash
-# CORRECT - Specify platform
+# RECOMMENDED - Pass as argument (most explicit)
 bash bootstrap.sh framework-dual
 bash bootstrap.sh cloudzy
 
-# WRONG - No platform specified (defaults to cloudzy or errors)
+# ALTERNATIVE - Set environment variable before running
+export GUIX_PLATFORM="framework-dual"
 bash bootstrap.sh
+
+# WRONG - No platform specified (empty GUIX_PLATFORM, behavior undefined)
+bash bootstrap.sh   # Without GUIX_PLATFORM set
 ```
 
 **Why this matters:**
 - Different platforms have different partition layouts (BIOS vs UEFI)
 - Different platforms need different channels (nonguix for framework, not for cloudzy)
 - Different platforms use different installer code paths
+- Without platform, installer behavior is undefined (may use wrong code path)
 
 ### Setting Environment Variables
 
