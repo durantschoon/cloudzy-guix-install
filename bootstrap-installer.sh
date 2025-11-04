@@ -171,7 +171,7 @@ if [[ ! -f go.mod ]]; then
     exit 1
 fi
 
-# Build the installer
+# Build the installer and helper tools
 # Note: We have no external dependencies, so go.sum won't exist
 # Go will still verify the build matches go.mod
 echo "Building installer from source..."
@@ -191,6 +191,15 @@ fi
 if [[ ! -f run-remote-steps ]]; then
     echo "Error: Binary not created"
     exit 1
+fi
+
+# Build hash-to-words helper tool (for manifest verification)
+echo "Building hash-to-words helper tool..."
+if go build -o hash-to-words ./cmd/hash-to-words; then
+    chmod +x hash-to-words
+    echo "[OK] hash-to-words tool built"
+else
+    echo "[WARN] hash-to-words build failed (not critical, continuing)"
 fi
 
 # Export channel info for Go installer

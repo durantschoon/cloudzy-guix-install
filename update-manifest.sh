@@ -68,13 +68,24 @@ echo ""
 # Calculate and display the manifest checksum itself
 MANIFEST_HASH=$(shasum -a 256 "$MANIFEST_FILE" | awk '{print $1}')
 
+# Convert hash to human-readable words
+MANIFEST_WORDS=$(go run cmd/hash-to-words/main.go "$MANIFEST_HASH" 2>/dev/null)
+
 echo "================================================================"
 echo "MANIFEST CHECKSUM (verify this on Guix ISO before running):"
 echo ""
-echo "  $MANIFEST_HASH"
+echo "  Hash: $MANIFEST_HASH"
+if [ -n "$MANIFEST_WORDS" ]; then
+    echo "  Words: $MANIFEST_WORDS"
+fi
 echo ""
 echo "On Guix ISO, verify with:"
 echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256"
+if [ -n "$MANIFEST_WORDS" ]; then
+    echo ""
+    echo "Or verify with words (easier to read aloud):"
+    echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256 | awk '{print \$1}' | ./hash-to-words"
+fi
 echo ""
 echo "If checksums match, GitHub CDN has the latest version."
 echo "================================================================"
