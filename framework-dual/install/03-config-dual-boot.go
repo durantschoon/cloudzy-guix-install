@@ -77,18 +77,25 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 
   // Check if config already exists (idempotency)
   configPath := "/mnt/etc/config.scm"
+  channelsPath := "/tmp/channels.scm"
+  configExists := false
   if _, err := os.Stat(configPath); err == nil {
+    configExists = true
     fmt.Printf("Configuration file %s already exists\n", configPath)
-    fmt.Println("Skipping config generation (idempotent - safe for reruns)")
+
+    // Check if channels.scm also exists
+    if _, err := os.Stat(channelsPath); err == nil {
+      fmt.Println("Channels file also exists - skipping config generation")
+      fmt.Println("(idempotent - safe for reruns)")
+      fmt.Println()
+      fmt.Println("To regenerate config and channels, remove both files:")
+      fmt.Printf("  rm %s %s\n", configPath, channelsPath)
+      return nil
+    }
+
+    // Config exists but channels.scm doesn't - need to setup nonguix
+    fmt.Println("But channels.scm is missing - will setup nonguix channel")
     fmt.Println()
-    fmt.Println("To regenerate config, remove the file first:")
-    fmt.Printf("  rm %s\n", configPath)
-    fmt.Println()
-    fmt.Println("If you need to pause the installer to do this:")
-    fmt.Println("  1. Press Ctrl+Z to suspend this process")
-    fmt.Println("  2. Run: rm /mnt/etc/config.scm")
-    fmt.Println("  3. Run: fg to resume the installer")
-    return nil
   }
 
 
@@ -136,24 +143,31 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
     return fmt.Errorf("failed to setup nonguix channel: %w", err)
   }
 
-  // Generate config
-  config := s.generateMinimalConfig(state, bootloader, targets)
+  // Generate and write config if it doesn't exist
+  if !configExists {
+    // Generate config
+    config := s.generateMinimalConfig(state, bootloader, targets)
 
-  // Write to file
-  if err := os.MkdirAll("/mnt/etc", 0755); err != nil {
-    return err
+    // Write to file
+    if err := os.MkdirAll("/mnt/etc", 0755); err != nil {
+      return err
+    }
+
+    if err := os.WriteFile("/mnt/etc/config.scm", []byte(config), 0644); err != nil {
+      return fmt.Errorf("failed to write config: %w", err)
+    }
+
+    fmt.Println()
+    fmt.Println("=== Generated config.scm ===")
+    fmt.Println(config)
+    fmt.Println()
+    fmt.Println("Configuration written to /mnt/etc/config.scm")
+    fmt.Println("  This will install GRUB to the existing EFI alongside Pop!_OS")
+  } else {
+    fmt.Println()
+    fmt.Println("[OK] Config file already exists, channels.scm has been created")
+    fmt.Println("     Ready to proceed with system init")
   }
-
-  if err := os.WriteFile("/mnt/etc/config.scm", []byte(config), 0644); err != nil {
-    return fmt.Errorf("failed to write config: %w", err)
-  }
-
-  fmt.Println()
-  fmt.Println("=== Generated config.scm ===")
-  fmt.Println(config)
-  fmt.Println()
-  fmt.Println("Configuration written to /mnt/etc/config.scm")
-  fmt.Println("  This will install GRUB to the existing EFI alongside Pop!_OS")
 
   return nil
 }
