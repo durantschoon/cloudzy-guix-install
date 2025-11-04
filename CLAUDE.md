@@ -122,9 +122,9 @@ All installation state is managed through a shared `State` struct (in `framework
 
 ### For scripts that run ONLY on Guix ISO:
 ```bash
-#!/bin/bash
+#!/run/current-system/profile/bin/bash
 ```
-Or safer (works everywhere):
+Or for maximum portability:
 ```bash
 #!/usr/bin/env bash
 ```
@@ -140,12 +140,13 @@ Or safer (works everywhere):
 ```
 
 **Why:**
-- Guix ISO has bash at `/bin/bash`
-- Installed Guix has bash at `/run/current-system/profile/bin/bash`
-- `#!/usr/bin/env bash` works in both by searching PATH
+- Both Guix ISO and installed Guix have bash at `/run/current-system/profile/bin/bash`
+- `#!/usr/bin/env bash` works universally by searching PATH
+- Using `/run/current-system/profile/bin/bash` directly is more explicit but less portable
 
 **Examples:**
-- ISO install scripts: `#!/usr/bin/env bash` (safe for both)
+- Bootstrap installer: `#!/run/current-system/profile/bin/bash` (ISO only)
+- Recovery script: `#!/usr/bin/env bash` (portable, works on ISO)
 - Postinstall customization: `#!/run/current-system/profile/bin/bash`
 - Verification script: `#!/usr/bin/env bash` (runs in both contexts)
 
