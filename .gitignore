@@ -1,4 +1,9 @@
+# Build artifacts (compiled binaries)
 run-remote-steps
+/hash-to-words
+
+# IDE and editor files
 .claude/
 
+# ISO files
 *.iso.*

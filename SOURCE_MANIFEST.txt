@@ -10,7 +10,8 @@ c855a1f0f677a2f9175d014d1d1edf8b489eb3434ed12a58bf81aa2ed18f57e3  ./cloudzy/inst
 3fdf9e90440f4f05c8c161e80db4c03487f59a33a6619b3f6491836b8d3cb787  ./cloudzy/install/03-config.go
 a67e656c29221efb9c7a38653cc9d1e7f6424a2244afd3069ee676fd10fe9f6b  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
-93711f02ebebc6256237978c66a140ef42dce1872ae57b2c98895fcdd11700b7  ./cmd/hash-to-words/main.go
+2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
+b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-words/main.go
 da8cc01c1cd2c763b3c08677008a53637e21a6cd8b92111fcb83299a4a4c066c  ./framework-dual/install/01-partition-check_test.go
 77f9b4115bb1fb2c7375be8737bbf666e80ffc9c192fe0b4e7442554243a39c5  ./framework-dual/install/01-partition-check.go
 3eb1b5b716c03d8b6aacb9064ef8e09e9b15b37998c40c0fdb1a1057e69cbad8  ./framework-dual/install/02-mount-existing_test.go
@@ -30,7 +31,7 @@ af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-s
 
 ## Critical Shell Scripts
 
-357e306eabb689d3dbb6935af8f45e17b7bb907df53127de799a815e404f673e  bootstrap-installer.sh
+f0f08bd7e08ed0f585d940fe507ee4fa36029339b927f88b87682a8e209ce6bd  bootstrap-installer.sh
 9b50240db6f2d1483162a3162d5ae79f73a6d68d25cfd785927923081e91c915  verify-guix-install.sh
 949430a4926456a04c84a0712f07d5149484a14b6a4f1edf37eaf96104aadd5d  recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh

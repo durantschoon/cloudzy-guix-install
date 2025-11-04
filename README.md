@@ -260,10 +260,20 @@ source ~/.guix-profile/etc/profile
 
 Step 1: Verify the manifest checksum (get this from your local machine after running `./update-manifest.sh`):
 
+**Option A: Hex hash verification (traditional method):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256
-# Should output: 3834036f9b6bd4ecc2503ea74b729901942f1ed0df00a0e74182e797af86ec31
+# Compare the output with the expected hash from update-manifest.sh output
 ```
+
+**Option B: Word-based verification (easier to read aloud/verify):**
+```bash
+# After bootstrap builds hash-to-words tool (see Step 2):
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256 | awk '{print $1}' | ./hash-to-words
+# Compare the word output with the expected words from update-manifest.sh
+```
+
+The word-based method converts the 64-character hex hash into a series of readable English words, making it easier to verify over phone/voice or when comparing manually.
 
 Step 2: Download and run the bootstrap:
 

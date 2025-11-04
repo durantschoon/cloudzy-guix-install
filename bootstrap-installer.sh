@@ -76,6 +76,12 @@ echo ""
 echo "Building from: ${REPO_OWNER} (${REPO_REF})"
 echo ""
 
+# Set up Go cache to use /tmp (more space on ISO)
+# This needs to be done early as it's used for hash-to-words and main installer builds
+mkdir -p /tmp/go-cache /tmp/go-tmp
+export GOCACHE=/tmp/go-cache
+export GOTMPDIR=/tmp/go-tmp
+
 # Verify source manifest (ensures GitHub CDN has latest version)
 if [[ -f SOURCE_MANIFEST.txt ]]; then
     echo "Verifying source file checksums..."
@@ -115,14 +121,39 @@ if [[ -f SOURCE_MANIFEST.txt ]]; then
     echo "All source files verified!"
     echo ""
 
+    # Build hash-to-words helper tool early (for manifest verification)
+    # This is safe because we just verified the source files
+    echo "Building hash-to-words helper tool for verification..."
+    if go build -o hash-to-words ./cmd/hash-to-words 2>/dev/null; then
+        chmod +x hash-to-words
+        echo "[OK] hash-to-words tool built"
+    else
+        echo "[WARN] hash-to-words build failed (will use hex hash only)"
+    fi
+    echo ""
+
     # Calculate manifest hash and ask user to verify
     MANIFEST_HASH=$(shasum -a 256 SOURCE_MANIFEST.txt | awk '{print $1}')
+    
+    # Try to convert to words if hash-to-words is available
+    MANIFEST_WORDS=""
+    if [[ -f hash-to-words ]]; then
+        MANIFEST_WORDS=$(echo "$MANIFEST_HASH" | ./hash-to-words 2>/dev/null)
+    fi
+    
     echo "================================================================"
     echo "MANIFEST HASH VERIFICATION"
     echo "================================================================"
     echo ""
     echo "The manifest hash for this download is:"
-    echo "  $MANIFEST_HASH"
+    echo "  Hash: $MANIFEST_HASH"
+    if [[ -n "$MANIFEST_WORDS" ]]; then
+        echo "  Words: $MANIFEST_WORDS"
+        echo ""
+        echo "You can verify using either:"
+        echo "  - Compare the hex hash above"
+        echo "  - Compare the words above (easier to read aloud)"
+    fi
     echo ""
     echo "Before proceeding, you should verify this matches the expected hash"
     echo "from the repository documentation or a trusted source."
@@ -174,13 +205,8 @@ fi
 # Build the installer and helper tools
 # Note: We have no external dependencies, so go.sum won't exist
 # Go will still verify the build matches go.mod
+# Go cache is already set up from earlier (for hash-to-words build)
 echo "Building installer from source..."
-
-# Use /tmp for Go cache to avoid filling up the ISO's limited space
-# /tmp on Guix ISO is typically a tmpfs with more space available
-mkdir -p /tmp/go-cache /tmp/go-tmp
-export GOCACHE=/tmp/go-cache
-export GOTMPDIR=/tmp/go-tmp
 
 if ! go build -o run-remote-steps .; then
     echo "Error: Build failed"
@@ -193,13 +219,16 @@ if [[ ! -f run-remote-steps ]]; then
     exit 1
 fi
 
-# Build hash-to-words helper tool (for manifest verification)
-echo "Building hash-to-words helper tool..."
-if go build -o hash-to-words ./cmd/hash-to-words; then
-    chmod +x hash-to-words
-    echo "[OK] hash-to-words tool built"
-else
-    echo "[WARN] hash-to-words build failed (not critical, continuing)"
+# Note: hash-to-words was already built earlier for manifest verification
+# If it failed then, we'll try again here as a fallback
+if [[ ! -f hash-to-words ]]; then
+    echo "Building hash-to-words helper tool..."
+    if go build -o hash-to-words ./cmd/hash-to-words; then
+        chmod +x hash-to-words
+        echo "[OK] hash-to-words tool built"
+    else
+        echo "[WARN] hash-to-words build failed (not critical, continuing)"
+    fi
 fi
 
 # Export channel info for Go installer
