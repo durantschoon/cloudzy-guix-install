@@ -1,425 +1,78 @@
-# Guix Installer Design Goals and Implementation Checklist
+# Guix Installer Implementation Checklist
 
-Note: This checklist is the source of truth for implementation status. After adding features, update statuses here in the same commit. See `CLAUDE.md` for workflow and conventions.
+This checklist tracks remaining work for the cloudzy-guix-install project. Completed items have been removed to keep this file focused on what's left to do.
 
-The goal of this project is to create a **reliable, repeatable, and hardware-aware Guix OS installation flow** tailored to the Framework 13 laptop. The installer should maximize success on first boot while remaining portable and adaptable for other systems.
+For implementation history and completed features, see git commit history.
 
 ## 🔄 Currently Working On
 
-**Status:** Recently Completed Documentation Improvements
+**Status:** Recovery Script Implementation Complete
 
-**Recently Completed:**
+**Most Recent Additions (2025-11):**
+- ✅ **Recovery script** - Automatic recovery script generation for all installers
+- ✅ **Installation verification** - Post-install checks for kernel/initrd/GRUB
+- ✅ **User password setup** - Pre-reboot password setting via chroot
+- ✅ **Nonguix integration** - Time-machine based nonguix channel support
 
-1. ✅ **Nonguix channel integration** - Added automatic nonguix channel setup for framework installers
-2. ✅ **DATA partition optimization** - Updated to mount DATA at /data with noatime option
-3. ✅ **Config validation improvements** - Enhanced validation with better error handling
-4. ✅ **EFI verification fixes** - Improved EFI partition detection and diagnostics
-5. ✅ **UUID to file-system-label migration** - Replaced all UUID usage with reliable labels
-6. ✅ **Nonguix trust prompt** - Added opt-in user consent with security explanation before trusting nonguix
-7. ✅ **Channel pinning** - Record channel commits to /mnt/etc/channels-pinned.scm for reproducible builds
-8. ✅ **Installation receipt improvements** - Include channel commits and substitute servers in receipt
-9. ✅ **Remove guix pull to avoid glibc mismatch** - Skip pull, rely on time-machine for channel fetching
-10. ✅ **Fix validation skip for nongnu modules** - Properly detect and skip validation when nonguix needed
-11. ✅ **First-boot expectations** - Added "What to Expect" section to QUICKSTART.md
-12. ✅ **Networking quick path** - Documented DHCP, static IP, WiFi, and NetworkManager setup
-13. ✅ **Time estimates** - Added installation step timing to QUICKSTART.md
-14. ✅ **System services documentation** - Added TLP, NTP, fstrim, rngd to CUSTOMIZATION.md
-
-**Next Priority Tasks:**
-
-1. **Test and validate framework-dual installation** - Verify complete install flow with all recent fixes
-2. **Dual-boot GRUB UX** - Already has timeout=5, verify chainloader detection works
-3. **Storage options** - Document LUKS/btrfs setup options
-
-**Context:** Major infrastructure and stability improvements completed. Documentation significantly improved for first-boot experience and system customization. Framework installers now use time-machine for nonguix (avoiding glibc issues), validate configs properly, and provide better user prompts.
+**Current Focus:**
+1. Test and validate complete framework-dual installation flow
+2. Improve dual-boot GRUB experience
+3. Document storage options (LUKS/btrfs)
 
 ---
 
-## 🧭 Core Design Principles
-
-### 1. Start From a Super-Minimal `config.scm`
-
-We want the initial install configuration to be as small and deterministic as possible. That means:
-
-* **Remove everything non-essential** from the base `config.scm`: no keyboard layout, no user comment field, no desktop environment, no CUPS, etc.
-* Keep only:
-  * `host-name`
-  * `locale` and `timezone`
-  * `bootloader` section
-  * Essential `file-systems`
-  * `users` block (with password set before reboot — see below)
-
-**Goal:** This stage should do *one thing only* — reliably install a bootable Guix system shell.
-
-Later stages (like adding services, desktop environments, etc.) will happen via a `guix system reconfigure` using a richer configuration file.
-
----
-
-### 2. Verify Kernel and Initrd Before Reboot
-
-One of the most common failure modes is rebooting into a system without a kernel or initrd present. To prevent this:
-
-* Add a **post-`system init` verification step** to the scripts.
-* The script should check that the following files exist before offering to reboot:
-
-```bash
-ls /mnt/boot/vmlinuz* /mnt/boot/initrd* >/dev/null
-ls /mnt/boot/efi/EFI/guix/grubx64.efi >/dev/null
-```
-
-* If any of these are missing, the script should print a clear error and refuse to reboot until the issue is fixed.
-* This verification step is simple but essential for catching broken installs early.
-
-**Status:** ✅ Implemented
-
----
-
-### 3. Pre-Set the User Password Before First Boot
-
-To avoid the frustrating "can't log in" situation:
-
-* After `guix system init` succeeds but **before reboot**, `chroot` into the installed system and run `passwd` for the primary user.
-* This will guarantee that the first boot lands on a login screen you can actually enter.
-
-This approach is preferred over embedding a password hash directly in the config, because it avoids storing secrets in version control.
-
-**Status:** ✅ Implemented
-
----
-
-### 4. Eliminate "Nomodeset" Workarounds With Hardware-Aware Defaults
-
-Currently, first boots sometimes require pressing `e` in GRUB and adding `nomodeset` to work around AMD GPU issues. This is fragile and confusing for users. To solve this:
-
-* In the **Framework-specific scripts/config**, include the absolute minimum required to boot cleanly without manual GRUB editing:
-  * Add the `amdgpu`, `nvme`, `xhci_pci`, `usbhid`, and `i2c_piix4` modules to `initrd`.
-  * Include `(kernel linux)` and `(firmware (list linux-firmware))` (requires `nonguix` channel).
-  * Set kernel arguments to something stable like `("quiet" "loglevel=3")`.
-
-This makes the Framework variant slightly more opinionated but much more user-friendly — the system should "just boot" into a login prompt.
-
-**Status:** ✅ Implemented (kernel from nonguix, linux-firmware, required initrd modules, and kernel args added in `framework/install/03-config.go` and `framework-dual/install/03-config-dual-boot.go`)
-
----
-
-## ✅ What We're Doing Correctly
-
-### 1. cow-store Usage
-
-* ✅ **Added `herd start cow-store /mnt` before `guix system init`**
-
-* ✅ Never using `mount --bind /mnt/gnu /gnu`
-
-### 2. Partition Labeling
-
-* ✅ **Using uppercase labels: `GUIX_ROOT` and `EFI`**
-
-* ✅ Setting GPT partition names via `parted name`
-* ✅ Setting filesystem labels via `mkfs.ext4 -L` and `mkfs.vfat -n`
-
-### 3. Installation Command
-
-* ✅ Using `--fallback` flag for local builds
-
-* ✅ Using multiple substitute URLs for redundancy
-* ✅ Retry logic (3 attempts with 10s delay)
-
-### 4. Mount Order
-
-* ✅ Correct sequence: root first, then EFI at `/mnt/boot/efi`
-
-* ✅ Creating mount points before mounting
-
-### 5. Storage Management
-
-* ✅ Setting `TMPDIR=/mnt/var/tmp` to use target disk
-
-* ✅ Setting `XDG_CACHE_HOME=/mnt/var/cache`
-* ✅ Clearing substitute cache
-
-### 6. Safety Features
-
-* ✅ Checking for Guix live ISO environment
-
-* ✅ Idempotency checks (skip if already formatted)
-* ✅ User confirmation prompts for destructive operations
-
-### 7. Documentation & Meta
-
-* ✅ Label everything consistently (UPPERCASE: EFI, GUIX_ROOT)
-
-* ✅ Name consistently across systems
-* ✅ Comment generously
-* ✅ Treat install as idempotent
-* ✅ Document the why (CLAUDE.md, README files)
-
----
-
-## 📋 Implementation Gaps and Action Items
-
-### 🔴 High Priority (Critical - Do First)
-
-#### 1. EFI Partition Verification
-
-**Status:** ✅ Implemented
-
-**Implemented checks:**
-
-```bash
-# Verify partition information
-lsblk -f
-
-# Verify EFI label and vfat type
-blkid -t LABEL=EFI
-blkid -t TYPE=vfat
-
-# Verify mount points
-mount | grep -i efi
-
-# Check /mnt/boot/efi directory exists
-ls -la /mnt/boot/
-```
-
-**Why it matters:**
-
-* Most common installation failure: "doesn't look like an EFI partition"
-* Early detection prevents wasted installation time
-* Provides diagnostic output for debugging
-
-**Note:** We use `lsblk -f` and `blkid` instead of `df -T` because they provide more reliable filesystem type detection.
-
-**Impact:** ⭐⭐⭐ High - Prevents cryptic errors during `guix system init`
-
----
-
-#### 5. Harden Channels and Substitutes
-
-**Status:** ✅ Implemented
-
-Channel commits are recorded to `/mnt/etc/channels-pinned.scm` using `guix describe --format=channels`. Installation receipt includes:
-
-* Channel commits with full introduction/fingerprint
-* Substitute server URLs used
-* Authorization keys applied
-
-Users can reproduce builds with: `guix pull -C /mnt/etc/channels-pinned.scm`
-
-**Impact:** ⭐⭐⭐ High - Reproducibility and trust of binaries
-
----
-
-#### 6. Nonguix Key Trust is Opt‑In
-
-**Status:** ✅ Implemented
-
-Prompts user with clear explanation:
-
-* What Nonguix provides (firmware, kernel, substitutes)
-* Security implications (third-party binaries)
-* Required for Framework 13 WiFi/GPU
-* Aborts if declined
-
-User must explicitly consent before trusting substitutes.nonguix.org.
-
-**Impact:** ⭐⭐⭐ High - Security transparency and informed consent
-
----
-
-#### 7. Onboarding Clarity and Data‑Loss Warnings
-
-**Status:** ✅ Implemented
-
-Added to README.md and platform-specific docs:
-
-* Platform decision table with data safety warnings
-* Clear "WIPES ENTIRE DISK" warnings for cloudzy and framework
-* Hardware requirements (40GB+ disk, 2GB+ RAM, x86_64/aarch64)
-* Secure Boot status (not supported - must disable in BIOS)
-* Framework 13 BIOS access instructions (F2=BIOS, F12=Boot menu)
-
-**Impact:** ⭐⭐⭐ High - Prevents user errors and surprises
-
-#### 2. Post-Installation File Verification
-
-**Status:** ✅ Implemented
-
-**Missing checks after `guix system init`:**
-
-```bash
-# Verify kernel and initrd
-ls /mnt/boot/vmlinuz-* || echo "ERROR: No kernel"
-ls /mnt/boot/initrd-* || echo "ERROR: No initrd"
-
-# Verify GRUB installation
-ls /mnt/boot/grub/grub.cfg || echo "ERROR: No GRUB config"
-ls /mnt/boot/efi/EFI/guix/grubx64.efi || echo "ERROR: No GRUB EFI"
-ls /mnt/boot/efi/EFI/guix/grub.cfg || echo "ERROR: No GRUB EFI config"
-```
-
-**Why it matters:**
-
-* Detects incomplete installations before reboot
-* Prevents "no bootable device" scenarios
-* Allows immediate retry while still in live environment
-
-**Impact:** ⭐⭐⭐ High - Prevents failed boot experiences
-
----
-
-#### 3. Label Existence Check Before Mount
-
-**Status:** ✅ Implemented
-
-**Missing checks:**
-
-```bash
-[ -e /dev/disk/by-label/EFI ] || { echo "ERROR: No EFI label"; exit 1; }
-[ -e /dev/disk/by-label/GUIX_ROOT ] || { echo "ERROR: No GUIX_ROOT label"; exit 1; }
-```
-
-**Why it matters:**
-
-* Verifies labels exist before attempting mount
-* Provides clear error if labeling step failed
-* Prevents confusing mount errors
-
-**Impact:** ⭐⭐⭐ High - Prevents mount failures
-
----
-
-#### 4. Use file-system-label for EFI in config.scm
-
-**Status:** ✅ Implemented
-
-**Current:**
-
-```scheme
-(file-system
-  (mount-point "/boot/efi")
-  (device "/dev/nvme0n1p1")  ; Device path, not label!
-  (type "vfat"))
-```
-
-**Should be:**
-
-```scheme
-(file-system
-  (mount-point "/boot/efi")
-  (device (file-system-label "EFI"))
-  (type "vfat"))
-```
-
-**Why it matters:**
-
-* Root already uses UUID (good!)
-* EFI should use label for consistency
-* Prevents boot issues if device enumeration changes
-
-**Impact:** ⭐⭐⭐ Medium-High - Can cause boot failures in some scenarios
-
----
+## 📋 Remaining Work
 
 ### 🟡 Medium Priority
 
-#### 5. Mount by Label in Scripts
-
-**Status:** ✅ Implemented
-
-**Current approach:**
-
-```go
-// We mount by device path
-state.EFI = "/dev/nvme0n1p1"
-state.Root = "/dev/nvme0n1p2"
-```
-
-**Should be:**
-
-```go
-// Mount by label for reliability
-state.EFI = "/dev/disk/by-label/EFI"
-state.Root = "/dev/disk/by-label/GUIX_ROOT"
-```
-
-**Why it matters:**
-
-* Device paths can change between boots (especially with multiple disks)
-* Labels are stable and don't depend on device enumeration order
-* This is especially important for dual-boot scenarios
-
-**Impact:** ⭐⭐ Medium-High - Can cause boot failures if device order changes
-
----
-
-#### 12. Dual‑Boot UX Improvements
-
+#### 1. Dual-Boot GRUB UX Improvements
 **Status:** ❌ Not implemented
 
-Ensure readable GRUB theme and a visible timeout; add explicit chainloader entry for Pop!_OS in EFI if auto-detection fails.
+Ensure readable GRUB theme and visible timeout; add explicit chainloader entry for Pop!_OS in EFI if auto-detection fails.
 
-**Impact:** ⭐⭐ Medium - Smoother dual‑boot selection
+**Current state:**
+- ✅ Timeout set to 5 seconds
+- ✅ os-prober configured in recovery script
+- ❌ Need to test chainloader detection
+- ❌ GRUB theme not customized
 
----
-
-#### 13. Networking on First Boot
-
-**Status:** ✅ Implemented
-
-Added to QUICKSTART.md:
-
-* Quick networking setup guide (DHCP, static IP, WiFi)
-* NetworkManager service documentation with nmtui/nmcli examples
-* wpa_supplicant fallback for WiFi without firmware
-
-**Impact:** ⭐⭐ Medium - Faster path to connectivity
+**Impact:** ⭐⭐ Medium - Smoother dual-boot selection
 
 ---
 
-#### 14. Power/Time/Maintenance Services
+#### 2. Bootloader Timeout Configuration
+**Status:** ⚠️ Partially implemented
 
-**Status:** ✅ Implemented
+**Current:**
+```scheme
+(bootloader-configuration
+  (bootloader grub-efi-bootloader)
+  (targets '("/boot/efi"))
+  (timeout 5))  ; Already set in framework-dual
+```
 
-Added to CUSTOMIZATION.md "Recommended System Services" section:
+**Need to verify:**
+- Framework single-boot installer also has timeout
+- Cloudzy installer has appropriate timeout
+- Timeout is documented in generated configs
 
-* `tlp-service-type` for laptop power management
-* `ntp-service-type` for time synchronization
-* `fstrim-service-type` for SSD maintenance
-* Complete laptop setup example combining all services
-
-**Impact:** ⭐⭐ Medium - Better battery, accurate time, SSD health
-
----
-
-#### 15. Entropy Early in Boot
-
-**Status:** ✅ Implemented
-
-Added to CUSTOMIZATION.md:
-
-* `rngd-service-type` documentation with benefits
-* Recommended for servers and crypto operations
-* Included in complete laptop setup example
-
-**Impact:** ⭐⭐ Medium - Reduces stalls waiting for entropy
+**Impact:** ⭐⭐ Medium - Affects dual-boot usability
 
 ---
 
-#### 16. Storage Options (LUKS / btrfs / Separate /home)
+#### 3. Storage Options Documentation
+**Status:** ❌ Not documented
 
-**Status:** ❌ Not implemented
+Provide documented flows for:
+- LUKS + ext4 root
+- btrfs with subvolumes and periodic scrub hooks
+- Flag to reserve N GiB unallocated and/or create separate `/home`
 
-Provide optional flows for:
-
-* LUKS + ext4 root
-* btrfs with subvolumes and periodic scrub hooks
-* Flag to reserve N GiB unallocated and/or create separate `/home`
-
-**Impact:** ⭐⭐ Medium - Security/flexibility options
+**Impact:** ⭐⭐ Medium - Security/flexibility options for advanced users
 
 ---
 
-#### 17. Safer Retries and Diagnostics
-
+#### 4. Safer Retries and Diagnostics
 **Status:** ❌ Not implemented
 
 Toggle verbose vs quiet logging; capture `guix describe` and `guix weather` summaries into the log and receipt.
@@ -428,135 +81,36 @@ Toggle verbose vs quiet logging; capture `guix describe` and `guix weather` summ
 
 ---
 
-#### 18. Post‑Install Customization Profiles
-
+#### 5. Post-Install Customization Profiles
 **Status:** ❌ Not implemented
 
-Split `/etc/config.scm` into base OS vs hardware profile; provide a “first reconfigure” profile that adds firmware, NetworkManager, SSH, time sync, and trim in one step.
+Split `/etc/config.scm` into base OS vs hardware profile; provide a "first reconfigure" profile that adds firmware, NetworkManager, SSH, time sync, and trim in one step.
 
 **Impact:** ⭐⭐ Medium - Faster, cleaner onboarding
 
 ---
 
-#### 19. First‑Boot Expectations and Networking Quick Path
+#### 6. Troubleshooting/Rescue Basics Documentation
+**Status:** ❌ Not documented
 
-**Status:** ✅ Implemented
+Document where logs/receipts live and add a short chroot/repair/rerun guide when post-install verification fails.
 
-Added to QUICKSTART.md "What to Expect on First Boot" section:
-
-* Clear checklist of what works immediately (login, sudo, basic utilities)
-* List of what's NOT configured yet (SSH, desktop, WiFi, network)
-* Step-by-step networking setup (DHCP, static IP, WiFi with wpa_supplicant)
-* NetworkManager quick path with nmtui/nmcli examples
-
-**Impact:** ⭐⭐ Medium - Reduces confusion at first boot
-
----
-
-#### 20. Troubleshooting/Rescue Basics
-
-**Status:** ❌ Not implemented
-
-Document where logs/receipts live and add a short chroot/repair/rerun guide when post‑install verification fails.
+**Current state:**
+- ✅ Recovery script exists
+- ✅ Installation receipt written
+- ❌ Need comprehensive troubleshooting guide
+- ❌ Need rescue/repair documentation
 
 **Impact:** ⭐⭐ Medium - Speeds recovery
 
 ---
 
-#### 21. Time Estimates per Step
-
-**Status:** ✅ Implemented
-
-Added to QUICKSTART.md installation section:
-
-* Table with time estimates for all 4 installation steps
-* Total time: 10-25 minutes (network speed dependent)
-* Explanation of what happens during each step
-
-**Impact:** ⭐⭐ Medium - Better user expectations
-
-#### 6. Bootloader Timeout Configuration
-
-**Status:** ❌ Not set
-
-**Current:**
-
-```scheme
-(bootloader-configuration
-  (bootloader grub-efi-bootloader)
-  (targets '("/boot/efi"))
-  ))
-```
-
-**Should include:**
-
-```scheme
-(bootloader-configuration
-  (bootloader grub-efi-bootloader)
-  (targets '("/boot/efi"))
-  (timeout 5)  ; Show menu for 5 seconds
-  ))
-```
-
-**Why it matters:**
-
-* Default timeout is 0 (hidden menu) - users can't select OS in dual-boot
-* Framework-dual needs visible menu to access Pop!_OS
-* F12 firmware menu is a workaround, not a solution
-
-**Impact:** ⭐⭐ Medium - Affects dual-boot usability
-
----
-
-#### 7. Free Space Check (All Installers)
-
-**Status:** ✅ Implemented (warns if < 40GiB after mount)
-
-**Missing for cloudzy and framework:**
-
-```bash
-# Check free space before installation
-available=$(df -BG /mnt | tail -1 | awk '{print $4}' | sed 's/G//')
-[[ $available -lt 40 ]] && echo "WARNING: Less than 40GB free"
-```
-
-**Why it matters:**
-
-* Prevents running out of space during installation
-* Early warning for users
-
-**Impact:** ⭐⭐ Medium - Installation will fail anyway, but later
-
----
-
-#### 8. Installation Logging
-
-**Status:** ✅ Implemented (tee-style to /tmp/guix-install.log)
-
-**Should add:**
-
-```bash
-exec > >(tee /tmp/guix-install.log) 2>&1
-```
-
-**Why it matters:**
-
-* Helps with debugging failures
-* Provides installation receipt
-* Users can review what happened
-
-**Impact:** ⭐⭐ Medium - Improves troubleshooting
-
----
-
 ### 🟢 Low Priority (Nice to Have)
 
-#### 9. Label Verification Output
-
+#### 7. Label Verification Output
 **Status:** ❌ Not shown to user
 
-**Should display:**
-
+Should display:
 ```bash
 # Show labels after formatting
 echo "Verifying partition labels..."
@@ -565,161 +119,120 @@ fatlabel /dev/nvme0n1p1       # Should show: EFI
 parted /dev/nvme0n1 print     # Should show GPT names
 ```
 
-**Why it matters:**
-
-* Confirms labels are correctly set
-* Helps users debug if something goes wrong
-* Educational for users learning Guix
-
 **Impact:** ⭐ Low - Nice for debugging
 
 ---
 
-#### 12. Stronger Receipts
+#### 8. Stronger Installation Receipts
+**Status:** ⚠️ Partially implemented
 
-**Status:** ❌ Not implemented
-
-Extend receipt to include channel commit hashes, `/run/current-system` derivation, substitute servers and keys used.
+**Current:**
+- ✅ Basic receipt written
+- ✅ Channel commits included (via recovery script)
+- ❌ Need `/run/current-system` derivation
+- ❌ Need complete substitute server list
+- ❌ Need authorization keys list
 
 **Impact:** ⭐ Low - Better provenance tracking
 
 ---
 
-#### 13. Recovery Helper
-
+#### 9. Raspberry Pi Track Enhancements
 **Status:** ❌ Not implemented
 
-Provide a helper to chroot into `/mnt`, run verification/repairs, and re‑attempt `guix system init` if post‑init verification fails.
-
-**Impact:** ⭐ Low - Smoother failure recovery
-
----
-
-#### 14. Raspberry Pi Track Enhancements
-
-**Status:** ❌ Not implemented
-
-Add optional image build recipe and Pi‑specific initrd modules/services (chrony, headless SSH with key drop).
+Add optional image build recipe and Pi-specific initrd modules/services (chrony, headless SSH with key drop).
 
 **Impact:** ⭐ Low - Broader hardware support
 
 ---
 
-#### 15. Labels vs Device Paths Micro‑explanation
+#### 10. Labels vs Device Paths Explanation
+**Status:** ❌ Not documented
 
-**Status:** ❌ Not implemented
+Add a one-sentence explanation and simple diagram where labels first appear in documentation.
 
-Add a one‑sentence explanation and simple diagram where labels first appear.
-
-**Impact:** ⭐ Low - Easier mental model
+**Impact:** ⭐ Low - Easier mental model for new users
 
 ---
 
-#### 16. Optional Channel Pinning Toggle for New Users
-
-**Status:** ❌ Not implemented
+#### 11. Optional Channel Pinning Toggle Documentation
+**Status:** ❌ Not documented
 
 Provide a short on/off toggle doc section; default remains safe/unpinned.
 
 **Impact:** ⭐ Low - Simpler onboarding choice
 
-#### 10. Swap Partition Support
+---
 
+#### 12. Swap Partition Support
 **Status:** ⚠️ Only swapfile support
 
 **Current:** Only supports creating swapfile in step 4
 
 **Could add:** Detection and use of existing swap partition
 
-**Why it matters:**
-
-* Some users prefer swap partitions
-* More traditional setup
-
-**Impact:** ⭐ Low - Swapfile works fine
+**Impact:** ⭐ Low - Swapfile works fine for most users
 
 ---
 
-#### 11. Reserved Disk Space Option
-
+#### 13. Reserved Disk Space Option
 **Status:** ❌ Not implemented
 
 **Could add:**
-
-* Allow leaving 10-20GB unallocated
-* User configurable via env var
-
-**Why it matters:**
-
-* Flexibility for future partitions
-* Some users prefer reserved space
+- Allow leaving 10-20GB unallocated
+- User configurable via env var
 
 **Impact:** ⭐ Low - Most users don't need this
 
 ---
 
-## 🔧 Recommended Implementation Order
+## 🎯 Core Design Principles
 
-### Phase 1: Critical Safety Checks (30 min - Do Now)
+These principles guide all implementation work:
 
-1. ✅ Add pre-init EFI verification (vfat check)
-2. ✅ Add label existence checks before mount
-3. ✅ Add post-init file verification (kernel, initrd, GRUB)
-4. ✅ Use file-system-label for EFI in config
+### 1. Super-Minimal Initial config.scm
+- Keep only: host-name, locale, timezone, bootloader, file-systems, users
+- No desktop environment, SSH, or optional services in initial install
+- Goal: Reliably install a bootable Guix system shell
 
-### Phase 2: Password & Hardware Defaults (1 hour - Next)
+### 2. Verify Before Reboot
+- Check kernel and initrd exist in `/mnt/boot/`
+- Verify GRUB EFI files exist
+- Refuse to reboot if critical files missing
 
-5. ✅ Set user password via chroot before reboot
-6. ✅ Add Framework-specific initrd modules
-7. ✅ Add bootloader timeout for dual-boot
+### 3. Pre-Set User Password
+- After `guix system init` but before reboot
+- Use `chroot` and `passwd` command
+- Avoids storing secrets in version control
 
-### Phase 3: Robustness Improvements (1-2 hours - When Time Permits)
-
-8. Add label verification output
-
-### Phase 4: Nice-to-Haves (Optional)
-
-12. Swap partition detection/support
-13. Reserved space option
-14. Post-install receipt generation — ✅ Implemented (writes receipt and installs logs)
-15. Optional: Generate fallback GRUB entry with `nomodeset`
+### 4. Hardware-Aware Defaults
+- Framework-specific: include AMD GPU, NVMe, USB modules in initrd
+- Include linux-firmware via nonguix for real-world hardware
+- Set stable kernel arguments
 
 ---
 
-## 📊 Summary of Installation Stages
+## 📊 Implementation Phases
 
-| Phase                                | Goal                                                  | Result                   |
-| ------------------------------------ | ----------------------------------------------------- | ------------------------ |
-| **Stage 1: Minimal Install**         | Tiny config, password pre-set, kernel/initrd verified | Always boots to a shell  |
-| **Stage 2: Framework Profile**       | Add GPU firmware, essential modules, network, DE      | Boots without GRUB hacks |
-| **Stage 3: Full System Reconfigure** | Add `/data` mounts, services, desktop, dotfiles, etc. | Complete environment     |
-
----
-
-## 📈 Current Implementation Status
-
-### By Category
-
-* **Partitioning:** 6/7 (86%) ✅
-* **Mounting:** 3/7 (43%) ⚠️ Needs verification checks
-* **Bootloader:** 4/6 (67%) ⚠️ Needs post-install checks
-* **Guix-Specific:** 6/7 (86%) ✅
-* **Automation:** 3/5 (60%) ⚠️ Needs logging and checks
-* **Meta Practices:** 6/6 (100%) ✅
-
-**Overall:** ~70% complete
-
-### Biggest Impact Improvements
-
-1. **EFI verification** (prevents most common error)
-2. **Post-install checks** (prevents boot failures)
-3. **Label verification** (prevents mount errors)
-4. **User password setup** (prevents login failures)
+| Phase | Goal | Status |
+|-------|------|--------|
+| **Phase 1: Core Installer** | Reliable single-boot installation | ✅ Complete |
+| **Phase 2: Dual-Boot Support** | Framework-dual installer working | ✅ Complete |
+| **Phase 3: Recovery & Safety** | Recovery script and verification | ✅ Complete |
+| **Phase 4: Documentation** | First-boot guides and customization | ✅ Complete |
+| **Phase 5: Advanced Options** | LUKS, btrfs, profiles | ⏳ In Progress |
+| **Phase 6: Raspberry Pi** | ARM support and image building | ❌ Not Started |
 
 ---
 
-## 🎯 Summary
+## 📝 Notes
 
-**In short:** we want a *bulletproof base install*, automatic sanity checks, and hardware-aware defaults that make first boot smooth and predictable — no typing `nomodeset`, no guessing at passwords, and no surprises when the reboot happens.
+- All critical safety features are implemented
+- Focus is now on advanced user options and polish
+- Recovery script handles most installation failures
+- Framework 13 is primary target, other platforms secondary
 
-The current implementation is solid for single-boot VPS scenarios. The gaps mostly affect edge cases, dual-boot reliability, and first-boot user experience on Framework laptops.
+For detailed implementation history, see:
+- Git commit log
+- INSTALLATION_KNOWLEDGE.md
+- Individual platform README files
