@@ -1426,6 +1426,40 @@ func IsPartitionFormatted(partition string, fsTypes ...string) bool {
 	return false
 }
 
+// IsPartitionType checks if a partition has a specific GPT partition type flag
+func IsPartitionType(partition string, partType string) bool {
+	// Use parted to check partition flags
+	// Extract device and partition number from partition path
+	device := partition
+	if strings.Contains(partition, "nvme") || strings.Contains(partition, "mmcblk") {
+		// NVMe/eMMC: /dev/nvme0n1p1 -> device=/dev/nvme0n1
+		parts := strings.Split(partition, "p")
+		if len(parts) >= 2 {
+			device = strings.Join(parts[:len(parts)-1], "p")
+		}
+	} else {
+		// SATA/SCSI: /dev/sda1 -> device=/dev/sda
+		for i := len(partition) - 1; i >= 0; i-- {
+			if partition[i] < '0' || partition[i] > '9' {
+				device = partition[:i+1]
+				break
+			}
+		}
+	}
+
+	// Get partition information from parted
+	cmd := exec.Command("parted", device, "print")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+
+	// Check if the partition has the specified flag
+	// parted output format includes flags like "bios_grub", "esp", etc.
+	outputStr := string(output)
+	return strings.Contains(outputStr, partType)
+}
+
 // IsStorePopulated checks if the Guix store is already populated
 func IsStorePopulated() bool {
 	// Check if /mnt/gnu/store has contents

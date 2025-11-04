@@ -119,12 +119,24 @@ func (s *Step01Partition) RunClean(state *State) error {
 
 	// Check if partitions already exist and are formatted (idempotency)
 	if lib.HasExistingPartitions(state.Device) {
-		fmt.Println("Partitions already exist, checking if formatted...")
-		
-		// Set partition paths
-		state.EFI = lib.MakePartitionPath(state.Device, "1")
-		state.Root = lib.MakePartitionPath(state.Device, "2")
-		
+		fmt.Println("Partitions already exist, detecting layout...")
+
+		// Detect partition layout: check if partition 1 is BIOS boot or EFI
+		// BIOS layout: partition 1 = BIOS boot, 2 = EFI, 3 = root
+		// UEFI layout: partition 1 = EFI, 2 = root
+		part1 := lib.MakePartitionPath(state.Device, "1")
+		isBIOSBoot := lib.IsPartitionType(part1, "bios_grub")
+
+		if isBIOSBoot {
+			fmt.Println("Detected BIOS partition layout (BIOS boot + ESP + root)")
+			state.EFI = lib.MakePartitionPath(state.Device, "2")
+			state.Root = lib.MakePartitionPath(state.Device, "3")
+		} else {
+			fmt.Println("Detected UEFI partition layout (ESP + root)")
+			state.EFI = lib.MakePartitionPath(state.Device, "1")
+			state.Root = lib.MakePartitionPath(state.Device, "2")
+		}
+
 		// Check if partitions are already formatted
 		if lib.IsPartitionFormatted(state.EFI, "vfat") && lib.IsPartitionFormatted(state.Root, "ext4") {
 			fmt.Println("Partitions are already formatted")
@@ -136,24 +148,49 @@ func (s *Step01Partition) RunClean(state *State) error {
 			lib.RunCommand("e2label", state.Root)
 			return nil
 		}
-		
+
 		fmt.Println("Partitions exist but not formatted, proceeding with formatting...")
 	} else {
 		fmt.Println("Creating partitions...")
 		fmt.Println()
 
-		// Partition the disk
-		if err := lib.RunCommand("parted", "--script", state.Device,
-			"mklabel", "gpt",
-			"mkpart", "EFI", "fat32", "1MiB", "513MiB",
-			"set", "1", "esp", "on",
-			"mkpart", "root", "ext4", "513MiB", "100%"); err != nil {
-			return fmt.Errorf("partitioning failed: %w", err)
+		// Detect boot mode to create appropriate partition layout
+		bootMode := lib.DetectBootMode()
+		fmt.Printf("Detected boot mode: %s\n", bootMode)
+		fmt.Println()
+
+		if bootMode == "uefi" {
+			// UEFI: Create EFI System Partition + root
+			fmt.Println("Creating UEFI partition layout (ESP + root)...")
+			if err := lib.RunCommand("parted", "--script", state.Device,
+				"mklabel", "gpt",
+				"mkpart", "EFI", "fat32", "1MiB", "513MiB",
+				"set", "1", "esp", "on",
+				"mkpart", "root", "ext4", "513MiB", "100%"); err != nil {
+				return fmt.Errorf("partitioning failed: %w", err)
+			}
+
+			// Set partition paths
+			state.EFI = lib.MakePartitionPath(state.Device, "1")
+			state.Root = lib.MakePartitionPath(state.Device, "2")
+		} else {
+			// BIOS: Create BIOS boot partition + EFI (for flexibility) + root
+			fmt.Println("Creating BIOS partition layout (BIOS boot + ESP + root)...")
+			fmt.Println("  Note: Including ESP for potential future UEFI boot")
+			if err := lib.RunCommand("parted", "--script", state.Device,
+				"mklabel", "gpt",
+				"mkpart", "BIOSBOOT", "1MiB", "2MiB",
+				"set", "1", "bios_grub", "on",
+				"mkpart", "EFI", "fat32", "2MiB", "514MiB",
+				"set", "2", "esp", "on",
+				"mkpart", "root", "ext4", "514MiB", "100%"); err != nil {
+				return fmt.Errorf("partitioning failed: %w", err)
+			}
+
+			// Set partition paths (note: different numbering for BIOS)
+			state.EFI = lib.MakePartitionPath(state.Device, "2")
+			state.Root = lib.MakePartitionPath(state.Device, "3")
 		}
-		
-		// Set partition paths
-		state.EFI = lib.MakePartitionPath(state.Device, "1")
-		state.Root = lib.MakePartitionPath(state.Device, "2")
 	}
 
 	fmt.Printf("EFI is %s and ROOT is %s\n", state.EFI, state.Root)
