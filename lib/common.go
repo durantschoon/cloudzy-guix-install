@@ -765,8 +765,15 @@ func RunGuixSystemInit() error {
 	if lastErr != nil {
 		fmt.Println()
 		fmt.Println("All retry attempts failed. You can:")
-		fmt.Println("  1. Wait a few minutes and run: guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  2. Try with --fallback to build from source: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
+		// Check if helper script exists (created by framework/framework-dual installers)
+		helperPath := "/root/guix-init-time-machine.sh"
+		if _, err := os.Stat(helperPath); err == nil {
+			fmt.Printf("  1. Run the helper script: %s\n", helperPath)
+			fmt.Println("  2. Or manually run: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
+		} else {
+			fmt.Println("  1. Wait a few minutes and run: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
+			fmt.Println("  2. Or try with --fallback to build from source: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
+		}
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
 
