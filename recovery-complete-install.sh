@@ -319,37 +319,59 @@ Installation log: /tmp/guix-install.log (if available)
 EOF
 echo "[OK] Installation receipt written to $RECEIPT_PATH"
 
-# Final verification
+# Final verification using comprehensive verification script
 echo ""
 echo "=== Final Verification ==="
-ALL_GOOD=true
 
-if ! ls /mnt/boot/vmlinuz-* >/dev/null 2>&1; then
-    echo "[ERROR] No kernel installed!"
-    ALL_GOOD=false
-else
-    echo "[OK] Kernel: $(ls /mnt/boot/vmlinuz-* | head -1 | xargs basename)"
+# Try to use verify-guix-install.sh if available for comprehensive check
+VERIFY_SCRIPT=""
+if [ -f /root/verify-guix-install.sh ]; then
+    VERIFY_SCRIPT="/root/verify-guix-install.sh"
+elif [ -f ./verify-guix-install.sh ]; then
+    VERIFY_SCRIPT="./verify-guix-install.sh"
 fi
 
-if ! ls /mnt/boot/initrd-* >/dev/null 2>&1; then
-    echo "[ERROR] No initrd installed!"
-    ALL_GOOD=false
+if [ -n "$VERIFY_SCRIPT" ]; then
+    echo "Running comprehensive verification..."
+    echo ""
+    if bash "$VERIFY_SCRIPT"; then
+        ALL_GOOD=true
+    else
+        ALL_GOOD=false
+    fi
 else
-    echo "[OK] Initrd: $(ls /mnt/boot/initrd-* | head -1 | xargs basename)"
-fi
+    # Fallback to basic checks if verify script not available
+    echo "Note: Using basic verification (verify-guix-install.sh not found)"
+    echo ""
+    ALL_GOOD=true
 
-if [ -f /mnt/boot/efi/EFI/Guix/grubx64.efi ] || [ -f /mnt/boot/efi/EFI/guix/grubx64.efi ]; then
-    echo "[OK] GRUB EFI bootloader installed"
-else
-    echo "[ERROR] No GRUB EFI bootloader!"
-    ALL_GOOD=false
-fi
+    if ! ls /mnt/boot/vmlinuz-* >/dev/null 2>&1; then
+        echo "[ERROR] No kernel installed!"
+        ALL_GOOD=false
+    else
+        echo "[OK] Kernel: $(ls /mnt/boot/vmlinuz-* | head -1 | xargs basename)"
+    fi
 
-if [ -f /mnt/boot/grub/grub.cfg ]; then
-    echo "[OK] GRUB config exists"
-else
-    echo "[ERROR] No GRUB config!"
-    ALL_GOOD=false
+    if ! ls /mnt/boot/initrd-* >/dev/null 2>&1; then
+        echo "[ERROR] No initrd installed!"
+        ALL_GOOD=false
+    else
+        echo "[OK] Initrd: $(ls /mnt/boot/initrd-* | head -1 | xargs basename)"
+    fi
+
+    if [ -f /mnt/boot/efi/EFI/Guix/grubx64.efi ] || [ -f /mnt/boot/efi/EFI/guix/grubx64.efi ]; then
+        echo "[OK] GRUB EFI bootloader installed"
+    else
+        echo "[ERROR] No GRUB EFI bootloader!"
+        ALL_GOOD=false
+    fi
+
+    if [ -f /mnt/boot/grub/grub.cfg ]; then
+        echo "[OK] GRUB config exists"
+    else
+        echo "[ERROR] No GRUB config!"
+        ALL_GOOD=false
+    fi
 fi
 
 echo ""

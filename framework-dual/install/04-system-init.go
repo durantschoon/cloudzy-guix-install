@@ -134,6 +134,11 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		return err
 	}
 
+	// Install verification script (for use after boot and by recovery script)
+	if err := lib.InstallVerificationScript(); err != nil {
+		fmt.Printf("Warning: Failed to install verification script: %v\n", err)
+	}
+
 	// Verify installation succeeded
 	if err := lib.VerifyInstallation(); err != nil {
 		return err
