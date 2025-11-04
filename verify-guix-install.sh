@@ -3,8 +3,8 @@
 # Can be run from Guix ISO (checks /mnt) or from installed system (checks /)
 #
 # Note: Uses #!/usr/bin/env bash for compatibility with both:
-#   - Guix ISO (has /bin/bash)
-#   - Installed Guix (has /run/current-system/profile/bin/bash)
+#   - Guix ISO (bash in /run/current-system/profile/bin/bash)
+#   - Installed Guix (same path: /run/current-system/profile/bin/bash)
 #
 # Usage:
 #   From ISO:       ./verify-guix-install.sh
