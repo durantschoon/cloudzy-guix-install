@@ -131,10 +131,16 @@ func (s *Step01Partition) RunClean(state *State) error {
 			fmt.Println("Detected BIOS partition layout (BIOS boot + ESP + root)")
 			state.EFI = lib.MakePartitionPath(state.Device, "2")
 			state.Root = lib.MakePartitionPath(state.Device, "3")
+			// Set boot mode to match partition layout
+			state.BootMode = "bios"
+			fmt.Println("Setting BootMode=bios to match partition layout")
 		} else {
 			fmt.Println("Detected UEFI partition layout (ESP + root)")
 			state.EFI = lib.MakePartitionPath(state.Device, "1")
 			state.Root = lib.MakePartitionPath(state.Device, "2")
+			// Set boot mode to match partition layout
+			state.BootMode = "uefi"
+			fmt.Println("Setting BootMode=uefi to match partition layout")
 		}
 
 		// Check if partitions are already formatted
@@ -155,9 +161,21 @@ func (s *Step01Partition) RunClean(state *State) error {
 		fmt.Println()
 
 		// Detect boot mode to create appropriate partition layout
-		bootMode := lib.DetectBootMode()
-		fmt.Printf("Detected boot mode: %s\n", bootMode)
+		// Use state.BootMode if set (from env var), otherwise detect from environment
+		bootMode := state.BootMode
+		if bootMode == "" {
+			bootMode = lib.DetectBootMode()
+		}
+		fmt.Printf("Boot mode: %s\n", bootMode)
+		if state.BootMode != "" {
+			fmt.Println("  (using BOOT_MODE env var)")
+		} else {
+			fmt.Println("  (auto-detected from live ISO environment)")
+		}
 		fmt.Println()
+
+		// Store boot mode in state for later steps
+		state.BootMode = bootMode
 
 		if bootMode == "uefi" {
 			// UEFI: Create EFI System Partition + root

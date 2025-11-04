@@ -85,9 +85,31 @@ func (s *Step03Config) RunClean(state *State) error {
 	}
 
 
-	// Detect boot mode if not set
+	// Use boot mode from state (set by Step01 based on partition layout)
+	// Only detect if not already set (shouldn't happen if Step01 ran)
 	if state.BootMode == "" {
+		fmt.Println("WARNING: BootMode not set in state, detecting from environment...")
+		fmt.Println("  This might cause mismatch if partitions were created with different boot mode")
 		state.BootMode = lib.DetectBootMode()
+	}
+	fmt.Printf("Using boot mode: %s (from Step01 partition layout)\n", state.BootMode)
+
+	// Validate boot mode matches partition layout
+	if state.BootMode == "bios" {
+		part1 := lib.MakePartitionPath(state.Device, "1")
+		hasBIOSBoot := lib.IsPartitionType(part1, "bios_grub")
+		if !hasBIOSBoot {
+			fmt.Println()
+			fmt.Println("ERROR: Boot mode is BIOS but partition layout doesn't have BIOS boot partition!")
+			fmt.Println("  This will cause GRUB installation to fail.")
+			fmt.Println()
+			fmt.Println("Options:")
+			fmt.Println("  1. Recreate partitions with BIOS layout: Run Step01 again")
+			fmt.Println("  2. Use UEFI boot mode: Set BOOT_MODE=uefi and rerun Step03")
+			fmt.Println("  3. Manually add BIOS boot partition (advanced)")
+			fmt.Println()
+			return fmt.Errorf("boot mode mismatch: BIOS mode requires BIOS boot partition, but partition layout is UEFI")
+		}
 	}
 
 	bootloader := ""
@@ -100,6 +122,7 @@ func (s *Step03Config) RunClean(state *State) error {
 		bootloader = "grub-bootloader"
 		targets = fmt.Sprintf(`'("%s")`, state.Device)
 		fmt.Printf("BIOS boot mode - using grub-bootloader on %s\n", state.Device)
+		fmt.Println("  (BIOS boot partition detected - GRUB installation should succeed)")
 	}
 
 	fmt.Println()
