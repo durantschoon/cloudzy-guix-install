@@ -147,6 +147,24 @@ else
     echo ""
 fi
 
+# Copy critical scripts to /root for manual recovery if needed
+echo "Installing critical recovery scripts to /root..."
+CRITICAL_SCRIPTS=(
+    "verify-guix-install.sh"
+    "recovery-complete-install.sh"
+)
+
+for script in "${CRITICAL_SCRIPTS[@]}"; do
+    if [[ -f "$script" ]]; then
+        cp "$script" /root/
+        chmod +x "/root/$script"
+        echo "[OK] Copied $script to /root/"
+    else
+        echo "[WARN] $script not found (skipping)"
+    fi
+done
+echo ""
+
 # Verify go.mod exists
 if [[ ! -f go.mod ]]; then
     echo "Error: go.mod not found. This doesn't appear to be a Go module."
