@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 # Guix Installation Verification Script
 # Can be run from Guix ISO (checks /mnt) or from installed system (checks /)
 #
-# Note: Uses #!/usr/bin/env bash for compatibility with both:
-#   - Guix ISO (bash in /run/current-system/profile/bin/bash)
+# Note: Uses #!/run/current-system/profile/bin/bash which works on both:
+#   - Guix ISO (bash at /run/current-system/profile/bin/bash)
 #   - Installed Guix (same path: /run/current-system/profile/bin/bash)
 #
 # Usage:

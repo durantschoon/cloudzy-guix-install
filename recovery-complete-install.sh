@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 # Recovery script to complete Guix installation after time-machine
 # Use this when guix time-machine ran but didn't complete fully
 #

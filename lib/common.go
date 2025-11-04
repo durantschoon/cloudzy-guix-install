@@ -1387,7 +1387,7 @@ func SetUserPassword(username string) error {
 // WriteRecoveryScript writes a comprehensive recovery script for completing installation
 // after guix time-machine succeeds but post-install steps may have failed
 func WriteRecoveryScript(scriptPath, platform string) error {
-	script := `#!/usr/bin/env bash
+	script := `#!/run/current-system/profile/bin/bash
 # Recovery script to complete Guix installation after time-machine
 # Use this when guix time-machine ran but didn't complete fully
 #
