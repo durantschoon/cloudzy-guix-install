@@ -328,10 +328,43 @@ func TestIsGuixLiveISO(t *testing.T) {
 	// This test will likely return false in a normal test environment
 	// but we can verify it doesn't panic and returns a boolean
 	result := IsGuixLiveISO()
-	
+
 	// We expect false in test environment, but the important thing is it doesn't panic
 	if result {
 		t.Log("IsGuixLiveISO() returned true (unexpected in test environment)")
+	}
+}
+
+func TestDetectBootMode(t *testing.T) {
+	// Test boot mode detection
+	// This will return actual boot mode of test system, but shouldn't panic
+	mode := DetectBootMode()
+
+	// Should return either "uefi" or "bios"
+	if mode != "uefi" && mode != "bios" {
+		t.Errorf("DetectBootMode() returned unexpected value: %s (expected 'uefi' or 'bios')", mode)
+	}
+
+	// Log what we detected for debugging
+	t.Logf("Detected boot mode: %s", mode)
+
+	// Additional verification: check if detection matches reality
+	_, efiErr := os.Stat("/sys/firmware/efi")
+	if mode == "uefi" && efiErr != nil {
+		t.Error("DetectBootMode() returned 'uefi' but /sys/firmware/efi doesn't exist")
+	}
+
+	// Verify that if /sys/firmware/efi exists as dir with entries, we get uefi
+	if efiErr == nil {
+		info, err := os.Stat("/sys/firmware/efi")
+		if err == nil && info.IsDir() {
+			entries, err := os.ReadDir("/sys/firmware/efi")
+			if err == nil && len(entries) > 0 {
+				if mode != "uefi" {
+					t.Error("DetectBootMode() should return 'uefi' when /sys/firmware/efi exists with entries")
+				}
+			}
+		}
 	}
 }
 

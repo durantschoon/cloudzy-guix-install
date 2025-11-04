@@ -2035,9 +2035,15 @@ func MakePartitionPath(device, partNum string) string {
 
 // DetectBootMode detects whether the system is running in UEFI or BIOS mode
 func DetectBootMode() string {
-	// Check if /sys/firmware/efi exists
-	if _, err := os.Stat("/sys/firmware/efi"); err == nil {
-		return "uefi"
+	// Check if /sys/firmware/efi exists and is a directory
+	// This is the most reliable way to detect EFI boot on Linux
+	if info, err := os.Stat("/sys/firmware/efi"); err == nil && info.IsDir() {
+		// Additional check: verify it has entries (not just an empty dir)
+		// Some VPS environments create /sys/firmware but not the efi subdir
+		entries, err := os.ReadDir("/sys/firmware/efi")
+		if err == nil && len(entries) > 0 {
+			return "uefi"
+		}
 	}
 	return "bios"
 }

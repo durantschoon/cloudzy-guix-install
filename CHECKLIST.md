@@ -6,18 +6,20 @@ For implementation history and completed features, see git commit history.
 
 ## 🔄 Currently Working On
 
-**Status:** Recovery Script Implementation Complete
+**Status:** Cloudzy Boot Mode Detection Fixed
 
 **Most Recent Additions (2025-11):**
 - ✅ **Recovery script** - Automatic recovery script generation for all installers
 - ✅ **Installation verification** - Post-install checks for kernel/initrd/GRUB
 - ✅ **User password setup** - Pre-reboot password setting via chroot
 - ✅ **Nonguix integration** - Time-machine based nonguix channel support
+- ✅ **Boot mode detection fix** - Cloudzy VPS now correctly detects BIOS vs UEFI
 
 **Current Focus:**
-1. Test and validate complete framework-dual installation flow
-2. Improve dual-boot GRUB experience
-3. Document storage options (LUKS/btrfs)
+1. Test Cloudzy installer on fresh VPS with BIOS boot fix
+2. Test and validate complete framework-dual installation flow
+3. Improve dual-boot GRUB experience
+4. Document storage options (LUKS/btrfs)
 
 ---
 
@@ -183,6 +185,34 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 - User configurable via env var
 
 **Impact:** ⭐ Low - Most users don't need this
+
+---
+
+#### 14. Script Directory Reorganization
+**Status:** ❌ Not implemented
+
+**Proposal:**
+- Move critical scripts that run on Guix ISO/system into `lib/` subdirectory:
+  - `verify-guix-install.sh` → `lib/verify-guix-install.sh`
+  - `recovery-complete-install.sh` → `lib/recovery-complete-install.sh`
+  - `bootstrap-installer.sh` → `lib/bootstrap-installer.sh`
+  - `lib/postinstall.sh` (already in lib/)
+- Keep development/repo scripts at top level:
+  - `update-manifest.sh`
+  - `run-tests.sh`
+
+**Benefits:**
+- Clear separation between Guix runtime scripts and development scripts
+- Consistent with `lib/common.go` and `lib/postinstall.sh` patterns
+- Easier to understand repository structure
+
+**Breaking changes:**
+- Bootstrap script path references need updating
+- Documentation URLs need updating
+- Manifest paths need updating
+- GitHub download URLs change
+
+**Impact:** ⭐ Low - Better organization, but significant refactoring
 
 ---
 
