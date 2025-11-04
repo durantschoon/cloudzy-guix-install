@@ -107,6 +107,61 @@ Always use `(file-system-label "LABEL_NAME")` instead of `(uuid "xxxx-xxxx" 'ext
 - **Benefits**: Cleaner separation, easier backup, shared access across systems
 - **Options**: `defaults,noatime` for better performance on data storage
 
+### BIOS vs UEFI Boot Modes
+
+**Critical**: The partition layout must match the boot mode.
+
+**UEFI Mode (most modern systems):**
+```bash
+# Partition layout:
+# 1. EFI System Partition (ESP) - 512MB, FAT32, flags: esp
+# 2. Root partition - remaining space, ext4
+
+parted /dev/sda --script \
+  mklabel gpt \
+  mkpart EFI fat32 1MiB 513MiB \
+  set 1 esp on \
+  mkpart root ext4 513MiB 100%
+```
+
+**BIOS Mode (legacy systems, some VPS):**
+```bash
+# Partition layout:
+# 1. BIOS Boot partition - 1MB, no filesystem, flags: bios_grub
+# 2. EFI System Partition - 512MB, FAT32, flags: esp (for future UEFI boot)
+# 3. Root partition - remaining space, ext4
+
+parted /dev/sda --script \
+  mklabel gpt \
+  mkpart BIOSBOOT 1MiB 2MiB \
+  set 1 bios_grub on \
+  mkpart EFI fat32 2MiB 514MiB \
+  set 2 esp on \
+  mkpart root ext4 514MiB 100%
+```
+
+**Why BIOS needs a special partition:**
+- GPT + BIOS boot requires a BIOS Boot Partition for GRUB's core.img
+- Without it: `grub-install` fails with "GPT partition label has no BIOS boot partition"
+- The partition must have the `bios_grub` flag set
+- Size: 1MB is sufficient
+- Filesystem: none (GRUB writes directly to it)
+
+**How to detect boot mode:**
+```bash
+# Check if /sys/firmware/efi exists
+if [ -d /sys/firmware/efi ]; then
+    echo "UEFI mode"
+else
+    echo "BIOS mode"
+fi
+```
+
+**Common VPS boot modes:**
+- Cloudzy: BIOS mode (requires BIOS boot partition)
+- Most cloud providers: UEFI mode
+- Physical systems: Check BIOS/UEFI settings
+
 ## 🔧 Nonguix Channel Setup
 
 **Critical**: Framework installers require the nonguix channel for proprietary firmware and kernel support.
@@ -153,13 +208,133 @@ guix time-machine -C /tmp/channels.scm -- \
 
 ### Common Errors Without Nonguix
 
-```
+```text
 no code for module (nongnu packages linux)
 unbound variable: linux
 unbound variable: linux-firmware
 ```
 
 **Solution**: Ensure nonguix channel is available before config generation.
+
+### Troubleshooting Nonguix Channel Issues
+
+**Problem**: `/tmp/channels.scm` missing during installer re-runs
+
+**Symptoms:**
+- Config exists but channels.scm doesn't
+- "no code for module (nongnu packages linux)" error during system init
+- Installer skips nonguix setup prompt
+
+**Cause**: Installer idempotency check skips config generation (including channel setup) when config.scm already exists from a previous partial run.
+
+**Solution**: The installer now checks for both config.scm AND channels.scm. If config exists but channels.scm is missing, it will:
+1. Prompt for nonguix consent
+2. Create /tmp/channels.scm
+3. Skip config file writing (already exists)
+4. Continue to system init with time-machine
+
+**Manual fix if needed:**
+```bash
+# Remove config to trigger full re-generation
+rm /mnt/etc/config.scm /tmp/channels.scm
+
+# Re-run installer - will prompt for nonguix and create both files
+```
+
+## 🚀 Installer Best Practices
+
+### Always Specify Platform Argument
+
+**Critical**: Always pass the platform name to bootstrap.sh
+
+```bash
+# CORRECT - Specify platform
+bash bootstrap.sh framework-dual
+bash bootstrap.sh cloudzy
+
+# WRONG - No platform specified (defaults to cloudzy or errors)
+bash bootstrap.sh
+```
+
+**Why this matters:**
+- Different platforms have different partition layouts (BIOS vs UEFI)
+- Different platforms need different channels (nonguix for framework, not for cloudzy)
+- Different platforms use different installer code paths
+
+### Setting Environment Variables
+
+Set user variables BEFORE running the installer:
+
+```bash
+export USER_NAME="yourname"
+export FULL_NAME="Your Full Name"
+export TIMEZONE="America/New_York"
+export HOST_NAME="my-guix-system"
+
+# Then run installer
+bash bootstrap.sh framework-dual
+```
+
+**Why set variables first:**
+- Installer reads variables during config generation (step 3)
+- If not set, uses defaults (USER_NAME=guix, FULL_NAME="Guix User")
+- Cannot change after config is generated without deleting /mnt/etc/config.scm
+
+### Handling Installer Interruptions
+
+If the installer is interrupted or fails:
+
+1. **Check what completed:**
+   ```bash
+   lsblk -f                    # Check partitions and labels
+   ls /mnt/etc/config.scm      # Check if config exists
+   ls /tmp/channels.scm        # Check if channels exist
+   ```
+
+2. **Re-run is safe (idempotent):**
+   - Installer skips completed steps
+   - Won't repartition formatted disks
+   - Won't regenerate existing configs
+
+3. **To force re-run of specific step:**
+   ```bash
+   # Force config regeneration
+   rm /mnt/etc/config.scm /tmp/channels.scm
+
+   # Force partition recreation (DESTROYS DATA!)
+   wipefs -a /dev/vda
+   ```
+
+### Daemon Responsiveness Issues
+
+**Problem**: "Connection refused" errors when validating config
+
+**Symptoms:**
+- Config validation fails before system init
+- Error: "cannot connect to daemon socket"
+- System init never starts
+
+**Cause**: guix-daemon is slow to become responsive, especially on VPS systems
+
+**Solution**: The installer now:
+1. Waits up to 60 seconds for daemon to become responsive
+2. Tests responsiveness with `guix build --version`
+3. Shows progress: "Waiting... (5/20)"
+4. Continues with warning if daemon running but slow
+
+**Manual fix if needed:**
+```bash
+# Restart daemon
+herd stop guix-daemon
+herd start guix-daemon
+
+# Wait and test
+sleep 15
+guix build --version
+
+# If that works, continue manually
+guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt
+```
 
 ## 🐧 Kernel Configuration
 
