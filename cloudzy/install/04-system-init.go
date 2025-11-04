@@ -103,6 +103,17 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		return err
 	}
 
+	// Write comprehensive recovery script for post-install completion
+	// This works for both time-machine and plain guix system init
+	recoveryPath := "/root/recovery-complete-install.sh"
+	if err := lib.WriteRecoveryScript(recoveryPath, state.GuixPlatform); err == nil {
+		fmt.Printf("Recovery script written: %s\n", recoveryPath)
+		fmt.Println("If system init succeeds but post-install steps fail, run:")
+		fmt.Printf("  %s\n", recoveryPath)
+	} else {
+		fmt.Printf("Warning: Failed to write recovery script %s: %v\n", recoveryPath, err)
+	}
+
 	// Run guix system init with retry logic (free software only, no nonguix)
 	if err := lib.RunGuixSystemInitFreeSoftware(); err != nil {
 		return err

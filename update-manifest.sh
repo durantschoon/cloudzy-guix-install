@@ -37,6 +37,12 @@ echo "$hash  bootstrap-installer.sh" >> "$MANIFEST_FILE"
 hash=$(shasum -a 256 verify-guix-install.sh | awk '{print $1}')
 echo "$hash  verify-guix-install.sh" >> "$MANIFEST_FILE"
 
+# Recovery script (installation recovery tool)
+if [ -f recovery-complete-install.sh ]; then
+    hash=$(shasum -a 256 recovery-complete-install.sh | awk '{print $1}')
+    echo "$hash  recovery-complete-install.sh" >> "$MANIFEST_FILE"
+fi
+
 # Post-install library
 if [ -f lib/postinstall.sh ]; then
     hash=$(shasum -a 256 lib/postinstall.sh | awk '{print $1}')

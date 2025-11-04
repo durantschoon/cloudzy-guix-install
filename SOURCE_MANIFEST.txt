@@ -8,7 +8,7 @@
 59eae9dcce62da98dd1b998e8cf4ee1cb80c720c14b961ac89cc42aaea3712cb  ./cloudzy/install/01-partition.go
 c855a1f0f677a2f9175d014d1d1edf8b489eb3434ed12a58bf81aa2ed18f57e3  ./cloudzy/install/02-mount.go
 3fdf9e90440f4f05c8c161e80db4c03487f59a33a6619b3f6491836b8d3cb787  ./cloudzy/install/03-config.go
-58836f8dc87d6592e6f7f11cdc5f7311e1702e54719acb4d399f99e52394c740  ./cloudzy/install/04-system-init.go
+51bfa1cb8587494a78e0851ec9934f39b4a50afcf969d7019d0503e2b4aa67e7  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
 da8cc01c1cd2c763b3c08677008a53637e21a6cd8b92111fcb83299a4a4c066c  ./framework-dual/install/01-partition-check_test.go
 77f9b4115bb1fb2c7375be8737bbf666e80ffc9c192fe0b4e7442554243a39c5  ./framework-dual/install/01-partition-check.go
@@ -16,21 +16,22 @@ da8cc01c1cd2c763b3c08677008a53637e21a6cd8b92111fcb83299a4a4c066c  ./framework-du
 3e265a3034d69aa08b1759e23369a66c100d7f63f05a8d7c6539e0ae1bdb750c  ./framework-dual/install/02-mount-existing.go
 d431aa64e43994bdee5585edf6782a9243c28c8b1b0a8464fd4cc8f7b4bf4c8b  ./framework-dual/install/03-config-dual-boot_test.go
 b3bc38ead90b9a99c18c5e26f82c7822c85c4944188734f7680bde3faaf0cae1  ./framework-dual/install/03-config-dual-boot.go
-8ba0aa6061467a92aeae5c85c9e572a1d8142deb5e08604acfa02cb273875914  ./framework-dual/install/04-system-init.go
+d18ed5cc1ae1e1f4b3a77092626726a0fe160161479f46ca6505ebf4fa5e818a  ./framework-dual/install/04-system-init.go
 d56d2e6049643a072032ba79b2728b0c4621dd66c8ded1dcaabf64c9448791bf  ./framework-dual/install/state.go
 5b569840941377401c928b119a92fc5a2d6a97766a32f35309620c756a6d48ea  ./framework/install/01-partition.go
 4e27da32ea27e27e70ae7ea479a0022deeed71eba9195797c7e7dc4df1227d5d  ./framework/install/02-mount.go
 2afa1900c77b665243ddaa702a9138d684e972531f33c1678a3f98c47e746e1c  ./framework/install/03-config.go
-2ede46b24fca8f1bf541503b9ba775992921698e6933759974896abfbe85e29b  ./framework/install/04-system-init.go
+bdeee8b0eb863d7742b95fe7cb03473cfff718f83a581bbf1b5bec2023c645bd  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
 688c0a510ac4c416a3ea47714b3ebe684d9a8370b1429376b2498a971e08418e  ./lib/common_test.go
-b731ddb39a991befa6a32204829e248456a1905eec94c578cf184a327b55ee00  ./lib/common.go
+1543d4231ed0cfe08bcf99e6cf68947f7cfaa8979a14ecedf0a41eefee273a55  ./lib/common.go
 af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
 4344b207a172ae745a9e272222e5d64da2f1e8291be1eb1360384a27b86fe060  bootstrap-installer.sh
 32ec52345ce9607d31725fda68e7012bee5b580a2f37d23cbebeb9495bcb06b2  verify-guix-install.sh
+03a96eb6e92b3e7f0bd2172bb3eccd0d03ff0c9ab604d5487e09f410617f93df  recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 
 ## Post-Install Customization Scripts

@@ -107,8 +107,8 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		return err
 	}
 
-    // Write the exact time-machine init command to a helper script for the user
-    // Useful if they need to retry manually from the console
+    // Write helper scripts for manual recovery
+    // 1. Simple time-machine retry script
     tmCmd := "guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n"
     helperPath := "/root/guix-init-time-machine.sh"
     if err := os.WriteFile(helperPath, []byte("#!/bin/sh\n"+tmCmd), 0755); err == nil {
@@ -117,6 +117,16 @@ func (s *Step04SystemInit) RunClean(state *State) error {
         fmt.Printf("  %s\n", helperPath)
     } else {
         fmt.Printf("Warning: Failed to write helper script %s: %v\n", helperPath, err)
+    }
+
+    // 2. Comprehensive recovery script (for post-time-machine completion)
+    recoveryPath := "/root/recovery-complete-install.sh"
+    if err := lib.WriteRecoveryScript(recoveryPath, state.GuixPlatform); err == nil {
+        fmt.Printf("Recovery script written: %s\n", recoveryPath)
+        fmt.Println("If time-machine succeeds but post-install steps fail, run:")
+        fmt.Printf("  %s\n", recoveryPath)
+    } else {
+        fmt.Printf("Warning: Failed to write recovery script %s: %v\n", recoveryPath, err)
     }
 
 	// Run guix system init with retry logic (includes daemon startup)
