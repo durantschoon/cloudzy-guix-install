@@ -7,7 +7,7 @@
 
 a40440b32eaef54ae736721f1b11ebcdb894888fe3206b947850cffa06e35ecf  ./cloudzy/install/01-partition.go
 c855a1f0f677a2f9175d014d1d1edf8b489eb3434ed12a58bf81aa2ed18f57e3  ./cloudzy/install/02-mount.go
-ad9fa38430545281ac0eadf3a3078d41368d724000c3f22ce73a57810d7df48d  ./cloudzy/install/03-config.go
+cb6c8f73cda549c3d14ffb226f57e57d7275ea7df0d59c6c5fdb923e2ca8b925  ./cloudzy/install/03-config.go
 58836f8dc87d6592e6f7f11cdc5f7311e1702e54719acb4d399f99e52394c740  ./cloudzy/install/04-system-init.go
 1f03c23e61a40c25325d12e9f7dca6e1b32f3f1de7030f37dde937302acaf562  ./cloudzy/install/state.go
 da8cc01c1cd2c763b3c08677008a53637e21a6cd8b92111fcb83299a4a4c066c  ./framework-dual/install/01-partition-check_test.go
