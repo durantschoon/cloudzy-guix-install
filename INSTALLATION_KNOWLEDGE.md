@@ -1115,6 +1115,13 @@ When you create a new shell script, determine if it's a **critical script** that
    chmod +x my-new-script.sh
    ```
 
+   **CRITICAL**: Use the correct bash shebang for Guix ISO:
+   ```bash
+   #!/run/current-system/profile/bin/bash
+   ```
+
+   **Never use** `#!/usr/bin/env bash` or `#!/bin/bash` for critical scripts that run on the Guix ISO. The Guix ISO has bash at `/run/current-system/profile/bin/bash` and this path must be used for scripts to execute correctly.
+
 2. **Add to `update-manifest.sh`** in the "Critical Shell Scripts" section:
    ```bash
    # My new script (description)

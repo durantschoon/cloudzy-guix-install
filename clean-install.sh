@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/run/current-system/profile/bin/bash
 set -euo pipefail
 
 # Clean Install Script
