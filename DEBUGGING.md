@@ -135,14 +135,74 @@ sudo du -sh /mnt/boot/efi/
 
 ## Root Cause Analysis
 
-### Primary Issue: Incomplete `guix system init`
+### Primary Issue: Missing `initrd` Field in config.scm
+
+**CRITICAL DISCOVERY (2025-11-04):** The framework and framework-dual configs are missing the explicit `initrd` field in the `operating-system` definition.
+
+When using the nonguix channel with `(nongnu system linux-initrd)`, you **MUST** explicitly specify:
+
+```scheme
+(use-modules (gnu)
+             (gnu packages linux)
+             (gnu system nss)
+             (nongnu packages linux)
+             (nongnu system linux-initrd))
+
+(operating-system
+  ;; ... other fields ...
+  (kernel linux)
+  (initrd microcode-initrd)  ; <-- THIS LINE WAS MISSING!
+  (firmware (list linux-firmware))
+  ;; ... rest of config ...
+)
+```
+
+**Why this matters:**
+- Without `(initrd microcode-initrd)`, Guix System doesn't generate the initrd file properly
+- The initrd file is critical for loading kernel modules during boot
+- `guix system init` may appear to complete but won't create `/mnt/boot/initrd-*`
+- Without initrd, the system cannot boot (kernel loads but can't mount root filesystem)
+
+**Files affected:**
+- `framework-dual/install/03-config-dual-boot.go` - needs `(initrd microcode-initrd)` added
+- `framework/install/03-config.go` - needs `(initrd microcode-initrd)` added
+
+**Note:** The cloudzy installer uses `linux-libre` (not nonguix) and doesn't need this because it uses Guix's default initrd handling.
+
+**Defensive measure (optional):** After fixing the config to include `(initrd microcode-initrd)`, you can also add an activation service to ensure kernel/initrd symlinks are always present in `/boot/`:
+
+```scheme
+;; Add to services section
+(services
+  (append (list
+    (simple-service 'copy-kernel-to-boot activation-service-type
+      #~(begin
+          (use-modules (guix build utils))
+          (let* ((boot   "/boot")
+                 (vk     (string-append boot "/vmlinuz-guix"))
+                 (ir     (string-append boot "/initrd-guix"))
+                 (kernel "/run/current-system/kernel")
+                 (initrd "/run/current-system/initrd"))
+            (mkdir-p boot)
+            (false-if-exception (delete-file vk))
+            (false-if-exception (delete-file ir))
+            (symlink kernel vk)
+            (symlink initrd ir)
+            (chmod vk #o644)
+            (chmod ir #o644)))))
+    %base-services))
+```
+
+This activation service runs after each `guix system reconfigure` and ensures the kernel/initrd symlinks are always up-to-date. However, this is a **post-boot safety measure** - the primary fix is adding `(initrd microcode-initrd)` so the files are created during installation.
+
+### Secondary Issue: Incomplete `guix system init`
 
 The installation process did not complete successfully:
 1. ✅ Partitions created and formatted
 2. ✅ Config file generated at `/mnt/etc/config.scm`
 3. ✅ Some packages installed to `/mnt/gnu/store/` (2137 items)
 4. ✅ GRUB installed to EFI partition
-5. ❌ **Kernel and initrd NOT installed to `/mnt/boot/`**
+5. ❌ **Kernel and initrd NOT installed to `/mnt/boot/`** ← Root cause: missing initrd field
 6. ❌ **User account NOT created**
 7. ❌ **User password NOT set**
 

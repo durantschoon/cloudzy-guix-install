@@ -201,6 +201,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
 
  ;; Linux kernel with proprietary firmware support (from nonguix)
  (kernel linux)
+ (initrd microcode-initrd)
  (firmware (list linux-firmware))
 
  ;; Framework 13 AMD specific initrd modules
