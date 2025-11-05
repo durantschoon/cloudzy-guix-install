@@ -181,6 +181,7 @@ fi
 # Copy critical scripts to /root for manual recovery if needed
 echo "Installing critical recovery scripts to /root..."
 CRITICAL_SCRIPTS=(
+    "clean-install.sh"
     "verify-guix-install.sh"
     "recovery-complete-install.sh"
 )
