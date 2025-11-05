@@ -118,37 +118,36 @@ All installation state is managed through a shared `State` struct (in `framework
 
 ## Bash Shebang Paths
 
-**IMPORTANT:** Use the correct shebang based on where the script runs:
+**CRITICAL:** All scripts that run on Guix ISO MUST use this shebang:
 
-### For scripts that run ONLY on Guix ISO:
-```bash
-#!/run/current-system/profile/bin/bash
-```
-Or for maximum portability:
-```bash
-#!/usr/bin/env bash
-```
-
-### For scripts that run ONLY on installed Guix system (postinstall):
 ```bash
 #!/run/current-system/profile/bin/bash
 ```
 
-### For scripts that run in BOTH contexts (ISO and installed):
-```bash
-#!/usr/bin/env bash
-```
+**DO NOT use `#!/usr/bin/env bash` or `#!/bin/bash` for critical scripts.**
 
-**Why:**
-- Both Guix ISO and installed Guix have bash at `/run/current-system/profile/bin/bash`
-- `#!/usr/bin/env bash` works universally by searching PATH
-- Using `/run/current-system/profile/bin/bash` directly is more explicit but less portable
+This applies to:
+- All scripts in the root directory that run on ISO (bootstrap-installer.sh, clean-install.sh, verify-guix-install.sh, recovery-complete-install.sh)
+- All scripts in `**/install/*.sh` directories
+- Any script that needs to execute on the Guix ISO
+
+**Why `/run/current-system/profile/bin/bash` is required:**
+- The Guix ISO has bash at this specific path
+- `#!/usr/bin/env bash` may not work reliably on the ISO
+- `#!/bin/bash` does not exist (Guix doesn't use FHS)
+
+**For postinstall scripts** (run after booting into installed Guix):
+```bash
+#!/run/current-system/profile/bin/bash
+```
+Use the same path for consistency and reliability.
 
 **Examples:**
-- Bootstrap installer: `#!/run/current-system/profile/bin/bash` (ISO only)
-- Recovery script: `#!/usr/bin/env bash` (portable, works on ISO)
-- Postinstall customization: `#!/run/current-system/profile/bin/bash`
-- Verification script: `#!/usr/bin/env bash` (runs in both contexts)
+- bootstrap-installer.sh: `#!/run/current-system/profile/bin/bash`
+- clean-install.sh: `#!/run/current-system/profile/bin/bash`
+- verify-guix-install.sh: `#!/run/current-system/profile/bin/bash`
+- recovery-complete-install.sh: `#!/run/current-system/profile/bin/bash`
+- All postinstall/customize scripts: `#!/run/current-system/profile/bin/bash`
 
 ## Common Pitfalls
 

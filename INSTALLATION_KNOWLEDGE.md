@@ -12,20 +12,20 @@ This document captures critical lessons learned from real-world Guix OS installa
 
 ## 🐚 Bash Paths in Guix
 
-**Critical: Never use `/bin/bash` in Guix scripts or commands.**
+**CRITICAL: All scripts MUST use `/run/current-system/profile/bin/bash` shebang.**
 
-Guix does not have `/bin/bash` (or any binaries in `/bin` except `/bin/sh`). Instead:
+Guix does not follow the Filesystem Hierarchy Standard (FHS). There is NO `/bin/bash` on Guix systems.
 
-**From Live ISO or Installed System:**
+**For all scripts (ISO and installed system):**
 ```bash
-# CORRECT - Use the profile path
-/run/current-system/profile/bin/bash
-
-# CORRECT - Use env (finds bash in PATH)
-#!/usr/bin/env bash
+# CORRECT - Required for all scripts
+#!/run/current-system/profile/bin/bash
 
 # WRONG - Does not exist in Guix
-/bin/bash
+#!/bin/bash
+
+# WRONG - Not reliable on Guix ISO (DO NOT USE)
+#!/usr/bin/env bash
 ```
 
 **For chroot commands:**
@@ -37,10 +37,11 @@ chroot /mnt /run/current-system/profile/bin/bash
 chroot /mnt /bin/bash
 ```
 
-**Why this matters:**
-- `/bin/bash` does not exist on Guix systems
-- Commands using `/bin/bash` will fail with "No such file or directory"
-- Always use `/run/current-system/profile/bin/bash` or `#!/usr/bin/env bash`
+**Why `/run/current-system/profile/bin/bash` is mandatory:**
+- This is where bash exists on both Guix ISO and installed systems
+- `#!/usr/bin/env bash` is NOT reliable on Guix ISO
+- `/bin/bash` does not exist at all
+- All critical scripts must use the explicit path
 
 ## 🧩 Partitioning & Filesystems
 
