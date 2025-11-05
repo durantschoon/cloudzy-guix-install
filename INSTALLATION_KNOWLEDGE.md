@@ -1089,6 +1089,67 @@ Keep code platform-specific when:
 2. The logic is fundamentally different per platform
 3. Factoring would make the code harder to understand
 
+### Adding New Scripts to the Repository
+
+When you create a new shell script, determine if it's a **critical script** that should be:
+1. Tracked in the manifest (`SOURCE_MANIFEST.txt`)
+2. Copied to `/root/` by the bootstrap installer
+3. Verified during installation
+
+**Critical scripts are:**
+- Scripts that users run directly from the Guix ISO
+- Recovery/diagnostic tools needed when installation fails
+- Scripts that modify system state or prepare for installation
+
+**Examples of critical scripts:**
+- `bootstrap-installer.sh` - Entry point for installation
+- `clean-install.sh` - Prepares system for clean reinstall
+- `verify-guix-install.sh` - Diagnostic tool for checking installation
+- `recovery-complete-install.sh` - Recovery tool for completing partial installations
+
+**Steps to add a new critical script:**
+
+1. **Create the script** in the repository root (or appropriate subdirectory)
+   ```bash
+   vim my-new-script.sh
+   chmod +x my-new-script.sh
+   ```
+
+2. **Add to `update-manifest.sh`** in the "Critical Shell Scripts" section:
+   ```bash
+   # My new script (description)
+   hash=$(shasum -a 256 my-new-script.sh | awk '{print $1}')
+   echo "$hash  my-new-script.sh" >> "$MANIFEST_FILE"
+   ```
+
+3. **Add to `bootstrap-installer.sh`** CRITICAL_SCRIPTS array:
+   ```bash
+   CRITICAL_SCRIPTS=(
+       "clean-install.sh"
+       "verify-guix-install.sh"
+       "recovery-complete-install.sh"
+       "my-new-script.sh"  # <-- Add your script here
+   )
+   ```
+
+4. **Update the manifest**:
+   ```bash
+   ./update-manifest.sh
+   ```
+
+5. **Test the changes**:
+   - Verify the script is in SOURCE_MANIFEST.txt
+   - Check that bootstrap-installer.sh copies it to /root/
+   - Confirm the manifest hash changed
+
+6. **Commit everything together**:
+   ```bash
+   git add my-new-script.sh update-manifest.sh bootstrap-installer.sh SOURCE_MANIFEST.txt
+   git commit -m "Add my-new-script.sh as critical script"
+   ```
+
+**Non-critical scripts** (like `update-manifest.sh` or `run-tests.sh`) are development tools that don't need to be in the manifest or copied to `/root/`. They stay in the repository for developers but aren't distributed to end users during installation.
+
 ---
 
 **Remember:** The Guix installation is more forgiving than it seems. Most failures can be recovered by re-running the same command without rebooting.
