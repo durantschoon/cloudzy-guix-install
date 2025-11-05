@@ -1,12 +1,50 @@
 # Debugging Session: Framework 13 Dual-Boot Installation Issues
 
-**Date:** 2025-10-18
+**Date:** 2025-10-18 (Original), Updated 2025-11-04
 **Platform:** Framework 13 AMD with Pop!_OS dual-boot
 **Issue:** Guix OS installation hangs during boot, user account not created
 
 ---
 
-## Summary of Issues Found
+## ⚠️ ACTIVE INVESTIGATION (2025-11-04)
+
+### Framework13 Nonguix Prompt Not Appearing
+
+**Critical Bug:** After running clean-install.sh and re-downloading bootstrap-installer.sh from GitHub, the framework installer is NOT prompting the user about trusting nonguix during Step 3 (config generation).
+
+**Symptoms:**
+- No "Do you want to trust and use Nonguix? [Y/n]" prompt appears
+- Generated `/mnt/etc/config.scm` is missing nonguix imports:
+  - Missing: `(nongnu packages linux)`
+  - Missing: `(nongnu system linux-initrd)`
+- Config appears to be "free software only" version
+- This causes the initrd field to be ignored even though it's in the template
+
+**What we've verified:**
+- ✅ Latest code pushed to GitHub has all fixes (initrd, nonguix, shebangs)
+- ✅ clean-install.sh removes `/tmp/channels.scm` and all artifacts
+- ✅ All scripts have correct `/run/current-system/profile/bin/bash` shebang
+- ✅ `lib.SetupNonguixChannel()` function EXISTS in common.go (lines 500-580)
+- ✅ framework/install/03-config.go CALLS SetupNonguixChannel() on line 130
+- ✅ Config template INCLUDES nonguix imports (lines 160-164)
+
+**Investigation priorities:**
+1. Add debug logging to see if SetupNonguixChannel() is being called
+2. Check if /dev/tty is accessible during config generation step
+3. Verify that stdin/stdout/stderr aren't being redirected in a way that suppresses prompts
+4. Check if there's a silent error before the prompt is shown
+5. Test if the function is even executing or returning early somehow
+
+**Next debugging steps:**
+- Add `fmt.Println("DEBUG: About to call SetupNonguixChannel")` before line 130
+- Add logging inside SetupNonguixChannel to trace execution path
+- Check return value and error from SetupNonguixChannel() call
+- Verify /tmp/channels.scm doesn't exist before the call
+- Test opening /dev/tty manually to confirm it's accessible
+
+---
+
+## Summary of Issues Found (Historical)
 
 1. **Missing kernel and initrd files** - `/mnt/boot/vmlinuz-*` and `/mnt/boot/initrd-*` do not exist
 2. **Guix system init did not complete successfully** - Installation appears incomplete

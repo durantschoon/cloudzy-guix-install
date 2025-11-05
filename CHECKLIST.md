@@ -6,7 +6,7 @@ For implementation history and completed features, see git commit history.
 
 ## 🔄 Currently Working On
 
-**Status:** Cloudzy Boot Mode Detection Fixed
+**Status:** ⚠️ CRITICAL BUG - Framework13 Nonguix Prompt Missing
 
 **Most Recent Additions (2025-11):**
 - ✅ **Recovery script** - Automatic recovery script generation for all installers
@@ -14,12 +14,38 @@ For implementation history and completed features, see git commit history.
 - ✅ **User password setup** - Pre-reboot password setting via chroot
 - ✅ **Nonguix integration** - Time-machine based nonguix channel support
 - ✅ **Boot mode detection fix** - Cloudzy VPS now correctly detects BIOS vs UEFI
+- ✅ **Initrd fix** - Added `(initrd microcode-initrd)` to framework configs
+- ✅ **Clean install script** - Removes all artifacts for fresh reinstall
+- ✅ **Bash shebang documentation** - Fixed contradictory documentation
+
+**CRITICAL ISSUE TO INVESTIGATE:**
+
+### Framework13 Nonguix Prompt Not Appearing
+
+**Problem:** After running clean-install.sh and downloading latest bootstrap-installer.sh, the framework installer never prompts the user about trusting nonguix. The generated config.scm is missing nonguix imports.
+
+**Expected behavior:**
+- User should see nonguix trust prompt during Step 3 (config generation)
+- Config should include `(nongnu packages linux)` and `(nongnu system linux-initrd)`
+- Config should have `(initrd microcode-initrd)` field
+
+**Actual behavior:**
+- No nonguix prompt appears
+- Config missing nonguix use-modules
+- Generates "free software only" config
+
+**Investigation needed:**
+- Why is `lib.SetupNonguixChannel()` not prompting?
+- Is /tmp/channels.scm somehow persisting?
+- Is the function being called at all?
+- Check if stdin/tty redirection is suppressing the prompt
 
 **Current Focus:**
-1. Test Cloudzy installer on fresh VPS with BIOS boot fix
-2. Test and validate complete framework-dual installation flow
-3. Improve dual-boot GRUB experience
-4. Document storage options (LUKS/btrfs)
+1. ⚠️ DEBUG: Why nonguix prompt not appearing on framework13
+2. Test Cloudzy installer on fresh VPS with BIOS boot fix
+3. Test and validate complete framework-dual installation flow
+4. Improve dual-boot GRUB experience
+5. Document storage options (LUKS/btrfs)
 
 ---
 
