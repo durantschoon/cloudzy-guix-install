@@ -33,6 +33,10 @@ echo "" >> "$MANIFEST_FILE"
 hash=$(shasum -a 256 bootstrap-installer.sh | awk '{print $1}')
 echo "$hash  bootstrap-installer.sh" >> "$MANIFEST_FILE"
 
+# Cleanup script (prepare for fresh install)
+hash=$(shasum -a 256 clean-install.sh | awk '{print $1}')
+echo "$hash  clean-install.sh" >> "$MANIFEST_FILE"
+
 # Verification script (diagnostic tool)
 hash=$(shasum -a 256 verify-guix-install.sh | awk '{print $1}')
 echo "$hash  verify-guix-install.sh" >> "$MANIFEST_FILE"
