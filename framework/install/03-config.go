@@ -127,9 +127,21 @@ func (s *Step03Config) RunClean(state *State) error {
 	}
 
 	// Setup nonguix channel for proprietary firmware and kernel
+	fmt.Println()
+	fmt.Println("DEBUG: About to call SetupNonguixChannel()")
+	fmt.Printf("DEBUG: Checking if /tmp/channels.scm exists... ")
+	if _, err := os.Stat("/tmp/channels.scm"); err == nil {
+		fmt.Println("YES (already exists)")
+	} else {
+		fmt.Println("NO (does not exist)")
+	}
+
 	if err := lib.SetupNonguixChannel(); err != nil {
 		return fmt.Errorf("failed to setup nonguix channel: %w", err)
 	}
+
+	fmt.Println("DEBUG: SetupNonguixChannel() returned successfully")
+	fmt.Println()
 
 	// Generate config
 	config := s.generateMinimalConfig(state, bootloader, targets)

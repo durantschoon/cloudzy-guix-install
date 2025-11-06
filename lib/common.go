@@ -498,6 +498,7 @@ func SetupGRUBEFI() error {
 
 // SetupNonguixChannel sets up the nonguix channel for proprietary firmware and kernel
 func SetupNonguixChannel() error {
+	fmt.Println("DEBUG: Entered SetupNonguixChannel()")
 	fmt.Println("=== Setting up nonguix channel ===")
 	fmt.Println()
 
@@ -512,20 +513,27 @@ func SetupNonguixChannel() error {
 	fmt.Println("  - This is a third-party server (not official GNU Guix)")
 	fmt.Println("  - Required for Framework 13 WiFi/GPU to work properly")
 	fmt.Println()
+	fmt.Println("DEBUG: About to print prompt and wait for user input...")
 	fmt.Print("Do you want to trust and use Nonguix? [Y/n] ")
 
 	// Read user response from /dev/tty (not stdin which may be redirected)
+	fmt.Println("DEBUG: Opening /dev/tty...")
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
+		fmt.Printf("DEBUG: Failed to open /dev/tty: %v\n", err)
 		return fmt.Errorf("failed to open /dev/tty for user input: %w", err)
 	}
 	defer tty.Close()
+	fmt.Println("DEBUG: /dev/tty opened successfully")
 
+	fmt.Println("DEBUG: Creating reader and waiting for input...")
 	reader := bufio.NewReader(tty)
 	response, err := reader.ReadString('\n')
 	if err != nil {
+		fmt.Printf("DEBUG: Failed to read response: %v\n", err)
 		return fmt.Errorf("failed to read user response: %w", err)
 	}
+	fmt.Printf("DEBUG: Got response: %q\n", response)
 
 	response = strings.ToLower(strings.TrimSpace(response))
 	if response != "" && response != "y" && response != "yes" {
