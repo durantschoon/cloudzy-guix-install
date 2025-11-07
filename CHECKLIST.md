@@ -226,29 +226,27 @@ Document where logs/receipts live and add a short chroot/repair/rerun guide when
 ### 🟢 Low Priority (Nice to Have)
 
 #### 7. Color-Coded Step Distinction in Go Installers
-**Status:** ❌ Not implemented
+**Status:** ⚠️ Implemented - Needs Testing
 
-**Goal:** Add visual distinction between installation steps (01-partition, 02-mount, 03-config, 04-system-init) using subtle background colors.
+**🚨 CRITICAL - MUST TEST NEXT SESSION:**
 
-**Inspiration:** The verify-guix-install.sh script uses colors effectively for status output.
+Branch `feature/color-coded-installer-steps` contains color-coded installers.
+Testing required before merge to main.
 
-**Implementation approach:**
-- Add ANSI color codes to Go installer steps
-- Use alternating subtle light background colors when transitioning between steps
-- Example progression:
-  - Step 01: Light blue background
-  - Step 02: Light green background
-  - Step 03: Light yellow background
-  - Step 04: Light cyan background
-- Keep foreground text readable (dark text on light backgrounds)
-- Add color reset codes at end of each step
-- Consider adding colored [OK], [WARN], [ERROR] markers similar to shell scripts
+**Testing Checklist:**
+1. Boot Framework 13 from Guix ISO
+2. Download and run framework-dual installer from feature branch
+3. Verify colored step headers display correctly
+4. Confirm black text is readable on light backgrounds
+5. Ensure no terminal compatibility issues on Guix ISO
+6. If all tests pass → merge feature branch to main
 
-**Benefits:**
-- Easier to visually scan installation output
-- Quickly identify which step is running
-- Better distinguish step transitions in logs
-- More polished user experience
+**Implementation:**
+- ✅ Created `lib/colors.go` with ANSI color utilities
+- ✅ Added `PrintStepHeader()` with background colors
+- ✅ Updated all installers (framework, framework-dual, cloudzy)
+- ✅ Step color scheme implemented (blue/green/yellow/cyan)
+- ✅ Added PrintSuccess/Warning/Error/Info helpers
 
 **Impact:** ⭐ Low - Nice visual polish, improves readability
 
