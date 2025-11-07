@@ -206,15 +206,18 @@ Split `/etc/config.scm` into base OS vs hardware profile; provide a "first recon
 ---
 
 #### 6. Troubleshooting/Rescue Basics Documentation
-**Status:** ❌ Not documented
+**Status:** ✅ Complete
 
 Document where logs/receipts live and add a short chroot/repair/rerun guide when post-install verification fails.
 
-**Current state:**
+**Completed:**
 - ✅ Recovery script exists
 - ✅ Installation receipt written
-- ❌ Need comprehensive troubleshooting guide
-- ❌ Need rescue/repair documentation
+- ✅ Comprehensive troubleshooting guide ([TROUBLESHOOTING.md](TROUBLESHOOTING.md))
+- ✅ Rescue/repair documentation with chroot procedures
+- ✅ Common failure scenarios and solutions
+- ✅ Log locations and diagnostic commands
+- ✅ Quick reference for common tasks
 
 **Impact:** ⭐⭐ Medium - Speeds recovery
 
