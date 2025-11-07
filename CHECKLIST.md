@@ -226,27 +226,32 @@ Document where logs/receipts live and add a short chroot/repair/rerun guide when
 ### 🟢 Low Priority (Nice to Have)
 
 #### 7. Color-Coded Step Distinction in Go Installers
-**Status:** ⚠️ Implemented - Needs Testing
+**Status:** ✅ Merged to main - Ready for testing
 
-**🚨 CRITICAL - MUST TEST NEXT SESSION:**
+**Completed:**
+- ✅ Created `lib/colors.go` with color utilities
+- ✅ Added `PrintStepHeader()` function with background colors
+- ✅ Updated all installers (framework, framework-dual, cloudzy)
+- ✅ Step color scheme:
+  - Step 01: Light blue background
+  - Step 02: Light green background
+  - Step 03: Light yellow background
+  - Step 04: Light cyan background
+- ✅ Added utility functions: PrintSuccess, PrintWarning, PrintError, PrintInfo
+- ✅ Merged to main branch
 
-Branch `feature/color-coded-installer-steps` contains color-coded installers.
-Testing required before merge to main.
+**Testing on Framework 13:**
 
-**Testing Checklist:**
-1. Boot Framework 13 from Guix ISO
-2. Download and run framework-dual installer from feature branch
+1. Boot from Guix ISO
+2. Run framework-dual installer from main branch
 3. Verify colored step headers display correctly
-4. Confirm black text is readable on light backgrounds
-5. Ensure no terminal compatibility issues on Guix ISO
-6. If all tests pass → merge feature branch to main
+4. Confirm readability (black text on light backgrounds)
+5. Test terminal compatibility
 
 **Implementation:**
-- ✅ Created `lib/colors.go` with ANSI color utilities
-- ✅ Added `PrintStepHeader()` with background colors
-- ✅ Updated all installers (framework, framework-dual, cloudzy)
-- ✅ Step color scheme implemented (blue/green/yellow/cyan)
-- ✅ Added PrintSuccess/Warning/Error/Info helpers
+- `lib/colors.go` - ANSI color codes and helper functions
+- All `*/install/0*-*.go` files updated to use `lib.PrintStepHeader()`
+- Colors automatically reset after each header
 
 **Impact:** ⭐ Low - Nice visual polish, improves readability
 

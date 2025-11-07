@@ -12,7 +12,7 @@ import (
 type Step04SystemInit struct{}
 
 func (s *Step04SystemInit) RunWarnings(state *State) error {
-	fmt.Println("=== Step 4: System Initialization (Final Step) ===")
+	lib.PrintStepHeader(4, "System Initialization (Final Step)")
 	fmt.Println()
 	fmt.Println("This step will:")
 	fmt.Println("  1. Create swap file in /mnt/swapfile (size from SWAP_SIZE env var)")

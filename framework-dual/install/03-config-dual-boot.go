@@ -41,7 +41,7 @@ func (s *Step03ConfigDualBoot) RunWarnings(state *State) error {
     return fmt.Errorf("required variables not set (ROOT, EFI, DEVICE). Please run previous steps or set environment variables")
   }
 
-  fmt.Println("=== Step 3: Configuration Generation ===")
+  lib.PrintStepHeader(3, "Configuration Generation")
   fmt.Println()
   fmt.Println("This step will:")
   fmt.Println("  1. Setup nonguix channel (prompts for user consent)")
