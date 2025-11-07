@@ -63,7 +63,7 @@ func RunCommand(name string, args ...string) error {
 // RunCommandWithSpinner runs a command with a spinner when output is quiet
 func RunCommandWithSpinner(name string, args ...string) error {
     cmd := exec.Command(name, args...)
-    
+
     // Create pipes for stdout and stderr
     stdout, err := cmd.StdoutPipe()
     if err != nil {
@@ -73,15 +73,16 @@ func RunCommandWithSpinner(name string, args ...string) error {
     if err != nil {
         return err
     }
-    
+
     // Start the command
     if err := cmd.Start(); err != nil {
         return err
     }
-    
-    // Channel to signal when we have output
-    outputReceived := make(chan bool, 1)
-    
+
+    // Channels for monitoring
+    outputReceived := make(chan string, 100) // Buffer recent output lines
+    done := make(chan error, 1)
+
     // Goroutine to read stdout
     go func() {
         scanner := bufio.NewScanner(stdout)
@@ -89,17 +90,17 @@ func RunCommandWithSpinner(name string, args ...string) error {
             line := scanner.Text()
             if commandLogWriter != nil {
                 fmt.Fprintln(commandLogWriter, line)
-            } else {
-                fmt.Println(line)
             }
-            // Signal that we have output
+            fmt.Println(line)
+
+            // Send line to monitoring channel
             select {
-            case outputReceived <- true:
+            case outputReceived <- line:
             default:
             }
         }
     }()
-    
+
     // Goroutine to read stderr
     go func() {
         scanner := bufio.NewScanner(stderr)
@@ -107,63 +108,148 @@ func RunCommandWithSpinner(name string, args ...string) error {
             line := scanner.Text()
             if commandLogWriter != nil {
                 fmt.Fprintln(commandLogWriter, line)
-            } else {
-                fmt.Fprintln(os.Stderr, line)
             }
-            // Signal that we have output
+            fmt.Fprintln(os.Stderr, line)
+
+            // Send line to monitoring channel
             select {
-            case outputReceived <- true:
+            case outputReceived <- line:
             default:
             }
         }
     }()
-    
-    // Spinner goroutine
+
+    // Wait for command in separate goroutine
+    go func() {
+        done <- cmd.Wait()
+    }()
+
+    // Monitor progress with enhanced feedback
     spinner := []string{"/", "|", "\\", "-"}
     spinnerIndex := 0
     lastOutputTime := time.Now()
+    lastLogSize := int64(0)
     spinnerActive := false
-    
-    go func() {
-        ticker := time.NewTicker(200 * time.Millisecond)
-        defer ticker.Stop()
-        
-        for {
-            select {
-            case <-ticker.C:
-                // Check if we've received output recently
-                if time.Since(lastOutputTime) > 3*time.Second {
-                    if !spinnerActive {
-                        spinnerActive = true
-                        fmt.Printf("\n") // New line before starting spinner
+    progressTicker := time.NewTicker(60 * time.Second) // Progress update every 60s
+    spinnerTicker := time.NewTicker(200 * time.Millisecond)
+    defer progressTicker.Stop()
+    defer spinnerTicker.Stop()
+
+    for {
+        select {
+        case err := <-done:
+            // Command finished
+            if spinnerActive {
+                fmt.Printf("\r%s\r", strings.Repeat(" ", 80))
+                fmt.Printf("\033[?25h") // Restore cursor
+            }
+            return err
+
+        case <-outputReceived:
+            // Clear spinner if active
+            if spinnerActive {
+                fmt.Printf("\r%s\r", strings.Repeat(" ", 80))
+                spinnerActive = false
+            }
+            lastOutputTime = time.Now()
+
+        case <-spinnerTicker.C:
+            // Show spinner when quiet
+            elapsed := time.Since(lastOutputTime)
+            if elapsed > 3*time.Second {
+                if !spinnerActive {
+                    spinnerActive = true
+                    fmt.Print("\n")
+                }
+                fmt.Printf("\r\033[?25l%s Working... (%s elapsed, may take 5-30 min)",
+                    spinner[spinnerIndex],
+                    formatDuration(time.Since(lastOutputTime)))
+                os.Stdout.Sync()
+                spinnerIndex = (spinnerIndex + 1) % len(spinner)
+            }
+
+        case <-progressTicker.C:
+            // Periodic progress update
+            elapsed := time.Since(lastOutputTime)
+
+            // Clear spinner for progress message
+            if spinnerActive {
+                fmt.Printf("\r%s\r", strings.Repeat(" ", 80))
+            }
+
+            // Check log file growth
+            logGrowth := ""
+            if commandLogWriter != nil {
+                if logFile, ok := commandLogWriter.(*os.File); ok {
+                    if stat, err := logFile.Stat(); err == nil {
+                        newSize := stat.Size()
+                        if newSize > lastLogSize {
+                            growth := newSize - lastLogSize
+                            logGrowth = fmt.Sprintf(" (log +%s)", formatBytes(growth))
+                            lastLogSize = newSize
+                        }
                     }
-                    // Hide cursor and show spinner
-                    fmt.Printf("\r\033[?25l%s Working... (this may take 5-30 minutes)", spinner[spinnerIndex])
-                    os.Stdout.Sync()
-                    spinnerIndex = (spinnerIndex + 1) % len(spinner)
                 }
-            case <-outputReceived:
-                // We have output, clear spinner and restore cursor
-                if spinnerActive {
-                    fmt.Printf("\r%s", strings.Repeat(" ", 80)) // Clear line
-                    fmt.Printf("\r\033[?25h") // Restore cursor
-                    os.Stdout.Sync()
-                    spinnerActive = false
+            }
+
+            timestamp := time.Now().Format("15:04:05")
+
+            if elapsed > 15*time.Minute {
+                fmt.Printf("\n[%s] [WARN] No output for %s - process may be hung%s\n",
+                    timestamp, formatDuration(elapsed), logGrowth)
+                fmt.Println("         Check: tail -f /tmp/guix-install.log")
+                fmt.Println("         Or: ps aux | grep guix")
+                if logGrowth == "" {
+                    fmt.Println("         Log not growing - likely hung!")
                 }
-                lastOutputTime = time.Now()
+            } else if elapsed > 5*time.Minute {
+                fmt.Printf("\n[%s] [INFO] No output for %s (normal for some phases)%s\n",
+                    timestamp, formatDuration(elapsed), logGrowth)
+            } else {
+                fmt.Printf("\n[%s] [PROGRESS] Last output %s ago%s\n",
+                    timestamp, formatDuration(elapsed), logGrowth)
+            }
+
+            // Resume spinner if needed
+            if elapsed > 3*time.Second {
+                spinnerActive = true
             }
         }
-    }()
-    
-    // Wait for command to complete
-    err = cmd.Wait()
-    
-    // Clear any remaining spinner and restore cursor
-    fmt.Printf("\r%s", strings.Repeat(" ", 80))
-    fmt.Printf("\r\033[?25h") // Restore cursor
+    }
     os.Stdout.Sync()
-    
+
     return err
+}
+
+// formatDuration formats a duration in a human-readable way
+func formatDuration(d time.Duration) string {
+    d = d.Round(time.Second)
+    h := d / time.Hour
+    d -= h * time.Hour
+    m := d / time.Minute
+    d -= m * time.Minute
+    s := d / time.Second
+
+    if h > 0 {
+        return fmt.Sprintf("%dh%dm%ds", h, m, s)
+    } else if m > 0 {
+        return fmt.Sprintf("%dm%ds", m, s)
+    }
+    return fmt.Sprintf("%ds", s)
+}
+
+// formatBytes formats byte count in human-readable format
+func formatBytes(bytes int64) string {
+    const unit = 1024
+    if bytes < unit {
+        return fmt.Sprintf("%d B", bytes)
+    }
+    div, exp := int64(unit), 0
+    for n := bytes / unit; n >= unit; n /= unit {
+        div *= unit
+        exp++
+    }
+    return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 // WriteInstallReceipt writes a summary of the installation to the target filesystem
