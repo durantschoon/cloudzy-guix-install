@@ -13,7 +13,7 @@ import (
 type Step01Partition struct{}
 
 func (s *Step01Partition) RunWarnings(state *State) error {
-	fmt.Println("=== Step 1: Partition Setup ===")
+	lib.PrintStepHeader(1, "Partition Setup")
 	fmt.Println()
 	fmt.Println("This step will:")
 	fmt.Println("  1. Detect your disk device (or use DEVICE env var if set)")

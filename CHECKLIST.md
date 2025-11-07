@@ -226,23 +226,33 @@ Document where logs/receipts live and add a short chroot/repair/rerun guide when
 ### 🟢 Low Priority (Nice to Have)
 
 #### 7. Color-Coded Step Distinction in Go Installers
-**Status:** ❌ Not implemented
+**Status:** ✅ Implemented (needs testing)
 
-**Goal:** Add visual distinction between installation steps (01-partition, 02-mount, 03-config, 04-system-init) using subtle background colors.
+**Branch:** `feature/color-coded-installer-steps`
 
-**Inspiration:** The verify-guix-install.sh script uses colors effectively for status output.
-
-**Implementation approach:**
-- Add ANSI color codes to Go installer steps
-- Use alternating subtle light background colors when transitioning between steps
-- Example progression:
+**Completed:**
+- ✅ Created `lib/colors.go` with color utilities
+- ✅ Added `PrintStepHeader()` function with background colors
+- ✅ Updated all installers (framework, framework-dual, cloudzy)
+- ✅ Step color scheme:
   - Step 01: Light blue background
   - Step 02: Light green background
   - Step 03: Light yellow background
   - Step 04: Light cyan background
-- Keep foreground text readable (dark text on light backgrounds)
-- Add color reset codes at end of each step
-- Consider adding colored [OK], [WARN], [ERROR] markers similar to shell scripts
+- ✅ Added utility functions: PrintSuccess, PrintWarning, PrintError, PrintInfo
+
+**🚨 NEXT SESSION - MUST TEST:**
+1. Boot Framework 13 from Guix ISO
+2. Run framework-dual installer
+3. Verify color-coded step headers display correctly
+4. Ensure colors don't break on Guix ISO terminal
+5. Confirm readability (black text on light backgrounds)
+6. If tests pass, merge feature branch to main
+
+**Implementation:**
+- `lib/colors.go` - ANSI color codes and helper functions
+- All `*/install/0*-*.go` files updated to use `lib.PrintStepHeader()`
+- Colors automatically reset after each header
 
 **Benefits:**
 - Easier to visually scan installation output

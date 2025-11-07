@@ -43,7 +43,7 @@ func (s *Step02MountExisting) RunWarnings(state *State) error {
 		return fmt.Errorf("required variables not set (ROOT, EFI). Please run Step01 first or set DEVICE, ROOT, and EFI environment variables")
 	}
 
-	fmt.Println("=== Step 2: Mount and Store Setup ===")
+	lib.PrintStepHeader(2, "Mount and Store Setup")
 	fmt.Println()
 	fmt.Println("This step will:")
 	fmt.Println("  1. Mount Guix root partition to /mnt (if not already mounted)")
