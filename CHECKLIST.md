@@ -50,11 +50,56 @@ For implementation history and completed features, see git commit history.
 - ✅ Hang detection (warns after 15min of no output)
 - ✅ Log file tracking at `/tmp/guix-install.log`
 
+**Research findings - Most likely causes:**
+
+1. **Disk space exhaustion** (MOST LIKELY)
+   - ISO tmpfs fills up during kernel compilation
+   - Build fails with "no space left on device"
+   - Need to verify TMPDIR is set early enough
+
+2. **cow-store not redirecting properly**
+   - Store writes filling up ISO RAM instead of /mnt
+   - Need to verify cow-store is actually working
+
+3. **Silent build failure**
+   - Kernel build errors but guix system init continues
+   - Never generates vmlinuz/initrd but appears to succeed
+
+4. **Nonguix substitute unavailable + build hangs**
+   - substitutes.nonguix.org lacks pre-built kernel
+   - Local compilation gets stuck indefinitely
+
 **Next debugging steps:**
-1. Re-run with new monitoring to see if process hangs or has silent errors
-2. Check last 100 lines of `/tmp/guix-install.log` for build errors
-3. Verify `/gnu/store` has kernel and initrd packages
-4. Try `--fallback` flag to build from source if substitutes fail
+
+1. **Before starting install:**
+   ```bash
+   df -h          # Check all filesystem space
+   df -h /mnt     # Check target partition space
+   df -h /tmp     # Check tmpfs space
+   ```
+
+2. **Check if kernel was built:**
+   ```bash
+   ls /gnu/store/*linux-6*
+   find /gnu/store -name "vmlinuz*"
+   find /gnu/store -name "initrd*"
+   ```
+
+3. **Check log for actual errors:**
+   ```bash
+   tail -200 /tmp/guix-install.log | grep -i "error\|fail\|space\|denied"
+   ```
+
+4. **Verify build process:**
+   ```bash
+   ps aux | grep guix      # Check if guix is running
+   ls -lah /tmp/guix*      # Check temp files
+   ```
+
+5. **Re-run with new monitoring** - Enhanced progress monitoring will show:
+   - If log is growing (build working but slow)
+   - If log stopped (hung or failed)
+   - Warnings after 15min of silence
 
 **Current Focus:**
 1. 🚨 **#1 PRIORITY: Fix missing vmlinuz*/initrd* files** - System cannot boot without these
