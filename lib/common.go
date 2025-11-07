@@ -947,12 +947,12 @@ func VerifyInstallation() error {
 		fmt.Println("[OK] GRUB EFI binary installed")
 	}
 
-	// Check for EFI GRUB config
-	if _, err := os.Stat("/mnt/boot/efi/EFI/guix/grub.cfg"); err != nil {
-		fmt.Println("[WARN] No EFI GRUB config at /mnt/boot/efi/EFI/guix/grub.cfg")
+	// Check for GRUB config (actual location is /boot/grub/grub.cfg, not in EFI directory)
+	if _, err := os.Stat("/mnt/boot/grub/grub.cfg"); err != nil {
+		fmt.Println("[WARN] No GRUB config at /mnt/boot/grub/grub.cfg")
 		allGood = false
 	} else {
-		fmt.Println("[OK] EFI GRUB config installed")
+		fmt.Println("[OK] GRUB config installed")
 	}
 
 	if !allGood {

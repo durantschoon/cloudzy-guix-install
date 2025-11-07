@@ -526,11 +526,10 @@ guix system init /mnt/etc/config.scm /mnt \
 After successful installation, `/mnt/boot` should contain:
 
 ```
-/mnt/boot/vmlinuz-*              # Kernel
-/mnt/boot/initrd-*               # Initial RAM disk
-/mnt/boot/grub/grub.cfg          # GRUB config
-/mnt/boot/efi/EFI/guix/grubx64.efi
-/mnt/boot/efi/EFI/guix/grub.cfg
+/mnt/boot/vmlinuz-*                    # Linux kernel
+/mnt/boot/initrd-*                     # Initial RAM disk
+/mnt/boot/grub/grub.cfg                # GRUB config (main config file)
+/mnt/boot/efi/EFI/guix/grubx64.efi     # GRUB EFI bootloader binary
 ```
 
 **Warning signs:**
