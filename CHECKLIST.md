@@ -6,7 +6,7 @@ For implementation history and completed features, see git commit history.
 
 ## 🔄 Currently Working On
 
-**Status:** ⚠️ CRITICAL BUG - Framework13 Nonguix Prompt Missing
+**Status:** 🚨 CRITICAL - Missing vmlinuz*/initrd* Files Prevent Boot
 
 **Most Recent Additions (2025-11):**
 - ✅ **Recovery script** - Automatic recovery script generation for all installers
@@ -17,35 +17,50 @@ For implementation history and completed features, see git commit history.
 - ✅ **Initrd fix** - Added `(initrd microcode-initrd)` to framework configs
 - ✅ **Clean install script** - Removes all artifacts for fresh reinstall
 - ✅ **Bash shebang documentation** - Fixed contradictory documentation
+- ✅ **Nonguix prompt fix** - Debug logging revealed user was accidentally declining
+- ✅ **Hybrid progress monitoring** - Detects hangs, shows log growth, warns after 15min
+- ✅ **GRUB verification fix** - Corrected false warning about grub.cfg location
 
-**CRITICAL ISSUE TO INVESTIGATE:**
+**🚨 CRITICAL ISSUE #1 - BLOCKS ALL INSTALLATIONS:**
 
-### Framework13 Nonguix Prompt Not Appearing
+### Missing vmlinuz* and initrd* Files After guix system init
 
-**Problem:** After running clean-install.sh and downloading latest bootstrap-installer.sh, the framework installer never prompts the user about trusting nonguix. The generated config.scm is missing nonguix imports.
+**Problem:** After `guix system init` appears to complete, `/mnt/boot/` is missing kernel and initrd files. System cannot boot without these files.
 
-**Expected behavior:**
-- User should see nonguix trust prompt during Step 3 (config generation)
-- Config should include `(nongnu packages linux)` and `(nongnu system linux-initrd)`
-- Config should have `(initrd microcode-initrd)` field
+**What's present:**
+- ✅ `/mnt/boot/grub/grub.cfg` exists
+- ✅ `/mnt/boot/efi/EFI/guix/grubx64.efi` exists
+- ❌ `/mnt/boot/vmlinuz-*` MISSING
+- ❌ `/mnt/boot/initrd-*` MISSING
 
-**Actual behavior:**
-- No nonguix prompt appears
-- Config missing nonguix use-modules
-- Generates "free software only" config
+**What we know:**
+- Config.scm has correct nonguix imports: `(nongnu packages linux)` and `(nongnu system linux-initrd)`
+- Config.scm has `(initrd microcode-initrd)` field
+- User confirmed seeing nonguix trust prompt and accepting
+- `guix system init` appears to run but may hang silently or fail during build
 
-**Investigation needed:**
-- Why is `lib.SetupNonguixChannel()` not prompting?
-- Is /tmp/channels.scm somehow persisting?
-- Is the function being called at all?
-- Check if stdin/tty redirection is suppressing the prompt
+**Root causes to investigate:**
+1. **Silent build failure** - `guix system init` may be failing to build kernel but not showing error
+2. **Process hangs** - May hang during download/build phase (spinner kept going overnight)
+3. **Incomplete init** - Build succeeds but bootloader installation phase fails silently
+4. **Substitute failures** - Can't download kernel package and build from source fails
+
+**New tools to help diagnose:**
+- ✅ Enhanced progress monitoring (shows log growth every 60s)
+- ✅ Hang detection (warns after 15min of no output)
+- ✅ Log file tracking at `/tmp/guix-install.log`
+
+**Next debugging steps:**
+1. Re-run with new monitoring to see if process hangs or has silent errors
+2. Check last 100 lines of `/tmp/guix-install.log` for build errors
+3. Verify `/gnu/store` has kernel and initrd packages
+4. Try `--fallback` flag to build from source if substitutes fail
 
 **Current Focus:**
-1. ⚠️ DEBUG: Why nonguix prompt not appearing on framework13
-2. Test Cloudzy installer on fresh VPS with BIOS boot fix
-3. Test and validate complete framework-dual installation flow
-4. Improve dual-boot GRUB experience
-5. Document storage options (LUKS/btrfs)
+1. 🚨 **#1 PRIORITY: Fix missing vmlinuz*/initrd* files** - System cannot boot without these
+2. Test with enhanced monitoring to identify why guix system init isn't generating kernel files
+3. Test Cloudzy installer on fresh VPS with BIOS boot fix
+4. Test and validate complete framework-dual installation flow
 
 ---
 
