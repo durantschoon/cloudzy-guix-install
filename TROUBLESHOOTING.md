@@ -618,6 +618,112 @@ journalctl -b
 
 ---
 
+## Guix Daemon Issues
+
+### Daemon Not Responding
+
+**Symptom:** "Connection refused" or "cannot connect to daemon socket" errors
+
+**Diagnosis:**
+```bash
+# Check if daemon is running
+herd status guix-daemon
+
+# Check socket exists
+ls -l /var/guix/daemon-socket/socket
+```
+
+**Solution:**
+```bash
+# Restart daemon
+herd restart guix-daemon
+
+# Or manually start
+guix-daemon --build-users-group=guixbuild &
+
+# Verify it's working
+guix describe
+```
+
+### Daemon Connection Timeout
+
+**Symptom:** Commands hang waiting for daemon
+
+**Solution:**
+```bash
+# Kill hung daemon
+kill all guix-daemon
+
+# Clear any stale locks
+rm -f /var/guix/daemon-socket/socket.lock
+
+# Restart fresh
+herd start guix-daemon
+```
+
+---
+
+## Cow-Store Issues
+
+### Cow-Store Not Redirecting
+
+**Symptom:** "No space left on device" during `guix system init`
+
+**Diagnosis:**
+```bash
+# Check cow-store status
+herd status cow-store
+
+# Check where writes are going
+df -h /gnu/store
+df -h /mnt
+```
+
+**Solution:**
+```bash
+# Ensure /mnt is mounted
+mount | grep /mnt
+
+# Start cow-store pointing to target
+herd start cow-store /mnt
+
+# Verify it started
+herd status cow-store
+
+# Check overlay is active
+mount | grep overlay
+```
+
+### Store Writes Filling ISO
+
+**Symptom:** ISO tmpfs full, but target disk has space
+
+**Root cause:** cow-store not working, writes going to ISO RAM
+
+**Solution:** Use [pre-build kernel workaround](PREBUILD_KERNEL.md) or:
+
+```bash
+# Stop any guix processes
+killall guix-daemon
+herd stop guix-daemon
+
+# Ensure clean mount state
+umount -R /mnt || true
+mount /dev/nvme0n1p2 /mnt
+mount /dev/nvme0n1p1 /mnt/boot/efi
+
+# Restart daemon
+herd start guix-daemon
+
+# Start cow-store fresh
+herd start cow-store /mnt
+
+# Retry system init
+guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt
+```
+
+---
+
 ## Getting Help
 
 If you've tried the above and still have issues:

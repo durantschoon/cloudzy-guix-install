@@ -224,6 +224,7 @@ bash verify-guix-install.sh
 
 ## See Also
 
-- [DEBUGGING.md](DEBUGGING.md) - Complete debugging session notes
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Complete troubleshooting and rescue guide
 - [CHECKLIST.md](CHECKLIST.md) - Installation implementation checklist
 - [README.md](README.md) - Main installation documentation
+- [INSTALLATION_KNOWLEDGE.md](INSTALLATION_KNOWLEDGE.md) - Technical installation details
