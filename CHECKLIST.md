@@ -52,14 +52,16 @@ For implementation history and completed features, see git commit history.
 
 **Research findings - Most likely causes:**
 
-1. **Disk space exhaustion** (MOST LIKELY)
-   - ISO tmpfs fills up during kernel compilation
-   - Build fails with "no space left on device"
-   - Need to verify TMPDIR is set early enough
+1. **cow-store not redirecting properly** (MOST LIKELY)
+   - Store writes should go to /mnt (60GB target disk) but may be filling ISO tmpfs instead
+   - cow-store may fail silently if /mnt not properly mounted
+   - TMPDIR may not be set early enough before guix processes start
+   - Need to verify cow-store is actually working and redirecting to target disk
 
-2. **cow-store not redirecting properly**
-   - Store writes filling up ISO RAM instead of /mnt
-   - Need to verify cow-store is actually working
+2. **Disk space exhaustion on target partition**
+   - If cow-store IS working, /mnt may be too small for kernel build
+   - Kernel source + build artifacts can require 10-20GB
+   - Need to verify target partition has enough free space
 
 3. **Silent build failure**
    - Kernel build errors but guix system init continues
@@ -100,6 +102,31 @@ For implementation history and completed features, see git commit history.
    - If log is growing (build working but slow)
    - If log stopped (hung or failed)
    - Warnings after 15min of silence
+
+**WORKAROUND: Pre-build kernel on Mac with Docker**
+
+To bypass both cow-store issues and substitute server unreliability, you can pre-build the kernel on your Mac and transfer it:
+
+1. **On Mac (with Docker):**
+   ```bash
+   ./prebuild-kernel.sh  # Takes 30-60 min, builds kernel in Docker
+   # Creates linux-kernel.nar (200-500 MB)
+   ```
+
+2. **Transfer to Framework 13:**
+   ```bash
+   # Via USB drive:
+   cp linux-kernel.nar /Volumes/USB_DRIVE/
+
+   # Via network (on Mac):
+   python3 -m http.server 8000
+   # On Framework ISO:
+   wget http://MAC_IP:8000/linux-kernel.nar -O /root/linux-kernel.nar
+   ```
+
+3. **Run installer normally** - It will auto-detect and import `/root/linux-kernel.nar`
+
+See [PREBUILD_KERNEL.md](PREBUILD_KERNEL.md) for detailed instructions.
 
 **Current Focus:**
 1. 🚨 **#1 PRIORITY: Fix missing vmlinuz*/initrd* files** - System cannot boot without these

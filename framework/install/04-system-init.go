@@ -125,6 +125,14 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Printf("Warning: Failed to write recovery script %s: %v\n", recoveryPath, err)
 	}
 
+	// Import pre-built kernel if available (avoids disk space issues)
+	// User can pre-build kernel on Mac with Docker using: ./prebuild-kernel.sh
+	// Then transfer linux-kernel.nar to /root/ on the Guix ISO
+	if err := lib.ImportPrebuiltKernel("/root/linux-kernel.nar"); err != nil {
+		fmt.Printf("Warning: Failed to import pre-built kernel: %v\n", err)
+		fmt.Println("  Will attempt to build kernel during system init (may fail if low disk space)")
+	}
+
 	// Run guix system init with retry logic (includes daemon startup)
 	if err := lib.RunGuixSystemInit(); err != nil {
 		return err

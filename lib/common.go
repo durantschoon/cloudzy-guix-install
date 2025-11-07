@@ -773,6 +773,53 @@ func ValidateGuixConfig(configPath string) error {
 	return nil
 }
 
+// ImportPrebuiltKernel imports a pre-built kernel NAR archive if it exists
+// This allows building the kernel on a powerful machine (e.g., Docker on Mac)
+// and transferring it to avoid disk space issues during installation
+func ImportPrebuiltKernel(narPath string) error {
+	// Check if NAR file exists
+	if _, err := os.Stat(narPath); os.IsNotExist(err) {
+		fmt.Printf("No pre-built kernel found at %s (optional)\n", narPath)
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Println("=== Importing Pre-built Kernel ===")
+	fmt.Printf("Found kernel archive at: %s\n", narPath)
+
+	// Get file size for display
+	if stat, err := os.Stat(narPath); err == nil {
+		fmt.Printf("Archive size: %s\n", formatBytes(stat.Size()))
+	}
+	fmt.Println()
+
+	// Import the archive
+	fmt.Println("Importing kernel into Guix store...")
+	fmt.Println("This may take a few minutes...")
+
+	narFile, err := os.Open(narPath)
+	if err != nil {
+		return fmt.Errorf("failed to open NAR file: %w", err)
+	}
+	defer narFile.Close()
+
+	cmd := exec.Command("guix", "archive", "--import")
+	cmd.Stdin = narFile
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to import kernel archive: %w", err)
+	}
+
+	fmt.Println()
+	fmt.Println("[OK] Pre-built kernel imported successfully")
+	fmt.Println("     System init will use this kernel instead of building from source")
+	fmt.Println()
+
+	return nil
+}
+
 // RunGuixSystemInit runs guix system init with retry logic
 func RunGuixSystemInit() error {
 	// Ensure daemon is running before validation (validation needs daemon)
