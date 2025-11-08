@@ -50,26 +50,38 @@ For implementation history and completed features, see git commit history.
 - ✅ Hang detection (warns after 15min of no output)
 - ✅ Log file tracking at `/tmp/guix-install.log`
 
-**Research findings - Most likely causes:**
+**🎯 ROOT CAUSE IDENTIFIED (2025-11-07):**
 
-1. **cow-store not redirecting properly** (MOST LIKELY)
-   - Store writes should go to /mnt (60GB target disk) but may be filling ISO tmpfs instead
-   - cow-store may fail silently if /mnt not properly mounted
-   - TMPDIR may not be set early enough before guix processes start
-   - Need to verify cow-store is actually working and redirecting to target disk
+**Broken System Generation** - `guix system init` creates broken symlink at `/mnt/run/current-system`
 
-2. **Disk space exhaustion on target partition**
-   - If cow-store IS working, /mnt may be too small for kernel build
-   - Kernel source + build artifacts can require 10-20GB
-   - Need to verify target partition has enough free space
+**Diagnostics from Framework 13 testing:**
+- ✅ No disk space issues (73GB available on /mnt)
+- ✅ No errors in installation log
+- ✅ Config.scm has correct nonguix imports and `(kernel linux)` specification
+- ✅ Nonguix channel properly configured in `/tmp/channels.scm`
+- ✅ GRUB installed successfully
+- ❌ `/mnt/run/current-system` is a **broken symlink** (points to non-existent directory)
+- ❌ No kernel package in `/gnu/store` (only test data found)
+- ❌ No vmlinuz*/initrd* files anywhere
 
-3. **Silent build failure**
-   - Kernel build errors but guix system init continues
-   - Never generates vmlinuz/initrd but appears to succeed
+**What's happening:**
+`guix time-machine` with nonguix channel runs `system init`, which:
+1. Successfully installs GRUB bootloader
+2. **Fails to resolve or build the `linux` kernel package from nonguix**
+3. Creates a broken system generation symlink
+4. **Exits with success status (no error reported)**
 
-4. **Nonguix substitute unavailable + build hangs**
-   - substitutes.nonguix.org lacks pre-built kernel
-   - Local compilation gets stuck indefinitely
+**Why it fails silently:**
+- Guix doesn't treat missing/unresolvable kernel package as a fatal error
+- System generation is created without a working kernel
+- GRUB config references non-existent kernel files
+- Installation appears to succeed but system is unbootable
+
+**Previous hypotheses ruled out:**
+- ~~cow-store not redirecting~~ - Not the issue (73GB free space on target)
+- ~~Disk space exhaustion~~ - Not the issue (plenty of space)
+- ~~Build hangs~~ - Build doesn't even start (package not found)
+- ~~Substitute server down~~ - Channel is configured correctly
 
 **Next debugging steps:**
 
@@ -226,34 +238,32 @@ Document where logs/receipts live and add a short chroot/repair/rerun guide when
 ### 🟢 Low Priority (Nice to Have)
 
 #### 7. Color-Coded Step Distinction in Go Installers
-**Status:** ✅ Merged to main - Ready for testing
+**Status:** ✅ Complete - Tested successfully on Framework 13
 
 **Completed:**
 - ✅ Created `lib/colors.go` with color utilities
 - ✅ Added `PrintStepHeader()` function with background colors
+- ✅ Added `PrintSectionHeader()` with cycling colors for all subsections
+- ✅ Added `PrintProgress()` for consistent cyan progress messages
+- ✅ Added rainbow spinner animation (8 colors)
 - ✅ Updated all installers (framework, framework-dual, cloudzy)
 - ✅ Step color scheme:
   - Step 01: Light blue background
   - Step 02: Light green background
   - Step 03: Light yellow background
   - Step 04: Light cyan background
-- ✅ Added utility functions: PrintSuccess, PrintWarning, PrintError, PrintInfo
-- ✅ Merged to main branch
-
-**Testing on Framework 13:**
-
-1. Boot from Guix ISO
-2. Run framework-dual installer from main branch
-3. Verify colored step headers display correctly
-4. Confirm readability (black text on light backgrounds)
-5. Test terminal compatibility
+- ✅ Section headers cycle through: blue → green → yellow → cyan
+- ✅ Spinner cycles through: red → orange → yellow → green → cyan → blue → purple → magenta
+- ✅ Added utility functions: PrintSuccess, PrintWarning, PrintError, PrintInfo, PrintProgress
+- ✅ Tested on Framework 13 Guix ISO - all colors display correctly
 
 **Implementation:**
-- `lib/colors.go` - ANSI color codes and helper functions
-- All `*/install/0*-*.go` files updated to use `lib.PrintStepHeader()`
-- Colors automatically reset after each header
+- [lib/colors.go](lib/colors.go) - ANSI color codes and helper functions
+- All `*/install/0*-*.go` files updated to use colored output
+- [lib/common.go](lib/common.go) - Progress monitoring uses colored messages
+- Colors automatically reset after each message
 
-**Impact:** ⭐ Low - Nice visual polish, improves readability
+**Impact:** ⭐ Low - Nice visual polish, significantly improves readability during long operations
 
 ---
 

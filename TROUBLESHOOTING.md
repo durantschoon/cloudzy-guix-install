@@ -251,28 +251,49 @@ exit
 
 **Critical Issue:** System won't boot without kernel and initrd in `/boot/`
 
+**🎯 ROOT CAUSE IDENTIFIED (2025-11-07):** `guix system init` creates broken system generation when it cannot resolve the nonguix `linux` kernel package. The installation appears to succeed but creates a broken symlink at `/mnt/run/current-system` and no kernel files.
+
 ### Diagnosis
 
 ```bash
-# Check if files exist
+# Check if system generation was created properly
+ls -la /mnt/run/current-system        # Should be valid symlink
+readlink /mnt/run/current-system      # Should point to existing directory
+
+# Check if files exist in /boot
 ls -lh /mnt/boot/vmlinuz*
 ls -lh /mnt/boot/initrd*
 
-# Should see something like:
-# /mnt/boot/vmlinuz-6.1.82-gnu
-# /mnt/boot/initrd-6.1.82-gnu
+# Check if kernel package is in store
+find /gnu/store -name "vmlinuz*" -o -name "initrd*" | grep -v "test"
 
-# Check if kernel is in store
-find /gnu/store -name "vmlinuz*"
-find /gnu/store -name "initrd*"
+# Check disk space (should have plenty)
+df -h /mnt
+
+# Check for errors in log
+tail -200 /tmp/guix-install.log | grep -i "error\|fail"
 ```
 
-### Possible Causes
+### Root Cause
 
-1. **cow-store not working** - Store writes went to ISO tmpfs instead of /mnt
-2. **Disk space exhaustion** - Build failed due to no space
-3. **Build failure** - Kernel compilation errors
-4. **Substitute unavailable** - Can't download pre-built kernel
+**Broken System Generation** - Guix silently fails when nonguix kernel package cannot be resolved:
+
+1. `guix time-machine` runs with nonguix channel configured
+2. `system init` attempts to build system with `(kernel linux)` from nonguix
+3. **Kernel package resolution fails** (substitute unavailable or channel issue)
+4. Guix creates system generation anyway, but without kernel
+5. `/mnt/run/current-system` becomes a **broken symlink**
+6. GRUB installed successfully but references non-existent kernel
+7. **No error reported** - installation appears to succeed
+
+**Key diagnostic:** If `/mnt/run/current-system` is a broken symlink, the system generation was not built correctly.
+
+### Previously Suspected Causes (Ruled Out)
+
+1. ~~**cow-store not working**~~ - Not the issue (73GB free on /mnt confirms cow-store working)
+2. ~~**Disk space exhaustion**~~ - Not the issue (plenty of space available)
+3. ~~**Build failure with errors**~~ - Not the issue (no errors in log)
+4. ~~**Substitute server down**~~ - Channel configured correctly
 
 ### Solutions
 
