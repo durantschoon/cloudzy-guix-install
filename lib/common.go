@@ -838,49 +838,106 @@ func RunGuixSystemInit() error {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
 	}
 	
-	PrintSectionHeader("Running guix system init")
+	// WORKAROUND: guix system init has a bug where it doesn't copy kernel/initrd to /boot
+	// Solution: Build the system first, manually copy kernel files, then run init
+
+	PrintSectionHeader("Building Guix System")
+	fmt.Println("Step 1/3: Building system closure (includes kernel)")
 	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
 	fmt.Println()
 	fmt.Println("You should see:")
 	fmt.Println("  1. time-machine fetching channels (nonguix + guix)")
-	fmt.Println("  2. Downloading/building packages")
-	fmt.Println("  3. Installing bootloader")
-	fmt.Println("  4. Finalizing system")
+	fmt.Println("  2. Downloading/building packages (including kernel)")
+	fmt.Println("  3. Final output: /gnu/store/...-system")
 	fmt.Println()
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
 	fmt.Println()
-	fmt.Println("NOTE: If you're in screen/tmux and see strange characters, that's normal.")
-	fmt.Println("     Use Ctrl+A+D to detach from screen, or Ctrl+B+D for tmux.")
-	fmt.Println()
-	fmt.Println("If output seems to stop for several minutes, the process is likely still working.")
-	fmt.Println("You can check progress by:")
-	fmt.Println("  1. Press Ctrl+Z to suspend this process")
-	fmt.Println("  2. Run: tail -f /tmp/guix-install.log")
-	fmt.Println("  3. Run: ps aux | grep guix")
-	fmt.Println("  4. Run: fg to resume in foreground, OR bg to continue in background")
-	fmt.Println()
-	fmt.Println("NOTE: If you don't run 'fg' or 'bg', the installer will stay suspended!")
-	fmt.Println("Alternatively, open another terminal and run the same commands.")
+
+	channelsPath := "/tmp/channels.scm"
+
+	// Step 1: Build the system (creates complete system in /gnu/store)
+	if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
+		return fmt.Errorf("guix system build failed: %w", err)
+	}
+
+	PrintSectionHeader("Copying Kernel Files")
+	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
+	fmt.Println("(Workaround for guix system init bug)")
 	fmt.Println()
 
+	// Step 2: Find the built system and copy kernel/initrd to /boot
+	// The system build creates /gnu/store/*-system with kernel and initrd
+	cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to find built system: %w", err)
+	}
+	systemPath := strings.TrimSpace(string(output))
+	if systemPath == "" {
+		return fmt.Errorf("no system found in /gnu/store")
+	}
+
+	fmt.Printf("Found built system: %s\n", systemPath)
+
+	// Copy kernel
+	kernelSrc := filepath.Join(systemPath, "kernel")
+	if _, err := os.Stat(kernelSrc); err != nil {
+		return fmt.Errorf("kernel not found in built system: %w", err)
+	}
+
+	// Determine kernel version from the kernel path
+	kernelDest := "/mnt/boot/vmlinuz"
+	if err := exec.Command("cp", kernelSrc, kernelDest).Run(); err != nil {
+		return fmt.Errorf("failed to copy kernel: %w", err)
+	}
+	fmt.Printf("✓ Copied kernel: %s -> %s\n", kernelSrc, kernelDest)
+
+	// Copy initrd
+	initrdSrc := filepath.Join(systemPath, "initrd")
+	if _, err := os.Stat(initrdSrc); err != nil {
+		return fmt.Errorf("initrd not found in built system: %w", err)
+	}
+
+	initrdDest := "/mnt/boot/initrd"
+	if err := exec.Command("cp", initrdSrc, initrdDest).Run(); err != nil {
+		return fmt.Errorf("failed to copy initrd: %w", err)
+	}
+	fmt.Printf("✓ Copied initrd: %s -> %s\n", initrdSrc, initrdDest)
+
+	// Create the current-system symlink
+	if err := os.Remove("/mnt/run/current-system"); err != nil && !os.IsNotExist(err) {
+		fmt.Printf("Warning: failed to remove old current-system symlink: %v\n", err)
+	}
+	if err := os.MkdirAll("/mnt/run", 0755); err != nil {
+		return fmt.Errorf("failed to create /mnt/run: %w", err)
+	}
+	if err := os.Symlink(systemPath, "/mnt/run/current-system"); err != nil {
+		return fmt.Errorf("failed to create current-system symlink: %w", err)
+	}
+	fmt.Printf("✓ Created symlink: /mnt/run/current-system -> %s\n", systemPath)
+	fmt.Println()
+
+	PrintSectionHeader("Installing Bootloader")
+	fmt.Println("Step 3/3: Running guix system init to install bootloader")
+	fmt.Println("(System already built, this should be quick)")
+	fmt.Println()
+
+	// Step 3: Run system init (should now just install bootloader since system is already built)
 	maxRetries := 3
 	var lastErr error
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		if attempt > 1 {
-			fmt.Printf("\n[RETRY %d/%d] Retrying guix system init after substitute failure...\n", attempt, maxRetries)
+			fmt.Printf("\n[RETRY %d/%d] Retrying guix system init...\n", attempt, maxRetries)
 			fmt.Println("Waiting 10 seconds before retry...")
 			fmt.Println()
 			time.Sleep(10 * time.Second)
 		}
 
-		// Use time-machine with nonguix channel for system init
-		channelsPath := "/tmp/channels.scm"
 		if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			if attempt < maxRetries {
-				fmt.Println("This is often caused by temporary substitute server issues.")
 				fmt.Println("The command will automatically retry...")
 			}
 			continue
@@ -893,16 +950,9 @@ func RunGuixSystemInit() error {
 
 	if lastErr != nil {
 		fmt.Println()
-		fmt.Println("All retry attempts failed. You can:")
-		// Check if helper script exists (created by framework/framework-dual installers)
-		helperPath := "/root/guix-init-time-machine.sh"
-		if _, err := os.Stat(helperPath); err == nil {
-			fmt.Printf("  1. Run the helper script: %s\n", helperPath)
-			fmt.Println("  2. Or manually run: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
-		} else {
-			fmt.Println("  1. Wait a few minutes and run: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
-			fmt.Println("  2. Or try with --fallback to build from source: guix time-machine -C /tmp/channels.scm -- system init --fallback /mnt/etc/config.scm /mnt")
-		}
+		fmt.Println("Bootloader installation failed. You can:")
+		fmt.Println("  1. Try manually: guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  2. Or reboot anyway - the kernel is already in place")
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
 
