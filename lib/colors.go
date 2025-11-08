@@ -57,3 +57,20 @@ func PrintError(msg string) {
 func PrintInfo(msg string) {
 	fmt.Printf("%s[INFO]%s %s\n", FgCyan, ColorReset, msg)
 }
+
+// SubsectionColors are the colors to cycle through for subsection headers
+var SubsectionColors = []string{
+	BgLightBlue,
+	BgLightGreen,
+	BgLightYellow,
+	BgLightCyan,
+}
+
+var subsectionColorIndex = 0
+
+// PrintSectionHeader prints a colored section header (cycles through colors)
+func PrintSectionHeader(title string) {
+	color := SubsectionColors[subsectionColorIndex%len(SubsectionColors)]
+	subsectionColorIndex++
+	fmt.Printf("%s=== %s ===%s\n", color, title, ColorReset)
+}

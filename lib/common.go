@@ -412,7 +412,7 @@ func CreateSwapFile(swapSize string) error {
 // NOTE: Do NOT use bind mounts! cow-store handles store writes correctly.
 // Bind mounting /mnt/gnu to /gnu shadows the live system's store and breaks guix.
 func EnsureGuixDaemonRunning() error {
-	fmt.Println("=== Ensuring guix-daemon is running ===")
+	PrintSectionHeader("Ensuring guix-daemon is running")
 
 	// First, check if daemon is already running and responsive
 	cmd := exec.Command("herd", "status", "guix-daemon")
@@ -513,7 +513,7 @@ func EnsureGuixDaemonRunning() error {
 // VerifyESP verifies the EFI System Partition is properly mounted as vfat
 func VerifyESP() error {
 	fmt.Println()
-	fmt.Println("=== Verifying EFI System Partition ===")
+	PrintSectionHeader("Verifying EFI System Partition")
 	
 	// Check partition information with lsblk
 	fmt.Println("Checking partition information:")
@@ -543,7 +543,7 @@ func VerifyESP() error {
 
 // StartCowStore starts cow-store to redirect store writes to target disk
 func StartCowStore() error {
-	fmt.Println("=== Starting cow-store ===")
+	PrintSectionHeader("Starting cow-store")
 	fmt.Println("Redirecting store writes to /mnt to avoid filling ISO space...")
 	if err := RunCommand("herd", "start", "cow-store", "/mnt"); err != nil {
 		return fmt.Errorf("failed to start cow-store: %w", err)
@@ -554,7 +554,7 @@ func StartCowStore() error {
 
 // SetupGRUBEFI creates necessary directories and symlinks for GRUB EFI bootloader
 func SetupGRUBEFI() error {
-	fmt.Println("=== Setting up GRUB EFI bootloader ===")
+	PrintSectionHeader("Setting up GRUB EFI bootloader")
 	
 	// Ensure the EFI directory structure exists
 	guixEfiDir := "/mnt/boot/efi/Guix"
@@ -677,7 +677,7 @@ func SetupNonguixChannel() error {
 // RecordChannelCommits records the current channel commits for reproducibility
 func RecordChannelCommits() error {
 	fmt.Println()
-	fmt.Println("=== Recording Channel Commits for Reproducibility ===")
+	PrintSectionHeader("Recording Channel Commits for Reproducibility")
 
 	// Run guix describe to get commit information
 	cmd := exec.Command("guix", "describe", "--format=channels")
@@ -706,7 +706,7 @@ func RecordChannelCommits() error {
 
 // ValidateGuixConfig validates the config file for common issues
 func ValidateGuixConfig(configPath string) error {
-	fmt.Println("=== Validating Guix Configuration ===")
+	PrintSectionHeader("Validating Guix Configuration")
 	fmt.Printf("Checking config file: %s\n", configPath)
 	
 	// Check if config file exists
@@ -784,7 +784,7 @@ func ImportPrebuiltKernel(narPath string) error {
 	}
 
 	fmt.Println()
-	fmt.Println("=== Importing Pre-built Kernel ===")
+	PrintSectionHeader("Importing Pre-built Kernel")
 	fmt.Printf("Found kernel archive at: %s\n", narPath)
 
 	// Get file size for display
@@ -838,7 +838,7 @@ func RunGuixSystemInit() error {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
 	}
 	
-	fmt.Println("=== Running guix system init ===")
+	PrintSectionHeader("Running guix system init")
 	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
 	fmt.Println()
 	fmt.Println("You should see:")
@@ -911,7 +911,7 @@ func RunGuixSystemInit() error {
 
 // InstallVerificationScript installs the verification script to the target system
 func InstallVerificationScript() error {
-	fmt.Println("=== Installing Verification Script ===")
+	PrintSectionHeader("Installing Verification Script")
 
 	// Read the verification script from current directory
 	scriptContent, err := os.ReadFile("verify-guix-install.sh")
@@ -947,7 +947,7 @@ func InstallVerificationScript() error {
 // VerifyInstallation verifies that all critical files were installed
 func VerifyInstallation() error {
 	fmt.Println()
-	fmt.Println("=== Verifying Installation ===")
+	PrintSectionHeader("Verifying Installation")
 	allGood := true
 
 	// Check for kernel
@@ -1061,7 +1061,7 @@ func RunGuixSystemInitFreeSoftware() error {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
 	}
 	
-	fmt.Println("=== Running guix system init (Free Software Only) ===")
+	PrintSectionHeader("Running guix system init (Free Software Only)")
 	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
 	fmt.Println()
 	fmt.Println("You should see:")
@@ -1368,7 +1368,7 @@ func AskYesNo(prompt string, expected string) bool {
 // DownloadCustomizationTools downloads customization tools to user's home directory
 func DownloadCustomizationTools(platform string, username string) error {
 	fmt.Println()
-	fmt.Println("=== Installing Customization Tools ===")
+	PrintSectionHeader("Installing Customization Tools")
 
 	if platform == "" {
 		platform = "cloudzy"
@@ -1494,7 +1494,7 @@ https://github.com/durantschoon/cloudzy-guix-install/blob/main/CUSTOMIZATION.md
 // SetUserPassword sets the password for a user in the installed system
 func SetUserPassword(username string) error {
 	fmt.Println()
-	fmt.Println("=== Set User Password ===")
+	PrintSectionHeader("Set User Password")
 	fmt.Printf("Setting password for user: %s\n", username)
 	fmt.Println("You will need this password to log in after first boot.")
 	fmt.Println()
@@ -2447,7 +2447,7 @@ func SetupDefaultChannels() error {
 
 // ValidateChannels validates the channel configuration
 func ValidateChannels() error {
-	fmt.Println("=== Validating Channel Configuration ===")
+	PrintSectionHeader("Validating Channel Configuration")
 	
 	channelsPath := filepath.Join(os.Getenv("HOME"), ".config", "guix", "channels.scm")
 	if _, err := os.Stat(channelsPath); os.IsNotExist(err) {
