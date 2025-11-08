@@ -193,7 +193,7 @@ if [ -f "${ROOT}/etc/passwd" ]; then
     ok "Password file exists"
 
     # List non-system users
-    local users=$(grep -E ":/home/.*:(bash|sh)" "${ROOT}/etc/passwd" 2>/dev/null | cut -d: -f1 || echo "")
+    users=$(grep -E ":/home/.*:(bash|sh)" "${ROOT}/etc/passwd" 2>/dev/null | cut -d: -f1 || echo "")
     if [ -n "$users" ]; then
         for user in $users; do
             ok "  User: $user"
@@ -217,7 +217,7 @@ echo "=== GNU Store ==="
 echo
 
 if [ -d "${ROOT}/gnu/store" ]; then
-    local store_count=$(ls -1 "${ROOT}/gnu/store" 2>/dev/null | wc -l | tr -d ' ')
+    store_count=$(ls -1 "${ROOT}/gnu/store" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$store_count" -gt 100 ]; then
         ok "GNU store populated: $store_count items"
     elif [ "$store_count" -gt 0 ]; then
@@ -236,14 +236,14 @@ echo
 # Check if critical filesystems are properly labeled
 if command -v blkid >/dev/null 2>&1; then
     if blkid -t LABEL=GUIX_ROOT >/dev/null 2>&1; then
-        local guix_dev=$(blkid -t LABEL=GUIX_ROOT -o device)
+        guix_dev=$(blkid -t LABEL=GUIX_ROOT -o device)
         ok "GUIX_ROOT label found: $guix_dev"
     else
         warn "GUIX_ROOT label not found (may need to be set)"
     fi
 
     if blkid -t LABEL=EFI >/dev/null 2>&1; then
-        local efi_dev=$(blkid -t LABEL=EFI -o device)
+        efi_dev=$(blkid -t LABEL=EFI -o device)
         ok "EFI label found: $efi_dev"
     else
         warn "EFI label not found (may need to be set)"
@@ -255,7 +255,7 @@ echo "=== Disk Space ==="
 echo
 
 if command -v df >/dev/null 2>&1; then
-    local root_avail=$(df -BG "${ROOT}/" 2>/dev/null | tail -1 | awk '{print $4}' | sed 's/G//')
+    root_avail=$(df -BG "${ROOT}/" 2>/dev/null | tail -1 | awk '{print $4}' | sed 's/G//')
     if [ -n "$root_avail" ] && [ "$root_avail" -gt 5 ]; then
         ok "Available space on root: ${root_avail}G"
     elif [ -n "$root_avail" ]; then
