@@ -74,3 +74,25 @@ func PrintSectionHeader(title string) {
 	subsectionColorIndex++
 	fmt.Printf("%s=== %s ===%s\n", color, title, ColorReset)
 }
+
+// PrintProgress prints a progress message with consistent cyan color
+func PrintProgress(msg string) {
+	fmt.Printf("%s%s%s\n", FgCyan, msg, ColorReset)
+}
+
+// SpinnerColors are rainbow colors for animated spinner
+var SpinnerColors = []string{
+	"\033[38;5;196m", // Red
+	"\033[38;5;208m", // Orange
+	"\033[38;5;226m", // Yellow
+	"\033[38;5;46m",  // Green
+	"\033[38;5;51m",  // Cyan
+	"\033[38;5;21m",  // Blue
+	"\033[38;5;93m",  // Purple
+	"\033[38;5;201m", // Magenta
+}
+
+// GetSpinnerColor returns the color for the current spinner frame
+func GetSpinnerColor(index int) string {
+	return SpinnerColors[index%len(SpinnerColors)]
+}

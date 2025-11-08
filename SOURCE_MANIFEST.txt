@@ -26,9 +26,9 @@ a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/in
 848a38cfc5e37774d946ccb6bb0ded97c14dec5a97221955284f765c187e7612  ./framework/install/03-config.go
 649de33cd54bf86e8b994d8b349f87f058f80bb7ba58afa258b160753ef74cb4  ./framework/install/04-system-init.go
 dd6ddb5b51998059b26e813c446128b2aec818e30f062aa6a36627b344e83d82  ./framework/install/state.go
-c485ea21924207ff236f68b642b621c3c8d72931c87cf99828d6ebbd7d618ff5  ./lib/colors.go
+499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 037b1f33c390cf3eed0c6e89b165dc7478ad6be8ff5641d892f91b1d12e356c9  ./lib/common_test.go
-15cbf77667a1bc956d3ae484a6e0022edd783ff0744c22fbf914afbc3b9c130d  ./lib/common.go
+2923b6943a491dea9fc881de5638567e9b48ccabfb5fefe39b1502350c998217  ./lib/common.go
 af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-steps.go
 
 ## Critical Shell Scripts

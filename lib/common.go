@@ -161,8 +161,11 @@ func RunCommandWithSpinner(name string, args ...string) error {
                     spinnerActive = true
                     fmt.Print("\n")
                 }
-                fmt.Printf("\r\033[?25l%s Working... (%s elapsed, may take 5-30 min)",
+                spinnerColor := GetSpinnerColor(spinnerIndex)
+                fmt.Printf("\r\033[?25l%s%s%s Working... (%s elapsed, may take 5-30 min)",
+                    spinnerColor,
                     spinner[spinnerIndex],
+                    ColorReset,
                     formatDuration(time.Since(lastOutputTime)))
                 os.Stdout.Sync()
                 spinnerIndex = (spinnerIndex + 1) % len(spinner)
@@ -195,19 +198,19 @@ func RunCommandWithSpinner(name string, args ...string) error {
             timestamp := time.Now().Format("15:04:05")
 
             if elapsed > 15*time.Minute {
-                fmt.Printf("\n[%s] [WARN] No output for %s - process may be hung%s\n",
-                    timestamp, formatDuration(elapsed), logGrowth)
+                PrintWarning(fmt.Sprintf("[%s] No output for %s - process may be hung%s",
+                    timestamp, formatDuration(elapsed), logGrowth))
                 fmt.Println("         Check: tail -f /tmp/guix-install.log")
                 fmt.Println("         Or: ps aux | grep guix")
                 if logGrowth == "" {
                     fmt.Println("         Log not growing - likely hung!")
                 }
             } else if elapsed > 5*time.Minute {
-                fmt.Printf("\n[%s] [INFO] No output for %s (normal for some phases)%s\n",
-                    timestamp, formatDuration(elapsed), logGrowth)
+                PrintInfo(fmt.Sprintf("[%s] No output for %s (normal for some phases)%s",
+                    timestamp, formatDuration(elapsed), logGrowth))
             } else {
-                fmt.Printf("\n[%s] [PROGRESS] Last output %s ago%s\n",
-                    timestamp, formatDuration(elapsed), logGrowth)
+                PrintProgress(fmt.Sprintf("[%s] [PROGRESS] Last output %s ago%s",
+                    timestamp, formatDuration(elapsed), logGrowth))
             }
 
             // Resume spinner if needed
