@@ -295,58 +295,50 @@ tail -200 /tmp/guix-install.log | grep -i "error\|fail"
 3. ~~**Build failure with errors**~~ - Not the issue (no errors in log)
 4. ~~**Substitute server down**~~ - Channel configured correctly
 
-### Solutions
+### Solution
 
-#### Option 1: Use Pre-built Kernel (Recommended)
+**✅ FIXED (2025-11-08):** This issue is permanently resolved in the latest installer.
 
-See [PREBUILD_KERNEL.md](PREBUILD_KERNEL.md) for complete instructions.
+**For users with installer versions after commit `b956baf`:**
+- The installer automatically uses the correct 3-step approach
+- No manual intervention needed
+- Kernel and initrd will be properly installed to /boot
 
-```bash
-# Pre-build on Mac with Docker, transfer to ISO, then:
-guix archive --import < /root/linux-kernel.nar
+**How the fix works:**
 
-# Retry system init
-/root/guix-init-time-machine.sh
-```
+The installer now does this automatically:
 
-#### Option 2: Retry with More Space
+1. **Build system:** `guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm`
+   - Creates complete system in `/gnu/store/*-system` with kernel and initrd
 
-```bash
-# Free up space
-rm -rf /tmp/*
-rm -rf /var/guix/substitute-cache/*
+2. **Copy kernel files to /boot:**
+   ```bash
+   cp /gnu/store/*-system/kernel /mnt/boot/vmlinuz
+   cp /gnu/store/*-system/initrd /mnt/boot/initrd
+   ln -s /gnu/store/*-system /mnt/run/current-system
+   ```
 
-# Ensure TMPDIR points to target disk
-export TMPDIR=/mnt/var/tmp
-export XDG_CACHE_HOME=/mnt/var/cache
+3. **Install bootloader:** `guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt`
+   - System already built, this just installs GRUB
 
-# Verify cow-store is running
-herd status cow-store
+**For users with older installer versions:**
 
-# If not running, start it
-herd start cow-store /mnt
-
-# Retry system init
-/root/guix-init-time-machine.sh
-```
-
-#### Option 3: Manual Kernel Installation
-
-If kernel was built but not copied to /boot:
+If you're stuck with missing kernel files, use this manual workaround:
 
 ```bash
-# Find kernel in store
-KERNEL=$(find /gnu/store -name "vmlinuz*" | head -1)
-INITRD=$(find /gnu/store -name "initrd*" | grep -v "\.drv$" | head -1)
+# Step 1: Build the system
+cd /root
+guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm
 
-# Copy to /boot
-cp $KERNEL /mnt/boot/
-cp $INITRD /mnt/boot/
+# Step 2: Find the built system and copy kernel files
+SYSTEM=$(ls -td /gnu/store/*-system 2>/dev/null | head -1)
+cp $SYSTEM/kernel /mnt/boot/vmlinuz
+cp $SYSTEM/initrd /mnt/boot/initrd
+ln -s $SYSTEM /mnt/run/current-system
 
-# Update GRUB
-chroot /mnt /run/current-system/profile/bin/bash
-grub-mkconfig -o /boot/grub/grub.cfg
-exit
+# Step 3: Verify and reboot
+bash verify-guix-install.sh
+reboot
 ```
 
 ---

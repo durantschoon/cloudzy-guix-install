@@ -392,6 +392,48 @@ guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt
 - Ensures proper initrd generation for your specific filesystem setup
 - Prevents boot failures due to missing initrd files
 - Makes the configuration explicit and reproducible
+
+### Critical Bug: Missing Kernel/Initrd Files (FIXED 2025-11-08)
+
+**Issue**: `guix system init` had a bug where it would create a system generation but fail to copy kernel and initrd files to `/boot/`, leaving the system unbootable.
+
+**Symptoms**:
+- Installation appears to succeed without errors
+- `/mnt/boot/grub/grub.cfg` exists
+- `/mnt/boot/vmlinuz*` and `/mnt/boot/initrd*` are MISSING
+- `/mnt/run/current-system` is a broken symlink
+
+**Root cause**: `guix system init` creates the system profile in `/gnu/store` but doesn't copy kernel/initrd to `/boot` as expected.
+
+**✅ Solution (implemented in installer commit b956baf)**:
+
+The installer now uses a 3-step process instead of calling `system init` directly:
+
+1. **Build system first**:
+   ```bash
+   guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm
+   ```
+   This creates complete system in `/gnu/store/*-system/` with kernel and initrd.
+
+2. **Manually copy kernel files to /boot**:
+   ```bash
+   cp /gnu/store/*-system/kernel /mnt/boot/vmlinuz
+   cp /gnu/store/*-system/initrd /mnt/boot/initrd
+   ln -s /gnu/store/*-system /mnt/run/current-system
+   ```
+
+3. **Install bootloader**:
+   ```bash
+   guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt
+   ```
+   System already built, this just installs GRUB.
+
+**Why this works**:
+- `system build` creates a complete, valid system generation with all files
+- Manual copy ensures kernel/initrd are in `/boot` where GRUB expects them
+- `system init` then succeeds because system is already built
+
+**For manual installations**: Always use the 3-step approach above. Don't rely on `guix system init` alone to copy kernel files.
 - Required for proper kernel initialization
 
 ### GRUB EFI Bootloader Configuration

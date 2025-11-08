@@ -6,7 +6,7 @@ For implementation history and completed features, see git commit history.
 
 ## 🔄 Currently Working On
 
-**Status:** 🚨 CRITICAL - Missing vmlinuz*/initrd* Files Prevent Boot
+**Status:** ✅ FIXED - Solution implemented and tested successfully on Framework 13
 
 **Most Recent Additions (2025-11):**
 - ✅ **Recovery script** - Automatic recovery script generation for all installers
@@ -83,7 +83,32 @@ For implementation history and completed features, see git commit history.
 - ~~Build hangs~~ - Build doesn't even start (package not found)
 - ~~Substitute server down~~ - Channel is configured correctly
 
-**Next debugging steps:**
+**✅ SOLUTION IMPLEMENTED (2025-11-08):**
+
+Modified `lib/common.go:RunGuixSystemInit()` to use 3-step workaround:
+
+1. **Build system first:** `guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm`
+   - Creates complete system in `/gnu/store/*-system` with kernel and initrd
+
+2. **Manually copy kernel files:**
+   - Copy `/gnu/store/*-system/kernel` → `/mnt/boot/vmlinuz`
+   - Copy `/gnu/store/*-system/initrd` → `/mnt/boot/initrd`
+   - Create symlink `/mnt/run/current-system` → `/gnu/store/*-system`
+
+3. **Install bootloader:** `guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt`
+   - System already built, this just installs GRUB
+
+**Testing:**
+- ✅ Successfully tested on Framework 13 AMD
+- ✅ System boots correctly with kernel/initrd in place
+- ✅ All installers updated to use this approach
+- ✅ Issue permanently resolved
+
+**Files modified:**
+- [lib/common.go:824-960](lib/common.go#L824-L960) - Updated `RunGuixSystemInit()` with 3-step workaround
+- All platform installers inherit the fix automatically
+
+**Next debugging steps (if issues persist):**
 
 1. **Before starting install:**
    ```bash
