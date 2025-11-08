@@ -164,18 +164,18 @@ echo
 if check_file "/etc/config.scm" "System configuration" yes; then
     # Parse some basic info from config
     if grep -q "host-name" "${ROOT}/etc/config.scm" 2>/dev/null; then
-        local hostname=$(grep "host-name" "${ROOT}/etc/config.scm" | sed 's/.*"\(.*\)".*/\1/' | head -1)
+        hostname=$(grep "host-name" "${ROOT}/etc/config.scm" | sed 's/.*"\(.*\)".*/\1/' | head -1)
         info "  Hostname: $hostname"
     fi
 
     if grep -q "timezone" "${ROOT}/etc/config.scm" 2>/dev/null; then
-        local timezone=$(grep "timezone" "${ROOT}/etc/config.scm" | sed 's/.*"\(.*\)".*/\1/' | head -1)
+        timezone=$(grep "timezone" "${ROOT}/etc/config.scm" | sed 's/.*"\(.*\)".*/\1/' | head -1)
         info "  Timezone: $timezone"
     fi
 
     # Check for kernel-arguments
     if grep -q "kernel-arguments" "${ROOT}/etc/config.scm" 2>/dev/null; then
-        local kargs=$(grep "kernel-arguments" "${ROOT}/etc/config.scm" | head -1)
+        kargs=$(grep "kernel-arguments" "${ROOT}/etc/config.scm" | head -1)
         info "  Kernel args: $kargs"
 
         # Warn about problematic parameters

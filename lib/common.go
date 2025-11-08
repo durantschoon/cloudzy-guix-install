@@ -219,9 +219,6 @@ func RunCommandWithSpinner(name string, args ...string) error {
             }
         }
     }
-    os.Stdout.Sync()
-
-    return err
 }
 
 // formatDuration formats a duration in a human-readable way
