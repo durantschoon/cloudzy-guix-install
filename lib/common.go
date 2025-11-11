@@ -740,7 +740,12 @@ func ValidateGuixConfig(configPath string) error {
 	fmt.Println("Checking daemon connectivity...")
 	testCmd := exec.Command("guix", "build", "--version")
 	if err := testCmd.Run(); err != nil {
-		return fmt.Errorf("daemon is not responsive - ensure guix-daemon is running: %w", err)
+		fmt.Println()
+		fmt.Println("[WARN] Daemon is not responsive yet")
+		fmt.Println("       Skipping config validation - will validate during system init")
+		fmt.Println("       If system init fails, run 'herd start guix-daemon' and retry")
+		fmt.Println()
+		return nil  // Skip validation gracefully
 	}
 	fmt.Println("[OK] Daemon is responsive")
 	
