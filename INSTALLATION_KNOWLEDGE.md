@@ -353,36 +353,69 @@ If the installer is interrupted or fails:
    wipefs -a /dev/vda
    ```
 
-### Daemon Responsiveness Issues
+### Daemon Responsiveness Issues (VPS Systems)
 
-**Problem**: "Connection refused" errors when validating config
+**Problem**: "Connection refused" errors when validating config, especially on VPS systems
 
 **Symptoms:**
 - Config validation fails before system init
-- Error: "cannot connect to daemon socket"
+- Error: "guix system: error: failed to connect to '/var/guix/daemon-socket/socket': Connection refused"
+- Daemon check says "[OK] Daemon is responsive" but then immediately fails
 - System init never starts
+- More common on Cloudzy VPS than bare metal (Framework 13)
 
-**Cause**: guix-daemon is slow to become responsive, especially on VPS systems
+**Root Cause**: guix-daemon is slow to become responsive on VPS systems, race condition between check and actual use
 
-**Solution**: The installer now:
-1. Waits up to 60 seconds for daemon to become responsive
-2. Tests responsiveness with `guix build --version`
-3. Shows progress: "Waiting... (5/20)"
-4. Continues with warning if daemon running but slow
+**Implemented Solutions** (as of 2025-11-10):
+
+1. **Increased wait time** (commit 44be9d8):
+   - Wait up to 2 minutes (was 60 seconds)
+   - 40 iterations × 3 seconds each
+   - Tests responsiveness with `guix build --version`
+   - Shows progress: "Waiting... (5/40)"
+
+2. **Graceful validation skip** (commit 059f1dd):
+   - If daemon not responsive, skip validation with warning
+   - Don't block installation - system init will validate anyway
+   - Allows installation to proceed to system build step
+
+**Still investigating** (2025-11-10):
+- Why VPS daemon slower than bare metal
+- Why daemon check passes but then fails immediately
+- May need socket file check: `test -S /var/guix/daemon-socket/socket`
+- May need to check daemon process directly: `pgrep -x guix-daemon`
+- Consider manual daemon start if herd fails: `guix-daemon --build-users-group=guixbuild &`
 
 **Manual fix if needed:**
 ```bash
+# Check daemon status
+herd status guix-daemon
+ps aux | grep guix-daemon
+ls -la /var/guix/daemon-socket/socket
+
 # Restart daemon
 herd stop guix-daemon
+sleep 5
 herd start guix-daemon
 
-# Wait and test
-sleep 15
-guix build --version
+# Wait longer on VPS
+sleep 30
+
+# Test multiple times
+for i in {1..5}; do
+  echo "Test $i:"
+  guix build --version && break
+  sleep 10
+done
 
 # If that works, continue manually
-guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt
+guix system init /mnt/etc/config.scm /mnt
 ```
+
+**Workaround for persistent issues:**
+- Answer 'y' to continue when validation warns about daemon
+- System build step will start daemon if needed
+- Real validation happens during system build anyway
 
 ## 🐧 Kernel Configuration
 
