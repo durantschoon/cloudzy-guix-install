@@ -81,6 +81,13 @@ echo ""
 echo "  Hash: $MANIFEST_HASH"
 if [ -n "$MANIFEST_WORDS" ]; then
     echo "  Words: $MANIFEST_WORDS"
+
+    # Extract first 3 and last 3 words
+    WORD_ARRAY=($MANIFEST_WORDS)
+    FIRST_THREE="${WORD_ARRAY[0]} ${WORD_ARRAY[1]} ${WORD_ARRAY[2]}"
+    LAST_IDX=$((${#WORD_ARRAY[@]} - 1))
+    LAST_THREE="${WORD_ARRAY[$((LAST_IDX - 2))]} ${WORD_ARRAY[$((LAST_IDX - 1))]} ${WORD_ARRAY[$LAST_IDX]}"
+    echo "  Quick: $FIRST_THREE ... $LAST_THREE"
 fi
 echo ""
 echo "On Guix ISO, verify with:"
