@@ -173,6 +173,62 @@ See [PREBUILD_KERNEL.md](PREBUILD_KERNEL.md) for detailed instructions.
 
 ---
 
+## 🧪 Framework 13 First Boot Assessment (Before Customization)
+
+**Date:** 2025-11-10
+**Platform:** Framework 13 AMD (mid-2025)
+**Guix Version:** 1.4.0 ISO
+**Config:** Minimal dual-boot config from installer
+
+### What Works Out-of-Box:
+
+✅ **System boots successfully** - Kernel and initrd present in /boot
+✅ **User login** - User account created, password set
+✅ **Basic services running** - nscd, pam, udev, transient
+✅ **Hardware detected**:
+  - Wired ethernet (eth0)
+  - WiFi card (wlp192s0 - MediaTek MT7922)
+  - Battery (88% detected)
+  - Sound devices (/dev/snd/ populated)
+
+✅ **Manual networking works** - `dhclient` gets IP on wired connection
+✅ **Guix functional** - `guix describe` works, on master branch
+
+### What's Missing (Needs Customization):
+
+❌ **No persistent networking** - No NetworkManager, only manual dhclient
+❌ **No WiFi configured** - Can't connect to wireless
+❌ **No basic CLI tools** - No git, vim, emacs, htop, curl, wget
+❌ **No sudo installed** - Can't elevate privileges easily
+❌ **No desktop environment** - No X, no $DISPLAY, command-line only
+❌ **No Bluetooth stack** - bluetoothctl not found
+❌ **Firmware warnings** - amdgpu errors in dmesg (need linux-firmware)
+❌ **Pop!_OS not in GRUB** - Dual-boot chainloading not configured
+❌ **No SSH server** - Can't remote in
+❌ **No battery optimization** - TLP not installed
+❌ **No automatic SSD TRIM** - fstrim.timer not enabled
+❌ **Empty /etc/resolv.conf** - No DNS until dhclient runs
+
+### Critical Gap Found:
+
+**NetworkManager is NOT in the customize script!** The script adds:
+- ✅ Framework hardware support (firmware)
+- ✅ Desktop environments
+- ✅ Common packages
+- ❌ **Missing: NetworkManager service**
+
+This needs to be added to the customize script as a high-priority option.
+
+### Recommended First-Boot Improvements:
+
+1. **Add NetworkManager to customize script** (option 0 or automatic)
+2. **Add TLP for battery management** (Framework-specific)
+3. **Add fstrim.timer for SSD health**
+4. **Auto-detect and configure dual-boot GRUB**
+5. **Pre-install curl/wget in minimal config** (for downloading customize tools)
+
+---
+
 ## 📋 Remaining Work
 
 ### 🟡 Medium Priority
