@@ -140,36 +140,11 @@ Modified `lib/common.go:RunGuixSystemInit()` to use 3-step workaround:
    - If log stopped (hung or failed)
    - Warnings after 15min of silence
 
-**WORKAROUND: Pre-build kernel on Mac with Docker**
+**ALTERNATIVE WORKAROUND (Not needed - kept for reference):**
 
-To bypass both cow-store issues and substitute server unreliability, you can pre-build the kernel on your Mac and transfer it:
+~~Pre-build kernel on Mac with Docker~~ - We found a better solution (3-step build process), but this approach remains documented in [PREBUILD_KERNEL.md](PREBUILD_KERNEL.md) in case it's useful for other scenarios.
 
-1. **On Mac (with Docker):**
-   ```bash
-   ./prebuild-kernel.sh  # Takes 30-60 min, builds kernel in Docker
-   # Creates linux-kernel.nar (200-500 MB)
-   ```
-
-2. **Transfer to Framework 13:**
-   ```bash
-   # Via USB drive:
-   cp linux-kernel.nar /Volumes/USB_DRIVE/
-
-   # Via network (on Mac):
-   python3 -m http.server 8000
-   # On Framework ISO:
-   wget http://MAC_IP:8000/linux-kernel.nar -O /root/linux-kernel.nar
-   ```
-
-3. **Run installer normally** - It will auto-detect and import `/root/linux-kernel.nar`
-
-See [PREBUILD_KERNEL.md](PREBUILD_KERNEL.md) for detailed instructions.
-
-**Current Focus:**
-1. 🚨 **#1 PRIORITY: Fix missing vmlinuz*/initrd* files** - System cannot boot without these
-2. Test with enhanced monitoring to identify why guix system init isn't generating kernel files
-3. Test Cloudzy installer on fresh VPS with BIOS boot fix
-4. Test and validate complete framework-dual installation flow
+**Historical context**: Initially considered pre-building kernel on Mac to bypass suspected cow-store or disk space issues. After debugging, discovered the real issue was `guix system init` not copying kernel files to /boot. The 3-step approach (build → copy → init) permanently resolves this without needing Docker pre-builds.
 
 ---
 
@@ -226,6 +201,31 @@ This needs to be added to the customize script as a high-priority option.
 3. **Add fstrim.timer for SSD health**
 4. **Auto-detect and configure dual-boot GRUB**
 5. **Pre-install curl/wget in minimal config** (for downloading customize tools)
+
+### Current Post-Install Setup Approach (2025-11-10):
+
+**Goal:** Get Framework 13 from minimal install to fully functional system
+
+**Steps in progress:**
+
+1. ✅ **Manual networking** - Used dhclient to get temporary IP
+2. 🔄 **Channel setup** - Creating `~/.config/guix/channels.scm` without introductions for old Guix
+3. 🔄 **First guix pull** - Upgrading to newer Guix (in progress)
+4. ⏳ **Second guix pull with nonguix** - Will add nonguix channel after first pull
+5. ⏳ **Edit /etc/config.scm** - Add NetworkManager service
+6. ⏳ **Reconfigure system** - Apply NetworkManager changes
+7. ⏳ **Reboot and test WiFi** - Use nmcli to connect wirelessly
+8. ⏳ **Run customize script** - Add firmware, packages, desktop
+
+**Challenges encountered:**
+- Old Guix (1.4.0 from ISO) doesn't support channel introductions
+- Solution: Two-step pull (default channels first, then add nonguix)
+- NetworkManager missing from customize script (need to add manually first)
+
+**Next session:**
+- Complete Framework 13 setup
+- Test end-to-end installation on fresh Framework
+- Try cloudzy installer with all latest improvements
 
 ---
 

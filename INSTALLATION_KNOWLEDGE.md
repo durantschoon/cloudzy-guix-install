@@ -2,6 +2,48 @@
 
 This document captures critical lessons learned from real-world Guix OS installations, particularly focusing on dual-boot scenarios and common pitfalls.
 
+## 🎯 Free Software vs Nonguix: Platform-Specific Design Decisions
+
+**Design Philosophy:** Different platforms have different hardware requirements and use cases.
+
+### Cloudzy VPS Installer - Free Software Only
+
+**Why no nonguix:**
+- VPS hardware is fully virtualized (KVM/QEMU) with free software drivers
+- No physical WiFi cards, Bluetooth, or proprietary GPU firmware needed
+- Server workloads typically don't require proprietary software
+- Keeps system fully free software compliant (important for many server deployments)
+- `linux-libre` kernel works perfectly with virtualized hardware
+
+**Code:** Uses `RunGuixSystemInitFreeSoftware()` - standard `guix system init` without time-machine or nonguix channel
+
+### Framework 13 Installer - Requires Nonguix
+
+**Why nonguix is mandatory:**
+- **WiFi:** MediaTek MT7922 requires proprietary firmware blobs (`linux-firmware` package)
+- **GPU:** AMD graphics need proprietary firmware for full functionality
+- **Bluetooth:** Modern Bluetooth chips require proprietary firmware
+- **Practical necessity:** Without nonguix, the laptop has no wireless connectivity
+- Laptop users expect "it just works" - nonguix delivers that
+
+**Code:** Uses `RunGuixSystemInit()` with time-machine + nonguix channel for `(kernel linux)` and `(firmware (list linux-firmware))`
+
+### When to Use Which Approach
+
+**Use Free Software Only (like Cloudzy):**
+- Virtual machines and VPS instances
+- Servers with Intel/Realtek NICs that have free drivers
+- Systems where hardware is known to work with `linux-libre`
+- Deployments where free software compliance is required
+
+**Use Nonguix (like Framework 13):**
+- Modern laptops (almost all need WiFi firmware)
+- Gaming systems (proprietary GPU drivers)
+- Workstations with recent AMD/Nvidia GPUs
+- Any system where wireless connectivity is essential
+
+**This is a feature, not a bug:** Having separate installers lets users make informed choices based on their hardware and values.
+
 ## 🧠 The Golden Rule: cow-store
 
 **Always run `herd start cow-store /mnt` before `guix system init`.**
