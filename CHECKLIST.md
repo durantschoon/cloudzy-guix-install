@@ -13,9 +13,85 @@ For implementation history and completed features, see:
 ## 🔄 Currently Working On
 
 **Testing cloudzy installer with latest improvements:**
-- 3-step kernel/initrd fix applied
-- Color-coded output with cycling headers
-- Enhanced manifest verification with Quick checksum view
+- ✅ 3-step kernel/initrd fix applied and tested
+- ✅ Color-coded output with cycling headers
+- ✅ Enhanced manifest verification with Quick checksum view
+- ✅ Improved swap creation error messages
+- ✅ Daemon startup timeout increased to 2 minutes
+- ✅ Graceful validation skip if daemon not responsive
+
+**Framework 13 Post-Install Process (2025-11-10):**
+
+Learned the complete workflow for getting Framework 13 fully operational after minimal install:
+
+1. **First Boot State:**
+   - Wired ethernet works (dhclient running)
+   - WiFi/Bluetooth NOT working (missing firmware)
+   - No NetworkManager (can't easily switch to WiFi)
+   - Guix 1.4.0 from ISO (old, doesn't support channel introductions)
+
+2. **Post-Install Steps Required:**
+   ```bash
+   # Step 1: First guix pull (upgrade Guix to support channel introductions)
+   guix pull
+   # Takes 10-30 min, upgrades to latest Guix from master
+
+   # Step 2: Create channels.scm with nonguix
+   mkdir -p ~/.config/guix
+   cat > ~/.config/guix/channels.scm <<'EOF'
+   (cons* (channel
+           (name 'nonguix)
+           (url "https://gitlab.com/nonguix/nonguix")
+           (branch "master")
+           (introduction
+            (make-channel-introduction
+             "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+             (openpgp-fingerprint
+              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+          %default-channels)
+   EOF
+
+   # Step 3: Second guix pull (add nonguix channel)
+   guix pull
+   # Takes 10-30 min, fetches nonguix
+
+   # Step 4: Fix PATH to use pulled Guix
+   export PATH="$HOME/.config/guix/current/bin:$PATH"
+   # Add to ~/.bashrc for persistence
+
+   # Step 5: Verify nonguix is available
+   guix describe  # Should show both guix and nonguix
+   guix show linux  # Should find non-free kernel
+   guix show linux-firmware  # Should find proprietary firmware
+
+   # Step 6: Add NetworkManager to /etc/config.scm
+   sudo nano /etc/config.scm
+   # Add (service network-manager-service-type) to services
+
+   # Step 7: Reconfigure system
+   sudo guix system reconfigure /etc/config.scm
+   # Takes 5-15 min, installs NetworkManager
+
+   # Step 8: Connect to WiFi
+   nmcli device wifi list
+   nmcli device wifi connect "SSID" password "password"
+
+   # Step 9: Run customize script
+   ~/guix-customize/customize
+   # Add desktop, packages, etc.
+   ```
+
+3. **Common Pitfalls:**
+   - **PATH issue:** `guix describe` shows old Guix if PATH not updated
+   - **Generation mismatch:** Pulled Guix is generation 2, system uses generation 1
+   - **Channel introduction required:** Old Guix 1.4.0 can't authenticate nonguix without upgrade
+   - **Two-step pull required:** Can't add nonguix until after first pull upgrades Guix
+
+4. **Automation Opportunities:**
+   - Post-install script could automate the two-pull process
+   - Could pre-populate ~/.bashrc with correct PATH
+   - Could check for and fix PATH issues automatically
+   - Customize script should detect missing NetworkManager and offer to add it
 
 ---
 
