@@ -475,9 +475,9 @@ func EnsureGuixDaemonRunning() error {
 		exec.Command("guix-daemon", "--build-users-group=guixbuild").Start()
 	}
 
-	// Wait for daemon to become responsive (up to 60 seconds)
+	// Wait for daemon to become responsive (up to 2 minutes for VPS systems)
 	fmt.Println("Waiting for daemon to become responsive...")
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 40; i++ {  // Increased from 20 to 40 iterations (up to 2 minutes)
 		time.Sleep(3 * time.Second)
 
 		// Check if process is running
@@ -485,7 +485,7 @@ func EnsureGuixDaemonRunning() error {
 		statusOutput, _ := statusCmd.Output()
 
 		if !strings.Contains(string(statusOutput), "It is started") && !strings.Contains(string(statusOutput), "It is enabled") {
-			fmt.Printf("  Daemon process not started yet... (%d/20)\n", i+1)
+			fmt.Printf("  Daemon process not started yet... (%d/40)\n", i+1)
 			continue
 		}
 
@@ -497,7 +497,7 @@ func EnsureGuixDaemonRunning() error {
 			return nil
 		}
 
-		fmt.Printf("  Daemon running but not responsive yet... (%d/20)\n", i+1)
+		fmt.Printf("  Daemon running but not responsive yet... (%d/40)\n", i+1)
 	}
 
 	// Final check
@@ -505,7 +505,7 @@ func EnsureGuixDaemonRunning() error {
 	finalOutput, err := statusCmd.Output()
 	if err != nil || (!strings.Contains(string(finalOutput), "It is started") && !strings.Contains(string(finalOutput), "It is enabled")) {
 		fmt.Println()
-		fmt.Println("[ERROR] Failed to start guix-daemon after 60 seconds")
+		fmt.Println("[ERROR] Failed to start guix-daemon after 2 minutes")
 		fmt.Println()
 		fmt.Println("Please manually run these commands:")
 		fmt.Println("  herd start guix-daemon")
@@ -515,7 +515,7 @@ func EnsureGuixDaemonRunning() error {
 		fmt.Println("Once the daemon is running and responsive, continue with:")
 		fmt.Println("  guix system init /mnt/etc/config.scm /mnt")
 		fmt.Println()
-		return fmt.Errorf("guix-daemon failed to become responsive after 60 seconds")
+		return fmt.Errorf("guix-daemon failed to become responsive after 2 minutes")
 	}
 
 	fmt.Println()
