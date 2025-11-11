@@ -376,34 +376,49 @@ func CreateSwapFile(swapSize string) error {
 		os.Remove("/mnt/swapfile")
 	}
 
-	fmt.Printf("Creating %s swap file...\n", swapSize)
+	fmt.Printf("Creating %s swap file at /mnt/swapfile...\n", swapSize)
 
-	// Try fallocate first, fall back to dd
+	// Try fallocate first (fast), fall back to dd (slower but more compatible)
 	cmd := exec.Command("fallocate", "-l", fmt.Sprintf("%d", sizeBytes), "/mnt/swapfile")
-	if err := cmd.Run(); err != nil {
-		fmt.Println("fallocate failed, using dd instead...")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("  [INFO] fallocate not supported on this filesystem (normal for some VPS): %s\n", strings.TrimSpace(string(output)))
+		fmt.Println("  Falling back to dd (this may take 1-2 minutes)...")
 		sizeMB := sizeBytes / 1024 / 1024
-		cmd = exec.Command("dd", "if=/dev/zero", "of=/mnt/swapfile", "bs=1M", fmt.Sprintf("count=%d", sizeMB))
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to create swap file: %w", err)
+		ddCmd := exec.Command("dd", "if=/dev/zero", "of=/mnt/swapfile", "bs=1M", fmt.Sprintf("count=%d", sizeMB), "status=progress")
+		ddCmd.Stdout = os.Stdout
+		ddCmd.Stderr = os.Stderr
+		if err := ddCmd.Run(); err != nil {
+			return fmt.Errorf("CRITICAL: dd failed to create swap file: %w", err)
 		}
+		fmt.Println("  [OK] Swap file created with dd")
+	} else {
+		fmt.Println("  [OK] Swap file created with fallocate")
 	}
 
+	fmt.Println("  Setting secure permissions (0600)...")
 	if err := os.Chmod("/mnt/swapfile", 0600); err != nil {
-		return err
+		return fmt.Errorf("failed to set permissions on swapfile: %w", err)
 	}
+	fmt.Println("  [OK] Permissions set to 0600")
 
+	fmt.Println("  Formatting as swap...")
 	if err := RunCommand("mkswap", "/mnt/swapfile"); err != nil {
-		return err
+		return fmt.Errorf("mkswap failed: %w", err)
 	}
+	fmt.Println("  [OK] Swap formatted")
 
+	fmt.Println("  Activating swap...")
 	if err := RunCommand("swapon", "/mnt/swapfile"); err != nil {
-		return err
+		return fmt.Errorf("swapon failed (check permissions and filesystem): %w", err)
 	}
+	fmt.Println("  [OK] Swap activated")
 
-	fmt.Println("Verify swap is active and memory is available:")
+	fmt.Println()
+	fmt.Println("Swap is now active:")
 	RunCommand("swapon", "--show")
 	RunCommand("free", "-h")
+	fmt.Println()
 
 	return nil
 }
