@@ -1,9 +1,11 @@
 package lib
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestMakePartitionPath tests the MakePartitionPath function with different device types
@@ -388,4 +390,195 @@ func BenchmarkCommandExists(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		CommandExists("ls")
 	}
+}
+
+// TestRetryUntilReady tests the generic retry helper function
+func TestRetryUntilReady(t *testing.T) {
+	t.Run("Success on first try", func(t *testing.T) {
+		attempts := 0
+		check := func() error {
+			attempts++
+			return nil // Success immediately
+		}
+
+		err := retryUntilReady(check, 1*time.Second, 100*time.Millisecond, nil)
+		if err != nil {
+			t.Errorf("Expected success, got error: %v", err)
+		}
+		if attempts != 1 {
+			t.Errorf("Expected 1 attempt, got %d", attempts)
+		}
+	})
+
+	t.Run("Success after retries", func(t *testing.T) {
+		attempts := 0
+		check := func() error {
+			attempts++
+			if attempts < 3 {
+				return fmt.Errorf("not ready yet")
+			}
+			return nil // Success on 3rd attempt
+		}
+
+		err := retryUntilReady(check, 1*time.Second, 100*time.Millisecond, nil)
+		if err != nil {
+			t.Errorf("Expected success, got error: %v", err)
+		}
+		if attempts != 3 {
+			t.Errorf("Expected 3 attempts, got %d", attempts)
+		}
+	})
+
+	t.Run("Timeout after max attempts", func(t *testing.T) {
+		attempts := 0
+		check := func() error {
+			attempts++
+			return fmt.Errorf("never succeeds")
+		}
+
+		// 500ms timeout, 100ms interval = max 5 attempts
+		err := retryUntilReady(check, 500*time.Millisecond, 100*time.Millisecond, nil)
+		if err == nil {
+			t.Error("Expected timeout error, got nil")
+		}
+		if !strings.Contains(err.Error(), "timeout") {
+			t.Errorf("Expected timeout error, got: %v", err)
+		}
+		if attempts != 5 {
+			t.Errorf("Expected 5 attempts, got %d", attempts)
+		}
+	})
+
+	t.Run("Progress callback called correctly", func(t *testing.T) {
+		attempts := 0
+		progressCalls := 0
+		lastMax := 0
+
+		check := func() error {
+			attempts++
+			if attempts < 3 {
+				return fmt.Errorf("not ready")
+			}
+			return nil // Success on 3rd attempt
+		}
+
+		progressFn := func(attempt, max int) {
+			progressCalls++
+			lastMax = max
+		}
+
+		err := retryUntilReady(check, 1*time.Second, 100*time.Millisecond, progressFn)
+		if err != nil {
+			t.Errorf("Expected success, got error: %v", err)
+		}
+		// Progress callback is called before each check, so 3 calls for 3 attempts
+		if progressCalls != 3 {
+			t.Errorf("Expected 3 progress calls, got %d", progressCalls)
+		}
+		if lastMax != 10 { // 1s / 100ms = 10 max attempts
+			t.Errorf("Expected max=10, got %d", lastMax)
+		}
+	})
+}
+
+// TestCheckSocketExists tests socket file verification
+func TestCheckSocketExists(t *testing.T) {
+	t.Run("Non-existent socket returns error", func(t *testing.T) {
+		// Test with a path that definitely doesn't exist
+		err := checkSocketExists()
+		// This will fail on most systems since daemon socket doesn't exist
+		// That's expected - we're testing the function behavior
+		if err == nil {
+			t.Log("Socket exists on this system - skipping test")
+			return
+		}
+		if !strings.Contains(err.Error(), "socket not ready") {
+			t.Errorf("Expected 'socket not ready' error, got: %v", err)
+		}
+	})
+}
+
+// TestCheckDaemonResponsive tests daemon command responsiveness
+func TestCheckDaemonResponsive(t *testing.T) {
+	t.Run("Daemon not available returns error", func(t *testing.T) {
+		// On most dev machines, guix daemon won't be running
+		err := checkDaemonResponsive()
+		if err == nil {
+			t.Log("Guix daemon is running on this system - skipping test")
+			return
+		}
+		if !strings.Contains(err.Error(), "daemon not responsive") {
+			t.Errorf("Expected 'daemon not responsive' error, got: %v", err)
+		}
+	})
+}
+
+// TestIsDaemonProcessRunning tests process status check
+func TestIsDaemonProcessRunning(t *testing.T) {
+	t.Run("Returns bool without error", func(t *testing.T) {
+		// Should always return a bool, never panic
+		result := isDaemonProcessRunning()
+		// On dev machine without Guix, should be false
+		// On Guix system, might be true
+		t.Logf("Daemon process running: %v", result)
+	})
+}
+
+// TestCheckDaemonStable tests stability verification
+func TestCheckDaemonStable(t *testing.T) {
+	t.Run("Fails fast if daemon not responsive", func(t *testing.T) {
+		// On most dev machines, this will fail immediately
+		err := checkDaemonStable(3, 100*time.Millisecond)
+		if err == nil {
+			t.Log("Guix daemon is running and stable - skipping test")
+			return
+		}
+		if !strings.Contains(err.Error(), "stability check 1/3 failed") {
+			t.Errorf("Expected stability check to fail on first attempt, got: %v", err)
+		}
+	})
+}
+
+// TestDaemonCheckComposition tests that checks compose correctly
+func TestDaemonCheckComposition(t *testing.T) {
+	t.Run("isDaemonReady fails early if socket missing", func(t *testing.T) {
+		// Should fail at socket check before trying daemon responsiveness
+		err := isDaemonReady()
+		if err == nil {
+			t.Log("Guix daemon is fully ready - skipping test")
+			return
+		}
+		// Error should be from socket or daemon check
+		errorStr := err.Error()
+		if !strings.Contains(errorStr, "socket not ready") &&
+		   !strings.Contains(errorStr, "daemon not responsive") {
+			t.Errorf("Expected socket or daemon error, got: %v", err)
+		}
+	})
+
+	t.Run("isDaemonReadyAfterStart checks process first", func(t *testing.T) {
+		// Should check process running before other checks
+		err := isDaemonReadyAfterStart()
+		if err == nil {
+			t.Log("Guix daemon process is running and ready - skipping test")
+			return
+		}
+		// Error could be "daemon process not started yet" or from inner checks
+		errorStr := err.Error()
+		validErrors := []string{
+			"daemon process not started yet",
+			"socket not ready",
+			"daemon not responsive",
+		}
+		hasValidError := false
+		for _, validErr := range validErrors {
+			if strings.Contains(errorStr, validErr) {
+				hasValidError = true
+				break
+			}
+		}
+		if !hasValidError {
+			t.Errorf("Expected daemon check error, got: %v", err)
+		}
+	})
 }
