@@ -834,18 +834,17 @@ func ValidateGuixConfig(configPath string) error {
 	RunCommand("tail", "-10", configPath)
 	fmt.Println()
 	
-	// First check if daemon is responsive
+	// First check if daemon is responsive using robust check
 	fmt.Println("Checking daemon connectivity...")
-	testCmd := exec.Command("guix", "build", "--version")
-	if err := testCmd.Run(); err != nil {
+	if err := isDaemonReady(); err != nil {
 		fmt.Println()
-		fmt.Println("[WARN] Daemon is not responsive yet")
+		fmt.Println("[WARN] Daemon is not fully ready yet")
 		fmt.Println("       Skipping config validation - will validate during system init")
 		fmt.Println("       If system init fails, run 'herd start guix-daemon' and retry")
 		fmt.Println()
 		return nil  // Skip validation gracefully
 	}
-	fmt.Println("[OK] Daemon is responsive")
+	fmt.Println("[OK] Daemon is responsive and stable")
 	
 	// Try to load the config to check for syntax errors and unbound variables
 	fmt.Println("Validating config syntax and checking for unbound variables...")
