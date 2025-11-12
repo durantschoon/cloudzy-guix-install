@@ -364,27 +364,34 @@ If the installer is interrupted or fails:
 - System init never starts
 - More common on Cloudzy VPS than bare metal (Framework 13)
 
-**Root Cause**: guix-daemon is slow to become responsive on VPS systems, race condition between check and actual use
+**Root Cause**: Race condition in daemon startup verification - daemon process runs but socket file not ready, or connection isn't stable yet
 
-**Implemented Solutions** (as of 2025-11-10):
+**✅ FIXED** (commit 4a50e50, 2025-11-11):
 
-1. **Increased wait time** (commit 44be9d8):
-   - Wait up to 2 minutes (was 60 seconds)
-   - 40 iterations × 3 seconds each
-   - Tests responsiveness with `guix build --version`
-   - Shows progress: "Waiting... (5/40)"
+The installer now includes robust daemon startup verification:
 
-2. **Graceful validation skip** (commit 059f1dd):
-   - If daemon not responsive, skip validation with warning
-   - Don't block installation - system init will validate anyway
-   - Allows installation to proceed to system build step
+1. **Socket file verification**:
+   - Checks `test -S /var/guix/daemon-socket/socket` before testing daemon
+   - Prevents false positives when process runs but socket not ready
+   - Critical for VPS systems with slower initialization
 
-**Still investigating** (2025-11-10):
-- Why VPS daemon slower than bare metal
-- Why daemon check passes but then fails immediately
-- May need socket file check: `test -S /var/guix/daemon-socket/socket`
-- May need to check daemon process directly: `pgrep -x guix-daemon`
-- Consider manual daemon start if herd fails: `guix-daemon --build-users-group=guixbuild &`
+2. **Stability verification**:
+   - After first successful `guix build --version`, waits 5 seconds
+   - Tests 3 more times (2 seconds apart) to ensure stable connection
+   - Prevents race conditions where daemon responds once but isn't truly ready
+
+3. **Extended wait time**:
+   - Up to 2 minutes wait (40 iterations × 3 seconds)
+   - Shows clear progress: "Waiting... (5/40)"
+   - Separate messages for socket, process, and responsiveness checks
+
+4. **Applied to both code paths**:
+   - When daemon is already running (early check)
+   - When daemon is freshly started (main startup loop)
+
+**Previous Solutions** (still in place):
+- Increased wait time (commit 44be9d8)
+- Graceful validation skip (commit 059f1dd)
 
 **Manual fix if needed:**
 ```bash
