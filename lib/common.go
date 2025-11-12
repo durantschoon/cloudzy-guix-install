@@ -438,10 +438,30 @@ func EnsureGuixDaemonRunning() error {
 
 		// Poll for responsiveness (daemon may be starting up)
 		for i := 0; i < 10; i++ {
+			// Check socket file first
+			socketCmd := exec.Command("test", "-S", "/var/guix/daemon-socket/socket")
+			if err := socketCmd.Run(); err != nil {
+				fmt.Printf("  Socket file not ready yet... (%d/10)\n", i+1)
+				time.Sleep(3 * time.Second)
+				continue
+			}
+
 			testCmd := exec.Command("guix", "build", "--version")
 			if err := testCmd.Run(); err == nil {
-				fmt.Println("[OK] guix-daemon is responsive and ready")
-				return nil
+				// Verify stability with 3 quick tests
+				stable := true
+				for j := 0; j < 3; j++ {
+					time.Sleep(2 * time.Second)
+					testCmd := exec.Command("guix", "build", "--version")
+					if err := testCmd.Run(); err != nil {
+						stable = false
+						break
+					}
+				}
+				if stable {
+					fmt.Println("[OK] guix-daemon is responsive and stable")
+					return nil
+				}
 			}
 			if i == 0 {
 				fmt.Println("Daemon is starting up, waiting for it to become responsive...")
@@ -489,12 +509,41 @@ func EnsureGuixDaemonRunning() error {
 			continue
 		}
 
-		// Process is running, check if responsive
+		// Check if socket file exists
+		socketCmd := exec.Command("test", "-S", "/var/guix/daemon-socket/socket")
+		if err := socketCmd.Run(); err != nil {
+			fmt.Printf("  Socket file not ready yet... (%d/40)\n", i+1)
+			continue
+		}
+
+		// Process is running and socket exists, check if responsive
 		testCmd := exec.Command("guix", "build", "--version")
 		if err := testCmd.Run(); err == nil {
-			fmt.Println("[OK] guix-daemon is now responsive and ready")
-			fmt.Println()
-			return nil
+			// Daemon responded once, but let's verify it's stable
+			// Wait a bit and test again to avoid race conditions
+			fmt.Println("[INFO] Daemon responded, verifying stability...")
+			time.Sleep(5 * time.Second)
+
+			// Test 3 times to ensure daemon is stable
+			stable := true
+			for j := 0; j < 3; j++ {
+				testCmd := exec.Command("guix", "build", "--version")
+				if err := testCmd.Run(); err != nil {
+					fmt.Printf("  Stability check %d/3 failed, continuing to wait...\n", j+1)
+					stable = false
+					break
+				}
+				fmt.Printf("  Stability check %d/3 passed\n", j+1)
+				if j < 2 {
+					time.Sleep(2 * time.Second)
+				}
+			}
+
+			if stable {
+				fmt.Println("[OK] guix-daemon is now responsive and stable")
+				fmt.Println()
+				return nil
+			}
 		}
 
 		fmt.Printf("  Daemon running but not responsive yet... (%d/40)\n", i+1)
