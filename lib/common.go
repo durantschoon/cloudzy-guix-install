@@ -423,6 +423,109 @@ func CreateSwapFile(swapSize string) error {
 	return nil
 }
 
+// DaemonCheck is a function type for daemon readiness checks
+type DaemonCheck func() error
+
+// checkSocketExists verifies the daemon socket file exists
+func checkSocketExists() error {
+	cmd := exec.Command("test", "-S", "/var/guix/daemon-socket/socket")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("socket not ready")
+	}
+	return nil
+}
+
+// checkDaemonResponsive verifies the daemon responds to commands
+func checkDaemonResponsive() error {
+	cmd := exec.Command("guix", "build", "--version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("daemon not responsive")
+	}
+	return nil
+}
+
+// checkDaemonStable verifies daemon connection is stable over multiple tests
+func checkDaemonStable(stabilityTests int, interval time.Duration) error {
+	for i := 0; i < stabilityTests; i++ {
+		if i > 0 {
+			time.Sleep(interval)
+		}
+		if err := checkDaemonResponsive(); err != nil {
+			return fmt.Errorf("stability check %d/%d failed", i+1, stabilityTests)
+		}
+		fmt.Printf("  Stability check %d/%d passed\n", i+1, stabilityTests)
+	}
+	return nil
+}
+
+// isDaemonReady performs complete daemon readiness check
+func isDaemonReady() error {
+	// Check socket exists
+	if err := checkSocketExists(); err != nil {
+		return err
+	}
+
+	// Check daemon responds
+	if err := checkDaemonResponsive(); err != nil {
+		return err
+	}
+
+	// Stabilization wait before testing stability
+	fmt.Println("[INFO] Daemon responded, verifying stability...")
+	time.Sleep(5 * time.Second)
+
+	// Verify stability with multiple consecutive tests
+	if err := checkDaemonStable(3, 2*time.Second); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// isDaemonReadyAfterStart checks process, socket, and stability after daemon start
+func isDaemonReadyAfterStart() error {
+	// First check if process is running
+	if !isDaemonProcessRunning() {
+		return fmt.Errorf("daemon process not started yet")
+	}
+
+	// Then do complete readiness check
+	return isDaemonReady()
+}
+
+// retryUntilReady retries a check function until it succeeds or times out
+// This is a generic retry helper that can be used for any similar waiting scenario
+func retryUntilReady(check DaemonCheck, timeout time.Duration, pollInterval time.Duration, progressFn func(int, int)) error {
+	maxAttempts := int(timeout / pollInterval)
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		time.Sleep(pollInterval)
+
+		// Call progress callback if provided
+		if progressFn != nil {
+			progressFn(attempt+1, maxAttempts)
+		}
+
+		// Try the check
+		if err := check(); err == nil {
+			return nil // Success!
+		}
+	}
+
+	return fmt.Errorf("timeout after %v", timeout)
+}
+
+// isDaemonProcessRunning checks if daemon process is running via herd
+func isDaemonProcessRunning() bool {
+	cmd := exec.Command("herd", "status", "guix-daemon")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(output), "It is started") ||
+	       strings.Contains(string(output), "It is enabled")
+}
+
 // EnsureGuixDaemonRunning ensures the guix-daemon is running
 // NOTE: Do NOT use bind mounts! cow-store handles store writes correctly.
 // Bind mounting /mnt/gnu to /gnu shadows the live system's store and breaks guix.
@@ -430,44 +533,26 @@ func EnsureGuixDaemonRunning() error {
 	PrintSectionHeader("Ensuring guix-daemon is running")
 
 	// First, check if daemon is already running and responsive
-	cmd := exec.Command("herd", "status", "guix-daemon")
-	output, err := cmd.Output()
-
-	if err == nil && (strings.Contains(string(output), "It is started") || strings.Contains(string(output), "It is enabled")) {
+	if isDaemonProcessRunning() {
 		fmt.Println("guix-daemon is already running, checking if responsive...")
 
-		// Poll for responsiveness (daemon may be starting up)
-		for i := 0; i < 10; i++ {
-			// Check socket file first
-			socketCmd := exec.Command("test", "-S", "/var/guix/daemon-socket/socket")
-			if err := socketCmd.Run(); err != nil {
-				fmt.Printf("  Socket file not ready yet... (%d/10)\n", i+1)
-				time.Sleep(3 * time.Second)
-				continue
-			}
+		// Use functional retry approach with 30 second timeout
+		err := retryUntilReady(
+			isDaemonReady,
+			30*time.Second,
+			3*time.Second,
+			func(attempt, maxAttempts int) {
+				if attempt == 1 {
+					fmt.Println("Daemon is starting up, waiting for it to become responsive...")
+				}
+				// Only show waiting message if socket or basic check fails
+				// isDaemonReady will show detailed stability check progress
+			},
+		)
 
-			testCmd := exec.Command("guix", "build", "--version")
-			if err := testCmd.Run(); err == nil {
-				// Verify stability with 3 quick tests
-				stable := true
-				for j := 0; j < 3; j++ {
-					time.Sleep(2 * time.Second)
-					testCmd := exec.Command("guix", "build", "--version")
-					if err := testCmd.Run(); err != nil {
-						stable = false
-						break
-					}
-				}
-				if stable {
-					fmt.Println("[OK] guix-daemon is responsive and stable")
-					return nil
-				}
-			}
-			if i == 0 {
-				fmt.Println("Daemon is starting up, waiting for it to become responsive...")
-			}
-			fmt.Printf("  Waiting... (%d/10)\n", i+1)
-			time.Sleep(3 * time.Second)
+		if err == nil {
+			fmt.Println("[OK] guix-daemon is responsive and stable")
+			return nil
 		}
 
 		// If still not responsive after waiting, we'll restart it below
@@ -497,56 +582,20 @@ func EnsureGuixDaemonRunning() error {
 
 	// Wait for daemon to become responsive (up to 2 minutes for VPS systems)
 	fmt.Println("Waiting for daemon to become responsive...")
-	for i := 0; i < 40; i++ {  // Increased from 20 to 40 iterations (up to 2 minutes)
-		time.Sleep(3 * time.Second)
+	err := retryUntilReady(
+		isDaemonReadyAfterStart,
+		2*time.Minute,
+		3*time.Second,
+		func(attempt, maxAttempts int) {
+			// Progress indicator - only show if we're still waiting
+			// The check functions will show detailed messages when ready
+		},
+	)
 
-		// Check if process is running
-		statusCmd := exec.Command("herd", "status", "guix-daemon")
-		statusOutput, _ := statusCmd.Output()
-
-		if !strings.Contains(string(statusOutput), "It is started") && !strings.Contains(string(statusOutput), "It is enabled") {
-			fmt.Printf("  Daemon process not started yet... (%d/40)\n", i+1)
-			continue
-		}
-
-		// Check if socket file exists
-		socketCmd := exec.Command("test", "-S", "/var/guix/daemon-socket/socket")
-		if err := socketCmd.Run(); err != nil {
-			fmt.Printf("  Socket file not ready yet... (%d/40)\n", i+1)
-			continue
-		}
-
-		// Process is running and socket exists, check if responsive
-		testCmd := exec.Command("guix", "build", "--version")
-		if err := testCmd.Run(); err == nil {
-			// Daemon responded once, but let's verify it's stable
-			// Wait a bit and test again to avoid race conditions
-			fmt.Println("[INFO] Daemon responded, verifying stability...")
-			time.Sleep(5 * time.Second)
-
-			// Test 3 times to ensure daemon is stable
-			stable := true
-			for j := 0; j < 3; j++ {
-				testCmd := exec.Command("guix", "build", "--version")
-				if err := testCmd.Run(); err != nil {
-					fmt.Printf("  Stability check %d/3 failed, continuing to wait...\n", j+1)
-					stable = false
-					break
-				}
-				fmt.Printf("  Stability check %d/3 passed\n", j+1)
-				if j < 2 {
-					time.Sleep(2 * time.Second)
-				}
-			}
-
-			if stable {
-				fmt.Println("[OK] guix-daemon is now responsive and stable")
-				fmt.Println()
-				return nil
-			}
-		}
-
-		fmt.Printf("  Daemon running but not responsive yet... (%d/40)\n", i+1)
+	if err == nil {
+		fmt.Println("[OK] guix-daemon is now responsive and stable")
+		fmt.Println()
+		return nil
 	}
 
 	// Final check
