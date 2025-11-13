@@ -431,10 +431,16 @@ See CUSTOMIZATION.md for more recipes and examples.
 
 **Solution:**
 
-1. Press `Ctrl+Alt+F2` for root console
+1. Switch to a text console: Press `Alt+F3` or `Alt+F4`
 2. Login as `root` (no password)
 3. Set user password: `passwd yourname`
-4. Return to normal login: `Ctrl+Alt+F1`
+4. Return to graphical login: Press `Alt+F7`
+
+**Note on virtual terminals:**
+- `Alt+F1`: ISO installer (original boot screen)
+- `Alt+F2`: Info page
+- `Alt+F3`, `Alt+F4`, `Alt+F5`, `Alt+F6`: Text consoles (useful for running background services like `python -m http.server`)
+- `Alt+F7`: Graphical login (if GUI installed)
 
 ### No Network After Boot
 
