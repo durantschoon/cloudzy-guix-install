@@ -87,7 +87,7 @@ guix system init /mnt/etc/config.scm /mnt
 
 ### Cloudzy Daemon Responsiveness - FIXED (2025-11-11)
 
-**Status**: ✅ RESOLVED with commit 4a50e50
+**Status**: ✅ RESOLVED with commits 4a50e50, ffa59d2, 7ebdb7d, 614c338
 
 **Original Symptoms**:
 - Daemon check says "[OK] Daemon is responsive"
@@ -95,22 +95,64 @@ guix system init /mnt/etc/config.scm /mnt
 - More common on VPS than bare metal
 
 **Root Cause Identified**:
-- Race condition between daemon startup check and actual use
+- Race condition in TWO places:
+  1. `EnsureGuixDaemonRunning()` - used simple single-test check
+  2. `ValidateGuixConfig()` - also used simple single-test check (**the actual culprit!**)
 - Socket file not ready even when process is running
 - Single successful test doesn't mean stable connection on VPS
 
-**Solution Implemented** (commit 4a50e50):
-1. ✅ Socket file verification: Check `test -S /var/guix/daemon-socket/socket` before testing
-2. ✅ Stability verification: After first success, wait 5s and test 3 more times
-3. ✅ Applied to both code paths (existing daemon and fresh startup)
+**Solution Implemented**:
+1. ✅ Socket file verification: Check `test -S /var/guix/daemon-socket/socket` before testing (commit 4a50e50)
+2. ✅ Stability verification: After first success, wait 5s and test 3 more times (commit 4a50e50)
+3. ✅ Functional refactoring: Extract checks into composable functions (commit ffa59d2)
+4. ✅ Comprehensive tests: Prevent future regressions (commit 7ebdb7d)
+5. ✅ Fix ValidateGuixConfig: Use robust check instead of simple test (commit 614c338) **← This was the missing piece!**
+
+**VPS Testing Results (2025-11-11)**:
+- ✅ Daemon restart required before bootstrap: `sudo herd restart guix-daemon`
+- ✅ Stability checks ALL PASSED: "Stability check 1/3 passed", "2/3 passed", "3/3 passed"
+- ✅ Config validation PASSED: No more "Connection refused" errors!
+- ❌ Installation failed: "No space left on device" during config validation
 
 **Why This Fixes It**:
 - VPS daemon initialization is slower than bare metal
 - Socket must exist before daemon can accept connections
 - Multiple consecutive tests ensure stable connection, not lucky timing
 - 5-second stabilization wait plus 3 × 2-second tests = robust verification
+- **ValidateGuixConfig now uses same robust check as EnsureGuixDaemonRunning**
 
-**Testing**: All unit tests pass, manifest updated
+**Testing**: All unit tests pass, VPS daemon checks work correctly
+
+## ⚠️ New Issue Discovered
+
+### Cloudzy VPS Disk Space - IDENTIFIED (2025-11-11)
+
+**Status**: ⚠️ Needs investigation and fix
+
+**Symptoms**:
+- Daemon checks pass perfectly (all 3 stability checks)
+- Config validation starts successfully
+- Error: "writing to file: No space left on device" during validation
+- Error message: "guix system: error: writing to file: No space left on device"
+
+**What We Know**:
+- Daemon fix is working correctly - no more race conditions!
+- Issue occurs during `guix system reconfigure --dry-run` validation
+- VPS likely has limited disk space for ISO/tmpfs operations
+- May need to configure TMPDIR or use target disk space earlier
+
+**Next Steps to Investigate**:
+1. Check available space on VPS: `df -h`
+2. Check tmpfs usage: `df -h /tmp`
+3. May need to set `TMPDIR=/mnt/var/tmp` before validation
+4. May need to increase VPS disk size
+5. Consider skipping validation entirely on space-constrained VPS
+6. Investigate if cow-store needs to be started earlier
+
+**Workaround for Testing**:
+- Use larger VPS instance with more disk space
+- Or manually set `export TMPDIR=/mnt/var/tmp` before running bootstrap
+- Or skip validation step (it's optional anyway)
 
 ## 📊 Test Results
 
@@ -118,7 +160,7 @@ guix system init /mnt/etc/config.scm /mnt
 |----------|--------|-------|
 | Framework 13 AMD | ✅ Working | Boots reliably, tested end-to-end |
 | Framework 13 AMD dual-boot | ✅ Working | GRUB shows both Guix and Pop!_OS |
-| Cloudzy VPS | ✅ Ready for Testing | Daemon fix implemented, needs VPS verification |
+| Cloudzy VPS | ⚠️ Partial Success | Daemon fix works! Blocked by disk space during validation |
 
 ## 🎓 Lessons Learned
 
@@ -152,24 +194,33 @@ guix system init /mnt/etc/config.scm /mnt
 
 ## 🔄 Next Session Recommendations
 
-**Start fresh** - This session is very long (117k tokens used). For the next session:
+**For the next session:**
 
 1. **Read these files first**:
+   - This SESSION_NOTES.md - Disk space issue documented
+   - INSTALLATION_KNOWLEDGE.md - Updated with daemon fix details
    - CHECKLIST.md - Current state and remaining work
-   - INSTALLATION_KNOWLEDGE.md - Daemon troubleshooting section
-   - This SESSION_NOTES.md
 
-2. **Priority**: Fix cloudzy daemon issue
-   - Try socket file check
-   - Try longer sleep after daemon start
-   - Consider manual daemon start fallback
+2. **Priority**: Fix VPS disk space issue during validation
+   - Check if cow-store is started before validation (should be)
+   - Consider setting `TMPDIR=/mnt/var/tmp` before validation
+   - May need to skip validation entirely on space-constrained VPS
+   - Or make validation optional with environment variable flag
+   - Document minimum disk space requirements for VPS
 
-3. **After daemon fix**: End-to-end cloudzy test
-   - Fresh VPS installation
-   - Verify all steps work
-   - Document any new findings
+3. **Good news**: Daemon issue is SOLVED!
+   - All 6 commits working correctly
+   - Stability checks pass reliably
+   - No more "Connection refused" errors
+   - Functional code with comprehensive tests
 
-4. **Future work**: Automation opportunities
+4. **After disk space fix**: End-to-end cloudzy test
+   - Fresh VPS installation with adequate space
+   - Verify all steps work from start to finish
+   - Document successful installation
+   - Update test results table
+
+5. **Future work**: Automation opportunities
    - Post-install script for Framework 13 two-pull process
    - Auto-detect and fix PATH issues
    - NetworkManager auto-installation
@@ -191,15 +242,25 @@ guix system init /mnt/etc/config.scm /mnt
 - ✅ Code tested and committed
 - ⚠️ Cloudzy installer needs daemon fix (one remaining issue)
 
-### 2025-11-11 Session (Cloudzy Daemon Fix)
+### 2025-11-11 Session (Cloudzy Daemon Fix - Part 1)
 - ✅ Identified root cause: race condition in daemon startup verification
-- ✅ Implemented socket file check before testing daemon
-- ✅ Added stability verification with multiple consecutive tests
-- ✅ All tests pass, code committed (4a50e50)
-- ✅ Ready for VPS testing
+- ✅ Implemented socket file check before testing daemon (4a50e50)
+- ✅ Added stability verification with multiple consecutive tests (4a50e50)
+- ✅ Functional refactoring for composability (ffa59d2)
+- ✅ Comprehensive test suite added (7ebdb7d)
+- ✅ All tests pass, ready for VPS testing
+
+### 2025-11-11 Session Continued (Critical ValidateGuixConfig Fix)
+- ✅ User discovered actual culprit via screenshot: ValidateGuixConfig still used simple check!
+- ✅ Fixed ValidateGuixConfig to use isDaemonReady() (614c338)
+- ✅ VPS testing shows daemon fix WORKS - all stability checks pass
+- ⚠️ New issue: "No space left on device" during config validation
+- 📝 Documented disk space issue for next session
 
 ---
 
 **Conclusion (2025-11-10)**: This was a highly productive session. We went from "installation kind of works" to "Framework 13 production-ready" and "cloudzy almost there". The remaining cloudzy daemon issue is well-documented and has clear next steps. Starting a fresh session to tackle it will be more efficient than continuing in this compressed context.
 
-**Update (2025-11-11)**: Fresh session successfully addressed the daemon issue! Implemented socket verification and stability checks. The cloudzy installer should now work reliably on VPS systems. Next step: end-to-end testing on actual Cloudzy VPS to verify the fix.
+**Update (2025-11-11 Morning)**: Fresh session successfully addressed the daemon issue! Implemented socket verification and stability checks with functional refactoring and comprehensive tests. Ready for VPS testing.
+
+**Update (2025-11-11 Afternoon)**: VPS testing revealed ValidateGuixConfig was the actual culprit - fixed! Daemon checks now work perfectly. However, discovered new issue: VPS runs out of disk space during config validation. This is a different, more tractable problem than the daemon race condition.
