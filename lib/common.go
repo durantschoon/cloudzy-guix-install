@@ -1216,100 +1216,38 @@ func RunGuixSystemInitFreeSoftware() error {
 	if err := EnsureGuixDaemonRunning(); err != nil {
 		return fmt.Errorf("failed to ensure guix-daemon is running: %w", err)
 	}
-	
+
 	// Validate config after daemon is confirmed running
 	configPath := "/mnt/etc/config.scm"
 	if err := ValidateGuixConfig(configPath); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
-	
+
 	// Setup GRUB EFI if needed
 	if err := SetupGRUBEFI(); err != nil {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
 	}
-	
-	// WORKAROUND: guix system init has a bug where it doesn't copy kernel/initrd to /boot
-	// Solution: Build the system first, manually copy kernel files, then run init
-	// This affects both nonguix AND free software installs
 
-	PrintSectionHeader("Building Guix System (Free Software)")
-	fmt.Println("Step 1/3: Building system closure (includes kernel)")
-	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
+	// NOTE: Free software installs (VPS, servers) use standard guix system init
+	// The 3-step kernel/initrd workaround is only needed for nonguix installs
+	// where time-machine creates different store structures
+
+	PrintSectionHeader("Installing Guix System (Free Software)")
+	fmt.Println("Running guix system init /mnt/etc/config.scm /mnt")
 	fmt.Println()
-	fmt.Println("You should see:")
-	fmt.Println("  1. Downloading/building packages (free software only)")
-	fmt.Println("  2. Final output: /gnu/store/...-system")
+	fmt.Println("This will:")
+	fmt.Println("  1. Build system packages (if not already built)")
+	fmt.Println("  2. Copy kernel and initrd to /boot")
+	fmt.Println("  3. Install GRUB bootloader")
+	fmt.Println("  4. Copy system configuration")
+	fmt.Println()
+	fmt.Println("Estimated time: 5-30 minutes depending on substitutes")
 	fmt.Println()
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
 	fmt.Println()
 
-	// Step 1: Build the system (creates complete system in /gnu/store)
-	if err := RunCommandWithSpinner("guix", "system", "build", "/mnt/etc/config.scm"); err != nil {
-		return fmt.Errorf("guix system build failed: %w", err)
-	}
-
-	PrintSectionHeader("Copying Kernel Files")
-	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
-	fmt.Println("(Workaround for guix system init bug)")
-	fmt.Println()
-
-	// Step 2: Find the built system and copy kernel/initrd to /boot
-	cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to find built system: %w", err)
-	}
-	systemPath := strings.TrimSpace(string(output))
-	if systemPath == "" {
-		return fmt.Errorf("no system found in /gnu/store")
-	}
-
-	fmt.Printf("Found built system: %s\n", systemPath)
-
-	// Copy kernel
-	kernelSrc := filepath.Join(systemPath, "kernel")
-	if _, err := os.Stat(kernelSrc); err != nil {
-		return fmt.Errorf("kernel not found in built system: %w", err)
-	}
-
-	kernelDest := "/mnt/boot/vmlinuz"
-	if err := exec.Command("cp", kernelSrc, kernelDest).Run(); err != nil {
-		return fmt.Errorf("failed to copy kernel: %w", err)
-	}
-	fmt.Printf("✓ Copied kernel: %s -> %s\n", kernelSrc, kernelDest)
-
-	// Copy initrd
-	initrdSrc := filepath.Join(systemPath, "initrd")
-	if _, err := os.Stat(initrdSrc); err != nil {
-		return fmt.Errorf("initrd not found in built system: %w", err)
-	}
-
-	initrdDest := "/mnt/boot/initrd"
-	if err := exec.Command("cp", initrdSrc, initrdDest).Run(); err != nil {
-		return fmt.Errorf("failed to copy initrd: %w", err)
-	}
-	fmt.Printf("✓ Copied initrd: %s -> %s\n", initrdSrc, initrdDest)
-
-	// Create the current-system symlink
-	if err := os.Remove("/mnt/run/current-system"); err != nil && !os.IsNotExist(err) {
-		fmt.Printf("Warning: failed to remove old current-system symlink: %v\n", err)
-	}
-	if err := os.MkdirAll("/mnt/run", 0755); err != nil {
-		return fmt.Errorf("failed to create /mnt/run: %w", err)
-	}
-	if err := os.Symlink(systemPath, "/mnt/run/current-system"); err != nil {
-		return fmt.Errorf("failed to create current-system symlink: %w", err)
-	}
-	fmt.Printf("✓ Created symlink: /mnt/run/current-system -> %s\n", systemPath)
-	fmt.Println()
-
-	PrintSectionHeader("Installing Bootloader")
-	fmt.Println("Step 3/3: Running guix system init to install bootloader")
-	fmt.Println("(System already built, this should be quick)")
-	fmt.Println()
-
-	// Step 3: Run system init (should now just install bootloader since system is already built)
+	// Run system init with retries
 	maxRetries := 3
 	var lastErr error
 	for attempt := 1; attempt <= maxRetries; attempt++ {
