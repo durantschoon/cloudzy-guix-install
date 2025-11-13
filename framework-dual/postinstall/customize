@@ -44,12 +44,17 @@ add_networkmanager() {
   fi
 
   # Add NetworkManager service to services list
-  if grep -q "services %base-services" "$CONFIG_FILE"; then
+  # Note: config.scm uses %base-services (single %)
+  if grep -q "(services %base-services)" "$CONFIG_FILE"; then
     # Simple services list - replace with append
     sed -i 's|(services %base-services)|(services\n  (append\n   (list (service network-manager-service-type))\n   %base-services))|' "$CONFIG_FILE"
+  elif grep -q "(services (append" "$CONFIG_FILE"; then
+    # Already has append, add to existing list
+    sed -i '0,/(list /s|(list |(list (service network-manager-service-type)\n         |' "$CONFIG_FILE"
   else
-    # Already has append, add to list
-    sed -i 's|(list |(list (service network-manager-service-type)\n         |' "$CONFIG_FILE"
+    err "Could not find services definition in config.scm"
+    err "Please add NetworkManager manually"
+    return 1
   fi
 
   info "✓ NetworkManager service added"
@@ -74,12 +79,16 @@ add_ssh() {
   fi
 
   # Add SSH service to services list
-  if grep -q "services %base-services" "$CONFIG_FILE"; then
+  if grep -q "(services %base-services)" "$CONFIG_FILE"; then
     # Simple services list - replace with append
     sed -i 's|(services %base-services)|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services))|' "$CONFIG_FILE"
+  elif grep -q "(services (append" "$CONFIG_FILE"; then
+    # Already has append, add to existing list
+    sed -i '0,/(list /s|(list |(list (service openssh-service-type)\n         |' "$CONFIG_FILE"
   else
-    # Already has append, add to list
-    sed -i 's|(list |(list (service openssh-service-type)\n         |' "$CONFIG_FILE"
+    err "Could not find services definition in config.scm"
+    err "Please add SSH manually"
+    return 1
   fi
 
   info "✓ SSH service added"
@@ -121,12 +130,16 @@ add_desktop() {
   fi
 
   # Add desktop service
-  if grep -q "services %base-services" "$CONFIG_FILE"; then
+  if grep -q "(services %base-services)" "$CONFIG_FILE"; then
     # Simple services list
     sed -i "s|(services %base-services)|(services\n  (append\n   (list (service $service))\n   %base-services))|" "$CONFIG_FILE"
+  elif grep -q "(services (append" "$CONFIG_FILE"; then
+    # Already has append, add to existing list
+    sed -i "0,/(list /s|(list |(list (service $service)\n         |" "$CONFIG_FILE"
   else
-    # Already has append, add to list
-    sed -i "s|(list |(list (service $service)\n         |" "$CONFIG_FILE"
+    err "Could not find services definition in config.scm"
+    err "Please add desktop manually"
+    return 1
   fi
 
   info "✓ $desktop desktop added"
