@@ -491,7 +491,13 @@ guix system init /mnt/etc/config.scm /mnt
 
 ### Critical Bug: Missing Kernel/Initrd Files (FIXED 2025-11-08)
 
-**Issue**: `guix system init` had a bug where it would create a system generation but fail to copy kernel and initrd files to `/boot/`, leaving the system unbootable.
+**⚠️ IMPORTANT: This workaround is ONLY needed for Framework 13 (nonguix + time-machine) installations.**
+
+**For Cloudzy VPS and other free software installations**: Use standard `guix system init` - this bug does not affect them. See [Platform-Specific Design Decisions](#-free-software-vs-nonguix-platform-specific-design-decisions) section above.
+
+---
+
+**Issue**: When using `time-machine` with nonguix channel, `guix system init` creates a system generation but fails to copy kernel and initrd files to `/boot/`, leaving the system unbootable.
 
 **Symptoms**:
 - Installation appears to succeed without errors
@@ -499,7 +505,7 @@ guix system init /mnt/etc/config.scm /mnt
 - `/mnt/boot/vmlinuz*` and `/mnt/boot/initrd*` are MISSING
 - `/mnt/run/current-system` is a broken symlink
 
-**Root cause**: `guix system init` creates the system profile in `/gnu/store` but doesn't copy kernel/initrd to `/boot` as expected.
+**Root cause**: When using `time-machine` + nonguix, the store structure is different and `guix system init` doesn't copy kernel/initrd to `/boot` as expected.
 
 **✅ Solution (implemented in installer commit b956baf)**:
 
