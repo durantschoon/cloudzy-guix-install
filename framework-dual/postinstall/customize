@@ -27,6 +27,36 @@ backup_config() {
   info "Backed up config to: $backup_file"
 }
 
+# Add NetworkManager service
+add_networkmanager() {
+  msg "Adding NetworkManager Service"
+
+  if grep -q "network-manager-service-type" "$CONFIG_FILE"; then
+    warn "NetworkManager already configured"
+    return
+  fi
+
+  backup_config
+
+  # Add networking module if not present
+  if ! grep -q "(gnu services networking)" "$CONFIG_FILE"; then
+    sed -i '/^(use-modules/a\             (gnu services networking)' "$CONFIG_FILE"
+  fi
+
+  # Add NetworkManager service to services list
+  if grep -q "services %base-services" "$CONFIG_FILE"; then
+    # Simple services list - replace with append
+    sed -i 's|(services %base-services)|(services\n  (append\n   (list (service network-manager-service-type))\n   %base-services))|' "$CONFIG_FILE"
+  else
+    # Already has append, add to list
+    sed -i 's|(list |(list (service network-manager-service-type)\n         |' "$CONFIG_FILE"
+  fi
+
+  info "✓ NetworkManager service added"
+  info "After reconfigure, use: nmcli device wifi list"
+  info "                   and: nmcli device wifi connect SSID password PASSWORD"
+}
+
 # Add SSH service
 add_ssh() {
   msg "Adding SSH Service"
@@ -44,7 +74,13 @@ add_ssh() {
   fi
 
   # Add SSH service to services list
-  sed -i 's|(services %base-services)|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services))|' "$CONFIG_FILE"
+  if grep -q "services %base-services" "$CONFIG_FILE"; then
+    # Simple services list - replace with append
+    sed -i 's|(services %base-services)|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services))|' "$CONFIG_FILE"
+  else
+    # Already has append, add to list
+    sed -i 's|(list |(list (service openssh-service-type)\n         |' "$CONFIG_FILE"
+  fi
 
   info "✓ SSH service added"
   info "After reconfigure, SSH will be available on port 22"
@@ -207,7 +243,8 @@ main_menu() {
     echo "Platform: Framework 13 (Dual-boot with Pop!_OS)"
     echo "Current config: $CONFIG_FILE"
     echo ""
-    echo "Hardware Support:"
+    echo "CRITICAL FOR WIFI (do these first):"
+    echo "  0) Add NetworkManager service (required for WiFi connectivity)"
     echo "  4) Add Framework 13 hardware support (WiFi/BT firmware)"
     echo ""
     echo "Desktop Environment:"
@@ -231,11 +268,12 @@ main_menu() {
     echo "  v) View current config"
     echo "  q) Quit"
     echo ""
-    info "Tip: Start with option 4 (WiFi firmware) to get network connectivity"
+    info "Tip: Run option 0 and 4, then 'r' to reconfigure and get WiFi working"
     echo ""
     read -r -p "Select option: " choice
 
     case "$choice" in
+      0) add_networkmanager; read -p "Press Enter to continue..." ;;
       1) add_ssh; read -p "Press Enter to continue..." ;;
       2) add_desktop; read -p "Press Enter to continue..." ;;
       3) add_packages; read -p "Press Enter to continue..." ;;
