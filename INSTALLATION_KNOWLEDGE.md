@@ -17,6 +17,13 @@ This document captures critical lessons learned from real-world Guix OS installa
 
 **Code:** Uses `RunGuixSystemInitFreeSoftware()` - standard `guix system init` without time-machine or nonguix channel
 
+**Installation approach:**
+- Single-step: `guix system init --fallback /mnt/etc/config.scm /mnt`
+- No kernel/initrd workaround needed
+- Uses Guix's built-in kernel copying logic
+- Simpler, more reliable for VPS/servers
+- **Key insight:** Free software installs don't need special handling
+
 ### Framework 13 Installer - Requires Nonguix
 
 **Why nonguix is mandatory:**
@@ -27,6 +34,13 @@ This document captures critical lessons learned from real-world Guix OS installa
 - Laptop users expect "it just works" - nonguix delivers that
 
 **Code:** Uses `RunGuixSystemInit()` with time-machine + nonguix channel for `(kernel linux)` and `(firmware (list linux-firmware))`
+
+**Installation approach:**
+- Three-step workaround needed (due to kernel/initrd bug with time-machine):
+  1. Build: `guix time-machine -C channels.scm -- system build /mnt/etc/config.scm`
+  2. Copy: Manually copy kernel/initrd from `/gnu/store/*-system/` to `/mnt/boot/`
+  3. Init: `guix time-machine -C channels.scm -- system init /mnt/etc/config.scm /mnt`
+- **Key insight:** time-machine + nonguix creates different store structure requiring manual kernel copy
 
 ### When to Use Which Approach
 
