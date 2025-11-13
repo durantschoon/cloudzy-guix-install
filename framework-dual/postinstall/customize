@@ -237,7 +237,8 @@ reconfigure() {
 # Main menu
 main_menu() {
   while true; do
-    clear
+    # Clear screen if clear command is available, otherwise just print separator
+    command -v clear >/dev/null 2>&1 && clear || printf "\n\n========================================\n\n"
     msg "Framework 13 Laptop Customization Tool"
     echo ""
     echo "Platform: Framework 13 (Dual-boot with Pop!_OS)"
@@ -283,8 +284,31 @@ main_menu() {
       d) source "$(dirname "$0")/../../postinstall/recipes/add-development.sh" && add_development; read -p "Press Enter to continue..." ;;
       f) source "$(dirname "$0")/../../postinstall/recipes/add-fonts.sh" && add_fonts; read -p "Press Enter to continue..." ;;
       r) reconfigure; read -p "Press Enter to continue..." ;;
-      e) ${EDITOR:-nano} "$CONFIG_FILE"; read -p "Press Enter to continue..." ;;
-      v) less "$CONFIG_FILE"; ;;
+      e)
+        # Try editors in order of preference
+        if command -v "${EDITOR}" >/dev/null 2>&1; then
+          "${EDITOR}" "$CONFIG_FILE"
+        elif command -v nano >/dev/null 2>&1; then
+          nano "$CONFIG_FILE"
+        elif command -v vi >/dev/null 2>&1; then
+          vi "$CONFIG_FILE"
+        else
+          err "No editor found. Install nano or set EDITOR variable"
+        fi
+        read -p "Press Enter to continue..."
+        ;;
+      v)
+        # Try pagers in order of preference
+        if command -v less >/dev/null 2>&1; then
+          less "$CONFIG_FILE"
+        elif command -v more >/dev/null 2>&1; then
+          more "$CONFIG_FILE"
+        else
+          cat "$CONFIG_FILE" | head -100
+          info "Install 'less' for better viewing (currently showing first 100 lines)"
+          read -p "Press Enter to continue..."
+        fi
+        ;;
       q) msg "Goodbye!"; exit 0 ;;
       *) err "Invalid option"; sleep 1 ;;
     esac
