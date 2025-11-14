@@ -36,6 +36,12 @@ add_networkmanager() {
     return
   fi
 
+  # Also check if wpa-supplicant is already there (might be added separately)
+  local has_wpa=false
+  if grep -q "wpa-supplicant-service-type" "$CONFIG_FILE"; then
+    has_wpa=true
+  fi
+
   backup_config
 
   # Add networking module if not present
@@ -44,21 +50,25 @@ add_networkmanager() {
   fi
 
   # Add NetworkManager service to services list
-  # Note: config.scm uses %base-services (single %)
+  # Note: NetworkManager requires wpa-supplicant-service-type (provides 'wireless-daemon')
   if grep -q "(services %base-services))" "$CONFIG_FILE"; then
     # Simple services list - replace with append
     # Must preserve the closing paren for operating-system
-    sed -i 's|(services %base-services))|(services\n  (append\n   (list (service network-manager-service-type))\n   %base-services)))|' "$CONFIG_FILE"
+    sed -i 's|(services %base-services))|(services\n  (append\n   (list (service wpa-supplicant-service-type)\n         (service network-manager-service-type))\n   %base-services)))|' "$CONFIG_FILE"
   elif grep -q "(services (append" "$CONFIG_FILE"; then
     # Already has append, add to existing list
-    sed -i '0,/(list /s|(list |(list (service network-manager-service-type)\n         |' "$CONFIG_FILE"
+    sed -i '0,/(list /s|(list |(list (service wpa-supplicant-service-type)\n         (service network-manager-service-type)\n         |' "$CONFIG_FILE"
   else
     err "Could not find services definition in config.scm"
     err "Please add NetworkManager manually"
     return 1
   fi
 
-  info "✓ NetworkManager service added"
+  if [ "$has_wpa" = true ]; then
+    info "✓ NetworkManager service added (wpa-supplicant was already configured)"
+  else
+    info "✓ NetworkManager and wpa-supplicant services added"
+  fi
   info "After reconfigure, use: nmcli device wifi list"
   info "                   and: nmcli device wifi connect SSID password PASSWORD"
 }
