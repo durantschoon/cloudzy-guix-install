@@ -272,5 +272,5 @@ cd framework-dual/postinstall
   - `cloudzy/postinstall/customize` - VPS/server focus
   - `framework/postinstall/customize` - Laptop single-boot
   - `framework-dual/postinstall/customize` - Laptop dual-boot
-- Main customization guide: `../CUSTOMIZATION.md`
+- Main customization guide: `CUSTOMIZATION.md`
 - Repository structure: `../STRUCTURE.md`

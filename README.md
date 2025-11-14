@@ -41,8 +41,12 @@ See [`QUICKSTART.md`](QUICKSTART.md) for complete instructions.
 ## Quick Navigation
 
 - ⚡ **Quick Start Guide**: See [`QUICKSTART.md`](QUICKSTART.md) - Complete workflow from ISO to customized system
-- 🎨 **Customization Guide**: See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) - Add features after minimal install
+- 🎨 **Customization Guide**: See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) - Add features after minimal install
+- 📦 **Channel Management**: See [`postinstall/CHANNEL_MANAGEMENT.md`](postinstall/CHANNEL_MANAGEMENT.md) - Configure Guix channels (nonguix, custom repos)
 - 🌍 **Mirror Configuration**: See [`lib/mirrors.md`](lib/mirrors.md) - Optimize download speeds globally
+- 📚 **Installation Knowledge**: See [`docs/INSTALLATION_KNOWLEDGE.md`](docs/INSTALLATION_KNOWLEDGE.md) - Deep technical details and lessons learned
+- 🔧 **Troubleshooting**: See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- ✅ **Verification Guide**: See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) - Verify installation integrity
 - 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
 - 💻 **Framework 13 Single-Boot**: See [`framework/README.md`](framework/README.md)
 - 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
@@ -111,7 +115,7 @@ Designed for **fresh VPS instances** where you want to completely replace the ex
 **If you're not absolutely certain you're in the right situation, STOP NOW!**
 
 **Installation:** See [`cloudzy/README.md`](cloudzy/README.md)
-**After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add SSH/packages
+**After Boot:** See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add SSH/packages
 
 ---
 
@@ -133,7 +137,7 @@ Designed for **Framework 13 laptops** where you want Guix as your only OS:
 - Backup of all important data
 
 **Installation:** See [`framework/README.md`](framework/README.md)
-**After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add WiFi/desktop
+**After Boot:** See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add WiFi/desktop
 
 ---
 
@@ -155,7 +159,7 @@ Designed for Framework 13 laptops with existing Pop!_OS installations:
 - Backup of important data
 
 **Installation:** See [`framework-dual/README.md`](framework-dual/README.md)
-**After Boot:** See [`CUSTOMIZATION.md`](CUSTOMIZATION.md) to add desktop/WiFi
+**After Boot:** See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add desktop/WiFi
 
 ---
 

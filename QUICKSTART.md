@@ -256,7 +256,7 @@ This is the most reliable method and works without network access:
 sudo nano /etc/config.scm
 ```
 
-Add features you need (see examples below and CUSTOMIZATION.md for more).
+Add features you need (see examples below and [postinstall/CUSTOMIZATION.md](postinstall/CUSTOMIZATION.md) for more).
 
 **Step 1: Add SSH (Critical for VPS!)**
 
@@ -355,6 +355,16 @@ chmod +x ~/customize-latest
 
 Or use USB transfer if no network is available (same method as before).
 
+### Advanced: Channel Management
+
+For custom Guix channels (nonguix for proprietary software, or your own channel repository):
+
+See [`postinstall/CHANNEL_MANAGEMENT.md`](postinstall/CHANNEL_MANAGEMENT.md) for complete guide on:
+
+- Adding nonguix channel (for proprietary firmware, Steam, Discord, etc.)
+- Using custom channel repositories
+- Managing channel updates and pinning
+
 ---
 
 ## Common Workflows
@@ -402,7 +412,7 @@ Or manually edit config.scm to add:
 - Desktop environment (GNOME/Xfce)
 - Common packages
 
-See CUSTOMIZATION.md for complete examples.
+See [postinstall/CUSTOMIZATION.md](postinstall/CUSTOMIZATION.md) for complete examples.
 
 ### Development Workstation
 
@@ -419,7 +429,7 @@ cd ~/guix-customize
 
 Or manually edit /etc/config.scm to add development tools.
 
-See CUSTOMIZATION.md for more recipes and examples.
+See [postinstall/CUSTOMIZATION.md](postinstall/CUSTOMIZATION.md) for more recipes and examples.
 
 ---
 
@@ -464,13 +474,13 @@ sudo dhclient eth0
 
 **Problem:** Missing firmware
 
-**Solution:** Add `linux-firmware` to config.scm (see CUSTOMIZATION.md)
+**Solution:** Add `linux-firmware` to config.scm (see [postinstall/CUSTOMIZATION.md](postinstall/CUSTOMIZATION.md))
 
 ---
 
 ## Next Steps
 
-- Read `CUSTOMIZATION.md` for detailed customization recipes
+- Read [postinstall/CUSTOMIZATION.md](postinstall/CUSTOMIZATION.md) for detailed customization recipes
 - Set up nonguix channel for proprietary software
 - Install your favorite packages
 - Configure dotfiles

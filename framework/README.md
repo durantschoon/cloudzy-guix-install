@@ -101,7 +101,7 @@ chmod +x ~/customize
 ./customize
 ```
 
-See `../../CUSTOMIZATION.md` for detailed post-boot customization workflows.
+See `../../postinstall/CUSTOMIZATION.md` for detailed post-boot customization workflows.
 
 ---
 
@@ -189,5 +189,5 @@ export GUIX_REGION="auto"   # Mirror region: auto, asia, europe, americas
 
 - **For dual-boot with Pop!_OS**: Use [`framework-dual/`](../framework-dual/README.md)
 - **For VPS installation**: Use [`cloudzy/`](../cloudzy/README.md)
-- **Customization guide**: See [`CUSTOMIZATION.md`](../CUSTOMIZATION.md)
+- **Customization guide**: See [`postinstall/CUSTOMIZATION.md`](../postinstall/CUSTOMIZATION.md)
 - **Quick start guide**: See [`QUICKSTART.md`](../QUICKSTART.md)

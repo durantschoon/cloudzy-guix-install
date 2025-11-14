@@ -96,7 +96,7 @@ chmod +x ~/customize
 ./customize
 ```
 
-See `../../CUSTOMIZATION.md` for detailed post-boot customization workflows.
+See `../../postinstall/CUSTOMIZATION.md` for detailed post-boot customization workflows.
 
 ## Environment Variables
 

@@ -4,8 +4,8 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 
 For implementation history and completed features, see:
 - Git commit history
-- [INSTALLATION_KNOWLEDGE.md](INSTALLATION_KNOWLEDGE.md) - Hard-won lessons and fixes
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Debugging guides
+- [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md) - Hard-won lessons and fixes
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Debugging guides
 - Individual platform README files
 
 ---
@@ -277,8 +277,8 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 - ✅ Updated documentation references:
   - README.md
   - QUICKSTART.md
-  - INSTALLATION_KNOWLEDGE.md
-  - CHANNEL_MANAGEMENT.md
+  - docs/INSTALLATION_KNOWLEDGE.md
+  - postinstall/CHANNEL_MANAGEMENT.md
 - ✅ All tests pass after reorganization
 
 **Breaking changes (v1.1.0):**
@@ -344,5 +344,5 @@ These principles guide all implementation work:
 
 For detailed implementation history, see:
 - Git commit log
-- INSTALLATION_KNOWLEDGE.md
+- docs/INSTALLATION_KNOWLEDGE.md
 - Individual platform README files
