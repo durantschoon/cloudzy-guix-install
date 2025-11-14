@@ -326,24 +326,17 @@ go build -o run-remote-steps .
 
 ---
 
-### Bash-Based Installer (cloudzy, framework)
+### All Platforms Use Go-Based Installer
 
-Other platforms still use bash scripts with SHA256 verification:
+All platforms (cloudzy, framework, framework-dual, raspberry-pi) now use the **Go-based installer** architecture:
 
-**Script Structure:**
+**Benefits:**
 
-Each installation step has two parts:
-
-- **`*-warnings.sh`**: Pre-flight checks, variable validation, user confirmation
-- **`*-clean.sh`**: Actual implementation (partition, mount, configure, install)
-
-**Shared Components:**
-
-Scripts 04-06 are identical across platforms:
-
-- `04-system-init`: Swap setup, Guix pull (with mirror optimization), system initialization
-- `05-postinstall-console`: Root password, SSH setup
-- `06-postinstall-own-terminal`: Channel configuration (nonguix, etc.)
+- ✅ Type-safe state management (no bash variable passing)
+- ✅ Centralized error handling
+- ✅ Built-in verification via Git and Go modules
+- ✅ Idempotent operations (safe to rerun)
+- ✅ Easier to test and maintain
 
 ## Preparation
 
@@ -435,96 +428,44 @@ You can override with: `GUIX_PLATFORM="framework"` or `GUIX_PLATFORM="framework-
 
 **Note**: Raspberry Pi installation uses a different approach (image-based) and is not supported by this script-based installer.
 
-## Quick Start (Go Installer)
-
-**⚠️ READ THE WARNING ABOVE FIRST! This script will destroy all data on the target device.**
-
-### 1. Prepare Guix Live ISO Environment
-
-```bash
-guix install go gcc-toolchain glibc curl bc
-GUIX_PROFILE="$HOME/.guix-profile"
-source "$GUIX_PROFILE/etc/profile"
-```
-
-### 2. Download and Build Installer
-
-```bash
-# Download source (use timestamp to bypass CDN cache)
-curl -fsSL "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/run-remote-steps.go?$(date +%s)" -o run-remote-steps.go
-
-# Verify checksum (get expected checksum from your local machine first)
-shasum -a 256 run-remote-steps.go
-# Compare with expected value to ensure you have the latest version
-
-# Build binary
-go build run-remote-steps.go
-```
-
-**To get the expected checksum on your local machine:**
-
-```bash
-# On your Mac/local machine where repo is cloned
-cd /path/to/cloudzy-guix-install
-shasum -a 256 run-remote-steps.go
-# Copy this value and compare with the output on Guix ISO
-```
-
-### 3. Set Environment Variables
-
-```bash
-# Required
-export USER_NAME="YOUR_USER_NAME"
-export FULL_NAME="YOUR_FULL_NAME"
-export TIMEZONE="America/New_York"
-export HOST_NAME="guix-vps"
-
-# Optional (with defaults)
-export BOOT_MODE="uefi"         # uefi or bios (auto-detected)
-export SWAP_SIZE="4G"           # 2G, 4G, 8G, etc.
-export GUIX_PLATFORM="cloudzy"  # cloudzy, framework, or framework-dual
-```
-
-### 4. Run Installer
-
-```bash
-# Use latest code from main branch
-GUIX_INSTALL_REF=main ./run-remote-steps
-
-# Or use a specific release tag
-GUIX_INSTALL_REF=v0.2.0 ./run-remote-steps
-```
-
-**Done!** The installer handles all downloads, checksums, and script execution automatically.
-
-**Note for development/testing:** If you're testing changes and re-running the installer, delete the `guix-install-scripts/` directory first to ensure fresh downloads:
-
-```bash
-rm -rf guix-install-scripts/
-GUIX_INSTALL_REF=main ./run-remote-steps
-```
-
 ---
 
 ## Development
 
-### Variable Passing Between Steps
+### Running Tests
 
-The installer automatically passes variables between steps using the `INCOMING_VARS` pattern:
-
-- Each script outputs variables via `###GUIX_INSTALL_VARS###` marker
-- Variables include both disk-related (DEVICE, EFI, ROOT) and user config (USER_NAME, FULL_NAME, etc.)
-- **All variables are passed forward**, even if a step doesn't use them
-- This allows **skipping steps** without breaking downstream steps
-
-When you skip a step, the variables from the previous step are automatically passed to the next step.
-
-### Updating Checksums
-
-After modifying any installation scripts, update the checksums:
+Run all tests locally:
 
 ```bash
-./update-sha256.sh
+./run-tests.sh
 ```
 
-This will regenerate SHA256 checksums and update `run-remote-steps.go` automatically.
+Run tests in Docker (no local Go needed):
+
+```bash
+./test-docker.sh
+```
+
+### Updating Manifest
+
+After modifying installation scripts, update the manifest:
+
+```bash
+./update-manifest.sh
+```
+
+This regenerates SHA256 checksums for all critical scripts and displays the manifest hash for verification.
+
+### Contributing
+
+**Platform-specific READMEs:**
+
+- [cloudzy/README.md](cloudzy/README.md) - VPS installation
+- [framework/README.md](framework/README.md) - Framework 13 single-boot
+- [framework-dual/README.md](framework-dual/README.md) - Framework 13 dual-boot
+- [raspberry-pi/README.md](raspberry-pi/README.md) - Raspberry Pi images
+
+**Technical documentation:**
+
+- [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md) - Implementation details and lessons learned
+- [CLAUDE.md](CLAUDE.md) - Development notes for AI assistants
