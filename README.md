@@ -434,6 +434,8 @@ You can override with: `GUIX_PLATFORM="framework"` or `GUIX_PLATFORM="framework-
 
 ### Running Tests
 
+For detailed testing information, see [`docs/TESTING.md`](docs/TESTING.md).
+
 **Local Testing** (requires Go 1.21+):
 
 ```bash
@@ -465,6 +467,8 @@ The Docker environment uses Alpine Linux + Go 1.21 and includes all necessary to
 - [lib/common_test.go](lib/common_test.go) - Unit tests for shared functions
 - `*/install/*_test.go` - Platform-specific integration tests
 - [cmd/hash-to-words/main_test.go](cmd/hash-to-words/main_test.go) - Hash verification tool tests
+
+See [`docs/TESTING.md`](docs/TESTING.md) for complete test documentation including test structure, coverage details, and how to add new tests.
 
 ### Updating Manifest
 
