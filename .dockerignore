@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Archives
+archive/
+
+# Documentation (not needed for tests)
+*.md
+!go.mod
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Unit and integration tests
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      # Mount source code for live development
+      - .:/workspace
+      # Use named volumes for Go caches to speed up builds
+      - go-cache:/tmp/go-cache
+      - go-tmp:/tmp/go-tmp
+    environment:
+      - GOCACHE=/tmp/go-cache
+      - GOTMPDIR=/tmp/go-tmp
+    command: ./run-tests.sh
+
+  # Interactive shell for debugging
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - .:/workspace
+      - go-cache:/tmp/go-cache
+      - go-tmp:/tmp/go-tmp
+    environment:
+      - GOCACHE=/tmp/go-cache
+      - GOTMPDIR=/tmp/go-tmp
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+
+volumes:
+  go-cache:
+  go-tmp:
