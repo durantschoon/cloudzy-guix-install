@@ -12,6 +12,12 @@ For implementation history and completed features, see:
 
 ## 🔄 Currently Working On
 
+**Confirm postinstall configuration works with framework-dual:**
+- ⚠️ GNOME installation fails with permissions error
+- ⚠️ Install script may need to use sudo for GNOME installation
+- ⏳ Need to test full postinstall workflow end-to-end
+- ⏳ Verify all customize script options work correctly
+
 **Testing cloudzy installer with latest improvements:**
 - ✅ 3-step kernel/initrd fix applied and tested
 - ✅ Color-coded output with cycling headers
