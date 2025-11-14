@@ -499,8 +499,58 @@ Add NetworkManager to config and reconfigure:
 
 ```bash
 sudo guix system reconfigure /etc/config.scm
-sudo herd start networking
+sudo herd start network-manager
 ```
+
+**Note:** NetworkManager takes over all network interfaces, including wired ethernet. If you were using `dhclient` manually, NetworkManager will replace it.
+
+### NetworkManager Not Starting
+
+**Symptom:** NetworkManager service fails to start after reconfigure
+
+**Diagnosis:**
+```bash
+# Check service status
+sudo herd status network-manager
+
+# Check service logs
+sudo herd log network-manager
+
+# Try starting manually
+sudo herd start network-manager
+
+# Check for errors in system journal
+journalctl -u network-manager
+```
+
+**Common Issues:**
+- Service may need a reboot after first installation
+- Check config.scm syntax: `guix system build /etc/config.scm`
+- Verify `(gnu services networking)` is in use-modules
+
+### WiFi Devices Not Detected
+
+**Symptom:** `nmcli device wifi list` shows no WiFi devices
+
+**Diagnosis:**
+```bash
+# Check if firmware is loaded
+dmesg | grep -i firmware
+
+# Check if WiFi device exists
+ip link show
+
+# Should see something like wlp1s0 or similar
+# If no wlan/wlp interface, firmware may be missing
+```
+
+**Solution:**
+- Ensure `linux-firmware` is in your config.scm:
+  ```scheme
+  (firmware (list linux-firmware))
+  ```
+- Reconfigure and reboot
+- On Framework 13, firmware requires nonguix channel
 
 ### DNS Not Working
 
