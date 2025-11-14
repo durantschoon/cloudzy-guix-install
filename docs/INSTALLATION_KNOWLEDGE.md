@@ -58,6 +58,55 @@ This document captures critical lessons learned from real-world Guix OS installa
 
 **This is a feature, not a bug:** Having separate installers lets users make informed choices based on their hardware and values.
 
+### Framework 13 Post-Install Workflow: The Two-Pull Process
+
+**Critical Finding:** After installing Guix on Framework 13, you must perform a two-pull process to add the nonguix channel and update your Guix installation.
+
+**Why Two Pulls Are Required:**
+
+1. **First `guix pull`**: Upgrades from Guix 1.4.0 (ISO) to latest master
+   - Required because old Guix doesn't support channel introductions
+   - Takes 10-30 minutes
+   - Creates generation 1
+
+2. **Create `~/.config/guix/channels.scm`** with nonguix channel:
+   ```scheme
+   (cons* (channel
+           (name 'nonguix)
+           (url "https://gitlab.com/nonguix/nonguix"))
+          %default-channels)
+   ```
+
+3. **Second `guix pull`**: Adds nonguix channel
+   - Takes 10-30 minutes
+   - Creates generation 2
+
+4. **Fix PATH** (CRITICAL):
+   ```bash
+   export PATH="$HOME/.config/guix/current/bin:$PATH"
+   ```
+   - Add to `~/.bashrc` for persistence
+   - Without this, `guix describe` shows old system Guix (generation 1) instead of your pulled Guix (generation 2)
+   - Nonguix packages won't be found even though second pull succeeded
+
+**Common Pitfall - PATH Issue:**
+
+- User's pulled Guix is in generation 2 at `~/.config/guix/current/bin/guix`
+- System Guix (old) is at `/run/current-system/profile/bin/guix`
+- If PATH not updated, `guix describe` shows generation 1 (system), not generation 2 (user)
+- Always verify which guix binary is running: `which guix`
+
+**Verification:**
+
+```bash
+# Check which guix is active
+which guix
+guix describe
+
+# Should show generation 2 with nonguix channel
+# If it shows generation 1, PATH is not set correctly
+```
+
 ## 🧠 The Golden Rule: cow-store
 
 **Always run `herd start cow-store /mnt` before `guix system init`.**
@@ -380,6 +429,14 @@ If the installer is interrupted or fails:
 
 **Root Cause**: Race condition in daemon startup verification - daemon process runs but socket file not ready, or connection isn't stable yet
 
+**Why VPS Systems Are Different:**
+
+- Daemon startup is slower on VPS than bare metal
+- Virtualization layer adds complexity and latency
+- Socket file initialization takes longer
+- May need longer waits or different startup approach
+- Standard Guix commands work better than workarounds on VPS
+
 **✅ FIXED** (commit 4a50e50, 2025-11-11):
 
 The installer now includes robust daemon startup verification:
@@ -437,6 +494,12 @@ guix system init /mnt/etc/config.scm /mnt
 - Answer 'y' to continue when validation warns about daemon
 - System build step will start daemon if needed
 - Real validation happens during system build anyway
+
+**Lessons Learned:**
+
+- **VPS systems require more patience**: Daemon initialization is slower, socket verification is critical
+- **Don't over-apply workarounds**: The 3-step kernel/initrd workaround is ONLY for nonguix+time-machine (Framework 13). Free software installs (VPS, servers) work fine with standard `guix system init`
+- **Test each platform separately**: Different Guix channels create different `/gnu/store` structures. Don't assume workarounds apply universally
 
 ## 🐧 Kernel Configuration
 
@@ -842,6 +905,119 @@ lsblk -o NAME,LABEL,FSTYPE,MOUNTPOINT
 ls -la /mnt/boot/efi/EFI/guix/
 ls -la /mnt/boot/
 ```
+
+### PATH Management Issues
+
+**Problem**: After `guix pull`, commands still use old system Guix instead of pulled Guix
+
+**Symptoms:**
+- `guix describe` shows generation 1 (system) instead of generation 2 (user)
+- Nonguix packages not found even though channel was added
+- `guix search` doesn't find packages from nonguix channel
+
+**Root Cause**: PATH environment variable not updated to include user's Guix profile
+
+**Solution:**
+
+```bash
+# Add to ~/.bashrc for persistence
+export PATH="$HOME/.config/guix/current/bin:$PATH"
+
+# Reload shell or source bashrc
+source ~/.bashrc
+
+# Verify which guix is active
+which guix
+# Should show: /home/username/.config/guix/current/bin/guix
+
+guix describe
+# Should show generation 2 with nonguix channel
+```
+
+**Why This Happens:**
+
+- Guix has multiple generations and profiles
+- System Guix (old) is at `/run/current-system/profile/bin/guix`
+- User's pulled Guix is at `~/.config/guix/current/bin/guix`
+- Without PATH update, shell uses system Guix by default
+- Always verify which guix binary is running: `which guix`
+
+### Swap File Creation Issues
+
+**Problem**: Confusing error messages when swap file creation fails
+
+**Symptoms:**
+- "exit status 1" appears even when swap creation succeeded
+- User can't tell if swap creation succeeded or failed
+- Installation continues but swap may not be active
+
+**Root Cause**: `fallocate` fails on some filesystems (normal), but error messages weren't clear
+
+**How Installer Handles This:**
+
+The installer now provides clear progress reporting:
+
+1. **`[INFO]` prefix** for fallocate failure (normal on some filesystems)
+2. **Clear progress messages**: "Setting permissions...", "Formatting...", "Activating..."
+3. **`[OK]` confirmation** after each step
+4. **Shows `swapon --show` output** to confirm swap active
+
+**Manual Verification:**
+
+```bash
+# Check if swap is active
+swapon --show
+
+# Check swap usage
+free -h
+
+# If swap creation failed, can continue without it
+# 4G RAM is sufficient for most VPS installations
+```
+
+**VPS-Specific Notes:**
+
+- Swap creation may fail on VPS due to I/O errors on ISO device (`sr0`)
+- This is non-critical - swap is optional for VPS with adequate RAM
+- Installation can continue successfully without swap
+
+### VPS Disk Space Issues During Validation
+
+**Problem**: "No space left on device" error during config validation on VPS
+
+**Symptoms:**
+- Config validation fails with disk space error
+- Installation appears to have enough space but validation fails
+- More common on smaller VPS instances
+
+**Root Cause**: Config validation may use temporary space on ISO's tmpfs, which can fill up
+
+**Solutions:**
+
+1. **Set TMPDIR to target disk** (recommended):
+   ```bash
+   export TMPDIR=/mnt/var/tmp
+   # Then continue with installation
+   ```
+
+2. **Skip validation** (if daemon is slow):
+   - Answer 'y' to continue when validation warns about daemon
+   - Real validation happens during system build anyway
+
+3. **Clear substitute cache** (if low on space):
+   ```bash
+   rm -rf /var/guix/substitute-cache/*
+   ```
+
+4. **Make validation optional**:
+   - Validation is a safety check, not required
+   - System build will validate config anyway
+
+**Prevention:**
+
+- Ensure VPS has at least 40GB disk space (60GB+ recommended)
+- Use `cow-store` to redirect store writes to target disk
+- Set `TMPDIR=/mnt/var/tmp` before running installer
 
 ## 🧾 Best Practices for Automation
 
