@@ -34,8 +34,8 @@ hash=$(shasum -a 256 lib/bootstrap-installer.sh | awk '{print $1}')
 echo "$hash  lib/bootstrap-installer.sh" >> "$MANIFEST_FILE"
 
 # Cleanup script (prepare for fresh install)
-hash=$(shasum -a 256 clean-install.sh | awk '{print $1}')
-echo "$hash  clean-install.sh" >> "$MANIFEST_FILE"
+hash=$(shasum -a 256 lib/clean-install.sh | awk '{print $1}')
+echo "$hash  lib/clean-install.sh" >> "$MANIFEST_FILE"
 
 # Verification script (diagnostic tool)
 hash=$(shasum -a 256 lib/verify-guix-install.sh | awk '{print $1}')

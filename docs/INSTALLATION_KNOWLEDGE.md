@@ -1247,7 +1247,7 @@ When you create a new shell script, determine if it's a **critical script** that
 
 **Examples of critical scripts:**
 - `lib/bootstrap-installer.sh` - Entry point for installation
-- `clean-install.sh` - Prepares system for clean reinstall
+- `lib/clean-install.sh` - Prepares system for clean reinstall
 - `lib/verify-guix-install.sh` - Diagnostic tool for checking installation
 - `lib/recovery-complete-install.sh` - Recovery tool for completing partial installations
 
@@ -1276,10 +1276,10 @@ When you create a new shell script, determine if it's a **critical script** that
 3. **Add to `lib/bootstrap-installer.sh`** CRITICAL_SCRIPTS array:
    ```bash
    CRITICAL_SCRIPTS=(
-       "clean-install.sh"
+       "lib/clean-install.sh"
        "lib/verify-guix-install.sh"
        "lib/recovery-complete-install.sh"
-       "my-new-script.sh"  # <-- Add your script here
+       "lib/my-new-script.sh"  # <-- Add your script here
    )
    ```
 

@@ -33,8 +33,8 @@ af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-s
 
 ## Critical Shell Scripts
 
-a08e6e8a4e64bef51494228d2204be5ea2ff8aac6fbde67aec90332547ec1ce7  lib/bootstrap-installer.sh
-275fdfab2ec339ef049bb462f4c034ac550509ef639e8845b7a03923c3ebbec6  clean-install.sh
+ae5d45c340c32a6192a862e4b54888cb2cefecb7e2fc2167cd1740b1d7cfb14b  lib/bootstrap-installer.sh
+275fdfab2ec339ef049bb462f4c034ac550509ef639e8845b7a03923c3ebbec6  lib/clean-install.sh
 846f1ec4e17aa08200af7b74fb46f1c432f11c033998b4e533d5c0046a5033f9  lib/verify-guix-install.sh
 949430a4926456a04c84a0712f07d5149484a14b6a4f1edf37eaf96104aadd5d  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
