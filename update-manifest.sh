@@ -30,21 +30,21 @@ echo "## Critical Shell Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
 
 # Bootstrap installer (entry point)
-hash=$(shasum -a 256 bootstrap-installer.sh | awk '{print $1}')
-echo "$hash  bootstrap-installer.sh" >> "$MANIFEST_FILE"
+hash=$(shasum -a 256 lib/bootstrap-installer.sh | awk '{print $1}')
+echo "$hash  lib/bootstrap-installer.sh" >> "$MANIFEST_FILE"
 
 # Cleanup script (prepare for fresh install)
 hash=$(shasum -a 256 clean-install.sh | awk '{print $1}')
 echo "$hash  clean-install.sh" >> "$MANIFEST_FILE"
 
 # Verification script (diagnostic tool)
-hash=$(shasum -a 256 verify-guix-install.sh | awk '{print $1}')
-echo "$hash  verify-guix-install.sh" >> "$MANIFEST_FILE"
+hash=$(shasum -a 256 lib/verify-guix-install.sh | awk '{print $1}')
+echo "$hash  lib/verify-guix-install.sh" >> "$MANIFEST_FILE"
 
 # Recovery script (installation recovery tool)
-if [ -f recovery-complete-install.sh ]; then
-    hash=$(shasum -a 256 recovery-complete-install.sh | awk '{print $1}')
-    echo "$hash  recovery-complete-install.sh" >> "$MANIFEST_FILE"
+if [ -f lib/recovery-complete-install.sh ]; then
+    hash=$(shasum -a 256 lib/recovery-complete-install.sh | awk '{print $1}')
+    echo "$hash  lib/recovery-complete-install.sh" >> "$MANIFEST_FILE"
 fi
 
 # Post-install library

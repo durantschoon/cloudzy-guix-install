@@ -260,30 +260,39 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 ---
 
 #### 14. Script Directory Reorganization
-**Status:** ❌ Not implemented
+**Status:** ✅ Complete (v1.1.0)
 
-**Proposal:**
-- Move critical scripts that run on Guix ISO/system into `lib/` subdirectory:
-  - `verify-guix-install.sh` → `lib/verify-guix-install.sh`
-  - `recovery-complete-install.sh` → `lib/recovery-complete-install.sh`
-  - `bootstrap-installer.sh` → `lib/bootstrap-installer.sh`
+**Completed:**
+
+- ✅ Moved critical scripts to `lib/` subdirectory:
+  - `lib/verify-guix-install.sh`
+  - `lib/recovery-complete-install.sh`
+  - `lib/bootstrap-installer.sh`
   - `lib/postinstall.sh` (already in lib/)
-- Keep development/repo scripts at top level:
+- ✅ Kept development/repo scripts at top level:
   - `update-manifest.sh`
   - `run-tests.sh`
+- ✅ Updated bootstrap script internal paths
+- ✅ Updated SOURCE_MANIFEST.txt with new paths
+- ✅ Updated documentation references:
+  - README.md
+  - QUICKSTART.md
+  - INSTALLATION_KNOWLEDGE.md
+  - CHANNEL_MANAGEMENT.md
+- ✅ All tests pass after reorganization
 
-**Benefits:**
+**Breaking changes (v1.1.0):**
+
+- GitHub download URLs changed to use `lib/bootstrap-installer.sh`
+- Users should update their bookmarks/documentation
+
+**Benefits achieved:**
+
 - Clear separation between Guix runtime scripts and development scripts
-- Consistent with `lib/common.go` and `lib/postinstall.sh` patterns
+- Consistent with `lib/common.go` pattern
 - Easier to understand repository structure
 
-**Breaking changes:**
-- Bootstrap script path references need updating
-- Documentation URLs need updating
-- Manifest paths need updating
-- GitHub download URLs change
-
-**Impact:** ⭐ Low - Better organization, but significant refactoring
+**Impact:** ⭐ Low - Better organization with minimal disruption
 
 ---
 

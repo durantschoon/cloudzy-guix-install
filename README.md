@@ -29,7 +29,7 @@ buymeacoffee.com/durantschoon (🙏 help support my LLM habit)
 **One command from Guix ISO:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- <platform>
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
 ```
 
 Replace `<platform>` with: `cloudzy`, `framework`, or `framework-dual`
@@ -278,7 +278,7 @@ The word-based method converts the 64-character hex hash into a series of readab
 Step 2: Download and run the bootstrap:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh -o bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh -o bootstrap.sh
 bash bootstrap.sh
 ```
 
@@ -286,7 +286,7 @@ bash bootstrap.sh
 
 ```bash
 export GUIX_INSTALL_REF=v0.1.6  # Use a specific tag
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/${GUIX_INSTALL_REF}/bootstrap-installer.sh -o bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/${GUIX_INSTALL_REF}/lib/bootstrap-installer.sh -o bootstrap.sh
 bash bootstrap.sh
 ```
 

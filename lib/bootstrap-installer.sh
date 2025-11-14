@@ -190,15 +190,15 @@ fi
 echo "Installing critical recovery scripts to /root..."
 CRITICAL_SCRIPTS=(
     "clean-install.sh"
-    "verify-guix-install.sh"
-    "recovery-complete-install.sh"
+    "lib/verify-guix-install.sh"
+    "lib/recovery-complete-install.sh"
 )
 
 for script in "${CRITICAL_SCRIPTS[@]}"; do
     if [[ -f "$script" ]]; then
         cp "$script" /root/
-        chmod +x "/root/$script"
-        echo "[OK] Copied $script to /root/"
+        chmod +x "/root/$(basename "$script")"
+        echo "[OK] Copied $(basename "$script") to /root/"
     else
         echo "[WARN] $script not found (skipping)"
     fi

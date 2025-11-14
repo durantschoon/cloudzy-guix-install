@@ -1046,7 +1046,7 @@ Use the recovery script if:
 
 ```bash
 cd /root
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/recovery-complete-install.sh
+wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/recovery-complete-install.sh
 chmod +x recovery-complete-install.sh
 ./recovery-complete-install.sh
 ```
@@ -1246,10 +1246,10 @@ When you create a new shell script, determine if it's a **critical script** that
 - Scripts that modify system state or prepare for installation
 
 **Examples of critical scripts:**
-- `bootstrap-installer.sh` - Entry point for installation
+- `lib/bootstrap-installer.sh` - Entry point for installation
 - `clean-install.sh` - Prepares system for clean reinstall
-- `verify-guix-install.sh` - Diagnostic tool for checking installation
-- `recovery-complete-install.sh` - Recovery tool for completing partial installations
+- `lib/verify-guix-install.sh` - Diagnostic tool for checking installation
+- `lib/recovery-complete-install.sh` - Recovery tool for completing partial installations
 
 **Steps to add a new critical script:**
 
@@ -1273,12 +1273,12 @@ When you create a new shell script, determine if it's a **critical script** that
    echo "$hash  my-new-script.sh" >> "$MANIFEST_FILE"
    ```
 
-3. **Add to `bootstrap-installer.sh`** CRITICAL_SCRIPTS array:
+3. **Add to `lib/bootstrap-installer.sh`** CRITICAL_SCRIPTS array:
    ```bash
    CRITICAL_SCRIPTS=(
        "clean-install.sh"
-       "verify-guix-install.sh"
-       "recovery-complete-install.sh"
+       "lib/verify-guix-install.sh"
+       "lib/recovery-complete-install.sh"
        "my-new-script.sh"  # <-- Add your script here
    )
    ```
@@ -1295,7 +1295,7 @@ When you create a new shell script, determine if it's a **critical script** that
 
 6. **Commit everything together**:
    ```bash
-   git add my-new-script.sh update-manifest.sh bootstrap-installer.sh SOURCE_MANIFEST.txt
+   git add my-new-script.sh update-manifest.sh lib/bootstrap-installer.sh SOURCE_MANIFEST.txt
    git commit -m "Add my-new-script.sh as critical script"
    ```
 

@@ -32,7 +32,7 @@ export HOST_NAME="my-guix"
 **One command to install:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- <platform>
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
 ```
 
 **Platforms:**
@@ -45,10 +45,10 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 
 ```bash
 # VPS installation
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- cloudzy
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- cloudzy
 
 # Framework 13 dual-boot
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- framework-dual
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- framework-dual
 ```
 
 **What this does:**

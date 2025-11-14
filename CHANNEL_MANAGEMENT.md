@@ -19,7 +19,7 @@ The installer automatically sets up default channels (nonguix + official) if no 
 
 ```bash
 # Run installer with default channels
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash
 ```
 
 ### Using Custom Channel Repository
@@ -33,14 +33,14 @@ export GUIX_CHANNEL_BRANCH="main"
 export GUIX_CHANNEL_PATH="channels/"
 
 # Run installer
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash
 ```
 
 ### Using Bootstrap Script with Channel Parameters
 
 ```bash
 # Download and run with channel parameters
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- \
   --channel-repo "https://github.com/yourusername/guix-config" \
   --channel-branch "main" \
   --channel-path "channels/" \
@@ -256,7 +256,7 @@ gt -- system reconfigure /etc/config.scm
 
 ```bash
 # Use default channels
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash
 ```
 
 ### Custom Development Setup
@@ -268,14 +268,14 @@ export GUIX_CHANNEL_BRANCH="main"
 export GUIX_CHANNEL_PATH="channels/"
 
 # Run installer
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash
 ```
 
 ### Framework Laptop with Custom Channels
 
 ```bash
 # Framework laptop with custom channels (any repository name works)
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- \
   --channel-repo "https://github.com/yourusername/my-guix-setup" \
   --channel-branch "framework-13" \
   --channel-path "config/" \
