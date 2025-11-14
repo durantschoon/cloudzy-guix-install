@@ -434,17 +434,37 @@ You can override with: `GUIX_PLATFORM="framework"` or `GUIX_PLATFORM="framework-
 
 ### Running Tests
 
-Run all tests locally:
+**Local Testing** (requires Go 1.21+):
 
 ```bash
 ./run-tests.sh
 ```
 
-Run tests in Docker (no local Go needed):
+Runs unit tests for:
+- Common library functions ([lib/common.go](lib/common.go))
+- Platform-specific installation steps
+- String operations and error handling
+- State management
+
+**Docker Testing** (no local Go installation needed):
 
 ```bash
+# Run all tests in Docker container
 ./test-docker.sh
+
+# Open interactive shell for debugging
+./test-docker.sh shell
+
+# Clean up Docker volumes
+./test-docker.sh clean
 ```
+
+The Docker environment uses Alpine Linux + Go 1.21 and includes all necessary tools (bash, partitioning utilities, etc.). Works with Docker Desktop or Colima.
+
+**Test Files:**
+- [lib/common_test.go](lib/common_test.go) - Unit tests for shared functions
+- `*/install/*_test.go` - Platform-specific integration tests
+- [cmd/hash-to-words/main_test.go](cmd/hash-to-words/main_test.go) - Hash verification tool tests
 
 ### Updating Manifest
 
