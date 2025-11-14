@@ -243,3 +243,26 @@ lib/common.go                  # Shared functions
 - ✅ Clear phase separation (ISO vs booted system)
 - ✅ Platform-specific customization
 - ✅ Modular, extensible design
+
+---
+
+## Development Status (v1.0.0)
+
+**Completed platforms:**
+
+- ✅ cloudzy - VPS installer (free software only)
+- ✅ framework-dual - Framework 13 dual-boot with Pop!_OS (WiFi working!)
+
+**Framework-dual achievements:**
+
+- NetworkManager + wpa-supplicant integration working
+- WiFi connectivity verified on Framework 13 AMD
+- Customize script handles minimal system gracefully
+- Console font tips for high-DPI displays
+
+**In progress:**
+
+- framework - Single-boot Framework 13 (derived from framework-dual)
+- raspberry-pi - ARM support (planned)
+
+This document archived in v1.0.0 as part of repository cleanup.

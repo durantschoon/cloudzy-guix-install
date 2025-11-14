@@ -70,7 +70,7 @@ add_networkmanager() {
     info "✓ NetworkManager and wpa-supplicant services added"
   fi
   info "After reconfigure, use: nmcli device wifi list"
-  info "                   and: nmcli device wifi connect SSID password PASSWORD"
+  info "                   and: nmcli device wifi connect SSID --ask"
 }
 
 # Add SSH service

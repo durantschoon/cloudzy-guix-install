@@ -81,7 +81,8 @@ nmcli device wifi list
 
 ### Step 7: Connect to WiFi
 ```bash
-nmcli device wifi connect "YOUR_SSID" password "YOUR_PASSWORD"
+# Secure method (prompts for password, prevents shell history leak)
+nmcli device wifi connect "YOUR_SSID" --ask
 
 # Should show: successfully activated connection
 ```

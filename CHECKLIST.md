@@ -74,7 +74,7 @@ Learned the complete workflow for getting Framework 13 fully operational after m
 
    # Step 8: Connect to WiFi
    nmcli device wifi list
-   nmcli device wifi connect "SSID" password "password"
+   nmcli device wifi connect "SSID" --ask
 
    # Step 9: Run customize script
    ~/guix-customize/customize

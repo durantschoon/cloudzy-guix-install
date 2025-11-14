@@ -232,12 +232,12 @@ sudo reboot
 **After reboot, connect to WiFi:**
 
 ```bash
-# Interactive mode (easiest)
+# Interactive mode (easiest, most secure)
 nmtui
 
 # Or command line
 nmcli device wifi list
-nmcli device wifi connect "YourSSID" password "YourPassword"
+nmcli device wifi connect "YourSSID" --ask  # Prompts for password securely
 ```
 
 ---
