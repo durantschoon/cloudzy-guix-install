@@ -38,12 +38,22 @@ These scripts automate the conversion of `.sh` files to `.scm` files using Claud
 **Output:**
 ```
 Generating batch conversion requests...
-  [1] postinstall/recipes/add-spacemacs.sh
-  [2] postinstall/recipes/add-development.sh
-  [3] postinstall/recipes/add-fonts.sh
+  [1] ./lib/postinstall.sh
+  [2] ./postinstall/recipes/add-development.sh
+  [3] ./postinstall/recipes/add-doom-emacs.sh
+  [4] ./postinstall/recipes/add-fonts.sh
+  [5] ./postinstall/recipes/add-spacemacs.sh
+  [6] ./postinstall/recipes/add-vanilla-emacs.sh
 
-Generated 3 batch requests
+Generated 6 batch requests
 ```
+
+**Note:** The script finds all `.sh` files that run on Guix OS, including:
+- `postinstall/recipes/*.sh` - Shared recipe scripts
+- `lib/*.sh` - Library scripts used during/after installation
+- Platform-specific scripts (if any)
+
+It excludes development tools in `tools/` and archived files in `archive/`.
 
 ### 2. Submit Batch
 
@@ -241,9 +251,13 @@ diff -y postinstall/recipes/add-spacemacs.sh \
 
 **Test converted scripts:**
 ```bash
-# Copy to test location
+# Copy to test location (from repo root)
 cp tools/converted-scripts/postinstall/recipes/add-spacemacs.scm \
    postinstall/recipes/add-spacemacs.scm
+
+# Or copy library scripts
+cp tools/converted-scripts/lib/postinstall.scm \
+   lib/postinstall.scm
 
 # Run tests
 ./run-tests.sh
@@ -254,12 +268,16 @@ framework-dual/postinstall/tests/run-guile-tests.sh
 
 **If tests pass:**
 ```bash
+# Copy converted scripts to their final locations (from repo root)
+cp tools/converted-scripts/postinstall/recipes/*.scm postinstall/recipes/
+cp tools/converted-scripts/lib/*.scm lib/
+
 # Update manifest
 ./update-manifest.sh
 
 # Commit
-git add postinstall/recipes/*.scm SOURCE_MANIFEST.txt
-git commit -m "Convert recipe scripts from bash to Guile (batch conversion)"
+git add postinstall/recipes/*.scm lib/*.scm SOURCE_MANIFEST.txt
+git commit -m "Convert scripts from bash to Guile (batch conversion)"
 ```
 
 **If issues found:**
@@ -329,12 +347,24 @@ export ANTHROPIC_API_KEY='your-api-key-here'
 
 ## Advanced: Batch Specific Scripts
 
-To convert just specific scripts (not all):
+To convert just specific scripts (not all), edit `generate-batch-conversion.sh`:
 
 ```bash
-# Edit generate-batch-conversion.sh
-# Change the find pattern:
-for script in postinstall/recipes/add-spacemacs.sh; do
+# Replace the find command with specific files:
+for script in \
+  postinstall/recipes/add-spacemacs.sh \
+  lib/postinstall.sh \
+; do
+  if [ -f "$script" ]; then
+    # ... rest of loop
+  fi
+done
+```
+
+Or filter the find results:
+```bash
+# Only convert recipe scripts
+find . -path "*/postinstall/recipes/*.sh" -type f | while read -r script; do
   # ... rest of loop
 done
 ```

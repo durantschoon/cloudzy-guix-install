@@ -94,10 +94,11 @@ with open(results_file, 'r', encoding='utf-8') as f:
                 
                 custom_id = result['custom_id']
 
-                # Extract original path from custom_id (e.g., "convert-postinstall-recipes-add-spacemacs")
+                # Extract original path from custom_id
+                # Format: "convert-postinstall__SLASH__recipes__SLASH__add-spacemacs"
                 # Convert back to path: postinstall/recipes/add-spacemacs.scm
-                path_parts = custom_id.replace('convert-', '').split('-')
-                original_path = '/'.join(path_parts) + '.scm'
+                path_with_slashes = custom_id.replace('convert-', '').replace('__SLASH__', '/')
+                original_path = path_with_slashes + '.scm'
 
                 output_path = os.path.join(conversions_dir, original_path)
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)

@@ -51,15 +51,34 @@ fi
 # Create new output file
 > "$OUTPUT_FILE"
 
-# Find all .sh scripts to convert (exclude tools directory itself)
+# Find all .sh scripts to convert (scripts that run on Guix OS)
+# Exclude: tools/, archive/, test files, development scripts
 SCRIPT_COUNT=0
 cd "$REPO_ROOT"
 
-# Recipe scripts in postinstall/recipes/
-for script in postinstall/recipes/*.sh; do
+# Find all .sh scripts that run on Guix
+# - postinstall/recipes/*.sh (shared recipes)
+# - lib/*.sh (library scripts used during/after install)
+# - platform/postinstall/recipes/*.sh (platform-specific recipes)
+# Exclude: tools/, archive/, test files, development scripts
+while IFS= read -r script; do
+  # Skip tools directory
+  if [[ "$script" == tools/* ]]; then
+    continue
+  fi
+  # Skip archive directory
+  if [[ "$script" == archive/* ]]; then
+    continue
+  fi
+  # Skip test files
+  if [[ "$script" == *test*.sh ]] || [[ "$script" == *tests/*.sh ]]; then
+    continue
+  fi
+  
   if [ -f "$script" ]; then
     SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
-    CUSTOM_ID="convert-$(echo "$script" | tr '/' '-' | sed 's/.sh$//')"
+    # Use full path as custom_id, replacing / with __SLASH__ to preserve structure
+    CUSTOM_ID="convert-$(echo "$script" | sed 's|/|__SLASH__|g' | sed 's/.sh$//')"
 
     # Use temporary files to avoid command-line argument length limits
     # and ensure proper handling of special characters
@@ -137,7 +156,7 @@ EOF
 
     echo "  [$SCRIPT_COUNT] $script"
   fi
-done
+done < <(find . -name "*.sh" -type f | grep -v "^\./tools/" | grep -v "^\./archive/" | sort)
 
 echo ""
 echo "Generated $SCRIPT_COUNT batch requests"
