@@ -28,7 +28,33 @@ backup_config() {
   info "Backed up config to: $backup_file"
 }
 
-# Helper function to safely edit /etc/config.scm
+# Helper function to add service using Guile S-expression parser
+# Usage: guile_add_service "module" "service-expression"
+guile_add_service() {
+  local module="$1"
+  local service="$2"
+  local tmp_file=$(mktemp)
+
+  # Copy config to temp file
+  sudo cp "$CONFIG_FILE" "$tmp_file"
+  sudo chown "$USER" "$tmp_file"
+
+  # Use Guile helper to add service
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local guile_helper="$script_dir/../../lib/guile-config-helper.scm"
+
+  if guile --no-auto-compile -s "$guile_helper" add-service "$tmp_file" "$module" "$service"; then
+    # Copy back with sudo
+    sudo cp "$tmp_file" "$CONFIG_FILE"
+    rm -f "$tmp_file"
+    return 0
+  else
+    rm -f "$tmp_file"
+    return 1
+  fi
+}
+
+# Legacy sed-based helper (kept for non-service edits)
 # Usage: safe_edit_config "sed command"
 safe_edit_config() {
   local sed_cmd="$1"
@@ -63,30 +89,29 @@ add_networkmanager() {
 
   backup_config
 
-  # Add networking module if not present
-  if ! grep -q "(gnu services networking)" "$CONFIG_FILE"; then
-    safe_edit_config '/^(use-modules/a\             (gnu services networking)'
-  fi
-
-  # Add NetworkManager service to services list
+  # Use Guile helper to add services
   # Note: NetworkManager requires wpa-supplicant-service-type (provides 'wireless-daemon')
-  if grep -q "(services %base-services))" "$CONFIG_FILE"; then
-    # Simple services list - replace with append
-    # Must preserve the closing paren for operating-system
-    safe_edit_config 's|(services %base-services))|(services\n  (append\n   (list (service wpa-supplicant-service-type)\n         (service network-manager-service-type))\n   %base-services)))|'
-  elif grep -q "(services (append" "$CONFIG_FILE"; then
-    # Already has append, add to existing list
-    safe_edit_config '0,/(list /s|(list |(list (service wpa-supplicant-service-type)\n         (service network-manager-service-type)\n         |'
-  else
-    err "Could not find services definition in config.scm"
-    err "Please add NetworkManager manually"
-    return 1
+
+  # Add wpa-supplicant first if not already present
+  if [ "$has_wpa" = false ]; then
+    if ! guile_add_service "(gnu services networking)" "(service wpa-supplicant-service-type)"; then
+      err "Failed to add wpa-supplicant service"
+      err "Please add services manually to /etc/config.scm"
+      return 1
+    fi
   fi
 
-  if [ "$has_wpa" = true ]; then
-    info "✓ NetworkManager service added (wpa-supplicant was already configured)"
+  # Add NetworkManager
+  if guile_add_service "(gnu services networking)" "(service network-manager-service-type)"; then
+    if [ "$has_wpa" = true ]; then
+      info "✓ NetworkManager service added (wpa-supplicant was already configured)"
+    else
+      info "✓ NetworkManager and wpa-supplicant services added"
+    fi
   else
-    info "✓ NetworkManager and wpa-supplicant services added"
+    err "Failed to add NetworkManager service"
+    err "Please add services manually to /etc/config.scm"
+    return 1
   fi
   info "After reconfigure, use: nmcli device wifi list"
   info "                   and: nmcli device wifi connect SSID --ask"
@@ -103,27 +128,15 @@ add_ssh() {
 
   backup_config
 
-  # Add ssh module if not present
-  if ! grep -q "(gnu services ssh)" "$CONFIG_FILE"; then
-    safe_edit_config '/^(use-modules/a\             (gnu services ssh)'
-  fi
-
-  # Add SSH service to services list
-  if grep -q "(services %base-services))" "$CONFIG_FILE"; then
-    # Simple services list - replace with append
-    # Must preserve the closing paren for operating-system
-    safe_edit_config 's|(services %base-services))|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services)))|'
-  elif grep -q "(services (append" "$CONFIG_FILE"; then
-    # Already has append, add to existing list
-    safe_edit_config '0,/(list /s|(list |(list (service openssh-service-type)\n         |'
+  # Use Guile helper to add SSH service
+  if guile_add_service "(gnu services ssh)" "(service openssh-service-type)"; then
+    info "✓ SSH service added"
+    info "After reconfigure, SSH will be available on port 22"
   else
-    err "Could not find services definition in config.scm"
-    err "Please add SSH manually"
+    err "Failed to add SSH service"
+    err "Please add SSH manually to /etc/config.scm"
     return 1
   fi
-
-  info "✓ SSH service added"
-  info "After reconfigure, SSH will be available on port 22"
 }
 
 # Add desktop environment
@@ -155,26 +168,14 @@ add_desktop() {
 
   backup_config
 
-  # Add desktop module if not present
-  if ! grep -q "(gnu services desktop)" "$CONFIG_FILE"; then
-    safe_edit_config '/^(use-modules/a\             (gnu services desktop)'
-  fi
-
-  # Add desktop service
-  if grep -q "(services %base-services))" "$CONFIG_FILE"; then
-    # Simple services list - replace with append
-    # Must preserve the closing paren for operating-system
-    safe_edit_config "s|(services %base-services))|(services\n  (append\n   (list (service $service))\n   %base-services)))|"
-  elif grep -q "(services (append" "$CONFIG_FILE"; then
-    # Already has append, add to existing list
-    safe_edit_config "0,/(list /s|(list |(list (service $service)\n         |"
+  # Use Guile helper to add desktop service
+  if guile_add_service "(gnu services desktop)" "(service $service)"; then
+    info "✓ $desktop desktop added"
   else
-    err "Could not find services definition in config.scm"
-    err "Please add desktop manually"
+    err "Failed to add desktop service"
+    err "Please add $desktop manually to /etc/config.scm"
     return 1
   fi
-
-  info "✓ $desktop desktop added"
 }
 
 # Add common packages

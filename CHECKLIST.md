@@ -13,12 +13,31 @@ For implementation history and completed features, see:
 
 ## 🔄 Currently Working On
 
-**Confirm postinstall configuration works with framework-dual:**
+**Guile Conversion Project (IN PROGRESS):**
 
-- ⚠️ GNOME installation fails with permissions error
-- ⚠️ Install script may need to use sudo for GNOME installation
-- ⏳ Need to test full postinstall workflow end-to-end
-- ⏳ Verify all customize script options work correctly
+See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
+
+- ✅ Phase 1: Library infrastructure complete
+  - Created lib/guile-config-helper.scm for S-expression manipulation
+  - Integrated Guile testing in Docker and run-tests.sh
+  - All tests passing
+
+- 🔄 Phase 2: Update postinstall scripts to use Guile helper
+  - Update framework-dual/postinstall/customize to use Guile helper
+  - This will fix GNOME configuration sed permission errors
+  - Replace fragile sed patterns with proper S-expression parsing
+
+- ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
+  - Priority: lib/postinstall.sh (simplest, 31 lines)
+  - Next: lib/clean-install.sh, lib/verify-guix-install.sh
+  - Later: bootstrap-installer.sh, recovery-complete-install.sh
+
+**Framework-dual postinstall fixes:**
+
+- ✅ Fixed sed permission errors (chown USER:USER → chown USER)
+- ✅ Created safe_edit_config() helper for /etc/config.scm edits
+- 🔄 Replacing sed with Guile helper for robustness
+- ⏳ Test full GNOME installation workflow
 
 **Testing cloudzy installer with latest improvements:**
 
