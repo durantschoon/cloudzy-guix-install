@@ -41,12 +41,23 @@ for converted in "${converted_files[@]}"; do
   # Convert path: tools/converted-scripts/postinstall/recipes/add-spacemacs.scm
   # To original: postinstall/recipes/add-spacemacs.sh
   relative_path="${converted#$CONVERSIONS_DIR/}"
+  
+  # Handle old path format (add/spacemacs.scm) vs new format (add-spacemacs.scm)
+  # Try new format first (correct format)
   original_path="$REPO_ROOT/${relative_path%.scm}.sh"
+  
+  # If not found, try old format (nested directories)
+  if [ ! -f "$original_path" ]; then
+    # Convert add/spacemacs.scm -> add-spacemacs.sh
+    old_format_path=$(echo "$relative_path" | sed 's|/|-|g' | sed 's/.scm$/.sh/')
+    original_path="$REPO_ROOT/$old_format_path"
+  fi
   
   if [ -f "$original_path" ]; then
     pairs+=("$original_path|$converted")
   else
     echo "  ⚠ Warning: Original not found for $relative_path"
+    echo "    Tried: ${original_path#$REPO_ROOT/}"
   fi
 done
 

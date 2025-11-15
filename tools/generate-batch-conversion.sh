@@ -74,6 +74,10 @@ while IFS= read -r script; do
   if [[ "$script" == *test*.sh ]] || [[ "$script" == *tests/*.sh ]]; then
     continue
   fi
+  # Skip development-only scripts (not run on Guix OS)
+  if [[ "$script" == update-manifest.sh ]] || [[ "$script" == run-tests.sh ]] || [[ "$script" == test-docker.sh ]]; then
+    continue
+  fi
   
   if [ -f "$script" ]; then
     SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
