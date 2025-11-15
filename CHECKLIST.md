@@ -51,7 +51,10 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - ✅ Fixed submit-batch.sh to convert JSONL to proper API format ({"requests": [...]})
   - ✅ Added JSONL validation before submission
   - ✅ Successfully submitted first batch: msgbatch_01UhbzJfuzqGwymdd9i8BKMD
-  - ⏳ Waiting for batch results (~24 hours) to convert postinstall/recipes/*.sh to Guile
+  - ✅ Fixed check-batch-status.sh to handle missing 'total' field and stdin consumption
+  - ✅ Fixed retrieve-batch.sh to handle missing fields and error responses gracefully
+  - ✅ Batch processing completed successfully (5/5 requests succeeded)
+  - ⏳ Ready for review: Results available at tools/batch-results.jsonl
 
 **Testing Strategy:**
 

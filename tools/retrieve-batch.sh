@@ -33,6 +33,13 @@ curl -s "https://api.anthropic.com/v1/messages/batches/$BATCH_ID/results" \
 echo "Results downloaded to: $RESULTS_FILE"
 echo ""
 
+# Check if results file contains an error
+if grep -q '"type":"error"' "$RESULTS_FILE"; then
+  echo "Error in batch results:"
+  python3 -m json.tool < "$RESULTS_FILE"
+  exit 1
+fi
+
 # Create conversions directory
 mkdir -p "$CONVERSIONS_DIR"
 
@@ -52,8 +59,25 @@ success_count = 0
 error_count = 0
 
 with open(results_file, 'r') as f:
-    for line in f:
-        result = json.loads(line)
+    for line_num, line in enumerate(f, 1):
+        line = line.strip()
+        if not line:
+            continue
+            
+        try:
+            result = json.loads(line)
+        except json.JSONDecodeError as e:
+            print(f"  ✗ Line {line_num}: Invalid JSON: {e}", file=sys.stderr)
+            error_count += 1
+            continue
+        
+        # Check if custom_id exists
+        if 'custom_id' not in result:
+            print(f"  ✗ Line {line_num}: Missing 'custom_id' field", file=sys.stderr)
+            print(f"    Result keys: {list(result.keys())}", file=sys.stderr)
+            error_count += 1
+            continue
+        
         custom_id = result['custom_id']
 
         # Extract original path from custom_id (e.g., "convert-postinstall-recipes-add-spacemacs")
@@ -64,10 +88,28 @@ with open(results_file, 'r') as f:
         output_path = os.path.join(conversions_dir, original_path)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+        # Check if result field exists
+        if 'result' not in result:
+            print(f"  ✗ {original_path}: Missing 'result' field")
+            print(f"    Result keys: {list(result.keys())}")
+            error_count += 1
+            continue
+        
         # Check if successful
-        if result['result']['type'] == 'succeeded':
+        if result['result'].get('type') == 'succeeded':
             # Extract converted script from response
-            content = result['result']['message']['content'][0]['text']
+            if 'message' not in result['result']:
+                print(f"  ✗ {original_path}: Missing 'message' field in result")
+                error_count += 1
+                continue
+            
+            message = result['result']['message']
+            if 'content' not in message or not message['content']:
+                print(f"  ✗ {original_path}: Missing or empty 'content' field")
+                error_count += 1
+                continue
+            
+            content = message['content'][0]['text']
 
             # Write to file
             with open(output_path, 'w') as out:
