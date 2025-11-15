@@ -137,9 +137,49 @@
   (unless (file-exists? path)
     (system* (format #f "mkdir -p ~s" path))))
 
-;;; Note: hash-to-words removed - use the actual hash-to-words tool if needed
-;;; The simplified version didn't match the real tool, causing confusion
-;;; Users should verify the hash directly against the repository
+;;; Use hash-to-words tool (same as update-manifest.sh)
+;;; Downloads and compiles the Go tool if Go is available
+(define (hash-to-words hash-string)
+  ;; Try to use the Go tool if available
+  (if (file-exists? "/run/current-system/profile/bin/go")
+      ;; Download and compile the tool
+      (let ((tool-dir "tools/hash-to-words")
+            (main-go (string-append tool-dir "/main.go"))
+            (words-json (string-append tool-dir "/words.json"))
+            (binary (string-append tool-dir "/hash-to-words"))
+            (result #f))
+        ;; Create directory
+        (mkdir-p tool-dir)
+        
+        ;; Download source files
+        (when (and (download-file "cmd/hash-to-words/main.go" main-go)
+                   (download-file "cmd/hash-to-words/words.json" words-json))
+          ;; Try to compile
+          (when (system* (format #f "cd ~s && go build -o ~s ~s"
+                                 tool-dir binary main-go))
+            ;; Run the tool
+            (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
+                                                  hash-string binary)))
+                   (output (read-line port))
+                   (status (close-pipe port)))
+              (when (and (zero? status) (string? output))
+                (set! result output))))
+          result)
+        result)
+      ;; No Go available, return #f to indicate we can't convert
+      #f))
+
+;;; Extract first N and last N words from word string
+(define (get-quick-words word-string n)
+  (let* ((words (string-split word-string #\space))
+         (total (length words)))
+    (if (< total (* n 2))
+        word-string
+        (let ((first-n (take words n))
+              (last-n (take-right words n)))
+          (format #f "~a ... ~a"
+                  (string-join first-n " ")
+                  (string-join last-n " "))))))
 
 ;;; Main bootstrap process
 (define (main args)
@@ -170,9 +210,20 @@
         (exit 1))
 
       ;; Show manifest checksum for manual verification
-      (let* ((manifest-hash (file-sha256 "SOURCE_MANIFEST.txt")))
+      (let* ((manifest-hash (file-sha256 "SOURCE_MANIFEST.txt"))
+             (hash-words (hash-to-words manifest-hash))
+             (quick-words (if hash-words (get-quick-words hash-words 3) #f)))
         (newline)
         (info (format #f "Manifest Hash: ~a" manifest-hash))
+        (if hash-words
+            (begin
+              (info (format #f "Words: ~a" hash-words))
+              (if quick-words
+                  (info (format #f "Quick: ~a" quick-words))
+                  #t))
+            (begin
+              (info "Words: (Go not available - install 'go' package to see word conversion)")
+              (info "Quick: (Go not available)")))
         (newline)
         (info "To verify this hash matches the repository:")
         (info (format #f "  curl -fsSL https://raw.githubusercontent.com/~a/~a/main/SOURCE_MANIFEST.txt | shasum -a 256"
