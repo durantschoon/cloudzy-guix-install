@@ -127,17 +127,16 @@ cd ~/guix-customize
 - ✅ Enhanced features complete:
   - ✅ Test generation (automatic test-*.scm files)
   - ✅ Comment structure preservation (structured vs unstructured handling)
+  - ✅ Test extraction and integration into test runner
+  - ✅ Verification script (verify-setup.sh)
+  - ✅ Magit integration for diff viewing
+  - ✅ Validation script (validate-comment-structure.sh)
   - ✅ All tool scripts work from repo root directory
   - ✅ .env file support (checks repo root first, then tools/)
   - ✅ Fixed submit-batch.sh Python script (variable expansion, stderr handling)
   - ✅ Fixed custom_id format to match API requirements (^[a-zA-Z0-9_-]{1,64}$)
   - ✅ Fixed view-jsonl.sh to find files in tools directory from root
   - ✅ Created generate-customize-batch.sh for converting customize scripts
-  - ✅ Test extraction and integration into test runner
-  - ✅ .env file support for API key
-  - ✅ Verification script (verify-setup.sh)
-  - ✅ Magit integration for diff viewing
-  - ✅ Validation script (validate-comment-structure.sh)
 - ⏳ Phase 2: Add validation (syntax checks, diff-based comparison, test account)
 - 📅 Phase 3: Execute first batch conversion (3 recipe scripts)
 - 📋 Future: Generalize system for any language pair (see [tools/GENERALIZATION_PLAN.md](tools/GENERALIZATION_PLAN.md))
