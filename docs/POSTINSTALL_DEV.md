@@ -155,6 +155,8 @@ If the Guile helper fails to find or modify the services field:
 
 ### Converting a .sh Script to .scm
 
+**IMPORTANT**: Read [docs/GUILE_KNOWLEDGE.md](GUILE_KNOWLEDGE.md) before starting Guile development!
+
 See [docs/GUILE_CONVERSION.md](GUILE_CONVERSION.md) for the comprehensive conversion plan.
 
 **Quick reference**:
@@ -170,10 +172,10 @@ See [docs/GUILE_CONVERSION.md](GUILE_CONVERSION.md) for the comprehensive conver
    (use-modules (ice-9 pretty-print)
                 (ice-9 match)
                 (ice-9 rdelim)
-                (srfi srfi-1))
+                (srfi srfi-1))  ; Required for filter-map, fold, etc.
    ```
 
-3. Convert bash patterns to Guile:
+3. Convert bash patterns to Guile - see GUILE_KNOWLEDGE.md for examples:
    - File reading: `(call-with-input-file file read-string)`
    - Command execution: `(open-input-pipe cmd)` + `(close-pipe port)`
    - Pattern matching: `(match expr ...)`
@@ -207,6 +209,7 @@ See [docs/GUILE_CONVERSION.md](GUILE_CONVERSION.md) for the comprehensive conver
 
 ## Questions?
 
+- See [docs/GUILE_KNOWLEDGE.md](GUILE_KNOWLEDGE.md) for Guile best practices and lessons learned
 - See [docs/GUILE_CONVERSION.md](GUILE_CONVERSION.md) for conversion strategy
 - See [CLAUDE.md](../CLAUDE.md) for AI assistant development notes
 - See [CHECKLIST.md](../CHECKLIST.md) for current project status

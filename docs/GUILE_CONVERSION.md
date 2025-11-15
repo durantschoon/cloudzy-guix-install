@@ -180,4 +180,5 @@ For each script:
 - **Coexistence**: .sh and .scm versions will coexist during transition
 - **Testing**: Both versions tested until .scm proven stable
 - **Rollback**: Keep .sh versions until all platforms verified
-- **Documentation**: Update CLAUDE.md with Guile patterns
+- **Knowledge Base**: See [GUILE_KNOWLEDGE.md](GUILE_KNOWLEDGE.md) for lessons learned and best practices
+- **Read First**: Review GUILE_KNOWLEDGE.md before starting any Guile development work
