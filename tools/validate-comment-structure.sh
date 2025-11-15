@@ -22,13 +22,47 @@ extract_comment_headers() {
   local lang="$2"  # "bash" or "guile"
   
   if [ "$lang" = "bash" ]; then
-    # Extract lines starting with # followed by space and capital letter
-    # But exclude header-style comments (first few lines, descriptive text)
-    # Focus on actual section headers that organize code
-    grep -E '^#[[:space:]]+[A-Z]' "$file" 2>/dev/null | sed 's/^#[[:space:]]*/# /' || true
+    # Extract section headers: comments that organize code structure
+    # Skip header comments (first 20 lines typically contain file header/documentation)
+    # Skip inline descriptive comments (comments with parentheses like "# Bootstrap installer (entry point)")
+    # Skip comments immediately before single statements (like "# Post-install library" before "if [ -f ... ]")
+    # Section headers are usually short, capitalized, and describe code blocks
+    
+    awk '
+      NR <= 20 { next }  # Skip header section
+      /^#[[:space:]]+[A-Z]/ {
+        # Skip comments with parentheses (inline descriptive comments)
+        if ($0 ~ /\(/) { next }
+        # Skip very long comments (documentation, not sections)
+        if (length($0) >= 60) { next }
+        
+        # Check if this comment is followed by a single statement (inline comment) vs code block (section header)
+        # Read ahead to find next non-comment, non-blank line
+        comment_line = NR
+        next_code_line = ""
+        for (i = NR + 1; i <= NR + 5; i++) {
+          getline next_line < FILENAME
+          if (next_line !~ /^[[:space:]]*#/ && next_line !~ /^[[:space:]]*$/) {
+            next_code_line = next_line
+            break
+          }
+        }
+        
+        # If next line is a single statement (if, hash=, echo, etc.), skip it (inline comment)
+        # Section headers are followed by code blocks (loops, multiple statements, etc.)
+        if (next_code_line ~ /^[[:space:]]*(if|hash=|echo|MANIFEST_|WORD_)/) {
+          # This is likely an inline comment before a single statement, skip it
+          next
+        }
+        
+        # This looks like a section header
+        print
+      }
+    ' "$file" 2>/dev/null | sed 's/^#[[:space:]]*/# /' || true
   else
     # Extract lines starting with ;;; (major sections) or ;; (subsections)
-    grep -E '^;;;[[:space:]]+[A-Z]|^;;[[:space:]]+[A-Z]' "$file" 2>/dev/null | sed 's/^;;;[[:space:]]*/;;; /' | sed 's/^;;[[:space:]]*/;; /' || true
+    # Skip header comments (first 20 lines)
+    awk 'NR > 20 && /^;;;[[:space:]]+[A-Z]|^;;[[:space:]]+[A-Z]/ { print }' "$file" 2>/dev/null | sed 's/^;;;[[:space:]]*/;;; /' | sed 's/^;;[[:space:]]*/;; /' || true
   fi
 }
 
