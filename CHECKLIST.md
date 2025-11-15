@@ -106,6 +106,11 @@ cd ~/guix-customize
 - Full checksum verification via SOURCE_MANIFEST.txt
 - Platform auto-detection (framework-dual)
 - All Guile tests passing in Docker
+- Bootstrap script fixed (syntax errors, path resolution, Go detection)
+- Hash-to-words conversion requires Go (fatal error if missing)
+- Customize scripts properly resolve paths (symlink support, INSTALL_ROOT)
+- postinstall/lib.sh functions correctly use INSTALL_ROOT
+- Batch conversion tools ready for production use
 
 **Note:** Framework-dual postinstall testing should focus on GNOME configuration workflow. See [docs/POSTINSTALL_DEV.md](docs/POSTINSTALL_DEV.md) for testing and development instructions.
 
