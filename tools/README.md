@@ -30,7 +30,11 @@ These scripts automate the conversion of `.sh` files to `.scm` files using Claud
 ```
 
 **What it does:**
-- Finds all `.sh` scripts in `postinstall/recipes/`
+- Finds all `.sh` scripts that run on Guix OS:
+  - `postinstall/recipes/*.sh` - Shared recipe scripts
+  - `lib/*.sh` - Library scripts used during/after installation
+  - Platform-specific scripts (if any)
+- Excludes development tools (`tools/`, `archive/`, test files, `update-manifest.sh`, etc.)
 - Reads all Guile documentation (KNOWLEDGE, BEST_PRACTICES, GOTCHAS, CONVERSION)
 - Creates batch request for each script
 - Outputs to `tools/batch-requests.jsonl`

@@ -46,11 +46,17 @@ for converted in "${converted_files[@]}"; do
   # Try new format first (correct format)
   original_path="$REPO_ROOT/${relative_path%.scm}.sh"
   
-  # If not found, try old format (nested directories)
+  # If not found, try old format (nested directories like add/spacemacs.scm)
   if [ ! -f "$original_path" ]; then
-    # Convert add/spacemacs.scm -> add-spacemacs.sh
-    old_format_path=$(echo "$relative_path" | sed 's|/|-|g' | sed 's/.scm$/.sh/')
-    original_path="$REPO_ROOT/$old_format_path"
+    # Check if this looks like old format (has nested add/ directory)
+    if [[ "$relative_path" == */add/* ]]; then
+      # Convert postinstall/recipes/add/spacemacs.scm -> postinstall/recipes/add-spacemacs.sh
+      # Extract everything before /add/, then combine add- with nested filename
+      base_dir=$(echo "$relative_path" | sed 's|/add/.*||')
+      nested_part=$(echo "$relative_path" | sed 's|.*/add/||' | sed 's|/|-|g' | sed 's/.scm$//')
+      old_format_path="${base_dir}/add-${nested_part}.sh"
+      original_path="$REPO_ROOT/$old_format_path"
+    fi
   fi
   
   if [ -f "$original_path" ]; then
