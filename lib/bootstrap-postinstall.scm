@@ -154,12 +154,13 @@
 
 ;;; Use hash-to-words tool (same as update-manifest.sh)
 ;;; Downloads and compiles the Go tool if Go is available
-(define (hash-to-words hash-string)
+;;; base-dir: base directory where files should be downloaded (e.g., ~/guix-customize)
+(define (hash-to-words hash-string base-dir)
   ;; Try to use the Go tool if available
   (let ((go-cmd (go-path)))
     (if go-cmd
         ;; Download and compile the tool
-        (let* ((tool-dir "tools/hash-to-words")
+        (let* ((tool-dir (string-append base-dir "/tools/hash-to-words"))
                (main-go (string-append tool-dir "/main.go"))
                (words-json (string-append tool-dir "/words.json"))
                (binary (string-append tool-dir "/hash-to-words")))
@@ -187,7 +188,9 @@
                       (err "Failed to compile hash-to-words tool")
                       #f))
                 (begin
-                  (err "Failed to download hash-to-words source files from repository")
+                  (err (format #f "Failed to download hash-to-words source files from repository"))
+                  (err (format #f "  Expected main.go at: ~a" main-go))
+                  (err (format #f "  Expected words.json at: ~a" words-json))
                   #f))))
         ;; No Go available, return #f to indicate we can't convert
         #f)))
@@ -234,7 +237,7 @@
 
       ;; Show manifest checksum for manual verification
       (let* ((manifest-hash (file-sha256 "SOURCE_MANIFEST.txt"))
-             (hash-words (hash-to-words manifest-hash))
+             (hash-words (hash-to-words manifest-hash install-dir))
              (quick-words (if hash-words (get-quick-words hash-words 3) #f)))
         (newline)
         (info (format #f "Manifest Hash: ~a" manifest-hash))
