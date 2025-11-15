@@ -8,7 +8,17 @@ CONFIG_FILE="/etc/config.scm"
 BACKUP_DIR="$HOME/.config/guix-customize/backups"
 
 # Source shared library functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve script path (handles symlinks)
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  # If relative symlink, resolve relative to original dir
+  if [[ "$SCRIPT_PATH" != /* ]]; then
+    SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$SCRIPT_PATH"
+  fi
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
 # Find postinstall/lib.sh relative to customize script location
 # Structure: ~/guix-customize/cloudzy/postinstall/customize
 # We need: ~/guix-customize/postinstall/lib.sh
@@ -17,6 +27,8 @@ if [ -f "$INSTALL_ROOT/postinstall/lib.sh" ]; then
   source "$INSTALL_ROOT/postinstall/lib.sh"
 else
   echo "Error: postinstall/lib.sh not found at $INSTALL_ROOT/postinstall/lib.sh"
+  echo "Script location: $SCRIPT_DIR"
+  echo "Install root: $INSTALL_ROOT"
   echo "Please run bootstrap-postinstall.scm first to download all required files."
   exit 1
 fi
