@@ -9,17 +9,19 @@ import (
 
 // TestStep03ConfigDualBoot_Integration tests the integration of refactored functions
 func TestStep03ConfigDualBoot_Integration(t *testing.T) {
-	step := &Step03ConfigDualBoot{}
-	state := &State{}
-
 	// Test that the step can be created without panicking
-	if step == nil {
-		t.Error("Step03ConfigDualBoot should be creatable")
-	}
+	step := &Step03ConfigDualBoot{}
+
+	// Verify the step has the expected methods (compile-time check)
+	_ = step.RunWarnings
+	_ = step.RunClean
 
 	// Test that state can be created
-	if state == nil {
-		t.Error("State should be creatable")
+	state := &State{}
+	// Verify state is usable by setting and reading a field
+	state.Device = "/dev/test"
+	if state.Device != "/dev/test" {
+		t.Error("State fields should be readable and writable")
 	}
 }
 
