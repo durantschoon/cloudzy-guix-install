@@ -7,3 +7,14 @@ run-remote-steps
 
 # ISO files
 *.iso.*
+
+# Batch conversion tools - intermediate/temporary files
+# These can be regenerated or re-downloaded
+tools/batch-requests.jsonl
+tools/batch-requests.jsonl.*
+tools/batch-results.jsonl
+tools/conversions.patch
+tools/.magit-diff-backup/
+
+# Note: tools/converted-scripts/ IS tracked - these are the actual converted code
+# that we review, test, and potentially integrate into the codebase
