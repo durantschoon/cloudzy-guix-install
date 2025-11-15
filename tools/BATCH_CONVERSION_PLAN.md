@@ -399,8 +399,116 @@ Interactive approval of each sudo command before execution.
 
 ---
 
+## Workflow Assumptions & Risks
+
+### Intended Workflow
+
+**Temporal Separation:**
+- **Daytime**: Work on downstream tasks (e.g., GNOME installation, framework-dual testing)
+- **Nighttime**: Launch batch conversion (runs overnight while you sleep)
+- **Between sessions**: Check batch results, validate, iterate
+
+**Code Lifecycle:**
+```
+┌─────────────────────────────────────────────────────┐
+│ UPSTREAM CODE (What batch converts)                │
+│ - Installation scripts (bootstrap, run-remote)     │
+│ - Pre-GNOME setup (partitioning, base system)      │
+│ - Recipe scripts (add-spacemacs.sh, etc.)          │
+│ ✅ Stable - not actively changing                  │
+└─────────────────────────────────────────────────────┘
+                    ⬇
+            Batch Conversion
+                    ⬇
+┌─────────────────────────────────────────────────────┐
+│ DOWNSTREAM CODE (What you're actively developing)  │
+│ - GNOME installation workflow                      │
+│ - framework-dual postinstall                        │
+│ - New service integrations                          │
+│ 🔄 Active development - changes frequently         │
+└─────────────────────────────────────────────────────┘
+```
+
+### Known Risks
+
+#### Risk: Stale Upstream Code During Batch Conversion
+
+**Scenario**:
+1. You discover an install bug in `bootstrap-installer.sh`
+2. You fix it and commit
+3. Meanwhile, batch conversion is running with the **old, unfixed version**
+4. 24 hours later, converted scripts have the same bug
+
+**Likelihood**: Low (you're currently working downstream, not upstream)
+
+**Impact**: Medium (waste of batch API credits, need to re-run)
+
+**Mitigation Strategies:**
+
+**Strategy 1: Pre-flight Freeze (Recommended for First Batch)**
+```bash
+# Before submitting batch:
+1. Commit all upstream changes
+2. Push to GitHub
+3. Tag the commit: git tag batch-conversion-v1
+4. Submit batch from this tagged commit
+5. Don't modify upstream code during batch processing
+```
+
+**Strategy 2: Timestamp Tracking**
+```bash
+# In tools/generate-batch-conversion.sh, add:
+echo "Batch generated from commit: $(git rev-parse HEAD)" >> batch-metadata.txt
+echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> batch-metadata.txt
+
+# When results return, check:
+git log --since="timestamp" -- postinstall/recipes/*.sh
+# If changes found, re-run batch
+```
+
+**Strategy 3: Scope Isolation (Current Approach)**
+- Work on downstream code (GNOME installation)
+- Only convert stable upstream code (recipes)
+- Natural separation reduces conflict risk
+
+**Strategy 4: Acceptance Criteria**
+- First batch is **exploratory** - expect to iterate
+- If upstream changes during batch, consider it a learning opportunity
+- Re-run batch with fixes is low cost (~$0.12)
+
+### Best Practices
+
+**Before Launching Batch:**
+- [ ] Review git status - no uncommitted upstream changes
+- [ ] Push all changes to GitHub
+- [ ] Note current commit hash in batch notes
+- [ ] Don't plan upstream changes during batch window
+
+**During Batch Processing (24 hours):**
+- ✅ Work on downstream code (GNOME, postinstall, etc.)
+- ✅ Update documentation
+- ✅ Test on real hardware
+- ⚠️  Avoid changing upstream scripts (recipes, bootstrap, etc.)
+- ⚠️  If urgent upstream fix needed, note it for re-batch
+
+**After Batch Completes:**
+- [ ] Check git log for upstream changes during batch window
+- [ ] If changes found, decide: use old conversion or re-run batch
+- [ ] Update BATCH_CONVERSION_PLAN.md with lessons learned
+
+### Future Consideration
+
+If batch conversions become frequent, consider:
+- **CI/CD integration**: Auto-trigger batch on upstream changes
+- **Incremental batches**: Only convert changed files
+- **Version pinning**: Batch always uses tagged releases
+
+---
+
 ## Notes
 
 This is a **parallel project** that can be worked on independently of the main framework-dual setup goal. The batch conversion system is production-ready, but these enhancements will significantly improve safety and reliability.
 
 **Timeline**: 2-3 weeks to complete all enhancements, running in parallel with framework-dual development.
+
+**Workflow Safety**: Designed for overnight batch processing while you work on downstream code during the day. Temporal separation reduces risk of code conflicts.
