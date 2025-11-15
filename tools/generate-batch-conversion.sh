@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Generate batch API requests for converting .sh scripts to .scm
 # Uses Anthropic Batch API for cost-effective conversion
+#
+# The conversion prompt includes instructions to preserve comment structure,
+# ensuring matching section headers between original and converted scripts.
+# This makes diffs more readable. Use validate-comment-structure.sh to check.
 
 set -euo pipefail
 

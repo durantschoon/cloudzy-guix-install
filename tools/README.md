@@ -304,6 +304,20 @@ diff -y postinstall/recipes/add-spacemacs.sh \
         tools/converted-scripts/postinstall/recipes/add-spacemacs.scm
 ```
 
+**Validate comment structure matching:**
+```bash
+./tools/validate-comment-structure.sh
+```
+
+This script checks if converted `.scm` scripts have matching comment section headers with their original `.sh` scripts. Matching comment sections make diffs much more readable by showing corresponding sections side-by-side.
+
+**What it checks:**
+- Extracts comment headers from both original and converted scripts
+- Compares section names and order
+- Reports mismatches or missing sections
+
+**Tip:** The conversion prompt now includes instructions to preserve comment structure. If original scripts have structured comments (e.g., `# Configuration`, `# Helper functions`), they'll be converted to matching Guile comments (`;;; Configuration`, `;;; Helper functions`). This ensures diffs show corresponding sections together.
+
 **Manual review checklist:**
 - [ ] Shebang correct: `#!/run/current-system/profile/bin/guile --no-auto-compile -s`
 - [ ] All `use-modules` present (ice-9, srfi-1, etc.)
@@ -312,6 +326,7 @@ diff -y postinstall/recipes/add-spacemacs.sh \
 - [ ] GNU coreutils used (sha256sum not shasum)
 - [ ] Comments explain complex conversions
 - [ ] Naming conventions followed (?, !, ->)
+- [ ] Comment sections match original structure (use `validate-comment-structure.sh`)
 
 **Test converted scripts:**
 ```bash
