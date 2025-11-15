@@ -36,9 +36,9 @@ Scripts for installing minimal Guix OS on Framework 13 alongside an existing Pop
 
 ### What These Scripts DON'T Do
 
-❌ Shrink or resize existing partitions (do this manually first if needed)
-❌ Modify Pop!_OS partitions
-❌ Create a new ESP (uses existing one)
+- ❌ Shrink or resize existing partitions (do this manually first if needed)
+- ❌ Modify Pop!_OS partitions
+- ❌ Create a new ESP (uses existing one)
 
 ## Directory Structure
 

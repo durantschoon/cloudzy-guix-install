@@ -23,8 +23,27 @@ ask_yes() {
 backup_config() {
   mkdir -p "$BACKUP_DIR"
   local backup_file="$BACKUP_DIR/config.scm.$(date +%Y%m%d-%H%M%S)"
-  cp "$CONFIG_FILE" "$backup_file"
+  sudo cp "$CONFIG_FILE" "$backup_file"
+  sudo chown "$USER:$USER" "$backup_file"
   info "Backed up config to: $backup_file"
+}
+
+# Helper function to safely edit /etc/config.scm
+# Usage: safe_edit_config "sed command"
+safe_edit_config() {
+  local sed_cmd="$1"
+  local tmp_file=$(mktemp)
+
+  # Copy config to temp file (readable by user)
+  sudo cp "$CONFIG_FILE" "$tmp_file"
+  sudo chown "$USER:$USER" "$tmp_file"
+
+  # Apply sed command to temp file
+  eval "sed -i '$sed_cmd' '$tmp_file'"
+
+  # Copy back with sudo
+  sudo cp "$tmp_file" "$CONFIG_FILE"
+  rm -f "$tmp_file"
 }
 
 # Add NetworkManager service
@@ -46,7 +65,7 @@ add_networkmanager() {
 
   # Add networking module if not present
   if ! grep -q "(gnu services networking)" "$CONFIG_FILE"; then
-    sed -i '/^(use-modules/a\             (gnu services networking)' "$CONFIG_FILE"
+    safe_edit_config '/^(use-modules/a\             (gnu services networking)'
   fi
 
   # Add NetworkManager service to services list
@@ -54,10 +73,10 @@ add_networkmanager() {
   if grep -q "(services %base-services))" "$CONFIG_FILE"; then
     # Simple services list - replace with append
     # Must preserve the closing paren for operating-system
-    sed -i 's|(services %base-services))|(services\n  (append\n   (list (service wpa-supplicant-service-type)\n         (service network-manager-service-type))\n   %base-services)))|' "$CONFIG_FILE"
+    safe_edit_config 's|(services %base-services))|(services\n  (append\n   (list (service wpa-supplicant-service-type)\n         (service network-manager-service-type))\n   %base-services)))|'
   elif grep -q "(services (append" "$CONFIG_FILE"; then
     # Already has append, add to existing list
-    sed -i '0,/(list /s|(list |(list (service wpa-supplicant-service-type)\n         (service network-manager-service-type)\n         |' "$CONFIG_FILE"
+    safe_edit_config '0,/(list /s|(list |(list (service wpa-supplicant-service-type)\n         (service network-manager-service-type)\n         |'
   else
     err "Could not find services definition in config.scm"
     err "Please add NetworkManager manually"
@@ -86,17 +105,17 @@ add_ssh() {
 
   # Add ssh module if not present
   if ! grep -q "(gnu services ssh)" "$CONFIG_FILE"; then
-    sed -i '/^(use-modules/a\             (gnu services ssh)' "$CONFIG_FILE"
+    safe_edit_config '/^(use-modules/a\             (gnu services ssh)'
   fi
 
   # Add SSH service to services list
   if grep -q "(services %base-services))" "$CONFIG_FILE"; then
     # Simple services list - replace with append
     # Must preserve the closing paren for operating-system
-    sed -i 's|(services %base-services))|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services)))|' "$CONFIG_FILE"
+    safe_edit_config 's|(services %base-services))|(services\n  (append\n   (list (service openssh-service-type))\n   %base-services)))|'
   elif grep -q "(services (append" "$CONFIG_FILE"; then
     # Already has append, add to existing list
-    sed -i '0,/(list /s|(list |(list (service openssh-service-type)\n         |' "$CONFIG_FILE"
+    safe_edit_config '0,/(list /s|(list |(list (service openssh-service-type)\n         |'
   else
     err "Could not find services definition in config.scm"
     err "Please add SSH manually"
@@ -138,17 +157,17 @@ add_desktop() {
 
   # Add desktop module if not present
   if ! grep -q "(gnu services desktop)" "$CONFIG_FILE"; then
-    sed -i '/^(use-modules/a\             (gnu services desktop)' "$CONFIG_FILE"
+    safe_edit_config '/^(use-modules/a\             (gnu services desktop)'
   fi
 
   # Add desktop service
   if grep -q "(services %base-services))" "$CONFIG_FILE"; then
     # Simple services list - replace with append
     # Must preserve the closing paren for operating-system
-    sed -i "s|(services %base-services))|(services\n  (append\n   (list (service $service))\n   %base-services)))|" "$CONFIG_FILE"
+    safe_edit_config "s|(services %base-services))|(services\n  (append\n   (list (service $service))\n   %base-services)))|"
   elif grep -q "(services (append" "$CONFIG_FILE"; then
     # Already has append, add to existing list
-    sed -i "0,/(list /s|(list |(list (service $service)\n         |" "$CONFIG_FILE"
+    safe_edit_config "0,/(list /s|(list |(list (service $service)\n         |"
   else
     err "Could not find services definition in config.scm"
     err "Please add desktop manually"
@@ -170,7 +189,7 @@ add_packages() {
   backup_config
 
   # Replace minimal packages with useful defaults
-  sed -i 's|(packages %base-packages)|(packages\n  (append (list (specification->package "emacs")\n                (specification->package "git")\n                (specification->package "vim")\n                (specification->package "htop")\n                (specification->package "curl")\n                (specification->package "wget"))\n          %base-packages))|' "$CONFIG_FILE"
+  safe_edit_config 's|(packages %base-packages)|(packages\n  (append (list (specification->package "emacs")\n                (specification->package "git")\n                (specification->package "vim")\n                (specification->package "htop")\n                (specification->package "curl")\n                (specification->package "wget"))\n          %base-packages))|'
 
   info "✓ Added: emacs, git, vim, htop, curl, wget"
 }
@@ -188,11 +207,11 @@ add_framework_hardware() {
 
   # Add firmware module
   if ! grep -q "(gnu packages linux)" "$CONFIG_FILE"; then
-    sed -i '/^(use-modules/a\             (gnu packages linux)' "$CONFIG_FILE"
+    safe_edit_config '/^(use-modules/a\             (gnu packages linux)'
   fi
 
   # Add firmware to operating-system
-  sed -i '/^(operating-system/a\ (firmware (list linux-firmware))' "$CONFIG_FILE"
+  safe_edit_config '/^(operating-system/a\ (firmware (list linux-firmware))'
 
   info "✓ Added WiFi/Bluetooth firmware (linux-firmware)"
   info "Note: For best results, also add nonguix channel for proprietary firmware"
