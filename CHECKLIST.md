@@ -113,11 +113,11 @@ cd ~/guix-customize
 
 ## 🔀 Parallel Projects
 
-### Batch Conversion System (Phase 2 - IN PROGRESS)
+### Batch Conversion System (Phase 2 - COMPLETED)
 
 **Goal**: Automated bash-to-Guile conversion using Anthropic Batch API with comprehensive validation.
 
-**Current Status**: Phase 1 Complete ✅ - Basic tooling ready, enhancements in progress
+**Current Status**: All tooling complete ✅ - Ready for production use
 
 **Plan**: See [tools/BATCH_CONVERSION_PLAN.md](tools/BATCH_CONVERSION_PLAN.md) for detailed roadmap.
 
@@ -127,6 +127,12 @@ cd ~/guix-customize
 - ✅ Enhanced features complete:
   - ✅ Test generation (automatic test-*.scm files)
   - ✅ Comment structure preservation (structured vs unstructured handling)
+  - ✅ All tool scripts work from repo root directory
+  - ✅ .env file support (checks repo root first, then tools/)
+  - ✅ Fixed submit-batch.sh Python script (variable expansion, stderr handling)
+  - ✅ Fixed custom_id format to match API requirements (^[a-zA-Z0-9_-]{1,64}$)
+  - ✅ Fixed view-jsonl.sh to find files in tools directory from root
+  - ✅ Created generate-customize-batch.sh for converting customize scripts
   - ✅ Test extraction and integration into test runner
   - ✅ .env file support for API key
   - ✅ Verification script (verify-setup.sh)
