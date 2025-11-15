@@ -428,6 +428,25 @@ tools/
 
 **Note:** Batch files are stored in compact JSONL format (one JSON object per line) for efficiency. Use `view-jsonl.sh` to view them with proper formatting and syntax highlighting.
 
+## Pre-Flight Check
+
+Before running a batch conversion, verify everything is set up:
+
+```bash
+./tools/verify-setup.sh
+```
+
+This checks:
+- ✅ All required scripts are present and executable
+- ✅ API key is configured (.env or environment variable)
+- ✅ Required dependencies (python3, curl, git)
+- ✅ Documentation files exist
+- ✅ .gitignore is properly configured
+- ✅ Conversion prompt includes test generation and comment preservation
+- ✅ Test extraction and runner are configured
+
+**Fix any errors before proceeding!**
+
 ## Troubleshooting
 
 ### Error: API key not set
