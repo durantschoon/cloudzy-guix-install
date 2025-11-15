@@ -8,6 +8,10 @@ run-remote-steps
 # ISO files
 *.iso.*
 
+# API keys and secrets (NEVER commit these!)
+.env
+*.key
+
 # Batch conversion tools - intermediate/temporary files
 # These can be regenerated or re-downloaded
 tools/batch-requests.jsonl
