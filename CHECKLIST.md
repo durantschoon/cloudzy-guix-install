@@ -59,6 +59,11 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - ✅ Fixed check-batch-status.sh to handle missing 'total' field and stdin consumption
   - ✅ Fixed retrieve-batch.sh to handle missing fields and error responses gracefully
   - ✅ Batch processing completed successfully (5/5 requests succeeded)
+  - ✅ Created generate-customize-batch.sh for converting customize scripts (4 scripts)
+  - ✅ Fixed all tool scripts to work from repo root and find .env there
+  - ✅ Fixed view-jsonl.sh to find files in tools directory when run from root
+  - ✅ Fixed submit-batch.sh Python script (variable expansion, stderr handling)
+  - ✅ Fixed custom_id format to match API requirements (^[a-zA-Z0-9_-]{1,64}$)
   - ⏳ Ready for review: Results available at tools/batch-results.jsonl
 
 **Testing Strategy:**
@@ -77,6 +82,12 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - ✅ Created docs/POSTINSTALL_DEV.md with developer workflow
 - ✅ Created lib/bootstrap-postinstall.scm (pure Guile bootstrap)
 - ✅ Enhanced docs/GUILE_KNOWLEDGE.md with community best practices
+- ✅ Fixed bootstrap-postinstall.scm syntax errors and path resolution
+- ✅ Fixed Go detection in bootstrap script (uses bash to run 'command -v go')
+- ✅ Made hash-to-words conversion failure fatal (requires Go)
+- ✅ Fixed customize script path resolution for symlinks
+- ✅ Fixed postinstall/lib.sh to use INSTALL_ROOT correctly (exported from customize scripts)
+- ✅ Fixed guile-config-helper.scm path resolution in guile_add_service()
 - 🧪 **NEXT**: Test full GNOME installation workflow on real hardware
 
 **Bootstrap Command for Testing:**
