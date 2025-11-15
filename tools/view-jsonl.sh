@@ -177,17 +177,96 @@ if total == 0:
     print("No valid JSON objects found in file.")
     sys.exit(1)
 
-def process_text_blobs(obj):
-    """Recursively replace \\n with actual newlines in text fields"""
+def extract_text_blobs(obj, path=""):
+    """Extract text blobs that need special formatting, return (modified_obj, text_blobs)"""
+    text_blobs = {}
+    
     if isinstance(obj, dict):
-        return {k: process_text_blobs(v) for k, v in obj.items()}
+        modified = {}
+        for key, val in obj.items():
+            current_path = f"{path}.{key}" if path else key
+            if isinstance(val, str) and ('\n' in val or '\\n' in val):
+                # Store text blob and replace with placeholder
+                text_blobs[current_path] = val.replace('\\n', '\n')
+                modified[key] = f"__TEXT_BLOB_{current_path}__"
+            elif isinstance(val, (dict, list)):
+                sub_modified, sub_blobs = extract_text_blobs(val, current_path)
+                modified[key] = sub_modified
+                text_blobs.update(sub_blobs)
+            else:
+                modified[key] = val
+        return modified, text_blobs
+    
     elif isinstance(obj, list):
-        return [process_text_blobs(item) for item in obj]
-    elif isinstance(obj, str):
-        # Replace escaped newlines with actual newlines
-        return obj.replace('\\n', '\n')
-    else:
-        return obj
+        modified = []
+        for i, item in enumerate(obj):
+            current_path = f"{path}[{i}]" if path else f"[{i}]"
+            if isinstance(item, dict) and 'text' in item:
+                text_content = item.get('text', '')
+                if '\n' in text_content or '\\n' in text_content:
+                    # Store text blob
+                    text_blobs[current_path] = text_content.replace('\\n', '\n')
+                    # Keep structure but mark text field
+                    modified_item = item.copy()
+                    modified_item['text'] = f"__TEXT_BLOB_{current_path}__"
+                    modified.append(modified_item)
+                else:
+                    sub_modified, sub_blobs = extract_text_blobs(item, current_path)
+                    modified.append(sub_modified)
+                    text_blobs.update(sub_blobs)
+            elif isinstance(item, (dict, list)):
+                sub_modified, sub_blobs = extract_text_blobs(item, current_path)
+                modified.append(sub_modified)
+                text_blobs.update(sub_blobs)
+            else:
+                modified.append(item)
+        return modified, text_blobs
+    
+    return obj, text_blobs
+
+def insert_text_blobs(formatted_json, text_blobs):
+    """Insert formatted text blobs into JSON output, handling jq color codes"""
+    lines = formatted_json.split('\n')
+    result_lines = []
+    i = 0
+    
+    while i < len(lines):
+        line = lines[i]
+        
+        # Check if this line contains a text blob placeholder (handle ANSI codes)
+        placeholder_found = False
+        import re
+        for path, text_content in text_blobs.items():
+            placeholder = f'__TEXT_BLOB_{path}__'
+            if placeholder in line:
+                # Extract indentation (strip ANSI codes first)
+                ansi_stripped = re.sub(r'\x1b\[[0-9;]*m', '', line)
+                # Find key name before the placeholder
+                # Pattern: "key": "placeholder"
+                key_match = re.search(r'(\s+)"([^"]+)"\s*:\s*"[^"]*' + re.escape(placeholder) + r'[^"]*"', ansi_stripped)
+                if key_match:
+                    indent = key_match.group(1)
+                    key = key_match.group(2)
+                    
+                    # Replace the entire line with key and multi-line text
+                    # Preserve ANSI codes for the key part
+                    ansi_reset = '\x1b[0m'
+                    ansi_key = '\x1b[1;34m'  # Blue for keys (jq default)
+                    ansi_string = '\x1b[0;32m'  # Green for strings (jq default)
+                    ansi_normal = '\x1b[1;39m'  # Normal color
+                    
+                    result_lines.append(f'{indent}{ansi_key}"{key}"{ansi_normal}: {ansi_string}|{ansi_reset}')
+                    for text_line in text_content.split('\n'):
+                        result_lines.append(f'{indent}  {ansi_string}{text_line}{ansi_reset}')
+                    placeholder_found = True
+                    i += 1
+                    break
+        
+        if not placeholder_found:
+            result_lines.append(line)
+            i += 1
+    
+    return "\n".join(result_lines)
 
 for i, obj in enumerate(objects, 1):
     # Print header
@@ -197,13 +276,17 @@ for i, obj in enumerate(objects, 1):
     print("")
     
     if use_jq:
-        # Process text blobs first, then output JSON and pipe through jq
-        processed_obj = process_text_blobs(obj)
-        json_str = json.dumps(processed_obj, ensure_ascii=False, indent=2)
+        # Extract text blobs, get JSON structure, colorize with jq, then insert text blobs
+        modified_obj, text_blobs = extract_text_blobs(obj)
+        json_str = json.dumps(modified_obj, ensure_ascii=False, indent=2)
+        
         import subprocess
         jq_process = subprocess.Popen(['jq', '-C', '.'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
         jq_output, _ = jq_process.communicate(input=json_str)
-        print(jq_output.rstrip())
+        
+        # Insert formatted text blobs
+        final_output = insert_text_blobs(jq_output.rstrip(), text_blobs)
+        print(final_output)
     else:
         # Use Python formatting
         formatted = format_value(obj, indent=0, key_name="")
