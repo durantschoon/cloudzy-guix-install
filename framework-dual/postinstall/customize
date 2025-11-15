@@ -24,7 +24,7 @@ backup_config() {
   mkdir -p "$BACKUP_DIR"
   local backup_file="$BACKUP_DIR/config.scm.$(date +%Y%m%d-%H%M%S)"
   sudo cp "$CONFIG_FILE" "$backup_file"
-  sudo chown "$USER:$USER" "$backup_file"
+  sudo chown "$USER" "$backup_file"
   info "Backed up config to: $backup_file"
 }
 
@@ -36,7 +36,7 @@ safe_edit_config() {
 
   # Copy config to temp file (readable by user)
   sudo cp "$CONFIG_FILE" "$tmp_file"
-  sudo chown "$USER:$USER" "$tmp_file"
+  sudo chown "$USER" "$tmp_file"
 
   # Apply sed command to temp file
   eval "sed -i '$sed_cmd' '$tmp_file'"
