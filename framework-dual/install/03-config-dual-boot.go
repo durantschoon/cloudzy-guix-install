@@ -3,6 +3,7 @@ package install
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/durantschoon/cloudzy-guix-install/lib"
 )

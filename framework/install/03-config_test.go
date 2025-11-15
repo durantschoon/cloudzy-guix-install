@@ -94,7 +94,25 @@ func TestStateIntegrity(t *testing.T) {
 	if state.Device != "/dev/nvme0n1" {
 		t.Errorf("Device not set correctly: got %s", state.Device)
 	}
+	if state.EFI != "/dev/nvme0n1p1" {
+		t.Errorf("EFI not set correctly: got %s", state.EFI)
+	}
+	if state.Root != "/dev/nvme0n1p2" {
+		t.Errorf("Root not set correctly: got %s", state.Root)
+	}
 	if state.UserName != "testuser" {
 		t.Errorf("UserName not set correctly: got %s", state.UserName)
+	}
+	if state.FullName != "Test User" {
+		t.Errorf("FullName not set correctly: got %s", state.FullName)
+	}
+	if state.Timezone != "America/New_York" {
+		t.Errorf("Timezone not set correctly: got %s", state.Timezone)
+	}
+	if state.HostName != "test-host" {
+		t.Errorf("HostName not set correctly: got %s", state.HostName)
+	}
+	if state.BootMode != "uefi" {
+		t.Errorf("BootMode not set correctly: got %s", state.BootMode)
 	}
 }

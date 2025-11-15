@@ -3,6 +3,7 @@ package install
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/durantschoon/cloudzy-guix-install/lib"
 )
@@ -227,7 +228,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
 
  (bootloader
   (bootloader-configuration
-   (bootloader grub-efi-bootloader)
+   (bootloader %s)
    (target %s)
    (timeout 5)
    ))
@@ -257,12 +258,14 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
  ;; Minimal services - add SSH, desktop, etc. after installation
  (services %%base-services))
 `,
-		state.HostName,    // host-name
-		state.Timezone,    // timezone
-		targets,           // targets
-		state.UserName,    // name
-		state.FullName,    // comment
-		state.UserName,    // home-directory
+		state.HostName,           // host-name
+		state.Timezone,           // timezone
+		keyboardLayoutConfig,     // keyboard-layout (or empty string)
+		bootloader,               // bootloader
+		targets,                  // targets
+		state.UserName,           // name
+		state.FullName,           // comment
+		state.UserName,           // home-directory
 	)
 
 	return config
