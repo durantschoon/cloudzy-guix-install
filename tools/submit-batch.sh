@@ -35,12 +35,60 @@ REQUEST_COUNT=$(wc -l < "$BATCH_FILE")
 echo "Submitting $REQUEST_COUNT conversion requests"
 echo ""
 
+# Validate JSONL format before submitting
+echo "Validating JSONL format..."
+VALIDATION_ERRORS=0
+LINE_NUM=0
+while IFS= read -r line; do
+  LINE_NUM=$((LINE_NUM + 1))
+  if ! echo "$line" | python3 -c "import sys, json; json.load(sys.stdin)" >/dev/null 2>&1; then
+    echo "  ✗ Line $LINE_NUM: Invalid JSON"
+    VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+  fi
+done < "$BATCH_FILE"
+
+if [ $VALIDATION_ERRORS -gt 0 ]; then
+  echo ""
+  echo "Error: Found $VALIDATION_ERRORS invalid JSON line(s) in batch file"
+  echo "Please fix the JSONL file before submitting"
+  exit 1
+fi
+
+echo "  ✓ All $REQUEST_COUNT lines are valid JSON"
+echo ""
+
+# Convert JSONL to API format (API expects {"requests": [...]})
+echo "Converting JSONL to API format..."
+TEMP_JSON=$(mktemp)
+python3 <<EOF > "$TEMP_JSON"
+import json
+import sys
+
+requests = []
+with open('$BATCH_FILE', 'r') as f:
+    for line in f:
+        line = line.strip()
+        if line:
+            requests.append(json.loads(line))
+
+# API expects {"requests": [...]} format
+batch_request = {"requests": requests}
+json.dump(batch_request, sys.stdout, ensure_ascii=False)
+EOF
+
+echo "  ✓ Converted to JSON array format"
+echo ""
+
 # Submit batch
+# Note: Anthropic Batch API expects JSON array format
 RESPONSE=$(curl -s https://api.anthropic.com/v1/messages/batches \
   --header "x-api-key: $ANTHROPIC_API_KEY" \
   --header "anthropic-version: 2023-06-01" \
   --header "content-type: application/json" \
-  --data-binary @"$BATCH_FILE")
+  --data-binary @"$TEMP_JSON")
+
+# Clean up temp file
+rm -f "$TEMP_JSON"
 
 # Check for errors
 if echo "$RESPONSE" | grep -q '"type":"error"'; then

@@ -35,7 +35,20 @@ echo "Generating batch conversion requests..."
 echo "Output: $OUTPUT_FILE"
 echo ""
 
-# Clear output file
+# Backup existing file with version number if it exists
+if [ -f "$OUTPUT_FILE" ]; then
+  VERSION=1
+  BACKUP_FILE="${OUTPUT_FILE}.${VERSION}"
+  while [ -f "$BACKUP_FILE" ]; do
+    VERSION=$((VERSION + 1))
+    BACKUP_FILE="${OUTPUT_FILE}.${VERSION}"
+  done
+  mv "$OUTPUT_FILE" "$BACKUP_FILE"
+  echo "Backed up existing file to: $BACKUP_FILE"
+  echo ""
+fi
+
+# Create new output file
 > "$OUTPUT_FILE"
 
 # Find all .sh scripts to convert (exclude tools directory itself)
@@ -46,18 +59,29 @@ cd "$REPO_ROOT"
 for script in postinstall/recipes/*.sh; do
   if [ -f "$script" ]; then
     SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
-    SCRIPT_CONTENT=$(cat "$script")
     CUSTOM_ID="convert-$(echo "$script" | tr '/' '-' | sed 's/.sh$//')"
 
-    # Create JSON request (properly escaped)
-    python3 - "$CUSTOM_ID" "$script" "$FULL_DOCS" "$SCRIPT_CONTENT" <<'EOF'
+    # Use temporary files to avoid command-line argument length limits
+    # and ensure proper handling of special characters
+    TEMP_DOCS=$(mktemp)
+    TEMP_SCRIPT=$(mktemp)
+    echo "$FULL_DOCS" > "$TEMP_DOCS"
+    cat "$script" > "$TEMP_SCRIPT"
+
+    # Create JSON request (properly escaped) and append to output file
+    python3 <<EOF >> "$OUTPUT_FILE"
 import sys
 import json
 
-custom_id = sys.argv[1]
-script_path = sys.argv[2]
-docs = sys.argv[3]
-script_content = sys.argv[4]
+# Read content from files to avoid command-line argument limits
+with open('$TEMP_DOCS', 'r', encoding='utf-8') as f:
+    docs = f.read()
+
+with open('$TEMP_SCRIPT', 'r', encoding='utf-8') as f:
+    script_content = f.read()
+
+custom_id = '$CUSTOM_ID'
+script_path = '$script'
 
 request = {
     "custom_id": custom_id,
@@ -67,7 +91,7 @@ request = {
         "messages": [
             {
                 "role": "user",
-                "content": f"""Convert this bash script to Guile Scheme following the documentation provided.
+                "content": """Convert this bash script to Guile Scheme following the documentation provided.
 
 REFERENCE DOCUMENTATION:
 
@@ -98,14 +122,18 @@ CONVERSION REQUIREMENTS:
 OUTPUT FORMAT:
 
 Provide ONLY the complete converted Guile script. No explanations, no markdown formatting, just the raw .scm file content starting with the shebang.
-"""
+""".format(docs=docs, script_path=script_path, script_content=script_content)
             }
         ]
     }
 }
 
-print(json.dumps(request))
+# Ensure valid JSON output
+print(json.dumps(request, ensure_ascii=False))
 EOF
+
+    # Clean up temp files
+    rm -f "$TEMP_DOCS" "$TEMP_SCRIPT"
 
     echo "  [$SCRIPT_COUNT] $script"
   fi

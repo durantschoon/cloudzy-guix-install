@@ -787,6 +787,57 @@ func SetupNonguixChannel() error {
 	return nil
 }
 
+// PromptKeyboardLayout prompts the user for keyboard layout preference
+// Returns layout string in format "layout:option" (e.g., "us:ctrl:swapcaps")
+func PromptKeyboardLayout() (string, error) {
+	fmt.Println()
+	fmt.Println("=== Keyboard Layout Configuration ===")
+	fmt.Println()
+	fmt.Println("Many Emacs users prefer to swap Caps Lock and Left Control.")
+	fmt.Println("This makes Ctrl more accessible for Emacs keybindings.")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  1. Standard US layout (no swap)")
+	fmt.Println("  2. US layout with Caps Lock <-> Left Ctrl swap")
+	fmt.Println("  3. Skip (can configure later)")
+	fmt.Println()
+	fmt.Print("Choose keyboard layout [1/2/3]: ")
+
+	// Read user response from /dev/tty
+	tty, err := os.Open("/dev/tty")
+	if err != nil {
+		return "", fmt.Errorf("failed to open /dev/tty for user input: %w", err)
+	}
+	defer tty.Close()
+
+	reader := bufio.NewReader(tty)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("failed to read user response: %w", err)
+	}
+
+	response = strings.TrimSpace(response)
+
+	var layout string
+	switch response {
+	case "1", "":
+		layout = "us"
+		fmt.Println("[OK] Using standard US keyboard layout")
+	case "2":
+		layout = "us:ctrl:swapcaps"
+		fmt.Println("[OK] Using US layout with Caps Lock <-> Left Ctrl swap")
+	case "3":
+		layout = ""
+		fmt.Println("[OK] Skipping keyboard layout configuration")
+	default:
+		layout = "us"
+		fmt.Printf("[WARN] Invalid choice '%s', using standard US layout\n", response)
+	}
+
+	fmt.Println()
+	return layout, nil
+}
+
 // RecordChannelCommits records the current channel commits for reproducibility
 func RecordChannelCommits() error {
 	fmt.Println()

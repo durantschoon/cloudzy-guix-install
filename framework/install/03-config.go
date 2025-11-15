@@ -140,6 +140,15 @@ func (s *Step03Config) RunClean(state *State) error {
 	}
 	fmt.Println()
 
+	// Prompt for keyboard layout if not already set
+	if state.KeyboardLayout == "" {
+		layout, err := lib.PromptKeyboardLayout()
+		if err != nil {
+			return fmt.Errorf("failed to prompt for keyboard layout: %w", err)
+		}
+		state.KeyboardLayout = layout
+	}
+
 	// Generate config
 	config := s.generateMinimalConfig(state, bootloader, targets)
 
@@ -162,6 +171,28 @@ func (s *Step03Config) RunClean(state *State) error {
 }
 
 func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets string) string {
+	// Generate keyboard layout configuration if set
+	keyboardLayoutConfig := ""
+	if state.KeyboardLayout != "" {
+		// Parse the layout string - format is "layout" or "layout:option"
+		parts := strings.Split(state.KeyboardLayout, ":")
+		layout := parts[0]
+		if len(parts) > 1 {
+			// Has options (e.g., "us:ctrl:swapcaps")
+			options := strings.Join(parts[1:], ":")
+			keyboardLayoutConfig = fmt.Sprintf(`
+ (keyboard-layout
+  (keyboard-layout "%s"
+                   #:options '("%s")))
+`, layout, options)
+		} else {
+			// No options, just layout
+			keyboardLayoutConfig = fmt.Sprintf(`
+ (keyboard-layout (keyboard-layout "%s"))
+`, layout)
+		}
+	}
+
 	config := fmt.Sprintf(`;; Framework 13 AMD - Hardware-Aware Minimal Configuration
 ;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
 ;; Customize after installation using: guix-customize
@@ -176,7 +207,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
  (host-name "%s")
  (timezone "%s")
  (locale "en_US.utf8")
-
+%s
  ;; Linux kernel with proprietary firmware support (from nonguix)
  (kernel linux)
  (initrd microcode-initrd)

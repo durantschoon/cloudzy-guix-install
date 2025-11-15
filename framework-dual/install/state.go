@@ -12,11 +12,12 @@ type State struct {
 	SwapSize     string
 
 	// User configuration
-	UserName string
-	FullName string
-	Timezone string
-	HostName string
-	BootMode string
+	UserName       string
+	FullName       string
+	Timezone       string
+	HostName       string
+	BootMode       string
+	KeyboardLayout string // Layout and options, e.g., "us:ctrl:swapcaps"
 
 	// Environment
 	GuixPlatform string
@@ -25,17 +26,18 @@ type State struct {
 // NewState creates a new State from environment variables
 func NewState() *State {
 	return &State{
-		Device:        os.Getenv("DEVICE"),
-		EFI:           os.Getenv("EFI"),
-		Root:          os.Getenv("ROOT"),
-		HomePartition: os.Getenv("HOME_PARTITION"),
-		UserName:      os.Getenv("USER_NAME"),
-		FullName:      os.Getenv("FULL_NAME"),
-		Timezone:      os.Getenv("TIMEZONE"),
-		HostName:      os.Getenv("HOST_NAME"),
-		BootMode:      os.Getenv("BOOT_MODE"),
-		SwapSize:      os.Getenv("SWAP_SIZE"),
-		GuixPlatform:  getEnv("GUIX_PLATFORM", "cloudzy"),
+		Device:         os.Getenv("DEVICE"),
+		EFI:            os.Getenv("EFI"),
+		Root:           os.Getenv("ROOT"),
+		HomePartition:  os.Getenv("HOME_PARTITION"),
+		UserName:       os.Getenv("USER_NAME"),
+		FullName:       os.Getenv("FULL_NAME"),
+		Timezone:       os.Getenv("TIMEZONE"),
+		HostName:       os.Getenv("HOST_NAME"),
+		BootMode:       os.Getenv("BOOT_MODE"),
+		SwapSize:       os.Getenv("SWAP_SIZE"),
+		KeyboardLayout: os.Getenv("KEYBOARD_LAYOUT"),
+		GuixPlatform:   getEnv("GUIX_PLATFORM", "cloudzy"),
 	}
 }
 

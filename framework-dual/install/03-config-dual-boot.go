@@ -152,6 +152,15 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
   }
   fmt.Println()
 
+  // Prompt for keyboard layout if not already set
+  if state.KeyboardLayout == "" {
+    layout, err := lib.PromptKeyboardLayout()
+    if err != nil {
+      return fmt.Errorf("failed to prompt for keyboard layout: %w", err)
+    }
+    state.KeyboardLayout = layout
+  }
+
   // Generate and write config if it doesn't exist
   if !configExists {
     // Generate config
@@ -192,6 +201,28 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
 `
   }
 
+  // Generate keyboard layout configuration if set
+  keyboardLayoutConfig := ""
+  if state.KeyboardLayout != "" {
+    // Parse the layout string - format is "layout" or "layout:option"
+    parts := strings.Split(state.KeyboardLayout, ":")
+    layout := parts[0]
+    if len(parts) > 1 {
+      // Has options (e.g., "us:ctrl:swapcaps")
+      options := strings.Join(parts[1:], ":")
+      keyboardLayoutConfig = fmt.Sprintf(`
+ (keyboard-layout
+  (keyboard-layout "%s"
+                   #:options '("%s")))
+`, layout, options)
+    } else {
+      // No options, just layout
+      keyboardLayoutConfig = fmt.Sprintf(`
+ (keyboard-layout (keyboard-layout "%s"))
+`, layout)
+    }
+  }
+
   config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
 ;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
 ;; Configured for dual-boot with Pop!_OS (shared EFI partition)
@@ -207,7 +238,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  (host-name "%s")
  (timezone "%s")
  (locale "en_US.utf8")
-
+%s
  ;; Linux kernel with proprietary firmware support (from nonguix)
  (kernel linux)
  (initrd microcode-initrd)
@@ -255,14 +286,15 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  ;; Minimal services - add SSH, desktop, etc. after installation
  (services %%base-services))
 `,
-    state.HostName,    // host-name
-    state.Timezone,    // timezone
-    bootloader,        // bootloader
-    targets,           // targets
-    dataFS,            // data filesystem conditional
-    state.UserName,    // name
-    state.FullName,    // comment
-    state.UserName,    // for home-directory
+    state.HostName,          // host-name
+    state.Timezone,          // timezone
+    keyboardLayoutConfig,    // keyboard-layout (conditional)
+    bootloader,              // bootloader
+    targets,                 // targets
+    dataFS,                  // data filesystem conditional
+    state.UserName,          // name
+    state.FullName,          // comment
+    state.UserName,          // for home-directory
   )
 
   return config
