@@ -128,9 +128,8 @@ Provide ONLY the complete converted Guile script. No explanations, no markdown f
     }
 }
 
-# Pretty-print JSON output for readability
-print(json.dumps(request, indent=2, ensure_ascii=False))
-print()  # Add blank line between entries for readability
+# Output compact JSON (one line per request)
+print(json.dumps(request, ensure_ascii=False))
 EOF
 
     # Clean up temp files

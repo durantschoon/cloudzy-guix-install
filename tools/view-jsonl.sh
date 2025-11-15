@@ -48,13 +48,20 @@ else
   echo ""
 fi
 
+# Check if jq is available for colorization
+USE_JQ=false
+if command -v jq >/dev/null 2>&1; then
+  USE_JQ=true
+fi
+
 # Process and display JSONL file
-python3 - "$INPUT_FILE" <<'PYTHON' | less -R
+python3 - "$INPUT_FILE" "$USE_JQ" <<'PYTHON' | less -R
 import json
 import sys
 import re
 
 input_file = sys.argv[1]
+use_jq = sys.argv[2] == "true"
 
 def replace_escaped_newlines(text):
     """Replace \\n with actual newlines in text strings"""
@@ -126,22 +133,6 @@ def format_value(value, indent=0, max_depth=10, key_name=""):
     else:
         return json.dumps(value)
 
-def format_json_object(obj, obj_num, total):
-    """Format a single JSON object for display"""
-    output = []
-    output.append("=" * 80)
-    output.append(f"Object {obj_num} of {total}")
-    output.append("=" * 80)
-    output.append("")
-    
-    # Format the entire object
-    formatted = format_value(obj, indent=0, key_name="")
-    output.append(formatted)
-    output.append("")
-    output.append("=" * 80)
-    output.append("")
-    
-    return "\n".join(output)
 
 # Parse JSONL file (handles both single-line and multi-line pretty-printed)
 objects = []
@@ -186,7 +177,40 @@ if total == 0:
     print("No valid JSON objects found in file.")
     sys.exit(1)
 
+def process_text_blobs(obj):
+    """Recursively replace \\n with actual newlines in text fields"""
+    if isinstance(obj, dict):
+        return {k: process_text_blobs(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [process_text_blobs(item) for item in obj]
+    elif isinstance(obj, str):
+        # Replace escaped newlines with actual newlines
+        return obj.replace('\\n', '\n')
+    else:
+        return obj
+
 for i, obj in enumerate(objects, 1):
-    print(format_json_object(obj, i, total))
+    # Print header
+    print("=" * 80)
+    print(f"Object {i} of {total}")
+    print("=" * 80)
+    print("")
+    
+    if use_jq:
+        # Process text blobs first, then output JSON and pipe through jq
+        processed_obj = process_text_blobs(obj)
+        json_str = json.dumps(processed_obj, ensure_ascii=False, indent=2)
+        import subprocess
+        jq_process = subprocess.Popen(['jq', '-C', '.'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        jq_output, _ = jq_process.communicate(input=json_str)
+        print(jq_output.rstrip())
+    else:
+        # Use Python formatting
+        formatted = format_value(obj, indent=0, key_name="")
+        print(formatted)
+    
+    print("")
+    print("=" * 80)
+    print("")
 PYTHON
 

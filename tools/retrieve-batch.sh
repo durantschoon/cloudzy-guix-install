@@ -24,67 +24,13 @@ echo "Retrieving batch results..."
 echo "Batch ID: $BATCH_ID"
 echo ""
 
-# Download results to temp file first
-TEMP_RESULTS=$(mktemp)
+# Download results (compact JSONL format)
 curl -s "https://api.anthropic.com/v1/messages/batches/$BATCH_ID/results" \
   --header "x-api-key: $ANTHROPIC_API_KEY" \
   --header "anthropic-version: 2023-06-01" \
-  > "$TEMP_RESULTS"
+  > "$RESULTS_FILE"
 
-# Pretty-print the results
-python3 <<PYTHON > "$RESULTS_FILE"
-import json
-import sys
-
-temp_file = '$TEMP_RESULTS'
-with open(temp_file, 'r', encoding='utf-8') as infile:
-    content = infile.read()
-    
-    # Try parsing as single-line JSONL first (one JSON object per line)
-    parsed_any = False
-    for line in content.split('\n'):
-        line = line.strip()
-        if not line:
-            continue
-        
-        try:
-            obj = json.loads(line)
-            # Pretty-print with 2-space indentation
-            json.dump(obj, sys.stdout, indent=2, ensure_ascii=False)
-            print('\n')  # Add blank line between objects for readability
-            parsed_any = True
-        except json.JSONDecodeError:
-            pass  # Not a single-line JSON, continue
-    
-    # If no single-line JSONL found, try as single JSON object
-    if not parsed_any:
-        try:
-            obj = json.loads(content)
-            json.dump(obj, sys.stdout, indent=2, ensure_ascii=False)
-            print()
-        except json.JSONDecodeError:
-            # Try parsing multi-line pretty-printed JSON
-            current_obj = []
-            brace_count = 0
-            for line in content.split('\n'):
-                brace_count += line.count('{') - line.count('}')
-                current_obj.append(line)
-                
-                if brace_count == 0 and current_obj:
-                    obj_str = '\n'.join(current_obj).strip()
-                    if obj_str:
-                        try:
-                            obj = json.loads(obj_str)
-                            json.dump(obj, sys.stdout, indent=2, ensure_ascii=False)
-                            print('\n')
-                        except json.JSONDecodeError:
-                            pass
-                    current_obj = []
-PYTHON
-
-rm -f "$TEMP_RESULTS"
-
-echo "Results downloaded and pretty-printed to: $RESULTS_FILE"
+echo "Results downloaded to: $RESULTS_FILE"
 echo ""
 
 # Check if results file contains an error
