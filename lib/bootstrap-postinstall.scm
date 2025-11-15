@@ -1,4 +1,5 @@
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
+#!/run/current-system/profile/bin/guile \
+--no-auto-compile
 !#
 ;;; Bootstrap Postinstall Scripts
 ;;; Downloads and verifies postinstall customization tools

@@ -14,7 +14,7 @@ Users install postinstall scripts with a single command:
 
 ```bash
 # One-line installation (pure Guile)
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile --no-auto-compile -s -
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile
 ```
 
 **What this does:**

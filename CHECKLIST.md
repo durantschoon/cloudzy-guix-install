@@ -55,7 +55,7 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 **Bootstrap Command for Testing:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile --no-auto-compile -s -
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile
 cd ~/guix-customize
 ./customize
 # Select option 2 (Add desktop), then option 1 (GNOME)
