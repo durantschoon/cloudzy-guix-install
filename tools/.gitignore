@@ -2,6 +2,8 @@
 # These can be regenerated or re-downloaded
 batch-requests.jsonl
 batch-requests.jsonl.*
+batch-requests-customize.jsonl
+batch-requests-customize.jsonl.*
 batch-results.jsonl
 conversions.patch
 .magit-diff-backup/
