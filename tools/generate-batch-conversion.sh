@@ -39,16 +39,15 @@ echo "Generating batch conversion requests..."
 echo "Output: $OUTPUT_FILE"
 echo ""
 
-# Backup existing file with version number if it exists
+# Archive existing file if it exists
+ARCHIVE_DIR="$REPO_ROOT/archive/batch"
+mkdir -p "$ARCHIVE_DIR"
+
 if [ -f "$OUTPUT_FILE" ]; then
-  VERSION=1
-  BACKUP_FILE="${OUTPUT_FILE}.${VERSION}"
-  while [ -f "$BACKUP_FILE" ]; do
-    VERSION=$((VERSION + 1))
-    BACKUP_FILE="${OUTPUT_FILE}.${VERSION}"
-  done
-  mv "$OUTPUT_FILE" "$BACKUP_FILE"
-  echo "Backed up existing file to: $BACKUP_FILE"
+  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+  ARCHIVE_FILE="$ARCHIVE_DIR/batch-requests-${TIMESTAMP}.jsonl"
+  mv "$OUTPUT_FILE" "$ARCHIVE_FILE"
+  echo "Archived existing file to: $ARCHIVE_FILE"
   echo ""
 fi
 

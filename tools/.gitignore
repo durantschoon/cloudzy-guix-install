@@ -1,12 +1,14 @@
 # Batch processing artifacts - intermediate/temporary files
 # These can be regenerated or re-downloaded
+# Active files (one at a time) - archived to archive/batch/ when replaced
 batch-requests.jsonl
-batch-requests.jsonl.*
 batch-requests-customize.jsonl
-batch-requests-customize.jsonl.*
 batch-results.jsonl
 conversions.patch
 .magit-diff-backup/
+
+# Note: archive/batch/ contains timestamped archives of old batch files
+# These are tracked in git for reference but can be cleaned up if needed
 
 # Note: converted-scripts/ IS tracked - these are the actual converted code
 # that we review, test, and potentially integrate into the codebase
