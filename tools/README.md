@@ -260,25 +260,32 @@ The viewer still works but displays plain text without colorization. All functio
 - **Interactive paging** - Navigate with arrow keys, Page Up/Down, spacebar
 - **Handles both path formats** - Works with old nested structure and new flat structure
 
-**View in magit (Emacs):**
+**View in Emacs (diff-mode):**
 ```bash
-# Generate patch file for magit
+# Generate patch file
 ./tools/diff-conversions.sh --patch
 
 # Then in emacs:
-# M-x magit-diff-patch
-# Select: tools/conversions.patch
+# C-x C-f tools/conversions.patch
+# (Emacs automatically uses diff-mode with syntax highlighting)
 ```
 
-**Or output git diff format:**
+**View in magit (temporarily stage files):**
 ```bash
-# Output git diff format (can be piped to file or viewed)
-./tools/diff-conversions.sh --magit > conversions.patch
+# Temporarily replace .sh files with .scm content
+./tools/diff-conversions.sh --stage-for-magit
 
-# In emacs:
-# M-x magit-diff-patch
-# Paste or select the patch file
+# Then in emacs:
+# M-x magit-status
+# Navigate to unstaged changes and press RET on files to view diffs
+
+# When done, restore original files:
+git checkout -- <files>
+# Or use the restore command:
+./tools/diff-conversions.sh --restore-from-backup
 ```
+
+**Note:** The `--stage-for-magit` mode backs up your original `.sh` files to `tools/.magit-diff-backup/` before temporarily replacing them with the converted `.scm` content. This allows magit to show them as modified files with full diff viewing capabilities.
 
 This script:
 - Finds all converted `.scm` files in `tools/converted-scripts/`
