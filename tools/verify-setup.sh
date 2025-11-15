@@ -44,17 +44,25 @@ echo ""
 
 # Check API key setup
 echo -e "${BLUE}Checking API key configuration...${NC}"
-if [ -f "$SCRIPT_DIR/.env" ]; then
-  if grep -q "ANTHROPIC_API_KEY=" "$SCRIPT_DIR/.env" && ! grep -q "your-api-key-here" "$SCRIPT_DIR/.env"; then
-    echo -e "  ${GREEN}✓${NC} API key configured in .env file"
+# Check for .env in repo root first, then tools directory
+ENV_FILE=""
+if [ -f "$REPO_ROOT/.env" ]; then
+  ENV_FILE="$REPO_ROOT/.env"
+elif [ -f "$SCRIPT_DIR/.env" ]; then
+  ENV_FILE="$SCRIPT_DIR/.env"
+fi
+
+if [ -n "$ENV_FILE" ]; then
+  if grep -q "ANTHROPIC_API_KEY=" "$ENV_FILE" && ! grep -q "your-api-key-here" "$ENV_FILE"; then
+    echo -e "  ${GREEN}✓${NC} API key configured in .env file ($(basename "$(dirname "$ENV_FILE")")/.env)"
   else
-    echo -e "  ${YELLOW}⚠${NC} .env file exists but API key not configured"
+    echo -e "  ${YELLOW}⚠${NC} .env file exists but API key not configured ($(basename "$(dirname "$ENV_FILE")")/.env)"
     WARNINGS=$((WARNINGS + 1))
   fi
 elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   echo -e "  ${GREEN}✓${NC} API key set via environment variable"
 else
-  echo -e "  ${YELLOW}⚠${NC} API key not configured (set ANTHROPIC_API_KEY or create tools/.env)"
+  echo -e "  ${YELLOW}⚠${NC} API key not configured (set ANTHROPIC_API_KEY or create .env in repo root)"
   WARNINGS=$((WARNINGS + 1))
 fi
 
