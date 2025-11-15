@@ -14,8 +14,12 @@ if [ -z "$BATCH_ID" ]; then
   exit 1
 fi
 
-# Load .env file if it exists (in tools/ directory)
-if [ -f "$SCRIPT_DIR/.env" ]; then
+# Load .env file - check repo root first, then tools directory
+if [ -f "$REPO_ROOT/.env" ]; then
+  set -a  # automatically export all variables
+  source "$REPO_ROOT/.env"
+  set +a
+elif [ -f "$SCRIPT_DIR/.env" ]; then
   set -a  # automatically export all variables
   source "$SCRIPT_DIR/.env"
   set +a
@@ -27,11 +31,15 @@ if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   echo ""
   echo "Set your API key using one of these methods:"
   echo ""
-  echo "1. Create a .env file (recommended):"
+  echo "1. Create a .env file in repo root (recommended):"
+  echo "   cp tools/.env.example .env"
+  echo "   # Edit .env and add your API key"
+  echo ""
+  echo "2. Create a .env file in tools directory:"
   echo "   cp tools/.env.example tools/.env"
   echo "   # Edit tools/.env and add your API key"
   echo ""
-  echo "2. Export as environment variable:"
+  echo "3. Export as environment variable:"
   echo "   export ANTHROPIC_API_KEY='your-api-key-here'"
   exit 1
 fi
