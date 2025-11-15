@@ -56,6 +56,16 @@ if [ -f lib/postinstall.sh ]; then
 fi
 
 echo "" >> "$MANIFEST_FILE"
+echo "## Guile Library Scripts" >> "$MANIFEST_FILE"
+echo "" >> "$MANIFEST_FILE"
+
+# Guile config helper (critical for postinstall)
+if [ -f lib/guile-config-helper.scm ]; then
+    hash=$(shasum -a 256 lib/guile-config-helper.scm | awk '{print $1}')
+    echo "$hash  lib/guile-config-helper.scm" >> "$MANIFEST_FILE"
+fi
+
+echo "" >> "$MANIFEST_FILE"
 echo "## Post-Install Customization Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
 
