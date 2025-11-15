@@ -12,6 +12,9 @@ run-remote-steps
 .env
 *.key
 
+# Test artifacts
+*.log
+
 # Batch conversion tools - intermediate/temporary files
 # These can be regenerated or re-downloaded
 # Active files (one per type) - archived to archive/batch/ when replaced
