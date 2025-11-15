@@ -55,6 +55,12 @@ if [ -f lib/postinstall.sh ]; then
     echo "$hash  lib/postinstall.sh" >> "$MANIFEST_FILE"
 fi
 
+# Shared postinstall library
+if [ -f postinstall/lib.sh ]; then
+    hash=$(shasum -a 256 postinstall/lib.sh | awk '{print $1}')
+    echo "$hash  postinstall/lib.sh" >> "$MANIFEST_FILE"
+fi
+
 echo "" >> "$MANIFEST_FILE"
 echo "## Guile Library Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"

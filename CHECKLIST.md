@@ -39,6 +39,11 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - ✅ Fixed GNOME configuration sed permission errors
   - ✅ Replaced fragile sed patterns with proper S-expression parsing
   - ✅ All service additions now use guile_add_service()
+  - ✅ Consolidated shared postinstall code into postinstall/lib.sh
+    - Created shared library with common functions (add_ssh, add_desktop, add_packages, etc.)
+    - Updated all platform customize scripts (cloudzy, framework, framework-dual) to source shared lib
+    - Moved test infrastructure to postinstall/tests/
+    - All platforms now benefit from improved error handling and guile_add_service()
   - ⏳ Ready for real-world testing on framework-dual
 
 - ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
