@@ -137,11 +137,18 @@
   (unless (file-exists? path)
     (system* (format #f "mkdir -p ~s" path))))
 
+;;; Check if Go command is available
+(define (go-available?)
+  (let* ((port (open-input-pipe "command -v go 2>/dev/null"))
+         (output (read-line port))
+         (status (close-pipe port)))
+    (and (zero? status) (string? output) (not (string-null? output)))))
+
 ;;; Use hash-to-words tool (same as update-manifest.sh)
 ;;; Downloads and compiles the Go tool if Go is available
 (define (hash-to-words hash-string)
   ;; Try to use the Go tool if available
-  (if (file-exists? "/run/current-system/profile/bin/go")
+  (if (go-available?)
       ;; Download and compile the tool
       (let* ((tool-dir "tools/hash-to-words")
              (main-go (string-append tool-dir "/main.go"))
@@ -157,7 +164,7 @@
                                  tool-dir binary main-go)))
             ;; Run the tool
             (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
-                                                  hash-string binary)))
+                                                 hash-string binary)))
                    (output (read-line port))
                    (status (close-pipe port)))
               (if (and (zero? status) (string? output))
@@ -220,8 +227,12 @@
                   (info (format #f "Quick: ~a" quick-words))
                   #t))
             (begin
-              (info "Words: (Go not available - install 'go' package to see word conversion)")
-              (info "Quick: (Go not available)")))
+              (info "Words: (Go not available)")
+              (info "Quick: (Go not available)")
+              (info "")
+              (info "Tip: Install Go to see hash-to-words conversion:")
+              (info "  Option 1: Run customize and select 'Add common packages' (includes Go)")
+              (info "  Option 2: guix package -i go"))))
         (newline)
         (info "To verify this hash matches the repository:")
         (info (format #f "  curl -fsSL https://raw.githubusercontent.com/~a/~a/main/SOURCE_MANIFEST.txt | shasum -a 256"

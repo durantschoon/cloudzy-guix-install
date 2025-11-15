@@ -179,9 +179,9 @@ add_packages() {
   backup_config
 
   # Replace minimal packages with useful defaults
-  safe_edit_config 's|(packages %base-packages)|(packages\n  (append (list (specification->package "emacs")\n                (specification->package "git")\n                (specification->package "vim")\n                (specification->package "htop")\n                (specification->package "curl")\n                (specification->package "wget"))\n          %base-packages))|'
+  safe_edit_config 's|(packages %base-packages)|(packages\n  (append (list (specification->package "emacs")\n                (specification->package "git")\n                (specification->package "vim")\n                (specification->package "htop")\n                (specification->package "curl")\n                (specification->package "wget")\n                (specification->package "go"))\n          %base-packages))|'
 
-  info "✓ Added: emacs, git, vim, htop, curl, wget"
+  info "✓ Added: emacs, git, vim, htop, curl, wget, go"
 }
 
 # Add nonguix channel info

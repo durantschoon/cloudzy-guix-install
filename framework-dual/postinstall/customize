@@ -98,7 +98,7 @@ main_menu() {
     echo ""
     echo "Essential Services:"
     echo "  1) Add SSH service (optional for laptop)"
-    echo "  3) Add common packages (git, vim, emacs, etc.)"
+    echo "  3) Add common packages (git, vim, emacs, go, etc.)"
     echo ""
     echo "Advanced:"
     echo "  5) Show nonguix channel info (proprietary software)"
