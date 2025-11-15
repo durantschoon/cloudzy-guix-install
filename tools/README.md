@@ -245,7 +245,23 @@ The viewer still works but displays plain text without colorization. All functio
 
 ### 6. Review and Test
 
-**Compare conversions:**
+**Interactive diff viewer (recommended):**
+```bash
+./tools/diff-conversions.sh
+```
+
+**Works with existing converted scripts:**
+- No need to run a new batch job
+- Works with any `.scm` files already in `tools/converted-scripts/`
+- Automatically finds and matches them with original `.sh` files
+
+This script:
+- Finds all converted `.scm` files in `tools/converted-scripts/`
+- Matches them with their original `.sh` files (handles both old and new path formats)
+- Shows unified diffs for each pair
+- Pages through all changes interactively with `less`
+
+**Manual diff (alternative):**
 ```bash
 # Visual diff
 diff postinstall/recipes/add-spacemacs.sh \
