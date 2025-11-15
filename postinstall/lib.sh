@@ -59,10 +59,16 @@ guile_add_service() {
   fi
 
   # Use Guile helper to add service
-  # Find lib/guile-config-helper.scm relative to this script
-  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  local repo_root="$(cd "$script_dir/../.." && pwd)"
-  local guile_helper="$repo_root/lib/guile-config-helper.scm"
+  # Find lib/guile-config-helper.scm relative to INSTALL_ROOT
+  # INSTALL_ROOT is set by customize scripts (e.g., ~/guix-customize)
+  local install_root="${INSTALL_ROOT:-}"
+  if [[ -z "$install_root" ]]; then
+    # Fallback: calculate from this script's location
+    # postinstall/lib.sh is at INSTALL_ROOT/postinstall/lib.sh
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    install_root="$(cd "$script_dir/.." && pwd)"
+  fi
+  local guile_helper="$install_root/lib/guile-config-helper.scm"
 
   if guile --no-auto-compile -s "$guile_helper" add-service "$tmp_file" "$module" "$service"; then
     # Copy back
@@ -195,9 +201,16 @@ add_nonguix_info() {
 
   # Source postinstall library for generate_channels_scm
   local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  local repo_root="$(cd "$script_dir/../.." && pwd)"
-  if [[ -f "$repo_root/lib/postinstall.sh" ]]; then
-    source "$repo_root/lib/postinstall.sh"
+  # Use INSTALL_ROOT if set, otherwise calculate from script location
+  local install_root="${INSTALL_ROOT:-}"
+  if [[ -z "$install_root" ]]; then
+    # Fallback: calculate from this script's location
+    # postinstall/lib.sh is at INSTALL_ROOT/postinstall/lib.sh
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    install_root="$(cd "$script_dir/.." && pwd)"
+  fi
+  if [[ -f "$install_root/lib/postinstall.sh" ]]; then
+    source "$install_root/lib/postinstall.sh"
   fi
 
   # Generate channels.scm with regional mirrors
