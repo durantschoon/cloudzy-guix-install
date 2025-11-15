@@ -69,6 +69,14 @@ guile_add_service() {
     install_root="$(cd "$script_dir/.." && pwd)"
   fi
   local guile_helper="$install_root/lib/guile-config-helper.scm"
+  
+  # Debug: verify path exists
+  if [[ ! -f "$guile_helper" ]]; then
+    err "guile-config-helper.scm not found at: $guile_helper"
+    err "INSTALL_ROOT: ${INSTALL_ROOT:-<not set>}"
+    err "Calculated install_root: $install_root"
+    return 1
+  fi
 
   if guile --no-auto-compile -s "$guile_helper" add-service "$tmp_file" "$module" "$service"; then
     # Copy back
