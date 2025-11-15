@@ -57,9 +57,9 @@ main_menu() {
       1) add_ssh; read -p "Press Enter to continue..." ;;
       3) add_packages; read -p "Press Enter to continue..." ;;
       5) add_nonguix_info; read -p "Press Enter to continue..." ;;
-      s) source "$REPO_ROOT/postinstall/recipes/add-spacemacs.sh" && add_spacemacs; read -p "Press Enter to continue..." ;;
-      d) source "$REPO_ROOT/postinstall/recipes/add-development.sh" && add_development; read -p "Press Enter to continue..." ;;
-      f) source "$REPO_ROOT/postinstall/recipes/add-fonts.sh" && add_fonts; read -p "Press Enter to continue..." ;;
+      s) source "$INSTALL_ROOT/postinstall/recipes/add-spacemacs.sh" && add_spacemacs; read -p "Press Enter to continue..." ;;
+      d) source "$INSTALL_ROOT/postinstall/recipes/add-development.sh" && add_development; read -p "Press Enter to continue..." ;;
+      f) source "$INSTALL_ROOT/postinstall/recipes/add-fonts.sh" && add_fonts; read -p "Press Enter to continue..." ;;
       r) reconfigure; read -p "Press Enter to continue..." ;;
       e) edit_config; read -p "Press Enter to continue..." ;;
       v) view_config ;;
