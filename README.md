@@ -1,6 +1,7 @@
 # Guix Installation Scripts
 
-Modular scripts for installing minimal Guix OS on different platforms with automated hardware detection, safety checks, and guided workflows.
+Modular scripts for installing minimal Guix OS on different platforms with
+automated hardware detection, safety checks, and guided workflows.
 
 buymeacoffee.com/durantschoon (🙏 help support my LLM habit)
 
@@ -29,28 +30,44 @@ buymeacoffee.com/durantschoon (🙏 help support my LLM habit)
 **One command from Guix ISO:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
+curl -fsSL https://raw.githubusercontent.com/durantschoon/\
+cloudzy-guix-install/main/lib/bootstrap-installer.sh | \
+bash -s -- <platform>
 ```
 
 Replace `<platform>` with: `cloudzy`, `framework`, or `framework-dual`
 
-**⚠️ WARNING:** `cloudzy` and `framework` will **WIPE YOUR ENTIRE DISK**. Only use on fresh systems.
+**⚠️ WARNING:** `cloudzy` and `framework` will **WIPE YOUR ENTIRE DISK**.
+Only use on fresh systems.
 
 See [`QUICKSTART.md`](QUICKSTART.md) for complete instructions.
 
 ## Quick Navigation
 
-- ⚡ **Quick Start Guide**: See [`QUICKSTART.md`](QUICKSTART.md) - Complete workflow from ISO to customized system
-- 🎨 **Customization Guide**: See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) - Add features after minimal install
-- 📦 **Channel Management**: See [`postinstall/CHANNEL_MANAGEMENT.md`](postinstall/CHANNEL_MANAGEMENT.md) - Configure Guix channels (nonguix, custom repos)
-- 🌍 **Mirror Configuration**: See [`lib/mirrors.md`](lib/mirrors.md) - Optimize download speeds globally
-- 📚 **Installation Knowledge**: See [`docs/INSTALLATION_KNOWLEDGE.md`](docs/INSTALLATION_KNOWLEDGE.md) - Deep technical details and lessons learned
-- 🔧 **Troubleshooting**: See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) - Common issues and solutions
-- ✅ **Verification Guide**: See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) - Verify installation integrity
+- ⚡ **Quick Start Guide**: See [`QUICKSTART.md`](QUICKSTART.md) -
+  Complete workflow from ISO to customized system
+- 🎨 **Customization Guide**: See
+  [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) -
+  Add features after minimal install
+- 📦 **Channel Management**: See
+  [`postinstall/CHANNEL_MANAGEMENT.md`](postinstall/CHANNEL_MANAGEMENT.md) -
+  Configure Guix channels (nonguix, custom repos)
+- 🌍 **Mirror Configuration**: See [`lib/mirrors.md`](lib/mirrors.md) -
+  Optimize download speeds globally
+- 📚 **Installation Knowledge**: See
+  [`docs/INSTALLATION_KNOWLEDGE.md`](docs/INSTALLATION_KNOWLEDGE.md) -
+  Deep technical details and lessons learned
+- 🔧 **Troubleshooting**: See
+  [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) -
+  Common issues and solutions
+- ✅ **Verification Guide**: See
+  [`docs/VERIFICATION.md`](docs/VERIFICATION.md) -
+  Verify installation integrity
 - 🚀 **VPS Installation**: See [`cloudzy/README.md`](cloudzy/README.md)
 - 💻 **Framework 13 Single-Boot**: See [`framework/README.md`](framework/README.md)
 - 💻 **Framework 13 Dual-Boot**: See [`framework-dual/README.md`](framework-dual/README.md)
-- 🥧 **Raspberry Pi 3/4/5** (Experimental): See [`raspberry-pi/README.md`](raspberry-pi/README.md)
+- 🥧 **Raspberry Pi 3/4/5** (Experimental): See
+  [`raspberry-pi/README.md`](raspberry-pi/README.md)
 
 ---
 
@@ -66,7 +83,8 @@ All installation scripts create a **truly minimal** bootable Guix system:
 - ❌ No SSH server
 - ❌ No extra packages
 
-**Why?** Get a working system fast (~10 min), boot into it (free of ISO!), then customize for your exact needs.
+**Why?** Get a working system fast (~10 min), boot into it (free of ISO!),
+then customize for your exact needs.
 
 **Workflow:**
 
@@ -84,7 +102,8 @@ See [`QUICKSTART.md`](QUICKSTART.md) for complete workflow.
 
 **⚠️ THIS WILL DESTROY ALL DATA ON THE TARGET DEVICE!**
 
-Designed for **fresh VPS instances** where you want to completely replace the existing system with Guix. It will:
+Designed for **fresh VPS instances** where you want to completely replace
+the existing system with Guix. It will:
 
 - **Wipe the entire disk** and create new partitions
 - **Destroy all existing data** on the target device
@@ -115,7 +134,10 @@ Designed for **fresh VPS instances** where you want to completely replace the ex
 **If you're not absolutely certain you're in the right situation, STOP NOW!**
 
 **Installation:** See [`cloudzy/README.md`](cloudzy/README.md)
-**After Boot:** See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add SSH/packages
+
+**After Boot:** See
+[`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add
+SSH/packages
 
 ---
 
@@ -137,7 +159,10 @@ Designed for **Framework 13 laptops** where you want Guix as your only OS:
 - Backup of all important data
 
 **Installation:** See [`framework/README.md`](framework/README.md)
-**After Boot:** See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add WiFi/desktop
+
+**After Boot:** See
+[`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add
+WiFi/desktop
 
 ---
 
@@ -159,7 +184,10 @@ Designed for Framework 13 laptops with existing Pop!_OS installations:
 - Backup of important data
 
 **Installation:** See [`framework-dual/README.md`](framework-dual/README.md)
-**After Boot:** See [`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add desktop/WiFi
+
+**After Boot:** See
+[`postinstall/CUSTOMIZATION.md`](postinstall/CUSTOMIZATION.md) to add
+desktop/WiFi
 
 ---
 
@@ -201,7 +229,8 @@ Designed for building **Raspberry Pi 3/4/5** images using Apple Silicon:
 
 ## Global Mirror Optimization
 
-**Faster downloads worldwide** - The installation scripts automatically optimize download speeds by selecting the best mirrors for your region.
+**Faster downloads worldwide** - The installation scripts automatically
+optimize download speeds by selecting the best mirrors for your region.
 
 ### Automatic Region Detection
 
