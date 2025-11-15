@@ -1,0 +1,8 @@
+# Batch processing artifacts
+batch-requests.jsonl
+batch-results.jsonl
+converted-scripts/
+
+# API keys (should use environment variables)
+*.key
+.env
