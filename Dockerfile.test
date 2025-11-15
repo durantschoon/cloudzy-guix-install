@@ -1,7 +1,7 @@
 # Test environment for cloudzy-guix-install
 # This simulates a minimal Linux environment for testing installer logic
 
-FROM golang:1.21-alpine
+FROM golang:1.23-alpine
 
 # Install basic tools needed for testing
 RUN apk add --no-cache \
@@ -15,15 +15,17 @@ RUN apk add --no-cache \
     git \
     findutils \
     grep \
-    sed
+    sed \
+    guile \
+    guile-dev
 
 # Create test directory
 WORKDIR /workspace
 
-# Copy go.mod and go.sum first for better caching
-COPY go.mod go.sum ./
+# Copy go.mod first for better caching
+COPY go.mod ./
 
-# Download dependencies
+# Download dependencies (go.sum will be created if it doesn't exist)
 RUN go mod download
 
 # Copy the entire project

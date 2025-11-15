@@ -38,6 +38,22 @@ run_tests "./lib" "Common Library Functions"
 # Test framework-dual install functions
 run_tests "./framework-dual/install" "Framework Dual-Boot Install Functions"
 
+# Test Guile config helper
+if command -v guile &> /dev/null; then
+    echo -e "${YELLOW}Testing Guile Config Helper...${NC}"
+    echo "----------------------------------------"
+    if framework-dual/postinstall/tests/run-guile-tests.sh; then
+        echo -e "${GREEN}✓ Guile Config Helper tests passed${NC}"
+    else
+        echo -e "${RED}✗ Guile Config Helper tests failed${NC}"
+        return 1
+    fi
+    echo
+else
+    echo -e "${YELLOW}⊘ Skipping Guile tests (guile not installed)${NC}"
+    echo
+fi
+
 echo -e "${GREEN}=== All Tests Completed Successfully! ===${NC}"
 echo
 echo "Test Summary:"
