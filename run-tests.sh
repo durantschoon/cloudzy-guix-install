@@ -64,13 +64,18 @@ if command -v guile &> /dev/null; then
         PASSED=0
         FAILED=0
         
+        # Ensure log directory exists
+        LOG_DIR="log"
+        mkdir -p "$LOG_DIR"
+        
         while IFS= read -r test_file; do
             TEST_COUNT=$((TEST_COUNT + 1))
             test_name=$(basename "$test_file")
             echo "Running $test_name..."
             
-            # Run test file with guile, capture output
-            TEST_OUTPUT=$(guile --no-auto-compile -s "$test_file" 2>&1)
+            # Run test file with guile from log directory (so logs go there)
+            # Capture output but let logs be written to log/ directory
+            TEST_OUTPUT=$(cd "$LOG_DIR" && guile --no-auto-compile -s "../$test_file" 2>&1)
             TEST_EXIT=$?
             
             if [ $TEST_EXIT -eq 0 ]; then
