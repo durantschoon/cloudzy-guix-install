@@ -5,7 +5,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CURRENT_DIR="${PWD}"
 
 # Check if less is available
 if ! command -v less >/dev/null 2>&1; then
@@ -13,39 +12,70 @@ if ! command -v less >/dev/null 2>&1; then
   exit 1
 fi
 
-# Find all .jsonl files in current directory
-mapfile -t jsonl_files < <(find "$CURRENT_DIR" -maxdepth 1 -name "*.jsonl" -type f | sort)
-
-if [ ${#jsonl_files[@]} -eq 0 ]; then
-  echo "No .jsonl files found in current directory: $CURRENT_DIR"
-  exit 1
-fi
-
-# If only one file, use it automatically
-if [ ${#jsonl_files[@]} -eq 1 ]; then
-  INPUT_FILE="${jsonl_files[0]}"
-  echo "Found one .jsonl file: $(basename "$INPUT_FILE")"
-  echo ""
+# If file path provided as argument, use it directly
+if [ $# -gt 0 ]; then
+  INPUT_FILE="$1"
+  if [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: File not found: $INPUT_FILE"
+    exit 1
+  fi
+  # Skip to file processing
 else
-  # Display menu
-  echo "Found ${#jsonl_files[@]} .jsonl file(s) in current directory:"
-  echo ""
-  for i in "${!jsonl_files[@]}"; do
-    echo "  $((i + 1)). $(basename "${jsonl_files[$i]}")"
-  done
-  echo ""
+  # Find all .jsonl files in tools directory (where script lives) and current directory
+  # Prefer tools directory since that's where batch files are typically located
+  mapfile -t tools_files < <(find "$SCRIPT_DIR" -maxdepth 1 -name "*.jsonl" -type f 2>/dev/null | sort)
+  mapfile -t current_files < <(find "${PWD}" -maxdepth 1 -name "*.jsonl" -type f 2>/dev/null | sort)
   
-  # Prompt for selection
-  while true; do
-    read -p "Select file number [1-${#jsonl_files[@]}]: " selection
-    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le ${#jsonl_files[@]} ]; then
-      INPUT_FILE="${jsonl_files[$((selection - 1))]}"
-      break
-    else
-      echo "Invalid selection. Please enter a number between 1 and ${#jsonl_files[@]}."
+  # Combine and deduplicate (tools directory files take precedence)
+  declare -A seen
+  jsonl_files=()
+  for file in "${tools_files[@]}" "${current_files[@]}"; do
+    if [ -n "$file" ] && [ -z "${seen["$file"]:-}" ]; then
+      jsonl_files+=("$file")
+      seen["$file"]=1
     fi
   done
-  echo ""
+  
+  if [ ${#jsonl_files[@]} -eq 0 ]; then
+    echo "No .jsonl files found in:"
+    echo "  - $SCRIPT_DIR"
+    echo "  - ${PWD}"
+    echo ""
+    echo "Usage: $0 [jsonl-file-path]"
+    exit 1
+  fi
+
+  # If only one file, use it automatically
+  if [ ${#jsonl_files[@]} -eq 1 ]; then
+    INPUT_FILE="${jsonl_files[0]}"
+    echo "Found one .jsonl file: $(basename "$INPUT_FILE")"
+    echo ""
+  else
+    # Display menu
+    echo "Found ${#jsonl_files[@]} .jsonl file(s):"
+    echo ""
+    for i in "${!jsonl_files[@]}"; do
+      file="${jsonl_files[$i]}"
+      if [[ "$file" == "$SCRIPT_DIR"/* ]]; then
+        echo "  $((i + 1)). $(basename "$file") (tools/)"
+      else
+        echo "  $((i + 1)). $(basename "$file") ($(basename "$(dirname "$file")")/)"
+      fi
+    done
+    echo ""
+    
+    # Prompt for selection
+    while true; do
+      read -p "Select file number [1-${#jsonl_files[@]}]: " selection
+      if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le ${#jsonl_files[@]} ]; then
+        INPUT_FILE="${jsonl_files[$((selection - 1))]}"
+        break
+      else
+        echo "Invalid selection. Please enter a number between 1 and ${#jsonl_files[@]}."
+      fi
+    done
+    echo ""
+  fi
 fi
 
 # Check if jq is available for colorization
