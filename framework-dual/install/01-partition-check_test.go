@@ -9,17 +9,19 @@ import (
 
 // TestStep01PartitionCheck_Integration tests the integration of refactored functions
 func TestStep01PartitionCheck_Integration(t *testing.T) {
-	step := &Step01PartitionCheck{}
-	state := &State{}
-
 	// Test that the step can be created without panicking
-	if step == nil {
-		t.Error("Step01PartitionCheck should be creatable")
-	}
+	step := &Step01PartitionCheck{}
+
+	// Verify the step has the expected methods (compile-time check)
+	_ = step.RunWarnings
+	_ = step.RunClean
 
 	// Test that state can be created
-	if state == nil {
-		t.Error("State should be creatable")
+	state := &State{}
+	// Verify state is usable by setting and reading a field
+	state.Device = "/dev/test"
+	if state.Device != "/dev/test" {
+		t.Error("State fields should be readable and writable")
 	}
 }
 
