@@ -23,6 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # Structure: ~/guix-customize/framework-dual/postinstall/customize
 # We need: ~/guix-customize/postinstall/lib.sh
 INSTALL_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+export INSTALL_ROOT
 if [ -f "$INSTALL_ROOT/postinstall/lib.sh" ]; then
   source "$INSTALL_ROOT/postinstall/lib.sh"
 else
