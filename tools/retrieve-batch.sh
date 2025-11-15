@@ -14,9 +14,25 @@ if [ -z "$BATCH_ID" ]; then
   exit 1
 fi
 
+# Load .env file if it exists (in tools/ directory)
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a  # automatically export all variables
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
 # Check for API key
 if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   echo "Error: ANTHROPIC_API_KEY environment variable not set"
+  echo ""
+  echo "Set your API key using one of these methods:"
+  echo ""
+  echo "1. Create a .env file (recommended):"
+  echo "   cp tools/.env.example tools/.env"
+  echo "   # Edit tools/.env and add your API key"
+  echo ""
+  echo "2. Export as environment variable:"
+  echo "   export ANTHROPIC_API_KEY='your-api-key-here'"
   exit 1
 fi
 

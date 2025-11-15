@@ -16,10 +16,20 @@ These scripts automate the conversion of `.sh` files to `.scm` files using Claud
 1. **Anthropic API Key**: Get from https://console.anthropic.com/settings/keys
 2. **Python 3**: For JSON processing
 3. **curl**: For API requests
-4. **Environment variable**:
+4. **API Key Setup** (choose one method):
+
+   **Option 1: .env file (recommended)**
+   ```bash
+   cp tools/.env.example tools/.env
+   # Edit tools/.env and add your actual API key
+   ```
+
+   **Option 2: Environment variable**
    ```bash
    export ANTHROPIC_API_KEY='your-api-key-here'
    ```
+
+   The scripts will automatically load from `tools/.env` if it exists, otherwise they'll use the environment variable.
 
 ## Workflow
 
