@@ -136,6 +136,47 @@
   (unless (file-exists? path)
     (system* (format #f "mkdir -p ~s" path))))
 
+;;; Convert hash to words (simplified version)
+;;; Full word list would require embedding words.json, so we use a minimal set
+(define (hash-to-words hash-string)
+  ;; Simple implementation: take hex pairs and map to memorable words
+  ;; This is a simplified version - full version would use the complete word list
+  (let* ((hex-pairs (let loop ((str hash-string) (pairs '()))
+                      (if (< (string-length str) 2)
+                          (reverse pairs)
+                          (loop (string-drop str 2)
+                                (cons (string-take str 2) pairs)))))
+         ;; Minimal word list (just enough for demonstration)
+         (words #("zero" "one" "two" "three" "four" "five" "six" "seven"
+                  "eight" "nine" "alpha" "beta" "gamma" "delta" "echo"
+                  "key" "light" "break" "story" "movement" "tonight" "owner"
+                  "third" "current" "create" "become" "program" "style"
+                  "method" "travel" "culture" "win" "dark" "mention"
+                  "capital" "property" "about" "discussion" "plant" "say"
+                  "product" "after" "sound" "increase" "window"))
+         (word-count (vector-length words)))
+    ;; Map each hex pair to a word (simplified mapping)
+    (string-join
+     (map (lambda (hex-pair)
+            (let ((num (string->number hex-pair 16)))
+              (if num
+                  (vector-ref words (modulo num word-count))
+                  "unknown")))
+          hex-pairs)
+     " ")))
+
+;;; Extract first N and last N words from word string
+(define (get-quick-words word-string n)
+  (let* ((words (string-split word-string #\space))
+         (total (length words)))
+    (if (< total (* n 2))
+        word-string
+        (let ((first-n (take words n))
+              (last-n (take-right words n)))
+          (format #f "~a ... ~a"
+                  (string-join first-n " ")
+                  (string-join last-n " "))))))
+
 ;;; Main bootstrap process
 (define (main args)
   (msg "Guix Postinstall Bootstrap")
@@ -165,9 +206,14 @@
         (exit 1))
 
       ;; Show manifest checksum for manual verification
-      (let ((manifest-hash (file-sha256 "SOURCE_MANIFEST.txt")))
+      (let* ((manifest-hash (file-sha256 "SOURCE_MANIFEST.txt"))
+             (hash-words (hash-to-words manifest-hash))
+             (quick-words (get-quick-words hash-words 3)))
         (newline)
-        (info (format #f "Manifest checksum: ~a" manifest-hash))
+        (info (format #f "Hash:  ~a" manifest-hash))
+        (info (format #f "Words: ~a" hash-words))
+        (info (format #f "Quick: ~a" quick-words))
+        (newline)
         (info (format #f "Verify this matches the docs: https://github.com/~a/~a"
                      github-user github-repo))
         (newline))
