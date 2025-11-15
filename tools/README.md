@@ -107,13 +107,16 @@ Summary:
 ```
 
 **What it does:**
-- Downloads conversion results
-- Extracts `.scm` files to `tools/converted-scripts/`
+- Downloads conversion results from API
+- Saves raw results to `tools/batch-results.jsonl`
+- **Extracts `.scm` files** from results to `tools/converted-scripts/`
 - Makes scripts executable
 - Reports success/error counts
 
 **Output:**
 ```
+Results downloaded to: tools/batch-results.jsonl
+
 Extracting converted scripts...
   ✓ postinstall/recipes/add-spacemacs.scm
   ✓ postinstall/recipes/add-development.scm
@@ -126,7 +129,16 @@ Extraction complete!
 Converted scripts written to: tools/converted-scripts
 ```
 
-### 5. View Results (Interactive Viewer)
+**Important:** This step extracts the converted `.scm` files from the batch results. The files are now ready for review and testing in `tools/converted-scripts/`.
+
+### 5. View Results (Interactive Viewer) - Optional
+
+**You can view the raw JSONL files before or after extraction:**
+
+```bash
+cd tools
+./view-jsonl.sh
+```
 
 **View batch files with syntax highlighting:**
 
@@ -196,6 +208,14 @@ sudo apt install jq python3-pygments bat
 
 **Without syntax highlighting tools:**
 The viewer still works but displays plain text without colorization. All functionality remains available.
+
+**When to use the viewer:**
+- **Before extraction** - Review what was converted before extracting files
+- **After extraction** - Compare extracted `.scm` files with what's in the JSONL
+- **Debugging** - Check error messages in failed conversions
+- **Quality review** - See the full API response including metadata
+
+**Note:** The viewer shows the raw JSONL content. The actual `.scm` files are extracted in step 4 above and saved to `tools/converted-scripts/`.
 
 ### 6. Review and Test
 
