@@ -145,14 +145,38 @@ with open(results_file, 'r', encoding='utf-8') as f:
                     
                     content = message['content'][0]['text']
 
-                    # Write to file
-                    with open(output_path, 'w') as out:
-                        out.write(content)
-
-                    # Make executable
-                    os.chmod(output_path, 0o755)
-
-                    print(f"  ✓ {original_path}")
+                    # Check if content contains test file delimiter
+                    if '---TEST FILE---' in content:
+                        # Split into script and test file
+                        parts = content.split('---TEST FILE---', 1)
+                        script_content = parts[0].strip()
+                        test_content = parts[1].strip() if len(parts) > 1 else None
+                        
+                        # Write converted script
+                        with open(output_path, 'w', encoding='utf-8') as f:
+                            f.write(script_content)
+                        os.chmod(output_path, 0o755)
+                        
+                        # Write test file if present
+                        if test_content:
+                            # Generate test file path: test-<script-name>.scm
+                            script_name = os.path.basename(original_path).replace('.scm', '')
+                            test_filename = f"test-{script_name}.scm"
+                            test_path = os.path.join(os.path.dirname(output_path), test_filename)
+                            
+                            with open(test_path, 'w', encoding='utf-8') as f:
+                                f.write(test_content)
+                            os.chmod(test_path, 0o755)
+                            print(f"  ✓ {original_path} + {test_filename}")
+                        else:
+                            print(f"  ✓ {original_path}")
+                    else:
+                        # No test file, just write script
+                        with open(output_path, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        os.chmod(output_path, 0o755)
+                        print(f"  ✓ {original_path}")
+                    
                     success_count += 1
                 else:
                     # Handle error
