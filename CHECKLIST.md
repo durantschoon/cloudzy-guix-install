@@ -47,12 +47,15 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - ⏳ Ready for real-world testing on framework-dual
 
 - ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
+  - **Before converting**: Add structured comments to originals (see [docs/BATCH_CONVERSION_BEST_PRACTICES.md](docs/BATCH_CONVERSION_BEST_PRACTICES.md))
   - Priority: lib/postinstall.sh (simplest, 31 lines)
   - Next: lib/clean-install.sh, lib/verify-guix-install.sh
   - Later: bootstrap-installer.sh, recovery-complete-install.sh
+  - **Workflow**: See [tools/README.md](tools/README.md) for batch conversion process
 
 - ✅ Batch Conversion Tools (COMPLETED) → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
   - ⏳ Ready for review: Results available at tools/batch-results.jsonl
+  - **Usage Guide**: [tools/README.md](tools/README.md)
 
 **Testing Strategy:**
 
@@ -103,7 +106,10 @@ cd ~/guix-customize
 
 **Current Status**: All tooling complete ✅ - Ready for production use
 
-**Plan**: See [tools/BATCH_CONVERSION_PLAN.md](tools/BATCH_CONVERSION_PLAN.md) for detailed roadmap.
+**Documentation:**
+- **Getting Started**: [tools/README.md](tools/README.md) - Complete workflow and usage guide
+- **Detailed Plan**: [tools/BATCH_CONVERSION_PLAN.md](tools/BATCH_CONVERSION_PLAN.md) - Roadmap and enhancement plan
+- **Best Practices**: [docs/BATCH_CONVERSION_BEST_PRACTICES.md](docs/BATCH_CONVERSION_BEST_PRACTICES.md) - Pre-conversion preparation guide
 
 **Quick Summary:**
 
