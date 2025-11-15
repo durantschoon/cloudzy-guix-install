@@ -169,9 +169,37 @@ Example:
 
 If the original script lacks structured comments, add logical section headers based on the code structure, but keep them minimal and descriptive.
 
+TEST GENERATION:
+
+After converting the script, generate a corresponding test file. The test file should:
+1. Be named: test-<script-name>.scm (e.g., test-add-development.scm for add-development.sh)
+2. Use Guile's test framework (srfi-64) or simple assertion-based testing
+3. Test key functions/procedures from the converted script
+4. Use temporary files/directories for testing (create and clean up)
+5. Test both success and error cases where applicable
+6. For scripts that modify config.scm files, test with sample config files
+7. Place test file in same directory structure as converted script (e.g., tools/converted-scripts/postinstall/recipes/test-add-development.scm)
+
+Test file structure:
+- Use-modules for testing (srfi-64 if available, or simple assertions)
+- Load the script being tested (use load or include)
+- Test helper functions/procedures
+- Test main entry point if applicable
+- Use temporary files for file operations
+- Clean up after tests
+
 OUTPUT FORMAT:
 
-Provide ONLY the complete converted Guile script. No explanations, no markdown formatting, just the raw .scm file content starting with the shebang.
+Provide TWO files:
+
+1. The converted Guile script (complete .scm file content starting with shebang)
+2. The test file (complete test-<script-name>.scm file content)
+
+Separate the two files with a clear delimiter:
+---TEST FILE---
+Then provide the test file content.
+
+If the script is too simple to warrant tests, include a minimal test file that at least verifies the script can be loaded without errors.
 """.format(docs=docs, script_path=script_path, script_content=script_content)
             }
         ]

@@ -49,6 +49,43 @@ if command -v guile &> /dev/null; then
         return 1
     fi
     echo
+    
+    # Test converted scripts (if any)
+    CONVERTED_TESTS_DIR="tools/converted-scripts"
+    if [ -d "$CONVERTED_TESTS_DIR" ]; then
+        echo -e "${YELLOW}Testing Converted Guile Scripts...${NC}"
+        echo "----------------------------------------"
+        
+        # Find all test-*.scm files
+        TEST_COUNT=0
+        PASSED=0
+        FAILED=0
+        
+        while IFS= read -r test_file; do
+            TEST_COUNT=$((TEST_COUNT + 1))
+            test_name=$(basename "$test_file")
+            echo "Running $test_name..."
+            
+            # Run test file with guile
+            if guile --no-auto-compile -s "$test_file" 2>&1; then
+                echo -e "${GREEN}✓ $test_name passed${NC}"
+                PASSED=$((PASSED + 1))
+            else
+                echo -e "${RED}✗ $test_name failed${NC}"
+                FAILED=$((FAILED + 1))
+            fi
+        done < <(find "$CONVERTED_TESTS_DIR" -name "test-*.scm" -type f | sort)
+        
+        if [ $TEST_COUNT -eq 0 ]; then
+            echo -e "${YELLOW}⊘ No converted script tests found${NC}"
+        elif [ $FAILED -eq 0 ]; then
+            echo -e "${GREEN}✓ All converted script tests passed ($PASSED/$TEST_COUNT)${NC}"
+        else
+            echo -e "${RED}✗ Some converted script tests failed ($FAILED/$TEST_COUNT failed)${NC}"
+            return 1
+        fi
+        echo
+    fi
 else
     echo -e "${YELLOW}⊘ Skipping Guile tests (guile not installed)${NC}"
     echo

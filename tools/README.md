@@ -339,6 +339,33 @@ This script checks if converted `.scm` scripts have matching comment section hea
 - [ ] Comment sections match original structure (use `validate-comment-structure.sh`)
 
 **Test converted scripts:**
+
+The batch conversion process now automatically generates test files (`test-*.scm`) alongside converted scripts. Tests are extracted and placed in the same directory structure.
+
+**Run all tests (including converted script tests):**
+```bash
+# From repo root - runs Go tests and Guile tests (including converted scripts)
+./run-tests.sh
+
+# Or run in Docker (includes Guile)
+./test-docker.sh
+```
+
+**Run only converted script tests:**
+```bash
+# Find and run all test-*.scm files
+find tools/converted-scripts -name "test-*.scm" -exec guile --no-auto-compile -s {} \;
+```
+
+**Test structure:**
+- Test files are named `test-<script-name>.scm`
+- Placed in same directory as converted script
+- Use Guile's test framework (srfi-64) or simple assertions
+- Test key functions/procedures
+- Use temporary files for file operations
+- Tests are automatically extracted from batch results
+
+**Copy converted scripts to final locations:**
 ```bash
 # Copy to test location (from repo root)
 cp tools/converted-scripts/postinstall/recipes/add-spacemacs.scm \
