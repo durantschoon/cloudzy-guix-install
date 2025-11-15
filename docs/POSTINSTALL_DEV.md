@@ -8,6 +8,34 @@ Postinstall scripts run **after** the user boots into their installed Guix syste
 
 **Key principle**: Use Guile for all config.scm manipulation to ensure proper S-expression parsing.
 
+## User Installation (On Guix System)
+
+Users install postinstall scripts with a single command:
+
+```bash
+# One-line installation (pure Guile)
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile --no-auto-compile -s -
+```
+
+**What this does:**
+
+1. Downloads the bootstrap script and runs it
+2. Detects platform (framework, framework-dual, cloudzy, raspberry-pi)
+3. Creates `~/guix-customize/` directory
+4. Downloads platform-specific customize script
+5. Downloads Guile library (lib/guile-config-helper.scm)
+6. Downloads shared recipes (Spacemacs, development tools, fonts)
+7. Verifies all checksums against SOURCE_MANIFEST.txt
+8. Creates convenience symlink: `~/guix-customize/customize`
+
+**After installation:**
+```bash
+cd ~/guix-customize
+./customize
+```
+
+This opens the interactive customization menu for their platform.
+
 ## Developer Workflow
 
 ### 1. Making Changes to Customize Scripts
