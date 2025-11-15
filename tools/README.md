@@ -17,8 +17,9 @@ Before your first batch conversion:
 
 1. ✅ **Run verification**: `./tools/verify-setup.sh` (checks everything)
 2. ✅ **Set up API key**: See "Prerequisites" below
-3. ✅ **Review workflow**: See "Workflow" section below
-4. ✅ **Ready to go!** Run `./tools/generate-batch-conversion.sh`
+3. ✅ **Pre-structure comments**: See "Pre-Conversion Preparation" below ⭐ **IMPORTANT**
+4. ✅ **Review workflow**: See "Workflow" section below
+5. ✅ **Ready to go!** Run `./tools/generate-batch-conversion.sh`
 
 ## Prerequisites
 
@@ -39,6 +40,56 @@ Before your first batch conversion:
    ```
 
    The scripts will automatically load from `tools/.env` if it exists, otherwise they'll use the environment variable.
+
+## Pre-Conversion Preparation ⭐ **RECOMMENDED**
+
+**Before generating batch conversion requests, add structured section headers to your bash scripts.**
+
+### Why Pre-Structure Comments?
+
+Adding structured comments (`# Section Name`) to bash scripts before conversion ensures:
+
+1. **Better organization** - Original scripts are easier to maintain
+2. **Matching structure** - Converted scripts will have matching section headers (easier diffs)
+3. **No guessing** - AI preserves your structure instead of inventing one
+4. **Validation passes** - Structured scripts validate automatically
+
+### How to Add Structured Comments
+
+1. **Review the script** and identify logical sections (Configuration, Helper Functions, Main Logic, etc.)
+2. **Add section headers** using `# Section Name` format immediately before the code they describe
+3. **Use consistent naming** (e.g., `# Configuration`, `# Helper Functions`, `# Main Logic`)
+4. **Aim for 5+ section headers** for scripts with substantial logic
+
+**Example:**
+```bash
+#!/usr/bin/env bash
+
+# Configuration
+VAR1="value1"
+VAR2="value2"
+
+# Helper Functions
+helper_function() {
+    # ...
+}
+
+# Main Logic
+main() {
+    # ...
+}
+```
+
+### Validate Structure
+
+After adding structured comments, verify with:
+```bash
+./tools/validate-comment-structure.sh
+```
+
+This will show which scripts have structured sections (5+ headers) vs unstructured ones.
+
+**For detailed guidance, see:** [docs/BATCH_CONVERSION_BEST_PRACTICES.md](../docs/BATCH_CONVERSION_BEST_PRACTICES.md)
 
 ## Workflow
 
