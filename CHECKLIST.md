@@ -71,6 +71,32 @@ cd ~/guix-customize
 
 **Note:** Framework-dual postinstall testing should focus on GNOME configuration workflow. See [docs/POSTINSTALL_DEV.md](docs/POSTINSTALL_DEV.md) for testing and development instructions.
 
+---
+
+## 🔀 Parallel Projects
+
+### Batch Conversion System (Phase 2 - IN PROGRESS)
+
+**Goal**: Automated bash-to-Guile conversion using Anthropic Batch API with comprehensive validation.
+
+**Current Status**: Phase 1 Complete ✅ - Basic tooling ready, enhancements in progress
+
+**Plan**: See [tools/BATCH_CONVERSION_PLAN.md](tools/BATCH_CONVERSION_PLAN.md) for detailed roadmap.
+
+**Quick Summary:**
+
+- ✅ Phase 1: Core batch tools complete (generate, submit, check, retrieve)
+- ⏳ Phase 2: Add validation (syntax checks, diff-based comparison, test account)
+- 📅 Phase 3: Execute first batch conversion (3 recipe scripts)
+
+**Why Parallel**: Can be developed independently while framework-dual testing proceeds. Low risk, high value for future script migrations.
+
+**Timeline**: 2-3 weeks to complete enhancements, then ready for production use.
+
+**Cost**: ~$0.12 for 3 scripts (50% savings vs interactive conversion)
+
+---
+
 **Testing cloudzy installer with latest improvements:**
 
 - ✅ 3-step kernel/initrd fix applied and tested
