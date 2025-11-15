@@ -142,6 +142,29 @@ CONVERSION REQUIREMENTS:
 8. Use tail recursion where appropriate
 9. Use GNU coreutils commands (sha256sum not shasum, etc.)
 
+COMMENT STRUCTURE PRESERVATION:
+
+CRITICAL: Preserve the logical structure and organization of the original script by matching comment sections.
+
+- Extract all comment headers/sections from the original bash script (lines starting with # that describe sections)
+- Convert bash comment headers (# Section Name) to Guile comment headers (;;; Section Name)
+- Maintain the SAME ORDER and SAME SECTION NAMES in the converted script
+- If the original has sections like "# Configuration", "# Helper functions", "# Main logic", preserve these exact section names
+- Use three semicolons (;;;) for major section headers in Guile
+- Use two semicolons (;;) for subsection headers
+- Place section headers immediately before the code they describe
+- This ensures diffs between original and converted scripts show matching sections side-by-side
+
+Example:
+  Bash:  # Configuration
+         # Helper functions  
+         # Main logic
+  Guile: ;;; Configuration
+         ;;; Helper functions
+         ;;; Main logic
+
+If the original script lacks structured comments, add logical section headers based on the code structure, but keep them minimal and descriptive.
+
 OUTPUT FORMAT:
 
 Provide ONLY the complete converted Guile script. No explanations, no markdown formatting, just the raw .scm file content starting with the shebang.
