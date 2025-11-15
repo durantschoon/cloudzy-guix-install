@@ -108,8 +108,20 @@ cd ~/guix-customize
 **Quick Summary:**
 
 - ✅ Phase 1: Core batch tools complete (generate, submit, check, retrieve)
+- ✅ Enhanced features complete:
+  - ✅ Test generation (automatic test-*.scm files)
+  - ✅ Comment structure preservation (structured vs unstructured handling)
+  - ✅ Test extraction and integration into test runner
+  - ✅ .env file support for API key
+  - ✅ Verification script (verify-setup.sh)
+  - ✅ Magit integration for diff viewing
+  - ✅ Validation script (validate-comment-structure.sh)
 - ⏳ Phase 2: Add validation (syntax checks, diff-based comparison, test account)
 - 📅 Phase 3: Execute first batch conversion (3 recipe scripts)
+- 📋 Future: Generalize system for any language pair (see [tools/GENERALIZATION_PLAN.md](tools/GENERALIZATION_PLAN.md))
+  - System is ~85% ready for generalization
+  - ~15 hardcoded values need parameterization (2-3 hours work)
+  - Architecture is well-separated and clean
 
 **Why Parallel**: Can be developed independently while framework-dual testing proceeds. Low risk, high value for future script migrations.
 
