@@ -67,8 +67,8 @@ echo ""
 # Validate and parse JSONL format (handles pretty-printed multi-line JSON)
 echo "Validating JSONL format..."
 TEMP_JSON=$(mktemp)
-VALIDATION_ERRORS=0
-python3 <<'PYTHON' > "$TEMP_JSON"
+TEMP_STDERR=$(mktemp)
+python3 <<PYTHON > "$TEMP_JSON" 2>"$TEMP_STDERR"
 import json
 import sys
 
@@ -76,6 +76,7 @@ requests = []
 current_obj = []
 brace_count = 0
 obj_count = 0
+validation_errors = 0
 
 with open('$BATCH_FILE', 'r', encoding='utf-8') as f:
     for line in f:
@@ -93,7 +94,7 @@ with open('$BATCH_FILE', 'r', encoding='utf-8') as f:
                     obj_count += 1
                 except json.JSONDecodeError as e:
                     print(f"  ✗ Object {obj_count + 1}: Invalid JSON: {e}", file=sys.stderr)
-                    VALIDATION_ERRORS += 1
+                    validation_errors += 1
             current_obj = []
 
 # Handle any remaining object
@@ -106,11 +107,11 @@ if current_obj:
             obj_count += 1
         except json.JSONDecodeError as e:
             print(f"  ✗ Object {obj_count + 1}: Invalid JSON: {e}", file=sys.stderr)
-            VALIDATION_ERRORS += 1
+            validation_errors += 1
 
-if VALIDATION_ERRORS > 0:
+if validation_errors > 0:
     print(f"", file=sys.stderr)
-    print(f"Error: Found {VALIDATION_ERRORS} invalid JSON object(s) in batch file", file=sys.stderr)
+    print(f"Error: Found {validation_errors} invalid JSON object(s) in batch file", file=sys.stderr)
     sys.exit(1)
 
 # API expects {"requests": [...]} format
@@ -118,12 +119,22 @@ batch_request = {"requests": requests}
 json.dump(batch_request, sys.stdout, ensure_ascii=False)
 PYTHON
 
-if [ $? -ne 0 ]; then
+PYTHON_EXIT_CODE=$?
+if [ $PYTHON_EXIT_CODE -ne 0 ]; then
+  # Show stderr output
+  if [ -s "$TEMP_STDERR" ]; then
+    cat "$TEMP_STDERR"
+  fi
   echo ""
   echo "Error: Failed to parse batch file"
-  rm -f "$TEMP_JSON"
+  rm -f "$TEMP_JSON" "$TEMP_STDERR"
   exit 1
 fi
+# Show any warnings from stderr
+if [ -s "$TEMP_STDERR" ]; then
+  cat "$TEMP_STDERR"
+fi
+rm -f "$TEMP_STDERR"
 
 REQUEST_COUNT=$(python3 -c "import json; print(len(json.load(open('$TEMP_JSON'))['requests']))")
 echo "  ✓ Found $REQUEST_COUNT valid JSON objects"
