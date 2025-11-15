@@ -2,8 +2,22 @@
 
 This checklist tracks remaining work for the cloudzy-guix-install project.
 
-For implementation history and completed features, see:
+## 📋 How to Update This Checklist
 
+**When completing an item:**
+1. Move the completed item to [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) (newest at top)
+2. Remove it from the active checklist sections below
+3. Update the "Latest Completed Items" section below with the 3 most recent completions
+4. Keep the active checklist focused on **remaining work only**
+
+**Format for archive:**
+- Use date headers (YYYY-MM-DD) for grouping related completions
+- List items with ✅ checkmarks
+- Include context/notes when helpful
+- Keep newest items at the top
+
+**For implementation history and completed features, see:**
+- [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) - All completed items (newest first)
 - Git commit history
 - [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md) - Hard-won lessons and fixes
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Debugging guides
@@ -11,39 +25,25 @@ For implementation history and completed features, see:
 
 ---
 
+## ✅ Latest Completed Items
+
+**Most Recent (2025-11-15):**
+1. Fixed bootstrap-postinstall.scm syntax errors, path resolution, and Go detection
+2. Fixed customize script path resolution and postinstall/lib.sh INSTALL_ROOT usage
+3. Completed batch conversion tools (all scripts work from repo root, fixed custom_id format)
+
+**See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
+
+---
+
 ## 🔄 Currently Working On
-
-**Pre-Installation UX Improvements (COMPLETED):**
-
-- ✅ Added USEBIGFONT environment variable for larger console fonts during installation
-  - Supports boolean values ("1", "yes", "true", "t") → defaults to solar24x32
-  - Supports custom font names (e.g., "ter-v32b", "solar24x32")
-  - Falls back to solar24x32 if specified font not found
-  - Sets font before installer runs for better readability on high-DPI displays
-  - Updated bootstrap-installer.sh, README.md, and QUICKSTART.md
-- ✅ KEYBOARD_LAYOUT environment variable already supported for Caps Lock ↔ Ctrl swap
-  - Applied at first login via generated config.scm
-  - Can be set before bootstrap to avoid prompts
 
 **Guile Conversion Project (IN PROGRESS):**
 
 See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 
-- ✅ Phase 1: Library infrastructure complete
-  - Created lib/guile-config-helper.scm for S-expression manipulation
-  - Integrated Guile testing in Docker and run-tests.sh
-  - All tests passing
-
-- ✅ Phase 2: Update postinstall scripts to use Guile helper
-  - ✅ Updated framework-dual/postinstall/customize to use Guile helper
-  - ✅ Fixed GNOME configuration sed permission errors
-  - ✅ Replaced fragile sed patterns with proper S-expression parsing
-  - ✅ All service additions now use guile_add_service()
-  - ✅ Consolidated shared postinstall code into postinstall/lib.sh
-    - Created shared library with common functions (add_ssh, add_desktop, add_packages, etc.)
-    - Updated all platform customize scripts (cloudzy, framework, framework-dual) to source shared lib
-    - Moved test infrastructure to postinstall/tests/
-    - All platforms now benefit from improved error handling and guile_add_service()
+- ✅ Phase 1: Library infrastructure complete → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-1-2025-11-15)
+- ✅ Phase 2: Update postinstall scripts to use Guile helper → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-2-2025-11-15)
   - ⏳ Ready for real-world testing on framework-dual
 
 - ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
@@ -51,43 +51,20 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - Next: lib/clean-install.sh, lib/verify-guix-install.sh
   - Later: bootstrap-installer.sh, recovery-complete-install.sh
 
-- ✅ Batch Conversion Tools (COMPLETED):
-  - ✅ Fixed generate-batch-conversion.sh to use temp files (avoids command-line arg limits)
-  - ✅ Fixed submit-batch.sh to convert JSONL to proper API format ({"requests": [...]})
-  - ✅ Added JSONL validation before submission
-  - ✅ Successfully submitted first batch: msgbatch_01UhbzJfuzqGwymdd9i8BKMD
-  - ✅ Fixed check-batch-status.sh to handle missing 'total' field and stdin consumption
-  - ✅ Fixed retrieve-batch.sh to handle missing fields and error responses gracefully
-  - ✅ Batch processing completed successfully (5/5 requests succeeded)
-  - ✅ Created generate-customize-batch.sh for converting customize scripts (4 scripts)
-  - ✅ Fixed all tool scripts to work from repo root and find .env there
-  - ✅ Fixed view-jsonl.sh to find files in tools directory when run from root
-  - ✅ Fixed submit-batch.sh Python script (variable expansion, stderr handling)
-  - ✅ Fixed custom_id format to match API requirements (^[a-zA-Z0-9_-]{1,64}$)
+- ✅ Batch Conversion Tools (COMPLETED) → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
   - ⏳ Ready for review: Results available at tools/batch-results.jsonl
 
 **Testing Strategy:**
 
-- ✅ **Guile (.scm) scripts**: Fully tested in Docker + run-tests.sh
+- ✅ **Guile (.scm) scripts**: Fully tested in Docker + run-tests.sh → [See archive](archive/CHECKLIST_COMPLETED.md#testing-infrastructure-2025-11-15)
 - ⏸️ **Shell (.sh) scripts**: Not actively testing, will migrate to Guile
 - 🎯 **Focus**: Guile-based postinstall workflow from GNOME config onward
 - 📝 **Developer docs**: See docs/POSTINSTALL_DEV.md for workflow
 
 **Framework-dual postinstall (READY FOR TESTING):**
 
-- ✅ Fixed sed permission errors (chown USER:USER → chown USER)
-- ✅ Created guile_add_service() helper using lib/guile-config-helper.scm
-- ✅ Updated add_networkmanager(), add_ssh(), add_desktop()
-- ✅ Added to SOURCE_MANIFEST.txt for integrity verification
-- ✅ Created docs/POSTINSTALL_DEV.md with developer workflow
-- ✅ Created lib/bootstrap-postinstall.scm (pure Guile bootstrap)
-- ✅ Enhanced docs/GUILE_KNOWLEDGE.md with community best practices
-- ✅ Fixed bootstrap-postinstall.scm syntax errors and path resolution
-- ✅ Fixed Go detection in bootstrap script (uses bash to run 'command -v go')
-- ✅ Made hash-to-words conversion failure fatal (requires Go)
-- ✅ Fixed customize script path resolution for symlinks
-- ✅ Fixed postinstall/lib.sh to use INSTALL_ROOT correctly (exported from customize scripts)
-- ✅ Fixed guile-config-helper.scm path resolution in guile_add_service()
+- ✅ All fixes complete → [See archive](archive/CHECKLIST_COMPLETED.md#framework-dual-postinstall-improvements-2025-11-15)
+- ✅ Bootstrap script fixes → [See archive](archive/CHECKLIST_COMPLETED.md#recent-bootstrap--path-resolution-fixes-2025-11-15)
 - 🧪 **NEXT**: Test full GNOME installation workflow on real hardware
 
 **Bootstrap Command for Testing:**
@@ -112,6 +89,8 @@ cd ~/guix-customize
 - postinstall/lib.sh functions correctly use INSTALL_ROOT
 - Batch conversion tools ready for production use
 
+*(For detailed completion history, see [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md))*
+
 **Note:** Framework-dual postinstall testing should focus on GNOME configuration workflow. See [docs/POSTINSTALL_DEV.md](docs/POSTINSTALL_DEV.md) for testing and development instructions.
 
 ---
@@ -128,20 +107,8 @@ cd ~/guix-customize
 
 **Quick Summary:**
 
-- ✅ Phase 1: Core batch tools complete (generate, submit, check, retrieve)
-- ✅ Enhanced features complete:
-  - ✅ Test generation (automatic test-*.scm files)
-  - ✅ Comment structure preservation (structured vs unstructured handling)
-  - ✅ Test extraction and integration into test runner
-  - ✅ Verification script (verify-setup.sh)
-  - ✅ Magit integration for diff viewing
-  - ✅ Validation script (validate-comment-structure.sh)
-  - ✅ All tool scripts work from repo root directory
-  - ✅ .env file support (checks repo root first, then tools/)
-  - ✅ Fixed submit-batch.sh Python script (variable expansion, stderr handling)
-  - ✅ Fixed custom_id format to match API requirements (^[a-zA-Z0-9_-]{1,64}$)
-  - ✅ Fixed view-jsonl.sh to find files in tools directory from root
-  - ✅ Created generate-customize-batch.sh for converting customize scripts
+- ✅ Phase 1: Core batch tools complete → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-system-2025-11-15)
+- ✅ Enhanced features complete → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
 - ⏳ Phase 2: Add validation (syntax checks, diff-based comparison, test account)
 - 📅 Phase 3: Execute first batch conversion (3 recipe scripts)
 - 📋 Future: Generalize system for any language pair (see [tools/GENERALIZATION_PLAN.md](tools/GENERALIZATION_PLAN.md))
