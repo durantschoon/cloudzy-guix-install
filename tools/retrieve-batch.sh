@@ -4,16 +4,22 @@
 set -euo pipefail
 
 BATCH_ID="${1:-}"
+RESULTS_FILE_NAME="${2:-batch-results.jsonl}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-RESULTS_FILE="$SCRIPT_DIR/batch-results.jsonl"
+RESULTS_FILE="$SCRIPT_DIR/$RESULTS_FILE_NAME"
 CONVERSIONS_DIR="$REPO_ROOT/tools/converted-scripts"
 
 if [ -z "$BATCH_ID" ]; then
-  echo "Usage: $0 <batch-id>"
+  echo "Usage: $0 <batch-id> [results-file]"
   echo ""
-  echo "Example:"
+  echo "Examples:"
   echo "  $0 msgbatch_01HJGK7MZ3X5QR8W9P2N4V6B7D"
+  echo "  $0 msgbatch_01HJGK7MZ3X5QR8W9P2N4V6B7D batch-results-customize.jsonl"
+  echo ""
+  echo "Arguments:"
+  echo "  batch-id      - The batch ID from submit-batch.sh output"
+  echo "  results-file  - Optional: Output filename (default: batch-results.jsonl)"
   exit 1
 fi
 
@@ -76,7 +82,9 @@ mkdir -p "$ARCHIVE_DIR"
 
 if [ -f "$RESULTS_FILE" ]; then
   TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-  ARCHIVE_FILE="$ARCHIVE_DIR/batch-results-${TIMESTAMP}.jsonl"
+  # Extract base name without extension for archive filename
+  BASE_NAME=$(basename "$RESULTS_FILE_NAME" .jsonl)
+  ARCHIVE_FILE="$ARCHIVE_DIR/${BASE_NAME}-${TIMESTAMP}.jsonl"
   mv "$RESULTS_FILE" "$ARCHIVE_FILE"
   echo "Archived existing results to: $ARCHIVE_FILE"
   echo ""

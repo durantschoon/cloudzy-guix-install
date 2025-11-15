@@ -141,7 +141,7 @@ Summary:
 
 **What it does:**
 - Downloads conversion results from API
-- Saves raw results to `tools/batch-results.jsonl`
+- Saves raw results to `tools/batch-results.jsonl` (or custom filename if specified)
 - **Extracts `.scm` files** from results to `tools/converted-scripts/`
 - Makes scripts executable
 - Reports success/error counts

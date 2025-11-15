@@ -1,9 +1,10 @@
 # Batch processing artifacts - intermediate/temporary files
 # These can be regenerated or re-downloaded
-# Active files (one at a time) - archived to archive/batch/ when replaced
+# Active files (one per type) - archived to archive/batch/ when replaced
 batch-requests.jsonl
 batch-requests-customize.jsonl
 batch-results.jsonl
+batch-results-customize.jsonl
 conversions.patch
 .magit-diff-backup/
 
