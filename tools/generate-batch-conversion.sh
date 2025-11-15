@@ -87,7 +87,9 @@ while IFS= read -r script; do
     SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
     # Use full path as custom_id, replacing / with _ and limiting to 64 chars
     # Pattern must match: ^[a-zA-Z0-9_-]{1,64}$
-    CUSTOM_ID="convert-$(echo "$script" | sed 's|/|_|g' | sed 's/.sh$//' | sed 's/[^a-zA-Z0-9_-]//g')"
+    # Strip leading ./ and remove .sh extension, then sanitize
+    CLEAN_PATH=$(echo "$script" | sed 's|^\./||' | sed 's/.sh$//')
+    CUSTOM_ID="convert-$(echo "$CLEAN_PATH" | sed 's|/|_|g' | sed 's/[^a-zA-Z0-9_-]//g')"
     # Truncate to 64 chars if needed
     if [ ${#CUSTOM_ID} -gt 64 ]; then
       CUSTOM_ID="${CUSTOM_ID:0:64}"
