@@ -119,7 +119,6 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 ├── update-manifest.sh          # Manifest checksum generator
 ├── SOURCE_MANIFEST.txt         # Source file checksums for verification
 ├── go.mod                      # Go module definition
-├── nonguix-signing-key.pub    # Nonguix channel signing key
 ├── CHECKLIST.md                # Development checklist
 ├── CLAUDE.md                   # Development notes for AI assistants
 ├── QUICKSTART.md               # Quick start guide

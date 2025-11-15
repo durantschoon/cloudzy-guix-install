@@ -3,6 +3,7 @@
 This checklist tracks remaining work for the cloudzy-guix-install project.
 
 For implementation history and completed features, see:
+
 - Git commit history
 - [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md) - Hard-won lessons and fixes
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Debugging guides
@@ -13,12 +14,14 @@ For implementation history and completed features, see:
 ## 🔄 Currently Working On
 
 **Confirm postinstall configuration works with framework-dual:**
+
 - ⚠️ GNOME installation fails with permissions error
 - ⚠️ Install script may need to use sudo for GNOME installation
 - ⏳ Need to test full postinstall workflow end-to-end
 - ⏳ Verify all customize script options work correctly
 
 **Testing cloudzy installer with latest improvements:**
+
 - ✅ 3-step kernel/initrd fix applied and tested
 - ✅ Color-coded output with cycling headers
 - ✅ Enhanced manifest verification with Quick checksum view
@@ -37,6 +40,7 @@ Learned the complete workflow for getting Framework 13 fully operational after m
    - Guix 1.4.0 from ISO (old, doesn't support channel introductions)
 
 2. **Post-Install Steps Required:**
+
    ```bash
    # Step 1: First guix pull (upgrade Guix to support channel introductions)
    guix pull
@@ -106,11 +110,13 @@ Learned the complete workflow for getting Framework 13 fully operational after m
 ### 🟡 Medium Priority
 
 #### 1. Add NetworkManager to Framework Customize Script
+
 **Status:** ❌ Missing from customize script
 
 **Current gap:** Framework 13 first boot has no persistent networking. User must manually add NetworkManager service to config.scm before running customize script.
 
 **Proposed solution:**
+
 - Add NetworkManager as high-priority option (option 0 or automatic)
 - Include in Framework-specific hardware setup
 - Document in first-boot instructions
@@ -120,11 +126,13 @@ Learned the complete workflow for getting Framework 13 fully operational after m
 ---
 
 #### 2. Dual-Boot GRUB UX Improvements
+
 **Status:** ❌ Not implemented
 
 Ensure readable GRUB theme and visible timeout; add explicit chainloader entry for Pop!_OS in EFI if auto-detection fails.
 
 **Current state:**
+
 - ✅ Timeout set to 5 seconds
 - ✅ os-prober configured in recovery script
 - ❌ Need to test chainloader detection
@@ -135,9 +143,11 @@ Ensure readable GRUB theme and visible timeout; add explicit chainloader entry f
 ---
 
 #### 3. Bootloader Timeout Configuration
+
 **Status:** ⚠️ Partially implemented
 
 **Current:**
+
 ```scheme
 (bootloader-configuration
   (bootloader grub-efi-bootloader)
@@ -146,6 +156,7 @@ Ensure readable GRUB theme and visible timeout; add explicit chainloader entry f
 ```
 
 **Need to verify:**
+
 - Framework single-boot installer also has timeout
 - Cloudzy installer has appropriate timeout
 - Timeout is documented in generated configs
@@ -155,9 +166,11 @@ Ensure readable GRUB theme and visible timeout; add explicit chainloader entry f
 ---
 
 #### 4. Storage Options Documentation
+
 **Status:** ❌ Not documented
 
 Provide documented flows for:
+
 - LUKS + ext4 root
 - btrfs with subvolumes and periodic scrub hooks
 - Flag to reserve N GiB unallocated and/or create separate `/home`
@@ -167,6 +180,7 @@ Provide documented flows for:
 ---
 
 #### 5. Safer Retries and Diagnostics
+
 **Status:** ❌ Not implemented
 
 Toggle verbose vs quiet logging; capture `guix describe` and `guix weather` summaries into the log and receipt.
@@ -176,6 +190,7 @@ Toggle verbose vs quiet logging; capture `guix describe` and `guix weather` summ
 ---
 
 #### 6. Post-Install Customization Profiles
+
 **Status:** ❌ Not implemented
 
 Split `/etc/config.scm` into base OS vs hardware profile; provide a "first reconfigure" profile that adds firmware, NetworkManager, SSH, time sync, and trim in one step.
@@ -187,9 +202,11 @@ Split `/etc/config.scm` into base OS vs hardware profile; provide a "first recon
 ### 🟢 Low Priority (Nice to Have)
 
 #### 7. Label Verification Output
+
 **Status:** ❌ Not shown to user
 
 Should display:
+
 ```bash
 # Show labels after formatting
 echo "Verifying partition labels..."
@@ -203,9 +220,11 @@ parted /dev/nvme0n1 print     # Should show GPT names
 ---
 
 #### 8. Stronger Installation Receipts
+
 **Status:** ⚠️ Partially implemented
 
 **Current:**
+
 - ✅ Basic receipt written
 - ✅ Channel commits included (via recovery script)
 - ❌ Need `/run/current-system` derivation
@@ -217,6 +236,7 @@ parted /dev/nvme0n1 print     # Should show GPT names
 ---
 
 #### 9. Raspberry Pi Track Enhancements
+
 **Status:** ❌ Not implemented
 
 Add optional image build recipe and Pi-specific initrd modules/services (chrony, headless SSH with key drop).
@@ -226,6 +246,7 @@ Add optional image build recipe and Pi-specific initrd modules/services (chrony,
 ---
 
 #### 10. Labels vs Device Paths Explanation
+
 **Status:** ❌ Not documented
 
 Add a one-sentence explanation and simple diagram where labels first appear in documentation.
@@ -235,6 +256,7 @@ Add a one-sentence explanation and simple diagram where labels first appear in d
 ---
 
 #### 11. Optional Channel Pinning Toggle Documentation
+
 **Status:** ❌ Not documented
 
 Provide a short on/off toggle doc section; default remains safe/unpinned.
@@ -244,6 +266,7 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 ---
 
 #### 12. Swap Partition Support
+
 **Status:** ⚠️ Only swapfile support
 
 **Current:** Only supports creating swapfile in step 4
@@ -255,9 +278,11 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 ---
 
 #### 13. Reserved Disk Space Option
+
 **Status:** ❌ Not implemented
 
 **Could add:**
+
 - Allow leaving 10-20GB unallocated
 - User configurable via env var
 
@@ -266,6 +291,7 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 ---
 
 #### 14. Script Directory Reorganization
+
 **Status:** ✅ Complete (v1.1.0)
 
 **Completed:**
@@ -307,21 +333,25 @@ Provide a short on/off toggle doc section; default remains safe/unpinned.
 These principles guide all implementation work:
 
 ### 1. Super-Minimal Initial config.scm
+
 - Keep only: host-name, locale, timezone, bootloader, file-systems, users
 - No desktop environment, SSH, or optional services in initial install
 - Goal: Reliably install a bootable Guix system shell
 
 ### 2. Verify Before Reboot
+
 - Check kernel and initrd exist in `/mnt/boot/`
 - Verify GRUB EFI files exist
 - Refuse to reboot if critical files missing
 
 ### 3. Pre-Set User Password
+
 - After `guix system init` but before reboot
 - Use `chroot` and `passwd` command
 - Avoids storing secrets in version control
 
 ### 4. Hardware-Aware Defaults
+
 - Framework-specific: include AMD GPU, NVMe, USB modules in initrd
 - Include linux-firmware via nonguix for real-world hardware
 - Set stable kernel arguments
@@ -349,6 +379,7 @@ These principles guide all implementation work:
 - Framework 13 is primary target, other platforms secondary
 
 For detailed implementation history, see:
+
 - Git commit log
 - docs/INSTALLATION_KNOWLEDGE.md
 - Individual platform README files
