@@ -40,7 +40,7 @@ af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-s
 846f1ec4e17aa08200af7b74fb46f1c432f11c033998b4e533d5c0046a5033f9  lib/verify-guix-install.sh
 949430a4926456a04c84a0712f07d5149484a14b6a4f1edf37eaf96104aadd5d  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
-7f70429b87eb1b51e3b5eab49dea3db73f375faf2086daeb615307243f687008  postinstall/lib.sh
+9d8f8a53eef74be845914d59c35478eb4ff70384e4c6c97e3e5764c6cf058955  postinstall/lib.sh
 
 ## Guile Library Scripts
 

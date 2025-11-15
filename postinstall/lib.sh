@@ -200,7 +200,6 @@ add_nonguix_info() {
   echo ""
 
   # Source postinstall library for generate_channels_scm
-  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   # Use INSTALL_ROOT if set, otherwise calculate from script location
   local install_root="${INSTALL_ROOT:-}"
   if [[ -z "$install_root" ]]; then
