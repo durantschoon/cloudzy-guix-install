@@ -137,44 +137,51 @@
   (unless (file-exists? path)
     (system* (format #f "mkdir -p ~s" path))))
 
-;;; Check if Go command is available
-(define (go-available?)
+;;; Check if Go command is available and return its path
+(define (go-path)
   ;; Use bash to run 'command -v go' since command is a bash builtin
   ;; Also check common Go locations as fallback
-  (let* ((port (open-input-pipe "bash -c 'command -v go 2>/dev/null || which go 2>/dev/null || [ -f /run/current-system/profile/bin/go ] && echo /run/current-system/profile/bin/go || [ -f ~/.guix-profile/bin/go ] && echo ~/.guix-profile/bin/go'"))
+  (let* ((port (open-input-pipe "bash -c 'command -v go 2>/dev/null || which go 2>/dev/null || ([ -f /run/current-system/profile/bin/go ] && echo /run/current-system/profile/bin/go) || ([ -f ~/.guix-profile/bin/go ] && echo ~/.guix-profile/bin/go) || echo'"))
          (output (read-line port))
          (status (close-pipe port)))
-    (and (zero? status) (string? output) (not (string-null? output)) (> (string-length output) 0))))
+    (if (and (zero? status) (string? output) (not (string-null? output)) (> (string-length output) 0))
+        output
+        #f)))
+
+;;; Check if Go is available
+(define (go-available?)
+  (not (not (go-path))))
 
 ;;; Use hash-to-words tool (same as update-manifest.sh)
 ;;; Downloads and compiles the Go tool if Go is available
 (define (hash-to-words hash-string)
   ;; Try to use the Go tool if available
-  (if (go-available?)
-      ;; Download and compile the tool
-      (let* ((tool-dir "tools/hash-to-words")
-             (main-go (string-append tool-dir "/main.go"))
-             (words-json (string-append tool-dir "/words.json"))
-             (binary (string-append tool-dir "/hash-to-words")))
-        ;; Create directory
-        (mkdir-p tool-dir)
-        
-        ;; Download source files and compile
-        (if (and (download-file "cmd/hash-to-words/main.go" main-go)
-                 (download-file "cmd/hash-to-words/words.json" words-json)
-                 (system* (format #f "cd ~s && go build -o ~s ~s"
-                                 tool-dir binary main-go)))
-            ;; Run the tool
-            (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
-                                                 hash-string binary)))
-                   (output (read-line port))
-                   (status (close-pipe port)))
-              (if (and (zero? status) (string? output))
-                  output
-                  #f))
-            #f))
-      ;; No Go available, return #f to indicate we can't convert
-      #f))
+  (let ((go-cmd (go-path)))
+    (if go-cmd
+        ;; Download and compile the tool
+        (let* ((tool-dir "tools/hash-to-words")
+               (main-go (string-append tool-dir "/main.go"))
+               (words-json (string-append tool-dir "/words.json"))
+               (binary (string-append tool-dir "/hash-to-words")))
+          ;; Create directory
+          (mkdir-p tool-dir)
+          
+          ;; Download source files and compile
+          (if (and (download-file "cmd/hash-to-words/main.go" main-go)
+                   (download-file "cmd/hash-to-words/words.json" words-json)
+                   (system* (format #f "cd ~s && ~s build -o ~s ~s"
+                                   tool-dir go-cmd binary main-go)))
+              ;; Run the tool
+              (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
+                                                   hash-string binary)))
+                     (output (read-line port))
+                     (status (close-pipe port)))
+                (if (and (zero? status) (string? output))
+                    output
+                    #f))
+              #f))
+        ;; No Go available, return #f to indicate we can't convert
+        #f)))
 
 ;;; Extract first N and last N words from word string
 (define (get-quick-words word-string n)

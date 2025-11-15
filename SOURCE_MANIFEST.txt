@@ -45,7 +45,7 @@ b07541effdf90ed2cbaee3f993cc6a181059739983d61fa9dc2225ef676282f6  postinstall/li
 ## Guile Library Scripts
 
 18c4ae8032f77aee3390bf72ffc4da973ab11838d2f1dde3c55eda1b4c43d390  lib/guile-config-helper.scm
-4f63a01c685a9594e9bf0f11004adad7b98652a03efaf669d9862fb2c53915eb  lib/bootstrap-postinstall.scm
+8af83c42de227449fb6e6137f963d94c418fd5ae3014afa292783385f581e727  lib/bootstrap-postinstall.scm
 
 ## Post-Install Customization Scripts
 
