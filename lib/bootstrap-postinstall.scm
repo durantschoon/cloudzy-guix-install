@@ -139,10 +139,12 @@
 
 ;;; Check if Go command is available
 (define (go-available?)
-  (let* ((port (open-input-pipe "command -v go 2>/dev/null"))
+  ;; Use bash to run 'command -v go' since command is a bash builtin
+  ;; Also check common Go locations as fallback
+  (let* ((port (open-input-pipe "bash -c 'command -v go 2>/dev/null || which go 2>/dev/null || [ -f /run/current-system/profile/bin/go ] && echo /run/current-system/profile/bin/go || [ -f ~/.guix-profile/bin/go ] && echo ~/.guix-profile/bin/go'"))
          (output (read-line port))
          (status (close-pipe port)))
-    (and (zero? status) (string? output) (not (string-null? output)))))
+    (and (zero? status) (string? output) (not (string-null? output)) (> (string-length output) 0))))
 
 ;;; Use hash-to-words tool (same as update-manifest.sh)
 ;;; Downloads and compiles the Go tool if Go is available
