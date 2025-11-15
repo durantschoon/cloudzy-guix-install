@@ -4,7 +4,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BATCH_FILE="$SCRIPT_DIR/batch-requests.jsonl"
+# Accept optional batch file argument, default to batch-requests.jsonl
+BATCH_FILE="${1:-$SCRIPT_DIR/batch-requests.jsonl}"
+# If relative path, make it relative to script directory
+if [[ "$BATCH_FILE" != /* ]]; then
+  BATCH_FILE="$SCRIPT_DIR/$BATCH_FILE"
+fi
 
 # Load .env file if it exists (in tools/ directory)
 if [ -f "$SCRIPT_DIR/.env" ]; then
