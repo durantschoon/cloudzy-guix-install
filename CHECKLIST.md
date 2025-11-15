@@ -34,6 +34,13 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - Next: lib/clean-install.sh, lib/verify-guix-install.sh
   - Later: bootstrap-installer.sh, recovery-complete-install.sh
 
+- ✅ Batch Conversion Tools (COMPLETED):
+  - ✅ Fixed generate-batch-conversion.sh to use temp files (avoids command-line arg limits)
+  - ✅ Fixed submit-batch.sh to convert JSONL to proper API format ({"requests": [...]})
+  - ✅ Added JSONL validation before submission
+  - ✅ Successfully submitted first batch: msgbatch_01UhbzJfuzqGwymdd9i8BKMD
+  - ⏳ Waiting for batch results (~24 hours) to convert postinstall/recipes/*.sh to Guile
+
 **Testing Strategy:**
 
 - ✅ **Guile (.scm) scripts**: Fully tested in Docker + run-tests.sh
