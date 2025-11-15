@@ -147,6 +147,18 @@ Converted scripts written to: tools/converted-scripts
 
 ### 5. View Results (Interactive Viewer) - Optional
 
+**You can use this tool with existing batch files from previous jobs:**
+
+```bash
+cd tools
+./view-jsonl.sh
+```
+
+**Works with:**
+- Existing `batch-requests.jsonl` files (from previous batch generations)
+- Existing `batch-results.jsonl` files (from previous batch retrievals)
+- No need to run a new batch job - works with any JSONL file in the current directory
+
 **You can view the raw JSONL files before or after extraction:**
 
 ```bash
