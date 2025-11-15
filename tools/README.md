@@ -255,11 +255,36 @@ The viewer still works but displays plain text without colorization. All functio
 - Works with any `.scm` files already in `tools/converted-scripts/`
 - Automatically finds and matches them with original `.sh` files
 
+**Features:**
+- **Colorized output** - Uses `git diff` or `colordiff` for syntax highlighting
+- **Interactive paging** - Navigate with arrow keys, Page Up/Down, spacebar
+- **Handles both path formats** - Works with old nested structure and new flat structure
+
+**View in magit (Emacs):**
+```bash
+# Generate patch file for magit
+./tools/diff-conversions.sh --patch
+
+# Then in emacs:
+# M-x magit-diff-patch
+# Select: tools/conversions.patch
+```
+
+**Or output git diff format:**
+```bash
+# Output git diff format (can be piped to file or viewed)
+./tools/diff-conversions.sh --magit > conversions.patch
+
+# In emacs:
+# M-x magit-diff-patch
+# Paste or select the patch file
+```
+
 This script:
 - Finds all converted `.scm` files in `tools/converted-scripts/`
 - Matches them with their original `.sh` files (handles both old and new path formats)
 - Shows unified diffs for each pair
-- Pages through all changes interactively with `less`
+- Pages through all changes interactively with `less` (or outputs git diff format for magit)
 
 **Manual diff (alternative):**
 ```bash

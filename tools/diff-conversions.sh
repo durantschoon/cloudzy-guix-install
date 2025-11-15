@@ -1,12 +1,26 @@
 #!/usr/bin/env bash
 # Interactive diff viewer for batch conversion results
 # Pages through all converted scripts showing diffs between .sh and .scm versions
+#
+# Usage:
+#   ./diff-conversions.sh           # Interactive colored diff viewer
+#   ./diff-conversions.sh --magit   # Generate git diff output for magit
+#   ./diff-conversions.sh --patch   # Generate patch file for magit
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONVERSIONS_DIR="$REPO_ROOT/tools/converted-scripts"
+
+# Parse arguments
+MAGIT_MODE=false
+PATCH_MODE=false
+if [[ "${1:-}" == "--magit" ]]; then
+  MAGIT_MODE=true
+elif [[ "${1:-}" == "--patch" ]]; then
+  PATCH_MODE=true
+fi
 
 if [ ! -d "$CONVERSIONS_DIR" ]; then
   echo "Error: Converted scripts directory not found: $CONVERSIONS_DIR"
@@ -15,10 +29,21 @@ if [ ! -d "$CONVERSIONS_DIR" ]; then
   exit 1
 fi
 
-# Check if less is available
-if ! command -v less >/dev/null 2>&1; then
-  echo "Error: 'less' command not found. Please install it to use this viewer."
-  exit 1
+# Check if less is available (only needed for interactive mode)
+if [ "$MAGIT_MODE" = false ] && [ "$PATCH_MODE" = false ]; then
+  if ! command -v less >/dev/null 2>&1; then
+    echo "Error: 'less' command not found. Please install it to use this viewer."
+    exit 1
+  fi
+fi
+
+# Detect best diff command for colorized output
+if command -v git >/dev/null 2>&1; then
+  DIFF_CMD="git diff --no-index --color=always"
+elif command -v colordiff >/dev/null 2>&1; then
+  DIFF_CMD="colordiff -u"
+else
+  DIFF_CMD="diff -u"
 fi
 
 echo "Finding converted scripts..."
@@ -84,22 +109,64 @@ for pair in "${pairs[@]}"; do
   relative_original="${original#$REPO_ROOT/}"
   relative_converted="${converted#$CONVERSIONS_DIR/}"
   
-  echo "==================================================================================" >> "$TEMP_DIFF"
-  echo "File: $relative_original -> $relative_converted" >> "$TEMP_DIFF"
-  echo "==================================================================================" >> "$TEMP_DIFF"
+  if [ "$MAGIT_MODE" = true ] || [ "$PATCH_MODE" = true ]; then
+    # For magit/patch mode, use git diff format
+    echo "diff --git a/$relative_original b/$relative_converted" >> "$TEMP_DIFF"
+    echo "--- a/$relative_original" >> "$TEMP_DIFF"
+    echo "+++ b/$relative_converted" >> "$TEMP_DIFF"
+  else
+    # For interactive mode, use header format
+    echo "==================================================================================" >> "$TEMP_DIFF"
+    echo "File: $relative_original -> $relative_converted" >> "$TEMP_DIFF"
+    echo "==================================================================================" >> "$TEMP_DIFF"
+  fi
   echo "" >> "$TEMP_DIFF"
   
-  # Generate unified diff
-  if diff -u "$original" "$converted" >> "$TEMP_DIFF" 2>&1; then
-    echo "  (No differences)" >> "$TEMP_DIFF"
+  # Generate unified diff with color support
+  if [ "$MAGIT_MODE" = true ] || [ "$PATCH_MODE" = true ]; then
+    # For magit, use git diff without color (magit will colorize)
+    git diff --no-index --no-color "$original" "$converted" >> "$TEMP_DIFF" 2>&1 || true
+  else
+    # For interactive mode, use colorized diff
+    if $DIFF_CMD "$original" "$converted" >> "$TEMP_DIFF" 2>&1; then
+      echo "  (No differences)" >> "$TEMP_DIFF"
+    fi
   fi
   
   echo "" >> "$TEMP_DIFF"
   echo "" >> "$TEMP_DIFF"
 done
 
-# Display with less
-less -R "$TEMP_DIFF"
+# Handle different output modes
+if [ "$MAGIT_MODE" = true ]; then
+  # Output for magit (can be piped to a file or viewed directly)
+  cat "$TEMP_DIFF"
+  echo ""
+  echo "To view in magit:"
+  echo "  1. Copy the output above"
+  echo "  2. In emacs: M-x magit-diff-patch"
+  echo "  3. Paste the diff"
+  echo ""
+  echo "Or save to file and view:"
+  echo "  ./diff-conversions.sh --magit > conversions.patch"
+  echo "  # Then in emacs: M-x magit-diff-patch (select the file)"
+elif [ "$PATCH_MODE" = true ]; then
+  # Generate patch file
+  PATCH_FILE="$REPO_ROOT/tools/conversions.patch"
+  cp "$TEMP_DIFF" "$PATCH_FILE"
+  echo "Patch file created: $PATCH_FILE"
+  echo ""
+  echo "To view in magit:"
+  echo "  1. Open emacs in the repo root"
+  echo "  2. M-x magit-diff-patch"
+  echo "  3. Select: $PATCH_FILE"
+  echo ""
+  echo "Or view directly:"
+  echo "  cat $PATCH_FILE | less -R"
+else
+  # Interactive mode with colored output
+  less -R "$TEMP_DIFF"
+fi
 
 echo ""
 echo "Review complete!"
