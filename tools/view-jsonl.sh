@@ -224,8 +224,99 @@ def extract_text_blobs(obj, path=""):
     
     return obj, text_blobs
 
-def insert_text_blobs(formatted_json, text_blobs):
-    """Insert formatted text blobs into JSON output, handling jq color codes"""
+def detect_code_language(text):
+    """Detect programming language from text content"""
+    text_lower = text.lower()
+    first_lines = text.split('\n')[:5]
+    first_100_chars = text[:100].lower()
+    
+    # Check for shebangs
+    if text.startswith('#!/'):
+        if 'python' in first_lines[0] or 'py' in first_lines[0]:
+            return 'python'
+        elif 'bash' in first_lines[0] or 'sh' in first_lines[0]:
+            return 'bash'
+        elif 'guile' in first_lines[0]:
+            return 'scheme'
+        elif 'ruby' in first_lines[0]:
+            return 'ruby'
+        elif 'perl' in first_lines[0]:
+            return 'perl'
+        elif 'node' in first_lines[0]:
+            return 'javascript'
+    
+    # Check for common patterns
+    if 'use-modules' in first_100_chars or '(define ' in first_100_chars or '(use-modules' in first_100_chars:
+        return 'scheme'
+    if 'def ' in first_100_chars and ('import ' in first_100_chars or 'from ' in first_100_chars):
+        return 'python'
+    if 'function ' in first_100_chars or 'const ' in first_100_chars or 'let ' in first_100_chars:
+        return 'javascript'
+    if 'package ' in first_100_chars and 'import ' in first_100_chars:
+        return 'go'
+    if 'fn ' in first_100_chars or 'let ' in first_100_chars and 'mut ' in first_100_chars:
+        return 'rust'
+    if 'class ' in first_100_chars and ('public ' in first_100_chars or 'private ' in first_100_chars):
+        return 'java'
+    if '<?php' in first_100_chars:
+        return 'php'
+    if '<!DOCTYPE' in first_100_chars or '<html' in first_100_chars:
+        return 'html'
+    if 'SELECT ' in text or 'INSERT ' in text or 'CREATE TABLE' in text:
+        return 'sql'
+    if '```' in text:
+        # Try to extract language from markdown code blocks
+        import re
+        lang_match = re.search(r'```(\w+)', text)
+        if lang_match:
+            return lang_match.group(1)
+    
+    return None
+
+def highlight_code(text, language=None):
+    """Apply syntax highlighting to code using pygmentize if available"""
+    if language is None:
+        language = detect_code_language(text)
+    
+    if language is None:
+        return None
+    
+    # Try pygmentize first (most common)
+    import subprocess
+    for cmd in ['pygmentize', 'pygmentize-3', 'pygmentize-3.11']:
+        try:
+            process = subprocess.Popen(
+                [cmd, '-l', language, '-f', 'terminal256', '-O', 'style=monokai'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            stdout, stderr = process.communicate(input=text, timeout=5)
+            if process.returncode == 0 and stdout:
+                return stdout
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+    
+    # Try bat as fallback
+    try:
+        process = subprocess.Popen(
+            ['bat', '--language', language, '--style', 'plain', '--color', 'always', '--decorations', 'never'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate(input=text, timeout=5)
+        if process.returncode == 0 and stdout:
+            return stdout
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    
+    return None
+
+def insert_text_blobs(formatted_json, text_blobs, use_syntax_highlighting=True):
+    """Insert formatted text blobs into JSON output, handling jq color codes and syntax highlighting"""
     lines = formatted_json.split('\n')
     result_lines = []
     i = 0
@@ -248,6 +339,11 @@ def insert_text_blobs(formatted_json, text_blobs):
                     indent = key_match.group(1)
                     key = key_match.group(2)
                     
+                    # Try syntax highlighting if enabled
+                    highlighted = None
+                    if use_syntax_highlighting:
+                        highlighted = highlight_code(text_content)
+                    
                     # Replace the entire line with key and multi-line text
                     # Preserve ANSI codes for the key part
                     ansi_reset = '\x1b[0m'
@@ -256,8 +352,17 @@ def insert_text_blobs(formatted_json, text_blobs):
                     ansi_normal = '\x1b[1;39m'  # Normal color
                     
                     result_lines.append(f'{indent}{ansi_key}"{key}"{ansi_normal}: {ansi_string}|{ansi_reset}')
-                    for text_line in text_content.split('\n'):
-                        result_lines.append(f'{indent}  {ansi_string}{text_line}{ansi_reset}')
+                    
+                    if highlighted:
+                        # Use syntax-highlighted version
+                        highlighted_lines = highlighted.rstrip().split('\n')
+                        for hl_line in highlighted_lines:
+                            result_lines.append(f'{indent}  {hl_line}')
+                    else:
+                        # Use plain text with color
+                        for text_line in text_content.split('\n'):
+                            result_lines.append(f'{indent}  {ansi_string}{text_line}{ansi_reset}')
+                    
                     placeholder_found = True
                     i += 1
                     break
@@ -284,8 +389,18 @@ for i, obj in enumerate(objects, 1):
         jq_process = subprocess.Popen(['jq', '-C', '.'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
         jq_output, _ = jq_process.communicate(input=json_str)
         
-        # Insert formatted text blobs
-        final_output = insert_text_blobs(jq_output.rstrip(), text_blobs)
+        # Check if syntax highlighting tools are available
+        use_syntax_highlighting = False
+        for cmd in ['pygmentize', 'bat']:
+            try:
+                subprocess.run([cmd, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1)
+                use_syntax_highlighting = True
+                break
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+        
+        # Insert formatted text blobs with optional syntax highlighting
+        final_output = insert_text_blobs(jq_output.rstrip(), text_blobs, use_syntax_highlighting)
         print(final_output)
     else:
         # Use Python formatting
