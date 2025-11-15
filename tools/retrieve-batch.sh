@@ -24,13 +24,67 @@ echo "Retrieving batch results..."
 echo "Batch ID: $BATCH_ID"
 echo ""
 
-# Download results
+# Download results to temp file first
+TEMP_RESULTS=$(mktemp)
 curl -s "https://api.anthropic.com/v1/messages/batches/$BATCH_ID/results" \
   --header "x-api-key: $ANTHROPIC_API_KEY" \
   --header "anthropic-version: 2023-06-01" \
-  > "$RESULTS_FILE"
+  > "$TEMP_RESULTS"
 
-echo "Results downloaded to: $RESULTS_FILE"
+# Pretty-print the results
+python3 <<PYTHON > "$RESULTS_FILE"
+import json
+import sys
+
+temp_file = '$TEMP_RESULTS'
+with open(temp_file, 'r', encoding='utf-8') as infile:
+    content = infile.read()
+    
+    # Try parsing as single-line JSONL first (one JSON object per line)
+    parsed_any = False
+    for line in content.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        
+        try:
+            obj = json.loads(line)
+            # Pretty-print with 2-space indentation
+            json.dump(obj, sys.stdout, indent=2, ensure_ascii=False)
+            print('\n')  # Add blank line between objects for readability
+            parsed_any = True
+        except json.JSONDecodeError:
+            pass  # Not a single-line JSON, continue
+    
+    # If no single-line JSONL found, try as single JSON object
+    if not parsed_any:
+        try:
+            obj = json.loads(content)
+            json.dump(obj, sys.stdout, indent=2, ensure_ascii=False)
+            print()
+        except json.JSONDecodeError:
+            # Try parsing multi-line pretty-printed JSON
+            current_obj = []
+            brace_count = 0
+            for line in content.split('\n'):
+                brace_count += line.count('{') - line.count('}')
+                current_obj.append(line)
+                
+                if brace_count == 0 and current_obj:
+                    obj_str = '\n'.join(current_obj).strip()
+                    if obj_str:
+                        try:
+                            obj = json.loads(obj_str)
+                            json.dump(obj, sys.stdout, indent=2, ensure_ascii=False)
+                            print('\n')
+                        except json.JSONDecodeError:
+                            pass
+                    current_obj = []
+PYTHON
+
+rm -f "$TEMP_RESULTS"
+
+echo "Results downloaded and pretty-printed to: $RESULTS_FILE"
 echo ""
 
 # Check if results file contains an error
@@ -58,77 +112,96 @@ repo_root = sys.argv[3]
 success_count = 0
 error_count = 0
 
-with open(results_file, 'r') as f:
-    for line_num, line in enumerate(f, 1):
-        line = line.strip()
-        if not line:
-            continue
-            
-        try:
-            result = json.loads(line)
-        except json.JSONDecodeError as e:
-            print(f"  ✗ Line {line_num}: Invalid JSON: {e}", file=sys.stderr)
-            error_count += 1
-            continue
+# Parse pretty-printed JSONL (multi-line JSON objects)
+with open(results_file, 'r', encoding='utf-8') as f:
+    content = f.read()
+    
+    # Try parsing as single-line JSONL first
+    current_obj = []
+    brace_count = 0
+    obj_num = 0
+    
+    for line in content.split('\n'):
+        brace_count += line.count('{') - line.count('}')
+        current_obj.append(line)
         
-        # Check if custom_id exists
-        if 'custom_id' not in result:
-            print(f"  ✗ Line {line_num}: Missing 'custom_id' field", file=sys.stderr)
-            print(f"    Result keys: {list(result.keys())}", file=sys.stderr)
-            error_count += 1
-            continue
+        # When braces are balanced, we have a complete JSON object
+        if brace_count == 0 and current_obj:
+            obj_str = '\n'.join(current_obj).strip()
+            if obj_str:
+                obj_num += 1
+                try:
+                    result = json.loads(obj_str)
+                except json.JSONDecodeError as e:
+                    print(f"  ✗ Object {obj_num}: Invalid JSON: {e}", file=sys.stderr)
+                    error_count += 1
+                    current_obj = []
+                    continue
         
-        custom_id = result['custom_id']
+                # Check if custom_id exists
+                if 'custom_id' not in result:
+                    print(f"  ✗ Object {obj_num}: Missing 'custom_id' field", file=sys.stderr)
+                    print(f"    Result keys: {list(result.keys())}", file=sys.stderr)
+                    error_count += 1
+                    current_obj = []
+                    continue
+                
+                custom_id = result['custom_id']
 
-        # Extract original path from custom_id (e.g., "convert-postinstall-recipes-add-spacemacs")
-        # Convert back to path: postinstall/recipes/add-spacemacs.scm
-        path_parts = custom_id.replace('convert-', '').split('-')
-        original_path = '/'.join(path_parts) + '.scm'
+                # Extract original path from custom_id (e.g., "convert-postinstall-recipes-add-spacemacs")
+                # Convert back to path: postinstall/recipes/add-spacemacs.scm
+                path_parts = custom_id.replace('convert-', '').split('-')
+                original_path = '/'.join(path_parts) + '.scm'
 
-        output_path = os.path.join(conversions_dir, original_path)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                output_path = os.path.join(conversions_dir, original_path)
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        # Check if result field exists
-        if 'result' not in result:
-            print(f"  ✗ {original_path}: Missing 'result' field")
-            print(f"    Result keys: {list(result.keys())}")
-            error_count += 1
-            continue
-        
-        # Check if successful
-        if result['result'].get('type') == 'succeeded':
-            # Extract converted script from response
-            if 'message' not in result['result']:
-                print(f"  ✗ {original_path}: Missing 'message' field in result")
-                error_count += 1
-                continue
-            
-            message = result['result']['message']
-            if 'content' not in message or not message['content']:
-                print(f"  ✗ {original_path}: Missing or empty 'content' field")
-                error_count += 1
-                continue
-            
-            content = message['content'][0]['text']
+                # Check if result field exists
+                if 'result' not in result:
+                    print(f"  ✗ {original_path}: Missing 'result' field")
+                    print(f"    Result keys: {list(result.keys())}")
+                    error_count += 1
+                    current_obj = []
+                    continue
+                
+                # Check if successful
+                if result['result'].get('type') == 'succeeded':
+                    # Extract converted script from response
+                    if 'message' not in result['result']:
+                        print(f"  ✗ {original_path}: Missing 'message' field in result")
+                        error_count += 1
+                        current_obj = []
+                        continue
+                    
+                    message = result['result']['message']
+                    if 'content' not in message or not message['content']:
+                        print(f"  ✗ {original_path}: Missing or empty 'content' field")
+                        error_count += 1
+                        current_obj = []
+                        continue
+                    
+                    content = message['content'][0]['text']
 
-            # Write to file
-            with open(output_path, 'w') as out:
-                out.write(content)
+                    # Write to file
+                    with open(output_path, 'w') as out:
+                        out.write(content)
 
-            # Make executable
-            os.chmod(output_path, 0o755)
+                    # Make executable
+                    os.chmod(output_path, 0o755)
 
-            print(f"  ✓ {original_path}")
-            success_count += 1
-        else:
-            # Handle error
-            error_type = result['result'].get('error', {}).get('type', 'unknown')
-            error_msg = result['result'].get('error', {}).get('message', 'No message')
+                    print(f"  ✓ {original_path}")
+                    success_count += 1
+                else:
+                    # Handle error
+                    error_type = result['result'].get('error', {}).get('type', 'unknown')
+                    error_msg = result['result'].get('error', {}).get('message', 'No message')
 
-            print(f"  ✗ {original_path}")
-            print(f"    Error: {error_type}")
-            print(f"    Message: {error_msg}")
-            error_count += 1
+                    print(f"  ✗ {original_path}")
+                    print(f"    Error: {error_type}")
+                    print(f"    Message: {error_msg}")
+                    error_count += 1
+                
+                current_obj = []
 
 print()
 print(f"Extraction complete!")

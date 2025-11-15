@@ -128,8 +128,9 @@ Provide ONLY the complete converted Guile script. No explanations, no markdown f
     }
 }
 
-# Ensure valid JSON output
-print(json.dumps(request, ensure_ascii=False))
+# Pretty-print JSON output for readability
+print(json.dumps(request, indent=2, ensure_ascii=False))
+print()  # Add blank line between entries for readability
 EOF
 
     # Clean up temp files
