@@ -316,7 +316,7 @@
                 (info "  - Service configuration (NetworkManager, SSH)")
                 (info "  - Package installation (development tools, fonts, etc.)")
                 (info "  - Hardware support (firmware, drivers)")
-                (newline)))))))))
+                (newline)))))))
 
 ;; Run main with command-line arguments
 (main (command-line))
