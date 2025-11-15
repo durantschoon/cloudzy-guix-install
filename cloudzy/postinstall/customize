@@ -9,8 +9,17 @@ BACKUP_DIR="$HOME/.config/guix-customize/backups"
 
 # Source shared library functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-source "$REPO_ROOT/postinstall/lib.sh"
+# Find postinstall/lib.sh relative to customize script location
+# Structure: ~/guix-customize/cloudzy/postinstall/customize
+# We need: ~/guix-customize/postinstall/lib.sh
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+if [ -f "$INSTALL_ROOT/postinstall/lib.sh" ]; then
+  source "$INSTALL_ROOT/postinstall/lib.sh"
+else
+  echo "Error: postinstall/lib.sh not found at $INSTALL_ROOT/postinstall/lib.sh"
+  echo "Please run bootstrap-postinstall.scm first to download all required files."
+  exit 1
+fi
 
 # Main menu
 main_menu() {

@@ -9,8 +9,17 @@ BACKUP_DIR="$HOME/.config/guix-customize/backups"
 
 # Source shared library functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-source "$REPO_ROOT/postinstall/lib.sh"
+# Find postinstall/lib.sh relative to customize script location
+# Structure: ~/guix-customize/framework-dual/postinstall/customize
+# We need: ~/guix-customize/postinstall/lib.sh
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+if [ -f "$INSTALL_ROOT/postinstall/lib.sh" ]; then
+  source "$INSTALL_ROOT/postinstall/lib.sh"
+else
+  echo "Error: postinstall/lib.sh not found at $INSTALL_ROOT/postinstall/lib.sh"
+  echo "Please run bootstrap-postinstall.scm first to download all required files."
+  exit 1
+fi
 
 # Add NetworkManager service (platform-specific)
 add_networkmanager() {
@@ -125,9 +134,9 @@ main_menu() {
       3) add_packages; read -p "Press Enter to continue..." ;;
       4) add_framework_hardware; read -p "Press Enter to continue..." ;;
       5) add_nonguix_info; read -p "Press Enter to continue..." ;;
-      s) source "$REPO_ROOT/postinstall/recipes/add-spacemacs.sh" && add_spacemacs; read -p "Press Enter to continue..." ;;
-      d) source "$REPO_ROOT/postinstall/recipes/add-development.sh" && add_development; read -p "Press Enter to continue..." ;;
-      f) source "$REPO_ROOT/postinstall/recipes/add-fonts.sh" && add_fonts; read -p "Press Enter to continue..." ;;
+      s) source "$INSTALL_ROOT/postinstall/recipes/add-spacemacs.sh" && add_spacemacs; read -p "Press Enter to continue..." ;;
+      d) source "$INSTALL_ROOT/postinstall/recipes/add-development.sh" && add_development; read -p "Press Enter to continue..." ;;
+      f) source "$INSTALL_ROOT/postinstall/recipes/add-fonts.sh" && add_fonts; read -p "Press Enter to continue..." ;;
       r) reconfigure; read -p "Press Enter to continue..." ;;
       e) edit_config; read -p "Press Enter to continue..." ;;
       v) view_config ;;

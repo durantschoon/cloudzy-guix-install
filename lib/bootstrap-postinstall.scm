@@ -274,6 +274,9 @@
         ;; Download postinstall library (for channel management)
         (download-file "lib/postinstall.sh" "lib/postinstall.sh")
 
+        ;; Download shared postinstall library (for customize scripts)
+        (download-file "postinstall/lib.sh" "postinstall/lib.sh")
+
         ;; Verify all downloads
         (msg "Verifying checksums")
         (newline)
@@ -282,7 +285,8 @@
                (not (and (verify-checksum "lib/guile-config-helper.scm" manifest-content)
                         (verify-checksum (string-append platform "/postinstall/customize")
                                         manifest-content)
-                        (verify-checksum "lib/postinstall.sh" manifest-content)))))
+                        (verify-checksum "lib/postinstall.sh" manifest-content)
+                        (verify-checksum "postinstall/lib.sh" manifest-content)))))
 
           (newline)
 
@@ -312,7 +316,7 @@
                 (info "  - Service configuration (NetworkManager, SSH)")
                 (info "  - Package installation (development tools, fonts, etc.)")
                 (info "  - Hardware support (firmware, drivers)")
-                (newline))))))))
+                (newline)))))))))
 
 ;; Run main with command-line arguments
 (main (command-line))
