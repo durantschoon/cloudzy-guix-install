@@ -28,21 +28,41 @@ RESPONSE=$(curl -s "https://api.anthropic.com/v1/messages/batches/$BATCH_ID" \
   --header "x-api-key: $ANTHROPIC_API_KEY" \
   --header "anthropic-version: 2023-06-01")
 
-# Check for errors
+# Check for errors first
 if echo "$RESPONSE" | grep -q '"type":"error"'; then
   echo "Error checking batch:"
   echo "$RESPONSE" | python3 -m json.tool
   exit 1
 fi
 
-# Display status
+# Display formatted JSON
 echo "$RESPONSE" | python3 -m json.tool
 
-# Extract key info
-PROCESSING_STATUS=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin)['processing_status'])")
-REQUEST_COUNT=$(echo "$RESPONSE" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['request_counts']['total'])")
-SUCCEEDED=$(echo "$RESPONSE" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['request_counts']['succeeded'])")
-ERRORED=$(echo "$RESPONSE" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['request_counts']['errored'])")
+# Extract key info (use a temp file to avoid stdin consumption issues)
+TEMP_FILE=$(mktemp)
+echo "$RESPONSE" > "$TEMP_FILE"
+
+read -r PROCESSING_STATUS REQUEST_COUNT SUCCEEDED ERRORED <<< "$(python3 <<PYTHON
+import json
+import sys
+
+with open('$TEMP_FILE', 'r') as f:
+    data = json.load(f)
+
+counts = data['request_counts']
+# Calculate total if not present
+total = counts.get('total', 
+    counts.get('succeeded', 0) + 
+    counts.get('errored', 0) + 
+    counts.get('canceled', 0) + 
+    counts.get('expired', 0) + 
+    counts.get('processing', 0))
+
+print(f"{data['processing_status']} {total} {counts['succeeded']} {counts['errored']}")
+PYTHON
+)"
+
+rm -f "$TEMP_FILE"
 
 echo ""
 echo "Summary:"
