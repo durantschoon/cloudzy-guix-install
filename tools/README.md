@@ -11,6 +11,15 @@ These scripts automate the conversion of `.sh` files to `.scm` files using Claud
 - **Parallel processing** - all scripts converted simultaneously
 - **Reproducible** - can re-run with updated documentation
 
+## Quick Start Checklist
+
+Before your first batch conversion:
+
+1. ✅ **Run verification**: `./tools/verify-setup.sh` (checks everything)
+2. ✅ **Set up API key**: See "Prerequisites" below
+3. ✅ **Review workflow**: See "Workflow" section below
+4. ✅ **Ready to go!** Run `./tools/generate-batch-conversion.sh`
+
 ## Prerequisites
 
 1. **Anthropic API Key**: Get from https://console.anthropic.com/settings/keys
