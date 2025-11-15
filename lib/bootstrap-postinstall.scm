@@ -143,29 +143,27 @@
   ;; Try to use the Go tool if available
   (if (file-exists? "/run/current-system/profile/bin/go")
       ;; Download and compile the tool
-      (let ((tool-dir "tools/hash-to-words")
-            (main-go (string-append tool-dir "/main.go"))
-            (words-json (string-append tool-dir "/words.json"))
-            (binary (string-append tool-dir "/hash-to-words"))
-            (result #f))
+      (let* ((tool-dir "tools/hash-to-words")
+             (main-go (string-append tool-dir "/main.go"))
+             (words-json (string-append tool-dir "/words.json"))
+             (binary (string-append tool-dir "/hash-to-words")))
         ;; Create directory
         (mkdir-p tool-dir)
         
-        ;; Download source files
-        (when (and (download-file "cmd/hash-to-words/main.go" main-go)
-                   (download-file "cmd/hash-to-words/words.json" words-json))
-          ;; Try to compile
-          (when (system* (format #f "cd ~s && go build -o ~s ~s"
-                                 tool-dir binary main-go))
+        ;; Download source files and compile
+        (if (and (download-file "cmd/hash-to-words/main.go" main-go)
+                 (download-file "cmd/hash-to-words/words.json" words-json)
+                 (system* (format #f "cd ~s && go build -o ~s ~s"
+                                 tool-dir binary main-go)))
             ;; Run the tool
             (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
                                                   hash-string binary)))
                    (output (read-line port))
                    (status (close-pipe port)))
-              (when (and (zero? status) (string? output))
-                (set! result output))))
-          result)
-        result)
+              (if (and (zero? status) (string? output))
+                  output
+                  #f))
+            #f))
       ;; No Go available, return #f to indicate we can't convert
       #f))
 
