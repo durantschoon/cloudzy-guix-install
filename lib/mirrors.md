@@ -146,19 +146,20 @@ If you don't set `GUIX_REGION`, the scripts will auto-detect based on your timez
 To add a new mirror to the configuration:
 
 1. Edit `lib/mirrors.sh`
+
 2. Add your region/mirror in the `get_mirrors()` function:
 
-```bash
-your_region)
-  echo "Detected region: Your Region - using your mirrors"
-  GUIX_GIT_URL="${GUIX_GIT_URL:-https://your-mirror.com/guix.git}"
-  NONGUIX_GIT_URL="${NONGUIX_GIT_URL:-https://gitlab.com/nonguix/nonguix.git}"
-  SUBSTITUTE_URLS=(
-    "https://your-mirror.com/substitutes"
-    "https://ci.guix.gnu.org"
-  )
-  ;;
-```
+   ```bash
+   your_region)
+     echo "Detected region: Your Region - using your mirrors"
+     GUIX_GIT_URL="${GUIX_GIT_URL:-https://your-mirror.com/guix.git}"
+     NONGUIX_GIT_URL="${NONGUIX_GIT_URL:-https://gitlab.com/nonguix/nonguix.git}"
+     SUBSTITUTE_URLS=(
+       "https://your-mirror.com/substitutes"
+       "https://ci.guix.gnu.org"
+     )
+     ;;
+   ```
 
 3. Submit a pull request!
 

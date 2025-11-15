@@ -393,4 +393,3 @@ lib/common.go                  # Shared functions
 - Idempotent operations (safe to rerun)
 - Robust error handling and recovery
 - Comprehensive documentation in `docs/`
-
