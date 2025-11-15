@@ -22,22 +22,35 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - Integrated Guile testing in Docker and run-tests.sh
   - All tests passing
 
-- 🔄 Phase 2: Update postinstall scripts to use Guile helper
-  - Update framework-dual/postinstall/customize to use Guile helper
-  - This will fix GNOME configuration sed permission errors
-  - Replace fragile sed patterns with proper S-expression parsing
+- ✅ Phase 2: Update postinstall scripts to use Guile helper
+  - ✅ Updated framework-dual/postinstall/customize to use Guile helper
+  - ✅ Fixed GNOME configuration sed permission errors
+  - ✅ Replaced fragile sed patterns with proper S-expression parsing
+  - ✅ All service additions now use guile_add_service()
+  - ⏳ Ready for real-world testing on framework-dual
 
 - ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
   - Priority: lib/postinstall.sh (simplest, 31 lines)
   - Next: lib/clean-install.sh, lib/verify-guix-install.sh
   - Later: bootstrap-installer.sh, recovery-complete-install.sh
 
-**Framework-dual postinstall fixes:**
+**Testing Strategy:**
+
+- ✅ **Guile (.scm) scripts**: Fully tested in Docker + run-tests.sh
+- ⏸️ **Shell (.sh) scripts**: Not actively testing, will migrate to Guile
+- 🎯 **Focus**: Guile-based postinstall workflow from GNOME config onward
+- 📝 **Developer docs**: See docs/POSTINSTALL_DEV.md for workflow
+
+**Framework-dual postinstall (COMPLETE):**
 
 - ✅ Fixed sed permission errors (chown USER:USER → chown USER)
-- ✅ Created safe_edit_config() helper for /etc/config.scm edits
-- 🔄 Replacing sed with Guile helper for robustness
-- ⏳ Test full GNOME installation workflow
+- ✅ Created guile_add_service() helper using lib/guile-config-helper.scm
+- ✅ Updated add_networkmanager(), add_ssh(), add_desktop()
+- ✅ Added to SOURCE_MANIFEST.txt for integrity verification
+- ✅ Created docs/POSTINSTALL_DEV.md with developer workflow
+- ⏳ Test full GNOME installation workflow on real hardware
+
+**Note:** Framework-dual postinstall testing should focus on GNOME configuration workflow. See [docs/POSTINSTALL_DEV.md](docs/POSTINSTALL_DEV.md) for testing and development instructions.
 
 **Testing cloudzy installer with latest improvements:**
 
