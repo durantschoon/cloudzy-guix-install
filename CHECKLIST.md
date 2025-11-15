@@ -41,14 +41,33 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - 🎯 **Focus**: Guile-based postinstall workflow from GNOME config onward
 - 📝 **Developer docs**: See docs/POSTINSTALL_DEV.md for workflow
 
-**Framework-dual postinstall (COMPLETE):**
+**Framework-dual postinstall (READY FOR TESTING):**
 
 - ✅ Fixed sed permission errors (chown USER:USER → chown USER)
 - ✅ Created guile_add_service() helper using lib/guile-config-helper.scm
 - ✅ Updated add_networkmanager(), add_ssh(), add_desktop()
 - ✅ Added to SOURCE_MANIFEST.txt for integrity verification
 - ✅ Created docs/POSTINSTALL_DEV.md with developer workflow
-- ⏳ Test full GNOME installation workflow on real hardware
+- ✅ Created lib/bootstrap-postinstall.scm (pure Guile bootstrap)
+- ✅ Enhanced docs/GUILE_KNOWLEDGE.md with community best practices
+- 🧪 **NEXT**: Test full GNOME installation workflow on real hardware
+
+**Bootstrap Command for Testing:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile --no-auto-compile -s -
+cd ~/guix-customize
+./customize
+# Select option 2 (Add desktop), then option 1 (GNOME)
+```
+
+**What's Ready:**
+
+- GNOME installation uses Guile S-expression parser (no more sed!)
+- NetworkManager, SSH, and desktop services all use guile_add_service()
+- Full checksum verification via SOURCE_MANIFEST.txt
+- Platform auto-detection (framework-dual)
+- All Guile tests passing in Docker
 
 **Note:** Framework-dual postinstall testing should focus on GNOME configuration workflow. See [docs/POSTINSTALL_DEV.md](docs/POSTINSTALL_DEV.md) for testing and development instructions.
 
