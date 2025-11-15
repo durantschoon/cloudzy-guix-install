@@ -11,7 +11,26 @@ if [ -z "$BATCH_ID" ]; then
   echo "Usage: $0 <batch-id>"
   echo ""
   echo "Example:"
-  echo "  $0 batch_01234567890abcdef"
+  echo "  $0 msgbatch_01HJGK7MZ3X5QR8W9P2N4V6B7D"
+  exit 1
+fi
+
+# Validate and normalize batch ID format
+# Anthropic API requires msgbatch_ prefix
+if [[ "$BATCH_ID" =~ ^batch_ ]]; then
+  # Auto-fix: replace batch_ with msgbatch_
+  BATCH_ID="msgbatch_${BATCH_ID#batch_}"
+  echo "⚠️  Auto-corrected batch ID prefix: batch_ → msgbatch_"
+  echo "   Using: $BATCH_ID"
+  echo ""
+elif [[ ! "$BATCH_ID" =~ ^msgbatch_ ]]; then
+  echo "Error: Invalid batch ID format"
+  echo ""
+  echo "Batch ID must start with 'msgbatch_' prefix"
+  echo "Received: $BATCH_ID"
+  echo ""
+  echo "If you have a batch ID starting with 'batch_', it will be auto-corrected."
+  echo "Otherwise, please check your batch ID from the submit-batch.sh output."
   exit 1
 fi
 
