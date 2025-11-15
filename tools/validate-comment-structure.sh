@@ -130,12 +130,18 @@ for converted in "${converted_files[@]}"; do
     guile_count=$(echo "$guile_normalized" | grep -c . || echo "0")
     
     if [ "$bash_count" -eq "$guile_count" ]; then
-      # Check if headers match (simple comparison)
+      # Check if headers match in order (for structured scripts, order matters for diff readability)
       match=true
+      mismatched_sections=()
+      header_num=0
       while IFS= read -r bash_norm && IFS= read -r guile_norm <&3; do
+        header_num=$((header_num + 1))
         if [ "$bash_norm" != "$guile_norm" ]; then
           match=false
-          break
+          # Get original header text for this position
+          bash_orig=$(echo "$bash_headers" | sed -n "${header_num}p")
+          guile_orig=$(echo "$guile_headers" | sed -n "${header_num}p")
+          mismatched_sections+=("  Section $header_num: '$bash_orig' vs '$guile_orig'")
         fi
       done < <(echo "$bash_normalized") 3< <(echo "$guile_normalized")
       
@@ -143,9 +149,9 @@ for converted in "${converted_files[@]}"; do
         echo "  ✓ $relative_original - Comment sections match ($bash_count sections)"
         MATCHES=$((MATCHES + 1))
       else
-        echo "  ⚠ $relative_original - Section count matches but names differ:"
-        echo "    Original: $(echo "$bash_headers" | head -1)"
-        echo "    Converted: $(echo "$guile_headers" | head -1)"
+        echo "  ✗ $relative_original - Section count matches but names/order differ:"
+        printf '%s\n' "${mismatched_sections[@]}"
+        echo "    (For structured scripts, sections must match exactly for diff readability)"
         MISMATCHES=$((MISMATCHES + 1))
       fi
     else

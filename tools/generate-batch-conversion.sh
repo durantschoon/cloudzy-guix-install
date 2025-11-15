@@ -150,16 +150,22 @@ COMMENT STRUCTURE PRESERVATION:
 
 CRITICAL: Preserve the logical structure and organization of the original script by matching comment sections.
 
-- Extract all comment headers/sections from the original bash script (lines starting with # that describe sections)
+**For scripts WITH structured section headers (5+ section headers):**
+- Extract ALL comment headers/sections from the original bash script (lines starting with # that describe sections)
 - Convert bash comment headers (# Section Name) to Guile comment headers (;;; Section Name)
-- Maintain the SAME ORDER and SAME SECTION NAMES in the converted script
-- If the original has sections like "# Configuration", "# Helper functions", "# Main logic", preserve these exact section names
+- Maintain the EXACT SAME ORDER and EXACT SAME SECTION NAMES in the converted script
+- Preserve these exact section names verbatim (e.g., "# Configuration" → ";;; Configuration")
 - Use three semicolons (;;;) for major section headers in Guile
 - Use two semicolons (;;) for subsection headers
 - Place section headers immediately before the code they describe
 - This ensures diffs between original and converted scripts show matching sections side-by-side
 
-Example:
+**For scripts WITHOUT structured section headers (fewer than 5 headers, mostly header comments):**
+- Add logical section headers based on the code structure
+- Keep them minimal and descriptive
+- Organize code into logical sections (Configuration, Helpers, Main logic, etc.)
+
+Example (structured original):
   Bash:  # Configuration
          # Helper functions  
          # Main logic
@@ -167,7 +173,7 @@ Example:
          ;;; Helper functions
          ;;; Main logic
 
-If the original script lacks structured comments, add logical section headers based on the code structure, but keep them minimal and descriptive.
+**IMPORTANT:** If the original script has structured sections, you MUST preserve them exactly. The validation system will check for exact matching.
 
 TEST GENERATION:
 
