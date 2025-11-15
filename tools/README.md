@@ -126,7 +126,78 @@ Extraction complete!
 Converted scripts written to: tools/converted-scripts
 ```
 
-### 5. Review and Test
+### 5. View Results (Interactive Viewer)
+
+**View batch files with syntax highlighting:**
+
+```bash
+cd tools
+./view-jsonl.sh
+```
+
+**What it does:**
+- Prompts you to select which `.jsonl` file to view (`batch-requests.jsonl` or `batch-results.jsonl`)
+- Automatically detects and uses `jq` for JSON colorization (if available)
+- Detects code blocks and applies syntax highlighting using `pygmentize` or `bat`
+- Formats text blobs with actual newlines (replaces `\n` with real line breaks)
+- Uses `less` for paging through multiple objects
+
+**Features:**
+- **Colorized JSON structure** - Keys, values, and structure are colorized
+- **Syntax-highlighted code** - Code blocks (Scheme, Python, Bash, etc.) are highlighted
+- **Readable text** - Multi-line text displays with proper formatting
+- **Interactive paging** - Navigate with arrow keys, Page Up/Down, spacebar
+- **Auto-detection** - Automatically detects language from shebangs and patterns
+
+**Example output:**
+```
+Found 2 .jsonl file(s) in current directory:
+
+  1. batch-requests.jsonl
+  2. batch-results.jsonl
+
+Select file number [1-2]: 2
+
+================================================================================
+Object 1 of 5
+================================================================================
+
+{
+  "custom_id": "convert-postinstall-recipes-add-development",
+  "result": {
+    "type": "succeeded",
+    "message": {
+      "content": |
+        #!/run/current-system/profile/bin/guile --no-auto-compile -s
+        !#
+        
+        (use-modules (ice-9 popen)
+                     (ice-9 rdelim)
+                     ...)
+        [syntax-highlighted Scheme code]
+```
+
+**Prerequisites for best experience:**
+- `jq` - For JSON colorization (optional but recommended)
+- `pygmentize` or `bat` - For code syntax highlighting (optional but recommended)
+- `less` - For paging (required)
+
+**Installation:**
+```bash
+# macOS
+brew install jq pygments bat
+
+# Guix
+guix install jq python-pygments bat
+
+# Ubuntu/Debian
+sudo apt install jq python3-pygments bat
+```
+
+**Without syntax highlighting tools:**
+The viewer still works but displays plain text without colorization. All functionality remains available.
+
+### 6. Review and Test
 
 **Compare conversions:**
 ```bash
@@ -189,8 +260,10 @@ Compare to interactive conversion: ~$0.24 (100% more expensive)
 
 ```
 tools/
-├── batch-requests.jsonl         # Input: Batch API requests
-├── batch-results.jsonl          # Output: Raw results from API
+├── batch-requests.jsonl         # Input: Batch API requests (compact JSONL)
+├── batch-results.jsonl          # Output: Raw results from API (compact JSONL)
+├── view-jsonl.sh               # Interactive viewer with syntax highlighting
+├── pretty-print-jsonl.sh       # Utility to pretty-print JSONL files
 └── converted-scripts/           # Output: Extracted .scm files
     └── postinstall/
         └── recipes/
@@ -198,6 +271,8 @@ tools/
             ├── add-development.scm
             └── add-fonts.scm
 ```
+
+**Note:** Batch files are stored in compact JSONL format (one JSON object per line) for efficiency. Use `view-jsonl.sh` to view them with proper formatting and syntax highlighting.
 
 ## Troubleshooting
 
@@ -212,8 +287,14 @@ export ANTHROPIC_API_KEY='your-api-key-here'
 - Verify API key has access to batches
 
 ### Error: Some conversions failed
-1. Check `batch-results.jsonl` for error messages
-2. Review which scripts failed
+1. **View results interactively:**
+   ```bash
+   cd tools
+   ./view-jsonl.sh
+   # Select batch-results.jsonl
+   # Look for error messages in failed objects
+   ```
+2. Review which scripts failed (check `custom_id` field)
 3. Fix documentation or convert manually
 4. Can re-run batch for just failed scripts
 
