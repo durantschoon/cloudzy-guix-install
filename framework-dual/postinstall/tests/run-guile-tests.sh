@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HELPER_SCRIPT="$SCRIPT_DIR/../guile-config-helper.scm"
+HELPER_SCRIPT="$SCRIPT_DIR/../../../lib/guile-config-helper.scm"
 TEST_CONFIG="$SCRIPT_DIR/test-config.scm"
 
 # Colors
