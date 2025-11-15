@@ -14,11 +14,15 @@ run-remote-steps
 
 # Batch conversion tools - intermediate/temporary files
 # These can be regenerated or re-downloaded
+# Active files (one at a time) - archived to archive/batch/ when replaced
 tools/batch-requests.jsonl
-tools/batch-requests.jsonl.*
+tools/batch-requests-customize.jsonl
 tools/batch-results.jsonl
 tools/conversions.patch
 tools/.magit-diff-backup/
+
+# Note: archive/batch/ contains timestamped archives of old batch files
+# These are tracked in git for reference but can be cleaned up if needed
 
 # Note: tools/converted-scripts/ IS tracked - these are the actual converted code
 # that we review, test, and potentially integrate into the codebase

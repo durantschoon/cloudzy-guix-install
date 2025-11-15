@@ -70,6 +70,18 @@ echo "Retrieving batch results..."
 echo "Batch ID: $BATCH_ID"
 echo ""
 
+# Archive existing results file if it exists
+ARCHIVE_DIR="$REPO_ROOT/archive/batch"
+mkdir -p "$ARCHIVE_DIR"
+
+if [ -f "$RESULTS_FILE" ]; then
+  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+  ARCHIVE_FILE="$ARCHIVE_DIR/batch-results-${TIMESTAMP}.jsonl"
+  mv "$RESULTS_FILE" "$ARCHIVE_FILE"
+  echo "Archived existing results to: $ARCHIVE_FILE"
+  echo ""
+fi
+
 # Download results (compact JSONL format)
 curl -s "https://api.anthropic.com/v1/messages/batches/$BATCH_ID/results" \
   --header "x-api-key: $ANTHROPIC_API_KEY" \
