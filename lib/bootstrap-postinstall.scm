@@ -166,20 +166,29 @@
           ;; Create directory
           (mkdir-p tool-dir)
           
-          ;; Download source files and compile
-          (if (and (download-file "cmd/hash-to-words/main.go" main-go)
-                   (download-file "cmd/hash-to-words/words.json" words-json)
-                   (system* (format #f "cd ~s && ~s build -o ~s ~s"
-                                   tool-dir go-cmd binary main-go)))
-              ;; Run the tool
-              (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
-                                                   hash-string binary)))
-                     (output (read-line port))
-                     (status (close-pipe port)))
-                (if (and (zero? status) (string? output))
-                    output
-                    #f))
-              #f))
+          ;; Download source files from GitHub repo
+          (let ((downloaded-main (download-file "cmd/hash-to-words/main.go" main-go))
+                (downloaded-words (download-file "cmd/hash-to-words/words.json" words-json)))
+            (if (and downloaded-main downloaded-words
+                     (file-exists? main-go)
+                     (file-exists? words-json))
+                ;; Compile the tool
+                (if (system* (format #f "cd ~s && ~s build -o ~s ~s"
+                                    tool-dir go-cmd binary main-go))
+                    ;; Run the tool
+                    (let* ((port (open-input-pipe (format #f "echo ~s | ~s"
+                                                         hash-string binary)))
+                           (output (read-line port))
+                           (status (close-pipe port)))
+                      (if (and (zero? status) (string? output))
+                          output
+                          #f))
+                    (begin
+                      (err "Failed to compile hash-to-words tool")
+                      #f))
+                (begin
+                  (err "Failed to download hash-to-words source files from repository")
+                  #f))))
         ;; No Go available, return #f to indicate we can't convert
         #f)))
 
