@@ -98,7 +98,7 @@
 ;;; Calculate SHA256 checksum of file
 (define (file-sha256 filepath)
   (if (file-exists? filepath)
-      (let* ((port (open-input-pipe (format #f "shasum -a 256 ~s" filepath)))
+      (let* ((port (open-input-pipe (format #f "sha256sum ~s" filepath)))
              (output (read-line port))
              (status (close-pipe port)))
         (if (and (zero? status) (string? output))
