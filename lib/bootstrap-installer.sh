@@ -47,6 +47,72 @@ if [[ -n "$CHANNEL_REPO" ]]; then
 fi
 echo ""
 
+# Set console font early if USEBIGFONT is set (before installer runs)
+if [[ -n "${USEBIGFONT:-}" ]]; then
+    echo "Setting larger console font (USEBIGFONT enabled)..."
+    
+    FONT_DIR="/run/current-system/profile/share/consolefonts"
+    FONT_NAME=""
+    
+    # Determine which font to use
+    if [[ "${USEBIGFONT}" == "1" ]] || [[ "${USEBIGFONT}" == "yes" ]] || [[ "${USEBIGFONT}" == "true" ]] || [[ "${USEBIGFONT}" == "t" ]]; then
+        # Default to solar24x32 for boolean values
+        FONT_NAME="solar24x32"
+    else
+        # Use the specified font name
+        FONT_NAME="${USEBIGFONT}"
+    fi
+    
+    if [[ -d "$FONT_DIR" ]]; then
+        # Check if the specified font exists (with or without extension)
+        FONT_FOUND=""
+        if [[ -f "$FONT_DIR/${FONT_NAME}.psf" ]]; then
+            FONT_FOUND="$FONT_DIR/${FONT_NAME}.psf"
+        elif [[ -f "$FONT_DIR/${FONT_NAME}.psfu" ]]; then
+            FONT_FOUND="$FONT_DIR/${FONT_NAME}.psfu"
+        elif [[ -f "$FONT_DIR/${FONT_NAME}" ]]; then
+            FONT_FOUND="$FONT_DIR/${FONT_NAME}"
+        fi
+        
+        # If specified font not found, try default solar24x32
+        if [[ -z "$FONT_FOUND" ]]; then
+            if [[ -f "$FONT_DIR/solar24x32.psf" ]] || [[ -f "$FONT_DIR/solar24x32.psfu" ]]; then
+                FONT_NAME="solar24x32"
+                if [[ -f "$FONT_DIR/solar24x32.psf" ]]; then
+                    FONT_FOUND="$FONT_DIR/solar24x32.psf"
+                else
+                    FONT_FOUND="$FONT_DIR/solar24x32.psfu"
+                fi
+                echo "  ⚠ Font '${USEBIGFONT}' not found, using default: solar24x32"
+            fi
+        fi
+        
+        # Set the font if found
+        if [[ -n "$FONT_FOUND" ]]; then
+            if command -v setfont >/dev/null 2>&1; then
+                # Remove extension for setfont command
+                FONT_BASE=$(echo "$FONT_FOUND" | sed 's/\.psf.*$//')
+                if sudo setfont "$FONT_BASE" 2>/dev/null; then
+                    echo "  ✓ Set font: $(basename "$FONT_BASE")"
+                else
+                    echo "  ⚠ Could not set font (may need sudo)"
+                fi
+            else
+                echo "  ⚠ setfont command not found"
+            fi
+        else
+            echo "  ⚠ Font '${FONT_NAME}' not found in $FONT_DIR"
+            echo "  Available fonts:"
+            ls "$FONT_DIR" 2>/dev/null | head -10 | sed 's/^/    /' || echo "    (none found)"
+            echo "  Font will be set after installation completes"
+        fi
+    else
+        echo "  ⚠ Font directory not found: $FONT_DIR"
+        echo "  Font will be set after installation completes"
+    fi
+    echo ""
+fi
+
 # Test that stdin is working before proceeding
 echo "Testing stdin availability..."
 read -p "Press Enter to continue (or Ctrl+C to abort): " -r </dev/tty

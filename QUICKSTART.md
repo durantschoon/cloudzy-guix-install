@@ -25,6 +25,12 @@ export USER_NAME="yourname"
 export FULL_NAME="Your Full Name"
 export TIMEZONE="America/New_York"
 export HOST_NAME="my-guix"
+
+# Optional: High-DPI display - larger console font during installation
+export USEBIGFONT="1"  # Use default (solar24x32), or specify any font name from consolefonts directory
+
+# Optional: Keyboard layout - swap Caps Lock and Left Ctrl (useful for Emacs)
+export KEYBOARD_LAYOUT="us:ctrl:swapcaps"  # or "us" for standard layout
 ```
 
 ### 3. Download and Run Installer

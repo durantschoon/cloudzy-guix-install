@@ -400,6 +400,31 @@ shasum -a 256 run-remote-steps.sh
 
 ## Environment Variables
 
+### Pre-Installation Setup (Recommended)
+
+Set these environment variables **before** running the bootstrap script to customize your installation:
+
+```bash
+# User configuration
+export USER_NAME="yourname"
+export FULL_NAME="Your Full Name"
+export TIMEZONE="America/New_York"
+export HOST_NAME="my-guix-system"
+
+# High-DPI display: Set larger console font before installer runs
+export USEBIGFONT="1"  # Use default (solar24x32), or specify any font name from consolefonts directory
+
+# Keyboard: Swap Caps Lock and Left Ctrl (useful for Emacs users)
+export KEYBOARD_LAYOUT="us:ctrl:swapcaps"  # or "us" for standard layout
+
+# Then run bootstrap
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
+```
+
+**Benefits:**
+- **USEBIGFONT**: Larger console font makes installer output easier to read on high-DPI displays (Framework 13, etc.)
+- **KEYBOARD_LAYOUT**: Caps Lock ↔ Ctrl swap is applied at first login (no need to configure manually)
+
 ### DEVICE (auto-detected)
 
 The `DEVICE` environment variable specifies the target storage device for installation. If not set, the script automatically detects from common VPS device names in order of preference:
@@ -438,6 +463,69 @@ You can customize the swap size using formats like:
 - `SWAP_SIZE="2G"` - 2 gigabytes
 - `SWAP_SIZE="512M"` - 512 megabytes  
 - `SWAP_SIZE="8192K"` - 8192 kilobytes
+
+### USEBIGFONT (optional)
+
+The `USEBIGFONT` environment variable enables automatic setting of a larger console font **before** the installer runs. This makes the installer output easier to read on high-DPI displays (Framework 13, etc.).
+
+**Usage:**
+```bash
+# Use default font (solar24x32)
+export USEBIGFONT="1"  # or "yes", "true", or "t"
+
+# Specify a custom font name (check what's available first)
+export USEBIGFONT="solar24x32"  # Explicitly use default
+export USEBIGFONT="<font-name>"  # Use any font found in consolefonts directory
+```
+
+**What it does:**
+- Sets a larger console font immediately when bootstrap script starts
+- If you specify a font name, it uses that font (if available)
+- If you use boolean values ("1", "yes", "true", "t"), defaults to `solar24x32`
+- If specified font is not found, falls back to `solar24x32`
+- Makes installer output easier to read during installation
+- Font persists for the duration of the installation session
+
+**Finding available fonts:**
+Fonts available on the ISO vary. Check what's available:
+```bash
+ls /run/current-system/profile/share/consolefonts/
+```
+
+**Note:** Available fonts depend on the Guix ISO version. The script will show available fonts if your specified font isn't found. If `solar24x32` isn't available, the script will attempt to find any large font (containing "32" in the name).
+
+**Recommended for:**
+- Framework 13 AMD (2256x1504 display)
+- Any high-DPI laptop display
+- Users who find default console font too small
+
+**Note:** Font is set temporarily for the installation session. To make it permanent, add console-font-service-type to your config.scm after installation (see [`docs/CONSOLE_FONT_TIPS.md`](docs/CONSOLE_FONT_TIPS.md)).
+
+### KEYBOARD_LAYOUT (optional)
+
+The `KEYBOARD_LAYOUT` environment variable configures keyboard layout and options for the installed system. Set this **before** running the bootstrap script.
+
+**Usage:**
+```bash
+# Standard US layout
+export KEYBOARD_LAYOUT="us"
+
+# US layout with Caps Lock ↔ Left Ctrl swap (recommended for Emacs users)
+export KEYBOARD_LAYOUT="us:ctrl:swapcaps"
+```
+
+**Format:** `layout:option1:option2` (e.g., `us:ctrl:swapcaps`)
+
+**Options:**
+- **`us`** - Standard US keyboard layout
+- **`us:ctrl:swapcaps`** - US layout with Caps Lock and Left Ctrl swapped (useful for Emacs)
+
+**When to use:**
+- Set before bootstrap script to avoid prompts during installation
+- Caps Lock ↔ Ctrl swap is especially useful for Emacs users
+- Applied automatically at first login (no manual configuration needed)
+
+**Note:** If not set, the installer will prompt you during config generation (step 3).
 
 ### GUIX_PLATFORM (default: cloudzy)
 

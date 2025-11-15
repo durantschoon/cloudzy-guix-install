@@ -13,6 +13,18 @@ For implementation history and completed features, see:
 
 ## 🔄 Currently Working On
 
+**Pre-Installation UX Improvements (COMPLETED):**
+
+- ✅ Added USEBIGFONT environment variable for larger console fonts during installation
+  - Supports boolean values ("1", "yes", "true", "t") → defaults to solar24x32
+  - Supports custom font names (e.g., "ter-v32b", "solar24x32")
+  - Falls back to solar24x32 if specified font not found
+  - Sets font before installer runs for better readability on high-DPI displays
+  - Updated bootstrap-installer.sh, README.md, and QUICKSTART.md
+- ✅ KEYBOARD_LAYOUT environment variable already supported for Caps Lock ↔ Ctrl swap
+  - Applied at first login via generated config.scm
+  - Can be set before bootstrap to avoid prompts
+
 **Guile Conversion Project (IN PROGRESS):**
 
 See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
