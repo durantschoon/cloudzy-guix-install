@@ -71,6 +71,12 @@ if [ -f lib/guile-config-helper.scm ]; then
     echo "$hash  lib/guile-config-helper.scm" >> "$MANIFEST_FILE"
 fi
 
+# Bootstrap postinstall script
+if [ -f lib/bootstrap-postinstall.scm ]; then
+    hash=$(shasum -a 256 lib/bootstrap-postinstall.scm | awk '{print $1}')
+    echo "$hash  lib/bootstrap-postinstall.scm" >> "$MANIFEST_FILE"
+fi
+
 echo "" >> "$MANIFEST_FILE"
 echo "## Post-Install Customization Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
