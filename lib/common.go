@@ -1425,18 +1425,53 @@ func RunGuixSystemInitFreeSoftware() error {
 			continue
 		}
 
-		// Success
+		// Verify that system init actually succeeded by checking for critical files
+		fmt.Println()
+		fmt.Println("Verifying that system init completed successfully...")
+		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
+		initrds, _ := filepath.Glob("/mnt/boot/initrd-*")
+		
+		if len(kernels) == 0 || len(initrds) == 0 {
+			lastErr = fmt.Errorf("guix system init completed but critical files are missing (kernel: %d, initrd: %d)", len(kernels), len(initrds))
+			fmt.Printf("\n[WARN] Attempt %d: System init completed but files missing: %v\n", attempt, lastErr)
+			if attempt < maxRetries {
+				fmt.Println("The command will automatically retry...")
+			}
+			continue
+		}
+
+		// Success - files are present
+		fmt.Printf("[OK] Kernel found: %s\n", filepath.Base(kernels[0]))
+		fmt.Printf("[OK] Initrd found: %s\n", filepath.Base(initrds[0]))
 		lastErr = nil
 		break
 	}
 
 	if lastErr != nil {
 		fmt.Println()
-		fmt.Println("Bootloader installation failed. You can:")
-		fmt.Println("  1. Try manually: guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  2. Or reboot anyway - the kernel is already in place")
+		fmt.Println("========================================")
+		fmt.Println("  SYSTEM INIT FAILED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Println("guix system init did not complete successfully.")
+		fmt.Println("Critical boot files (kernel/initrd) are missing.")
+		fmt.Println()
+		fmt.Println("DO NOT REBOOT - the system will not boot!")
+		fmt.Println()
+		fmt.Println("To fix this, run the recovery script:")
+		fmt.Println("  /root/recovery-complete-install.sh")
+		fmt.Println()
+		fmt.Println("Or try manually:")
+		fmt.Println("  1. Ensure daemon is running: herd start guix-daemon")
+		fmt.Println("  2. Re-run: guix system init --fallback /mnt/etc/config.scm /mnt")
+		fmt.Println("  3. Verify files exist: ls /mnt/boot/vmlinuz* /mnt/boot/initrd*")
+		fmt.Println()
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
+
+	fmt.Println()
+	fmt.Println("[OK] System init completed successfully - critical files present")
+	fmt.Println()
 
 	return nil
 }

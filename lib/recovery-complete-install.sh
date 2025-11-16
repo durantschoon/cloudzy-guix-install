@@ -171,10 +171,10 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
     # Run the init command
     if eval "$INIT_CMD"; then
         echo ""
-        echo "[OK] System init completed successfully"
+        echo "[OK] System init command completed"
     else
         echo ""
-        echo "[ERROR] System init failed!"
+        echo "[ERROR] System init command failed!"
         echo ""
         echo "You can try running it manually:"
         echo "  $INIT_CMD"
@@ -183,20 +183,40 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         exit 1
     fi
 
-    # Verify again
+    # Verify that system init actually succeeded by checking for critical files
     echo ""
-    echo "=== Verifying Installation (Post-Init) ==="
+    echo "=== Verifying System Init Succeeded ==="
     if ! ls /mnt/boot/vmlinuz-* >/dev/null 2>&1; then
-        echo "[ERROR] Still no kernel after system init!"
-        echo "System init may have failed silently."
+        echo "[ERROR] System init completed but kernel is still missing!"
+        echo "This means guix system init did not actually succeed."
+        echo ""
+        echo "Possible causes:"
+        echo "  - Disk space issues: df -h /mnt"
+        echo "  - Daemon issues: herd status guix-daemon"
+        echo "  - Store issues: ls -la /mnt/gnu/store | head"
+        echo ""
+        echo "Try running system init manually and check for errors:"
+        echo "  $INIT_CMD"
+        echo ""
         exit 1
     fi
     if ! ls /mnt/boot/initrd-* >/dev/null 2>&1; then
-        echo "[ERROR] Still no initrd after system init!"
-        echo "System init may have failed silently."
+        echo "[ERROR] System init completed but initrd is still missing!"
+        echo "This means guix system init did not actually succeed."
+        echo ""
+        echo "Possible causes:"
+        echo "  - Disk space issues: df -h /mnt"
+        echo "  - Daemon issues: herd status guix-daemon"
+        echo "  - Store issues: ls -la /mnt/gnu/store | head"
+        echo ""
+        echo "Try running system init manually and check for errors:"
+        echo "  $INIT_CMD"
+        echo ""
         exit 1
     fi
     echo "[OK] Kernel and initrd are now present"
+    echo "     Kernel: $(ls /mnt/boot/vmlinuz-* | head -1 | xargs basename)"
+    echo "     Initrd: $(ls /mnt/boot/initrd-* | head -1 | xargs basename)"
 else
     echo ""
     echo "[OK] System init already complete - skipping"
