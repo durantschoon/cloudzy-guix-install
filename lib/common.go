@@ -917,6 +917,19 @@ func ValidateGuixConfig(configPath string) error {
 			return fmt.Errorf("unbound variable in config: %s", outputStr)
 		}
 		
+		// Check for daemon connection issues - skip validation gracefully
+		if strings.Contains(outputStr, "failed to connect") ||
+		   strings.Contains(outputStr, "Connection refused") ||
+		   strings.Contains(outputStr, "daemon-socket") {
+			fmt.Println()
+			fmt.Println("[WARN] Daemon connection issue during validation")
+			fmt.Println("This can happen if the daemon is temporarily unavailable")
+			fmt.Println("The config will be validated during 'guix system init'")
+			fmt.Println("[OK] Skipping validation - will validate during system init")
+			fmt.Println()
+			return nil
+		}
+		
 		// Check for channel or nonguix/nongnu module issues
 		if strings.Contains(outputStr, "channel") ||
 		   strings.Contains(outputStr, "nonguix") ||
