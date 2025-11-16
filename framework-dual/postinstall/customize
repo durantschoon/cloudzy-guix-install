@@ -38,8 +38,16 @@ fi
 add_networkmanager() {
   msg "Adding NetworkManager Service"
 
+  # Check if NetworkManager is already explicitly configured
   if grep -q "network-manager-service-type" "$CONFIG_FILE"; then
     warn "NetworkManager already configured"
+    return
+  fi
+
+  # Check if %desktop-services is being used (which includes NetworkManager)
+  if grep -q "%desktop-services" "$CONFIG_FILE"; then
+    warn "NetworkManager is already included in %desktop-services"
+    info "No need to add it explicitly - it will be available after reconfigure"
     return
   fi
 

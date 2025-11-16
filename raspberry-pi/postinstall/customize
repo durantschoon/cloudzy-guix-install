@@ -79,14 +79,33 @@ add_desktop() {
 
   backup_config
 
+  # Check if we need to switch from %base-services to %desktop-services
+  # Desktop environments require %desktop-services for proper display manager support
+  if grep -q "%base-services" "$CONFIG_FILE" && ! grep -q "%desktop-services" "$CONFIG_FILE"; then
+    info "Switching from %base-services to %desktop-services for desktop support..."
+    sed -i 's|%base-services|%desktop-services|g' "$CONFIG_FILE"
+    info "✓ Switched to %desktop-services"
+    info "  Note: %desktop-services includes NetworkManager and wpa-supplicant"
+    info "        You may want to remove explicit NetworkManager/wpa-supplicant entries"
+  fi
+
   # Add desktop module if not present
   if ! grep -q "(gnu services desktop)" "$CONFIG_FILE"; then
     sed -i '/^(use-modules/a\             (gnu services desktop)' "$CONFIG_FILE"
   fi
 
   # Add desktop service
-  if grep -q "services %base-services" "$CONFIG_FILE"; then
-    # Simple services list
+  if grep -q "services %desktop-services" "$CONFIG_FILE"; then
+    # Using %desktop-services - add to append list
+    if grep -q "services.*append" "$CONFIG_FILE"; then
+      # Already has append, add to list
+      sed -i "s|(list |(list (service $service)\n         |" "$CONFIG_FILE"
+    else
+      # Need to convert to append
+      sed -i "s|(services %desktop-services)|(services\n  (append\n   (list (service $service))\n   %desktop-services))|" "$CONFIG_FILE"
+    fi
+  elif grep -q "services %base-services" "$CONFIG_FILE"; then
+    # Still using %base-services (shouldn't happen after switch above, but handle it)
     sed -i "s|(services %base-services)|(services\n  (append\n   (list (service $service))\n   %base-services))|" "$CONFIG_FILE"
   else
     # Already has append, add to list
@@ -94,6 +113,17 @@ add_desktop() {
   fi
 
   info "✓ $desktop desktop added"
+  echo ""
+  
+  # Warn about NetworkManager if %desktop-services is used
+  if grep -q "%desktop-services" "$CONFIG_FILE"; then
+    if grep -q "network-manager-service-type\|wpa-supplicant-service-type" "$CONFIG_FILE"; then
+      warn "Note: %desktop-services already includes NetworkManager and wpa-supplicant"
+      warn "      You may have duplicate entries - remove explicit NetworkManager/wpa-supplicant"
+      warn "      to avoid 'service provided more than once' errors"
+    fi
+  fi
+  
   echo ""
   info "IMPORTANT: After running 'r' to reconfigure, you will need to:"
   info "  1. Log out of your current session"

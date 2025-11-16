@@ -171,17 +171,36 @@ add_desktop() {
 
   backup_config
 
+  # Check if we need to switch from %base-services to %desktop-services
+  # Desktop environments require %desktop-services for proper display manager support
+  local needs_desktop_services=false
+  if grep -q "%base-services" "$CONFIG_FILE" && ! grep -q "%desktop-services" "$CONFIG_FILE"; then
+    needs_desktop_services=true
+    info "Switching from %base-services to %desktop-services for desktop support..."
+    
+    # Replace %base-services with %desktop-services
+    if safe_edit_config 's|%base-services|%desktop-services|g'; then
+      info "✓ Switched to %desktop-services"
+      info "  Note: %desktop-services includes NetworkManager and wpa-supplicant"
+      info "        You may want to remove explicit NetworkManager/wpa-supplicant entries"
+    else
+      warn "Could not automatically switch to %desktop-services"
+      warn "Please manually change %base-services to %desktop-services in config.scm"
+      warn "This is required for display manager (GDM/LightDM) to start properly"
+    fi
+  fi
+
   # Use Guile helper to add desktop service
   if guile_add_service "(gnu services desktop)" "(service $service)"; then
     info "✓ $desktop desktop added"
     echo ""
     
-    # For GNOME, check if we need to add elogind (login manager) explicitly
-    if [ "$desktop" = "gnome" ]; then
-      # Check if elogind is already in services (gnome-desktop-service-type should include it, but verify)
-      if ! grep -q "elogind-service-type\|login-service-type" "$CONFIG_FILE"; then
-        info "Note: GNOME desktop service includes display manager (GDM)"
-        info "      If GDM doesn't start after reconfigure, you may need to add elogind-service-type"
+    # Warn about NetworkManager if %desktop-services is used
+    if [ "$needs_desktop_services" = true ] || grep -q "%desktop-services" "$CONFIG_FILE"; then
+      if grep -q "network-manager-service-type\|wpa-supplicant-service-type" "$CONFIG_FILE"; then
+        warn "Note: %desktop-services already includes NetworkManager and wpa-supplicant"
+        warn "      You may have duplicate entries - remove explicit NetworkManager/wpa-supplicant"
+        warn "      to avoid 'service provided more than once' errors"
       fi
     fi
     
