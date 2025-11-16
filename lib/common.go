@@ -127,6 +127,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
     // Monitor progress with enhanced feedback
     spinner := []string{"/", "|", "\\", "-"}
     spinnerIndex := 0
+    spinnerColorIndex := 0 // Separate index for color cycling
     lastOutputTime := time.Now()
     lastLogSize := int64(0)
     spinnerActive := false
@@ -161,7 +162,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
                     spinnerActive = true
                     fmt.Print("\n")
                 }
-                spinnerColor := GetSpinnerColor(spinnerIndex)
+                spinnerColor := GetSpinnerColor(spinnerColorIndex)
                 fmt.Printf("\r\033[?25l%s%s%s Working... (%s elapsed, may take 5-30 min)",
                     spinnerColor,
                     spinner[spinnerIndex],
@@ -169,6 +170,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
                     formatDuration(time.Since(lastOutputTime)))
                 os.Stdout.Sync()
                 spinnerIndex = (spinnerIndex + 1) % len(spinner)
+                spinnerColorIndex = (spinnerColorIndex + 1) % len(SpinnerColors) // Cycle through all colors
             }
 
         case <-progressTicker.C:
