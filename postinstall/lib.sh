@@ -174,6 +174,13 @@ add_desktop() {
   # Use Guile helper to add desktop service
   if guile_add_service "(gnu services desktop)" "(service $service)"; then
     info "✓ $desktop desktop added"
+    echo ""
+    info "IMPORTANT: After running 'r' to reconfigure, you will need to:"
+    info "  1. Log out of your current session"
+    info "  2. Log back in at the graphical login screen"
+    info "  3. Select '$desktop' from the session menu (if multiple desktops installed)"
+    echo ""
+    info "The display manager will start automatically after reconfigure."
   else
     err "Failed to add desktop service"
     err "Please add $desktop manually to /etc/config.scm"
@@ -264,7 +271,30 @@ reconfigure() {
     return
   fi
 
+  # Check if desktop environment is configured
+  local has_desktop=false
+  if grep -q "desktop-service-type" "$CONFIG_FILE"; then
+    has_desktop=true
+  fi
+
   sudo guix system reconfigure "$CONFIG_FILE"
+  
+  # Remind user about logging out if desktop was configured
+  if [ "$has_desktop" = true ]; then
+    echo ""
+    info "=========================================="
+    info "Desktop Environment Configured"
+    info "=========================================="
+    echo ""
+    info "To start using your desktop environment:"
+    info "  1. Log out of your current session"
+    info "  2. Log back in at the graphical login screen"
+    info "  3. Select your desktop from the session menu (if multiple installed)"
+    echo ""
+    info "The display manager should now be running."
+    info "If you're on a text console, switch to tty1 or tty7 to see the login screen."
+    echo ""
+  fi
 }
 
 # Edit config file with fallback editors
