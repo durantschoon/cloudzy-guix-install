@@ -10,7 +10,7 @@
 0ccc49f97d57ddc86af14b94c4e009e9dcd5cce0d2f1578b0a09ebff3034f310  ./cloudzy/install/01-partition.go
 a3bec34f6eb852a75a5a602b2e6e4875d57fe2b6ab3741efc8843d44647df41e  ./cloudzy/install/02-mount.go
 82832b15a72000993812076b9020bed859e4a9563fac234db28683f3390b4d6e  ./cloudzy/install/03-config.go
-39f2f3a76be06f3fa87889cf2fd9db1e2982275b6328015214f6d7fc0fc1bca0  ./cloudzy/install/04-system-init.go
+804feef405a9149671a2920d7ed5d9f0b76ec41a8ab21bb88068cb2954b315cd  ./cloudzy/install/04-system-init.go
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
 2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
 b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-words/main.go
@@ -30,7 +30,7 @@ d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/in
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 6ff96526d341907e94c6cfd9d858928cc5faf7104cb09f5e1e61791fb92d3b77  ./lib/common_test.go
-993b1294fa38d456a07ceb6b34059806fa9ef7f3077096ba19f8a96aa0463525  ./lib/common.go
+35df22d4c35eb52c4a5cdb580cecfef62a4ee7a4a37e1b33c3ef03d0f47a05fb  ./lib/common.go
 af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-steps.go
 
 ## Critical Shell Scripts
@@ -38,7 +38,7 @@ af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-s
 353f15532621bcef7f4d3a2be4d20ca407681e9765a8dfca14d65c2994545a70  lib/bootstrap-installer.sh
 488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
 846f1ec4e17aa08200af7b74fb46f1c432f11c033998b4e533d5c0046a5033f9  lib/verify-guix-install.sh
-949430a4926456a04c84a0712f07d5149484a14b6a4f1edf37eaf96104aadd5d  lib/recovery-complete-install.sh
+dd700229867cbb5dba178e1df492c382b0baa26701284f5ca33facd23442dc2f  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 d5721a894c1f066ee89846b4859ac786dc21c0352ac929f9f234c3a5c8747cac  postinstall/lib.sh
 

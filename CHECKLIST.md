@@ -141,6 +141,9 @@ cd ~/guix-customize
 - ✅ Robust daemon startup: functional approach that ensures daemon is actually ready (restarts until responsive, not just retries)
 - ✅ Post-install steps made resilient: password setting always attempted, verification non-fatal
 - ✅ Better error handling: clear messages when post-install steps incomplete, suggests recovery script
+- ✅ Comprehensive verification at end: runs full verify-guix-install.sh script, ensures EFI mounted, prevents reboot if verification fails
+- ✅ Framework-dual kernel fixes applied to cloudzy: checks broken symlink, automatic fallback copy of kernel/initrd if missing
+- ✅ Verification after guix system init: checks for kernel/initrd files and broken symlink, retries with manual copy if needed
 
 **Framework 13 Post-Install Process (2025-11-10):**
 
