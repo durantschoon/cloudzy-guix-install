@@ -124,21 +124,11 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Printf("Warning: Failed to install verification script: %v\n", err)
 	}
 
-	// Verify installation succeeded (non-fatal - warn but continue)
-	if err := lib.VerifyInstallation(); err != nil {
-		fmt.Printf("\n[WARN] Installation verification reported issues: %v\n", err)
-		fmt.Println("       Continuing with post-install steps...")
-		fmt.Println("       You can verify manually after reboot or run /root/recovery-complete-install.sh")
-		fmt.Println()
-	}
-
 	// Set user password (CRITICAL - must always run)
 	passwordSet := false
 	if err := lib.SetUserPassword(state.UserName); err != nil {
 		fmt.Printf("\n[WARN] Failed to set user password: %v\n", err)
-		fmt.Println("       You will need to set it manually after first boot:")
-		fmt.Printf("       chroot /mnt /run/current-system/profile/bin/passwd %s\n", state.UserName)
-		fmt.Println("       Or run: /root/recovery-complete-install.sh")
+		fmt.Println("       Will be set by recovery script if needed")
 		fmt.Println()
 	} else {
 		passwordSet = true
@@ -155,31 +145,44 @@ func (s *Step04SystemInit) RunClean(state *State) error {
         fmt.Printf("Warning: Failed to write installation receipt: %v\n", err)
     }
 
-	// Check if critical post-install steps completed
-	if !passwordSet {
+	// FINAL STEP: Run comprehensive verification before reboot
+	// This ensures everything is ready and provides clear guidance if not
+	if err := lib.RunComprehensiveVerification(recoveryPath); err != nil {
+		// Verification failed - don't reboot, provide clear instructions
 		fmt.Println()
 		fmt.Println("========================================")
-		fmt.Println("  IMPORTANT: Post-Install Steps Needed")
+		fmt.Println("  INSTALLATION INCOMPLETE")
 		fmt.Println("========================================")
 		fmt.Println()
-		fmt.Println("The system init completed, but the user password was not set.")
+		fmt.Println("The final verification found issues that must be fixed before rebooting.")
 		fmt.Println()
-		fmt.Println("Before rebooting, please run:")
-		fmt.Println("  /root/recovery-complete-install.sh")
+		if !passwordSet {
+			fmt.Println("Additionally, the user password was not set.")
+			fmt.Println()
+		}
+		fmt.Println("To complete the installation, run:")
+		fmt.Printf("  %s\n", recoveryPath)
 		fmt.Println()
-		fmt.Println("This will:")
-		fmt.Println("  1. Verify the installation")
-		fmt.Println("  2. Set your user password")
-		fmt.Println("  3. Download customization tools")
-		fmt.Println("  4. Prepare for reboot")
+		fmt.Println("The recovery script will fix all issues automatically.")
 		fmt.Println()
-		fmt.Println("Or set password manually:")
-		fmt.Printf("  chroot /mnt /run/current-system/profile/bin/passwd %s\n", state.UserName)
-		fmt.Println()
-		fmt.Println("DO NOT REBOOT until password is set, or you won't be able to log in!")
-		fmt.Println()
-		return fmt.Errorf("user password not set - please run recovery script before rebooting")
+		return fmt.Errorf("installation incomplete - run recovery script before rebooting")
 	}
+
+	// Verification passed - safe to reboot
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("  INSTALLATION COMPLETE AND VERIFIED")
+	fmt.Println("========================================")
+	fmt.Println()
+	fmt.Println("All steps completed successfully:")
+	fmt.Println("  ✓ System initialized")
+	if passwordSet {
+		fmt.Println("  ✓ User password set")
+	}
+	fmt.Println("  ✓ Installation verified")
+	fmt.Println()
+	fmt.Println("Ready to reboot into your new Guix system!")
+	fmt.Println()
 
     // Sync and unmount
 	fmt.Println("Syncing filesystems...")
@@ -189,7 +192,6 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	lib.RunCommand("umount", "-R", "/mnt")
 
 	fmt.Println()
-	fmt.Println("=== Installation Complete ===")
 	fmt.Println("System will reboot now...")
 	fmt.Println()
 

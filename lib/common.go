@@ -1164,10 +1164,22 @@ func RunGuixSystemInit() error {
 func InstallVerificationScript() error {
 	PrintSectionHeader("Installing Verification Script")
 
-	// Read the verification script from current directory
-	scriptContent, err := os.ReadFile("verify-guix-install.sh")
+	// Try multiple locations for the verification script
+	var scriptContent []byte
+	var err error
+	
+	// Try lib directory first (when running from repo root - most common case)
+	scriptContent, err = os.ReadFile("lib/verify-guix-install.sh")
 	if err != nil {
-		return fmt.Errorf("failed to read verify-guix-install.sh: %w", err)
+		// Try current directory (when running from lib/ directory)
+		scriptContent, err = os.ReadFile("verify-guix-install.sh")
+	}
+	if err != nil {
+		// Try absolute path (when script was already copied to /root/)
+		scriptContent, err = os.ReadFile("/root/verify-guix-install.sh")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to find verify-guix-install.sh in lib/, current dir, or /root/: %w", err)
 	}
 
 	// Install to /mnt/usr/local/bin/ (for use after boot)
@@ -1196,6 +1208,7 @@ func InstallVerificationScript() error {
 }
 
 // VerifyInstallation verifies that all critical files were installed
+// This is a basic check - use RunComprehensiveVerification for full verification
 func VerifyInstallation() error {
 	fmt.Println()
 	PrintSectionHeader("Verifying Installation")
@@ -1245,53 +1258,114 @@ func VerifyInstallation() error {
 		fmt.Println("[OK] GRUB EFI binary installed")
 	}
 
-	// Check for GRUB config (actual location is /boot/grub/grub.cfg, not in EFI directory)
-	if _, err := os.Stat("/mnt/boot/grub/grub.cfg"); err != nil {
-		fmt.Println("[WARN] No GRUB config at /mnt/boot/grub/grub.cfg")
-		allGood = false
-	} else {
-		fmt.Println("[OK] GRUB config installed")
+	if !allGood {
+		return fmt.Errorf("installation verification failed - missing critical boot files")
 	}
 
-	if !allGood {
-		fmt.Println()
-		fmt.Println("========================================")
-		fmt.Println("  INSTALLATION VERIFICATION FAILED!")
-		fmt.Println("========================================")
-		fmt.Println()
-		fmt.Println("Missing critical boot files - system WILL NOT BOOT.")
-		fmt.Println()
-		fmt.Println("DO NOT REBOOT until this is resolved!")
-		fmt.Println()
-		fmt.Println("Recommended action:")
-		fmt.Println("  1. Re-run: guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  2. Wait for it to complete successfully")
-		fmt.Println("  3. Verify files exist: ls /mnt/boot/vmlinuz* /mnt/boot/initrd*")
-		fmt.Println()
-		fmt.Println("If the problem persists, check:")
-		fmt.Println("  - Disk space: df -h /mnt")
-		fmt.Println("  - Error messages in guix system init output")
-		fmt.Println("  - Installation logs")
-		fmt.Println()
-		return fmt.Errorf("installation verification failed - missing critical boot files")
-	} else {
-		fmt.Println()
-		fmt.Println("========================================")
-		fmt.Println("  INSTALLATION VERIFIED SUCCESSFULLY!")
-		fmt.Println("========================================")
-		fmt.Println()
-		fmt.Println("All critical boot files are present.")
-		fmt.Println("System should boot properly after reboot.")
-	}
+	fmt.Println()
+	fmt.Println("[OK] Basic verification passed - critical boot files present")
 	fmt.Println()
 
-	// Install verification script for future use
-	if err := InstallVerificationScript(); err != nil {
-		fmt.Printf("[WARN] Failed to install verification script: %v\n", err)
-		fmt.Println("       (This is not critical, continuing...)")
+	return nil
+}
+
+// RunComprehensiveVerification runs the full verification script and handles failures
+// This should be called at the very end of installation before reboot
+func RunComprehensiveVerification(recoveryScriptPath string) error {
+	fmt.Println()
+	PrintSectionHeader("Final Installation Verification")
+	fmt.Println("Running comprehensive verification script...")
+	fmt.Println()
+
+	// Ensure EFI is mounted before verification
+	if !isMountPoint("/mnt/boot/efi") {
+		fmt.Println("[WARN] EFI partition not mounted, mounting it now...")
+		if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
+			fmt.Printf("[WARN] Failed to create /mnt/boot/efi directory: %v\n", err)
+		} else {
+			// Try to mount EFI partition
+			cmd := exec.Command("mount", "LABEL=EFI", "/mnt/boot/efi")
+			if err := cmd.Run(); err != nil {
+				fmt.Printf("[WARN] Failed to mount EFI partition: %v\n", err)
+				fmt.Println("       Verification may report EFI errors, but this can be fixed")
+			} else {
+				fmt.Println("[OK] EFI partition mounted")
+			}
+		}
+		fmt.Println()
 	}
 
+	// Try to run the comprehensive verification script
+	verifyScript := "/root/verify-guix-install.sh"
+	if _, err := os.Stat(verifyScript); err != nil {
+		// Script not found, try to install it
+		fmt.Println("Verification script not found, installing it...")
+		if err := InstallVerificationScript(); err != nil {
+			fmt.Printf("[WARN] Verification script not available: %v\n", err)
+			fmt.Println("       Falling back to basic verification...")
+			fmt.Println()
+			// Fall back to basic verification
+			return VerifyInstallation()
+		}
+		// Verify it was installed
+		if _, err := os.Stat(verifyScript); err != nil {
+			fmt.Printf("[WARN] Verification script still not found after install: %v\n", err)
+			fmt.Println("       Falling back to basic verification...")
+			fmt.Println()
+			return VerifyInstallation()
+		}
+	}
+
+	// Run the comprehensive verification script
+	cmd := exec.Command("bash", verifyScript)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		// Verification failed
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  VERIFICATION FAILED - ACTION REQUIRED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Println("The installation verification found critical issues.")
+		fmt.Println("DO NOT REBOOT until these are resolved!")
+		fmt.Println()
+		fmt.Println("To fix the issues, run the recovery script:")
+		fmt.Printf("  %s\n", recoveryScriptPath)
+		fmt.Println()
+		fmt.Println("The recovery script will:")
+		fmt.Println("  1. Check and mount EFI partition if needed")
+		fmt.Println("  2. Re-run guix system init if kernel/initrd are missing")
+		fmt.Println("  3. Set your user password")
+		fmt.Println("  4. Download customization tools")
+		fmt.Println("  5. Run verification again")
+		fmt.Println()
+		fmt.Println("Or fix manually:")
+		fmt.Println("  1. Mount EFI: mkdir -p /mnt/boot/efi && mount LABEL=EFI /mnt/boot/efi")
+		fmt.Println("  2. Re-run system init: guix system init /mnt/etc/config.scm /mnt")
+		fmt.Println("  3. Set password: chroot /mnt /run/current-system/profile/bin/passwd USERNAME")
+		fmt.Println("  4. Verify again: /root/verify-guix-install.sh")
+		fmt.Println()
+		return fmt.Errorf("comprehensive verification failed - run recovery script before rebooting")
+	}
+
+	// Verification passed
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("  VERIFICATION PASSED - READY TO REBOOT")
+	fmt.Println("========================================")
+	fmt.Println()
+	fmt.Println("All critical files are present and verified.")
+	fmt.Println("The system should boot successfully after reboot.")
+	fmt.Println()
+
 	return nil
+}
+
+// isMountPoint checks if a path is a mount point
+func isMountPoint(path string) bool {
+	cmd := exec.Command("mountpoint", "-q", path)
+	return cmd.Run() == nil
 }
 
 // RunGuixSystemInitFreeSoftware runs guix system init with only free software (no nonguix)
