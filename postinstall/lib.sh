@@ -175,15 +175,83 @@ add_desktop() {
   if guile_add_service "(gnu services desktop)" "(service $service)"; then
     info "✓ $desktop desktop added"
     echo ""
+    
+    # For GNOME, check if we need to add elogind (login manager) explicitly
+    if [ "$desktop" = "gnome" ]; then
+      # Check if elogind is already in services (gnome-desktop-service-type should include it, but verify)
+      if ! grep -q "elogind-service-type\|login-service-type" "$CONFIG_FILE"; then
+        info "Note: GNOME desktop service includes display manager (GDM)"
+        info "      If GDM doesn't start after reconfigure, you may need to add elogind-service-type"
+      fi
+    fi
+    
+    echo ""
     info "IMPORTANT: After running 'r' to reconfigure, you will need to:"
     info "  1. Log out of your current session"
     info "  2. Log back in at the graphical login screen"
     info "  3. Select '$desktop' from the session menu (if multiple desktops installed)"
     echo ""
     info "The display manager will start automatically after reconfigure."
+    info ""
+    info "If you see text login instead of graphical login after reconfigure:"
+    info "  - Check service status: sudo herd status"
+    info "  - Look for 'gdm' service (for GNOME) or 'lightdm' (for Xfce/MATE/LXQt)"
+    info "  - Try starting manually: sudo herd start gdm"
   else
     err "Failed to add desktop service"
     err "Please add $desktop manually to /etc/config.scm"
+    return 1
+  fi
+}
+
+# Add console font configuration (for high-DPI displays)
+add_console_font() {
+  msg "Console Font Configuration"
+  echo ""
+  echo "This will configure a larger console font for all TTYs (tty1-tty6)."
+  echo "Recommended for high-DPI displays like Framework 13."
+  echo ""
+  
+  if grep -q "console-font-service-type" "$CONFIG_FILE"; then
+    warn "Console font already configured"
+    return
+  fi
+  
+  # List available large fonts
+  echo "Available large fonts:"
+  if [ -d "/run/current-system/profile/share/consolefonts" ]; then
+    ls /run/current-system/profile/share/consolefonts/ 2>/dev/null | grep -E '24|32|36' | head -10 | sed 's/\.psf.*$//' | sort -u | nl -w2 -s') '
+  else
+    echo "  (Font directory not found - will use default)"
+  fi
+  echo ""
+  
+  read -r -p "Enter font name (default: solar24x32): " font_choice
+  font_name="${font_choice:-solar24x32}"
+  
+  backup_config
+  
+  # Add console-font-service-type module if needed
+  if ! grep -q "(gnu services base)" "$CONFIG_FILE"; then
+    safe_edit_config '/^(use-modules/a\             (gnu services base)'
+  fi
+  
+  # Use Guile helper to add console font service
+  # Format: (service console-font-service-type (map (lambda (tty) (cons tty "font-name")) '("tty1" "tty2" ...)))
+  local font_service_expr="(service console-font-service-type (map (lambda (tty) (cons tty \"$font_name\")) '(\"tty1\" \"tty2\" \"tty3\" \"tty4\" \"tty5\" \"tty6\")))"
+  
+  if guile_add_service "(gnu services base)" "$font_service_expr"; then
+    info "✓ Console font '$font_name' configured for all TTYs"
+    info "Font will be applied after running 'r' to reconfigure"
+  else
+    err "Failed to add console font service"
+    err "You can add it manually to /etc/config.scm:"
+    echo ""
+    echo "  (service console-font-service-type"
+    echo "           (map (lambda (tty)"
+    echo "                  (cons tty \"$font_name\"))"
+    echo "                '(\"tty1\" \"tty2\" \"tty3\" \"tty4\" \"tty5\" \"tty6\")))"
+    echo ""
     return 1
   fi
 }
