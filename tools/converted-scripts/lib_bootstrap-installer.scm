@@ -177,35 +177,35 @@
               (format #t "    ~2d) Keep current font (skip font change)~%~%" (+ total-count 1))
               
               ;; Prompt user
-              (let ((selected-font #f))
-                (let loop ()
-                  (format #t "  Enter your choice [1-~a]: " (+ total-count 1))
-                  (force-output)
-                  (let ((input (read-line)))
-                    (cond
-                     ((string->number input)
-                      (let ((choice (string->number input)))
-                        (cond
-                         ;; Large font selected
-                         ((and (>= choice 1) (<= choice (length sorted-large)))
-                          (set! selected-font (list-ref sorted-large (- choice 1))))
-                         ;; Other font selected
-                         ((and (> choice (length sorted-large))
-                               (<= choice total-count))
-                          (set! selected-font (list-ref sorted-other
-                                                         (- choice (length sorted-large) 1))))
-                         ;; Keep current font
-                         ((= choice (+ total-count 1))
-                          (format #t "  Keeping current font~%")
-                          (set! selected-font #f))
-                         ;; Invalid choice
-                         (else
-                          (format #t "  Invalid choice. Please enter a number between 1 and ~a~%"
-                                  (+ total-count 1))
-                          (loop)))))
-                     (else
-                      (format #t "  Invalid input. Please enter a number~%")
-                      (loop)))))
+              (let ((selected-font
+                     (let loop ()
+                       (format #t "  Enter your choice [1-~a]: " (+ total-count 1))
+                       (force-output)
+                       (let ((input (read-line)))
+                         (cond
+                          ((string->number input)
+                           (let ((choice (string->number input)))
+                             (cond
+                              ;; Large font selected
+                              ((and (>= choice 1) (<= choice (length sorted-large)))
+                               (list-ref sorted-large (- choice 1)))
+                              ;; Other font selected
+                              ((and (> choice (length sorted-large))
+                                    (<= choice total-count))
+                               (list-ref sorted-other
+                                         (- choice (length sorted-large) 1)))
+                              ;; Keep current font
+                              ((= choice (+ total-count 1))
+                               (format #t "  Keeping current font~%")
+                               #f)
+                              ;; Invalid choice
+                              (else
+                               (format #t "  Invalid choice. Please enter a number between 1 and ~a~%"
+                                       (+ total-count 1))
+                               (loop)))))
+                          (else
+                           (format #t "  Invalid input. Please enter a number~%")
+                           (loop)))))))
                 
                 ;; Set selected font if user chose one
                 (when selected-font
