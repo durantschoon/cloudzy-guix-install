@@ -601,6 +601,130 @@ The installer now uses a 3-step process instead of calling `system init` directl
 **For manual installations**: Always use the 3-step approach above. Don't rely on `guix system init` alone to copy kernel files.
 - Required for proper kernel initialization
 
+### Universal Verification Practices (APPLIES TO ALL PLATFORMS)
+
+**⚠️ CRITICAL:** Even though the 3-step workaround is only needed for framework-dual (nonguix + time-machine), **all platforms** can experience silent failures where `guix system init` appears to succeed but doesn't actually create kernel/initrd files. These verification practices should be applied to **all installers** (cloudzy, framework, framework-dual, raspberry-pi).
+
+#### Key Diagnostic: Broken System Generation Symlink
+
+**The most reliable indicator of a failed system init** is checking if `/mnt/run/current-system` is a valid symlink pointing to an existing directory:
+
+```bash
+# Check if symlink exists and is valid
+if [ ! -L /mnt/run/current-system ]; then
+    echo "ERROR: /mnt/run/current-system symlink missing - system generation not created"
+    exit 1
+fi
+
+# Check if symlink target exists
+LINK_TARGET=$(readlink /mnt/run/current-system)
+if [ ! -e "$LINK_TARGET" ]; then
+    echo "ERROR: /mnt/run/current-system points to non-existent path: $LINK_TARGET"
+    echo "This indicates the system generation was not built correctly"
+    exit 1
+fi
+```
+
+**Why this matters:**
+- If the symlink is broken or missing, the system generation wasn't built correctly
+- This can happen even when `guix system init` exits with success code
+- Broken symlink = system won't boot, even if GRUB was installed
+
+#### Verification After guix system init
+
+**Always verify immediately after `guix system init` completes:**
+
+1. **Check system generation symlink:**
+   ```bash
+   ls -la /mnt/run/current-system
+   readlink /mnt/run/current-system  # Should point to existing directory
+   ```
+
+2. **Check kernel and initrd files exist:**
+   ```bash
+   ls /mnt/boot/vmlinuz-*  # Should exist
+   ls /mnt/boot/initrd-*   # Should exist
+   ```
+
+3. **If files are missing but system generation exists, manually copy them:**
+   ```bash
+   # Find the system generation
+   SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+   
+   # Copy kernel and initrd if they exist in system generation
+   if [ -f "$SYSTEM_PATH/kernel" ] && [ ! -f /mnt/boot/vmlinuz-* ]; then
+       cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz
+       echo "Manually copied kernel from system generation"
+   fi
+   
+   if [ -f "$SYSTEM_PATH/initrd" ] && [ ! -f /mnt/boot/initrd-* ]; then
+       cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd
+       echo "Manually copied initrd from system generation"
+   fi
+   ```
+
+**This fallback approach works for all platforms:**
+- **Cloudzy (free software)**: Can recover from silent failures
+- **Framework/Framework-dual (nonguix)**: Additional safety beyond 3-step workaround
+- **Raspberry Pi**: Prevents boot failures from incomplete installations
+
+#### Comprehensive Verification at End of Installation
+
+**Before allowing reboot, run comprehensive verification:**
+
+1. **Ensure EFI partition is mounted:**
+   ```bash
+   if ! mountpoint -q /mnt/boot/efi; then
+       mkdir -p /mnt/boot/efi
+       mount LABEL=EFI /mnt/boot/efi
+   fi
+   ```
+
+2. **Run full verification script:**
+   ```bash
+   /root/verify-guix-install.sh
+   ```
+
+3. **If verification fails, DO NOT REBOOT:**
+   - Provide clear error messages
+   - Suggest running recovery script: `/root/recovery-complete-install.sh`
+   - Recovery script will:
+     - Mount EFI if needed
+     - Re-run `guix system init` if kernel/initrd missing
+     - Set user password
+     - Download customization tools
+     - Run verification again
+
+**Why comprehensive verification matters:**
+- Catches issues that basic checks might miss (EFI mount, password file, etc.)
+- Prevents rebooting into unbootable system
+- Provides clear guidance on how to fix issues
+- Works consistently across all platforms
+
+#### Implementation in Installers
+
+**All installers should:**
+
+1. **After `guix system init` completes:**
+   - Check `/mnt/run/current-system` symlink is valid
+   - Verify kernel and initrd files exist
+   - If missing but system generation exists, attempt manual copy
+   - Retry up to 3 times if files still missing
+
+2. **Before reboot:**
+   - Ensure EFI partition is mounted
+   - Run comprehensive verification script
+   - Prevent reboot if verification fails
+   - Provide clear instructions to run recovery script
+
+3. **Recovery script should:**
+   - Check for broken symlink
+   - Attempt manual copy if files missing
+   - Re-run `guix system init` if needed
+   - Verify again before completing
+
+**This ensures all platforms benefit from the lessons learned on framework-dual.**
+
 ### GRUB EFI Bootloader Configuration
 
 **Critical**: Always specify `grub-efi-bootloader` explicitly in your `config.scm` file.
