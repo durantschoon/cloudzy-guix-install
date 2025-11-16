@@ -138,6 +138,9 @@ cd ~/guix-customize
 - ✅ Improved swap creation error messages
 - ✅ Daemon startup timeout increased to 2 minutes
 - ✅ Graceful validation skip if daemon not responsive
+- ✅ Robust daemon startup: functional approach that ensures daemon is actually ready (restarts until responsive, not just retries)
+- ✅ Post-install steps made resilient: password setting always attempted, verification non-fatal
+- ✅ Better error handling: clear messages when post-install steps incomplete, suggests recovery script
 
 **Framework 13 Post-Install Process (2025-11-10):**
 

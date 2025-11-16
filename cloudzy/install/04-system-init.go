@@ -124,14 +124,24 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Printf("Warning: Failed to install verification script: %v\n", err)
 	}
 
-	// Verify installation succeeded
+	// Verify installation succeeded (non-fatal - warn but continue)
 	if err := lib.VerifyInstallation(); err != nil {
-		return err
+		fmt.Printf("\n[WARN] Installation verification reported issues: %v\n", err)
+		fmt.Println("       Continuing with post-install steps...")
+		fmt.Println("       You can verify manually after reboot or run /root/recovery-complete-install.sh")
+		fmt.Println()
 	}
 
-	// Set user password
+	// Set user password (CRITICAL - must always run)
+	passwordSet := false
 	if err := lib.SetUserPassword(state.UserName); err != nil {
-		return err
+		fmt.Printf("\n[WARN] Failed to set user password: %v\n", err)
+		fmt.Println("       You will need to set it manually after first boot:")
+		fmt.Printf("       chroot /mnt /run/current-system/profile/bin/passwd %s\n", state.UserName)
+		fmt.Println("       Or run: /root/recovery-complete-install.sh")
+		fmt.Println()
+	} else {
+		passwordSet = true
 	}
 
 	// Download customization tools to user's home directory
@@ -144,6 +154,32 @@ func (s *Step04SystemInit) RunClean(state *State) error {
     if err := lib.WriteInstallReceipt(state.GuixPlatform, state.UserName); err != nil {
         fmt.Printf("Warning: Failed to write installation receipt: %v\n", err)
     }
+
+	// Check if critical post-install steps completed
+	if !passwordSet {
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  IMPORTANT: Post-Install Steps Needed")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Println("The system init completed, but the user password was not set.")
+		fmt.Println()
+		fmt.Println("Before rebooting, please run:")
+		fmt.Println("  /root/recovery-complete-install.sh")
+		fmt.Println()
+		fmt.Println("This will:")
+		fmt.Println("  1. Verify the installation")
+		fmt.Println("  2. Set your user password")
+		fmt.Println("  3. Download customization tools")
+		fmt.Println("  4. Prepare for reboot")
+		fmt.Println()
+		fmt.Println("Or set password manually:")
+		fmt.Printf("  chroot /mnt /run/current-system/profile/bin/passwd %s\n", state.UserName)
+		fmt.Println()
+		fmt.Println("DO NOT REBOOT until password is set, or you won't be able to log in!")
+		fmt.Println()
+		return fmt.Errorf("user password not set - please run recovery script before rebooting")
+	}
 
     // Sync and unmount
 	fmt.Println("Syncing filesystems...")

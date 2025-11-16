@@ -526,44 +526,26 @@ func isDaemonProcessRunning() bool {
 	       strings.Contains(string(output), "It is enabled")
 }
 
-// EnsureGuixDaemonRunning ensures the guix-daemon is running
+// EnsureGuixDaemonRunning ensures the guix-daemon is running and responsive
+// Uses a functional approach: actually ensures the daemon works, not just retries
 // NOTE: Do NOT use bind mounts! cow-store handles store writes correctly.
 // Bind mounting /mnt/gnu to /gnu shadows the live system's store and breaks guix.
 func EnsureGuixDaemonRunning() error {
 	PrintSectionHeader("Ensuring guix-daemon is running")
 
-	// First, check if daemon is already running and responsive
-	if isDaemonProcessRunning() {
-		fmt.Println("guix-daemon is already running, checking if responsive...")
-
-		// Use functional retry approach with 30 second timeout
-		err := retryUntilReady(
-			isDaemonReady,
-			30*time.Second,
-			3*time.Second,
-			func(attempt, maxAttempts int) {
-				if attempt == 1 {
-					fmt.Println("Daemon is starting up, waiting for it to become responsive...")
-				}
-				// Only show waiting message if socket or basic check fails
-				// isDaemonReady will show detailed stability check progress
-			},
-		)
-
-		if err == nil {
-			fmt.Println("[OK] guix-daemon is responsive and stable")
-			return nil
-		}
-
-		// If still not responsive after waiting, we'll restart it below
-		fmt.Println("Daemon not responsive after waiting, will restart...")
+	// First, check if daemon is actually ready (process + socket + responsive)
+	fmt.Println("Checking if guix-daemon is ready...")
+	if err := isDaemonReady(); err == nil {
+		fmt.Println("[OK] guix-daemon is already running and responsive")
+		fmt.Println()
+		return nil
 	}
 
-	// Daemon not running or not responsive - restart it
-	fmt.Println("Starting guix-daemon...")
+	// Daemon is not ready - need to start/restart it
+	fmt.Println("guix-daemon is not ready, ensuring it's running...")
 	fmt.Println()
 
-	// Stop any existing daemon processes
+	// Stop any existing daemon processes (clean slate)
 	fmt.Println("Stopping any existing guix-daemon processes...")
 	exec.Command("herd", "stop", "guix-daemon").Run()
 	exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
@@ -573,54 +555,92 @@ func EnsureGuixDaemonRunning() error {
 
 	// Start the daemon
 	fmt.Println("Starting guix-daemon via herd...")
-	if err := RunCommand("herd", "start", "guix-daemon"); err != nil {
-		fmt.Printf("Warning: herd start failed: %v\n", err)
-		// Try alternative startup method
-		fmt.Println("Trying alternative daemon startup...")
-		exec.Command("guix-daemon", "--build-users-group=guixbuild").Start()
+	startErr := RunCommand("herd", "start", "guix-daemon")
+	if startErr != nil {
+		fmt.Printf("Warning: herd start failed: %v\n", startErr)
+		fmt.Println("Trying alternative daemon startup method...")
+		// Try direct daemon start as fallback
+		cmd := exec.Command("guix-daemon", "--build-users-group=guixbuild")
+		if err := cmd.Start(); err != nil {
+			fmt.Printf("Warning: Direct daemon start also failed: %v\n", err)
+		} else {
+			fmt.Println("Started daemon via direct method, waiting for it to initialize...")
+			time.Sleep(3 * time.Second)
+		}
 	}
 
-	// Wait for daemon to become responsive (up to 2 minutes for VPS systems)
-	fmt.Println("Waiting for daemon to become responsive...")
-	err := retryUntilReady(
-		isDaemonReadyAfterStart,
-		2*time.Minute,
-		3*time.Second,
-		func(attempt, maxAttempts int) {
-			// Progress indicator - only show if we're still waiting
-			// The check functions will show detailed messages when ready
-		},
-	)
+	// Functional approach: Keep checking and restarting until daemon is actually ready
+	// This ensures the daemon is working, not just that we tried to start it
+	maxAttempts := 5
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			fmt.Printf("\n[RETRY %d/%d] Daemon not ready yet, restarting...\n", attempt, maxAttempts)
+			// Stop and restart
+			exec.Command("herd", "stop", "guix-daemon").Run()
+			exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
+			time.Sleep(2 * time.Second)
+			exec.Command("pkill", "-KILL", "-x", "guix-daemon").Run()
+			time.Sleep(2 * time.Second)
+			
+			fmt.Println("Restarting guix-daemon...")
+			RunCommand("herd", "start", "guix-daemon")
+			time.Sleep(3 * time.Second) // Give it a moment to start
+		}
 
-	if err == nil {
-		fmt.Println("[OK] guix-daemon is now responsive and stable")
-		fmt.Println()
-		return nil
+		// Check if process is running
+		if !isDaemonProcessRunning() {
+			fmt.Printf("[WARN] Attempt %d: Daemon process not running yet\n", attempt)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+
+		// Process is running, now check if it's actually ready (socket + responsive)
+		fmt.Printf("Attempt %d: Daemon process is running, checking responsiveness...\n", attempt)
+		
+		// Wait up to 30 seconds for daemon to become ready
+		readyErr := retryUntilReady(
+			isDaemonReady,
+			30*time.Second,
+			2*time.Second,
+			func(attemptNum, maxAttempts int) {
+				if attemptNum%5 == 0 { // Show progress every 5 attempts (10 seconds)
+					fmt.Printf("  Waiting for daemon to become ready... (%d/%d)\n", attemptNum*2, 30)
+				}
+			},
+		)
+
+		if readyErr == nil {
+			fmt.Println("[OK] guix-daemon is now running and responsive")
+			fmt.Println()
+			return nil
+		}
+
+		fmt.Printf("[WARN] Attempt %d: Daemon started but not responsive: %v\n", attempt, readyErr)
+		
+		// If this isn't the last attempt, we'll restart and try again
+		if attempt < maxAttempts {
+			fmt.Println("  Will restart and try again...")
+		}
 	}
 
-	// Final check
-	statusCmd := exec.Command("herd", "status", "guix-daemon")
-	finalOutput, err := statusCmd.Output()
-	if err != nil || (!strings.Contains(string(finalOutput), "It is started") && !strings.Contains(string(finalOutput), "It is enabled")) {
-		fmt.Println()
-		fmt.Println("[ERROR] Failed to start guix-daemon after 2 minutes")
-		fmt.Println()
-		fmt.Println("Please manually run these commands:")
-		fmt.Println("  herd start guix-daemon")
-		fmt.Println("  herd status guix-daemon")
-		fmt.Println("  guix build --version  # Test if responsive")
-		fmt.Println()
-		fmt.Println("Once the daemon is running and responsive, continue with:")
-		fmt.Println("  guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println()
-		return fmt.Errorf("guix-daemon failed to become responsive after 2 minutes")
-	}
-
+	// All attempts failed - provide helpful error message
 	fmt.Println()
-	fmt.Println("[WARN] guix-daemon is running but not fully responsive yet")
-	fmt.Println("       Continuing anyway - it may become responsive during system init")
+	fmt.Println("[ERROR] Failed to get guix-daemon running and responsive after", maxAttempts, "attempts")
 	fmt.Println()
-	return nil
+	fmt.Println("The daemon may be starting but not becoming responsive.")
+	fmt.Println("Please try manually:")
+	fmt.Println("  1. herd stop guix-daemon")
+	fmt.Println("  2. pkill -KILL guix-daemon")
+	fmt.Println("  3. herd start guix-daemon")
+	fmt.Println("  4. Wait 10-20 seconds")
+	fmt.Println("  5. Test: guix build --version")
+	fmt.Println()
+	fmt.Println("If it still doesn't work, check:")
+	fmt.Println("  - Disk space: df -h")
+	fmt.Println("  - System logs: journalctl -u guix-daemon")
+	fmt.Println("  - Socket exists: ls -la /var/guix/daemon-socket/socket")
+	fmt.Println()
+	return fmt.Errorf("guix-daemon failed to become responsive after %d restart attempts", maxAttempts)
 }
 
 // VerifyESP verifies the EFI System Partition is properly mounted as vfat
@@ -885,17 +905,17 @@ func ValidateGuixConfig(configPath string) error {
 	RunCommand("tail", "-10", configPath)
 	fmt.Println()
 	
-	// First check if daemon is responsive using robust check
-	fmt.Println("Checking daemon connectivity...")
-	if err := isDaemonReady(); err != nil {
+	// Ensure daemon is running and responsive before validation
+	fmt.Println("Ensuring daemon is running before validation...")
+	if err := EnsureGuixDaemonRunning(); err != nil {
 		fmt.Println()
-		fmt.Println("[WARN] Daemon is not fully ready yet")
+		fmt.Println("[WARN] Failed to ensure daemon is running")
 		fmt.Println("       Skipping config validation - will validate during system init")
-		fmt.Println("       If system init fails, run 'herd start guix-daemon' and retry")
+		fmt.Println("       The daemon will be ensured again before system init")
 		fmt.Println()
 		return nil  // Skip validation gracefully
 	}
-	fmt.Println("[OK] Daemon is responsive and stable")
+	fmt.Println("[OK] Daemon is running and responsive")
 	
 	// Try to load the config to check for syntax errors and unbound variables
 	fmt.Println("Validating config syntax and checking for unbound variables...")
