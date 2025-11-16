@@ -186,34 +186,109 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
     # Verify that system init actually succeeded by checking for critical files
     echo ""
     echo "=== Verifying System Init Succeeded ==="
+    
+    # Check 1: Verify /mnt/run/current-system symlink is valid (key diagnostic from framework-dual)
+    if [ ! -L /mnt/run/current-system ]; then
+        echo "[ERROR] System init completed but /mnt/run/current-system symlink is missing!"
+        echo "This indicates the system generation was not built correctly."
+        echo ""
+        echo "Try running system init manually and check for errors:"
+        echo "  $INIT_CMD"
+        echo ""
+        exit 1
+    fi
+    
+    LINK_TARGET=$(readlink /mnt/run/current-system)
+    if [ ! -e "$LINK_TARGET" ]; then
+        echo "[ERROR] System init completed but /mnt/run/current-system points to non-existent path: $LINK_TARGET"
+        echo "This indicates the system generation was not built correctly."
+        echo ""
+        echo "Try running system init manually and check for errors:"
+        echo "  $INIT_CMD"
+        echo ""
+        exit 1
+    fi
+    echo "[OK] System generation symlink valid: /mnt/run/current-system -> $LINK_TARGET"
+    
+    # Check 2: Verify kernel and initrd files exist
     if ! ls /mnt/boot/vmlinuz-* >/dev/null 2>&1; then
-        echo "[ERROR] System init completed but kernel is still missing!"
-        echo "This means guix system init did not actually succeed."
-        echo ""
-        echo "Possible causes:"
-        echo "  - Disk space issues: df -h /mnt"
-        echo "  - Daemon issues: herd status guix-daemon"
-        echo "  - Store issues: ls -la /mnt/gnu/store | head"
-        echo ""
-        echo "Try running system init manually and check for errors:"
-        echo "  $INIT_CMD"
-        echo ""
-        exit 1
+        echo "[WARN] System init completed but kernel is still missing!"
+        echo "Attempting to manually copy kernel from system generation..."
+        
+        # Try to copy kernel from system generation (fallback approach from framework-dual)
+        SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+        if [ -f "$SYSTEM_PATH/kernel" ]; then
+            if cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz 2>/dev/null; then
+                echo "[OK] Manually copied kernel from system generation"
+            else
+                echo "[ERROR] Failed to copy kernel from $SYSTEM_PATH/kernel"
+                echo "This means guix system init did not actually succeed."
+                echo ""
+                echo "Possible causes:"
+                echo "  - Disk space issues: df -h /mnt"
+                echo "  - Daemon issues: herd status guix-daemon"
+                echo "  - Store issues: ls -la /mnt/gnu/store | head"
+                echo ""
+                echo "Try running system init manually and check for errors:"
+                echo "  $INIT_CMD"
+                echo ""
+                exit 1
+            fi
+        else
+            echo "[ERROR] Kernel not found in system generation: $SYSTEM_PATH/kernel"
+            echo "This means guix system init did not actually succeed."
+            echo ""
+            echo "Possible causes:"
+            echo "  - Disk space issues: df -h /mnt"
+            echo "  - Daemon issues: herd status guix-daemon"
+            echo "  - Store issues: ls -la /mnt/gnu/store | head"
+            echo ""
+            echo "Try running system init manually and check for errors:"
+            echo "  $INIT_CMD"
+            echo ""
+            exit 1
+        fi
     fi
+    
     if ! ls /mnt/boot/initrd-* >/dev/null 2>&1; then
-        echo "[ERROR] System init completed but initrd is still missing!"
-        echo "This means guix system init did not actually succeed."
-        echo ""
-        echo "Possible causes:"
-        echo "  - Disk space issues: df -h /mnt"
-        echo "  - Daemon issues: herd status guix-daemon"
-        echo "  - Store issues: ls -la /mnt/gnu/store | head"
-        echo ""
-        echo "Try running system init manually and check for errors:"
-        echo "  $INIT_CMD"
-        echo ""
-        exit 1
+        echo "[WARN] System init completed but initrd is still missing!"
+        echo "Attempting to manually copy initrd from system generation..."
+        
+        # Try to copy initrd from system generation (fallback approach from framework-dual)
+        SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+        if [ -f "$SYSTEM_PATH/initrd" ]; then
+            if cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd 2>/dev/null; then
+                echo "[OK] Manually copied initrd from system generation"
+            else
+                echo "[ERROR] Failed to copy initrd from $SYSTEM_PATH/initrd"
+                echo "This means guix system init did not actually succeed."
+                echo ""
+                echo "Possible causes:"
+                echo "  - Disk space issues: df -h /mnt"
+                echo "  - Daemon issues: herd status guix-daemon"
+                echo "  - Store issues: ls -la /mnt/gnu/store | head"
+                echo ""
+                echo "Try running system init manually and check for errors:"
+                echo "  $INIT_CMD"
+                echo ""
+                exit 1
+            fi
+        else
+            echo "[ERROR] Initrd not found in system generation: $SYSTEM_PATH/initrd"
+            echo "This means guix system init did not actually succeed."
+            echo ""
+            echo "Possible causes:"
+            echo "  - Disk space issues: df -h /mnt"
+            echo "  - Daemon issues: herd status guix-daemon"
+            echo "  - Store issues: ls -la /mnt/gnu/store | head"
+            echo ""
+            echo "Try running system init manually and check for errors:"
+            echo "  $INIT_CMD"
+            echo ""
+            exit 1
+        fi
     fi
+    
     echo "[OK] Kernel and initrd are now present"
     echo "     Kernel: $(ls /mnt/boot/vmlinuz-* | head -1 | xargs basename)"
     echo "     Initrd: $(ls /mnt/boot/initrd-* | head -1 | xargs basename)"

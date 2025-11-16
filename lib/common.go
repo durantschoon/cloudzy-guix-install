@@ -1428,14 +1428,73 @@ func RunGuixSystemInitFreeSoftware() error {
 		// Verify that system init actually succeeded by checking for critical files
 		fmt.Println()
 		fmt.Println("Verifying that system init completed successfully...")
+		
+		// Check 1: Verify /mnt/run/current-system symlink is valid (key diagnostic from framework-dual)
+		if linkTarget, err := os.Readlink("/mnt/run/current-system"); err != nil {
+			lastErr = fmt.Errorf("guix system init completed but /mnt/run/current-system symlink is missing or broken: %w", err)
+			fmt.Printf("\n[WARN] Attempt %d: %v\n", attempt, lastErr)
+			fmt.Println("       This indicates the system generation was not built correctly.")
+			if attempt < maxRetries {
+				fmt.Println("       The command will automatically retry...")
+			}
+			continue
+		} else {
+			// Check if symlink target actually exists
+			if _, err := os.Stat(linkTarget); err != nil {
+				lastErr = fmt.Errorf("guix system init completed but /mnt/run/current-system points to non-existent path: %s", linkTarget)
+				fmt.Printf("\n[WARN] Attempt %d: %v\n", attempt, lastErr)
+				fmt.Println("       This indicates the system generation was not built correctly.")
+				if attempt < maxRetries {
+					fmt.Println("       The command will automatically retry...")
+				}
+				continue
+			}
+			fmt.Printf("[OK] System generation symlink valid: /mnt/run/current-system -> %s\n", linkTarget)
+		}
+		
+		// Check 2: Verify kernel and initrd files exist
 		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
 		initrds, _ := filepath.Glob("/mnt/boot/initrd-*")
 		
 		if len(kernels) == 0 || len(initrds) == 0 {
 			lastErr = fmt.Errorf("guix system init completed but critical files are missing (kernel: %d, initrd: %d)", len(kernels), len(initrds))
 			fmt.Printf("\n[WARN] Attempt %d: System init completed but files missing: %v\n", attempt, lastErr)
+			
+			// Try to find kernel/initrd in the system generation and copy them manually
+			// This is a fallback similar to framework-dual approach
+			if linkTarget, err := os.Readlink("/mnt/run/current-system"); err == nil {
+				if systemPath, err := filepath.EvalSymlinks(linkTarget); err == nil {
+					fmt.Println("       Attempting to manually copy kernel/initrd from system generation...")
+					kernelSrc := filepath.Join(systemPath, "kernel")
+					initrdSrc := filepath.Join(systemPath, "initrd")
+					
+					if _, err := os.Stat(kernelSrc); err == nil {
+						kernelDest := "/mnt/boot/vmlinuz"
+						if err := exec.Command("cp", kernelSrc, kernelDest).Run(); err == nil {
+							fmt.Printf("       [OK] Manually copied kernel: %s -> %s\n", kernelSrc, kernelDest)
+							kernels = []string{kernelDest}
+						}
+					}
+					
+					if _, err := os.Stat(initrdSrc); err == nil {
+						initrdDest := "/mnt/boot/initrd"
+						if err := exec.Command("cp", initrdSrc, initrdDest).Run(); err == nil {
+							fmt.Printf("       [OK] Manually copied initrd: %s -> %s\n", initrdSrc, initrdDest)
+							initrds = []string{initrdDest}
+						}
+					}
+					
+					// Re-check after manual copy
+					if len(kernels) > 0 && len(initrds) > 0 {
+						fmt.Println("       [OK] Manual copy succeeded - files are now present")
+						lastErr = nil
+						break
+					}
+				}
+			}
+			
 			if attempt < maxRetries {
-				fmt.Println("The command will automatically retry...")
+				fmt.Println("       The command will automatically retry...")
 			}
 			continue
 		}
