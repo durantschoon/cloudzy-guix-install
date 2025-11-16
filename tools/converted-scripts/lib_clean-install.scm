@@ -138,7 +138,7 @@
   (newline)
   (display "Next steps:\n")
   (display "  1. Download the latest bootstrap installer:\n")
-  (display "     curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh -o bootstrap-installer.sh\n")
+  (display "     curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh -o bootstrap-installer.sh\n")
   (newline)
   (display "  2. Run the installer with your platform:\n")
   (display "     bash bootstrap-installer.sh framework-dual\n")

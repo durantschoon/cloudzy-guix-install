@@ -75,7 +75,7 @@ The installer automatically detects and imports pre-built kernels:
 # Boot Framework 13 from Guix ISO
 # Transfer linux-kernel.nar to /root/ (see Step 2)
 # Run installer normally:
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/bootstrap-installer.sh | bash -s -- framework-dual
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- framework-dual
 ```
 
 When the installer reaches Step 4 (System Init), it will:

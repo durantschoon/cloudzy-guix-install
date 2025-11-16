@@ -201,7 +201,7 @@ You can also run it manually at any time from the repository:
 
 ```bash
 # Download from repository
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/verify-guix-install.sh -o /tmp/verify.sh
+curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/verify-guix-install.sh -o /tmp/verify.sh
 chmod +x /tmp/verify.sh
 sudo /tmp/verify.sh
 ```
