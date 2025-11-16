@@ -28,9 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent (2025-11-15):**
-1. Fixed bootstrap-postinstall.scm syntax errors, path resolution, and Go detection
-2. Fixed customize script path resolution and postinstall/lib.sh INSTALL_ROOT usage
-3. Completed batch conversion tools (all scripts work from repo root, fixed custom_id format)
+1. ✅ GNOME keyboard layout auto-configuration: Automatically adds `setxkbmap` package and creates autostart script when GNOME + keyboard options detected
+2. ✅ Ctrl-C signal handling: Installer now catches SIGINT and provides helpful recovery instructions
+3. ✅ Framework-dual GNOME testing: GNOME launches successfully, display manager working
+4. Fixed bootstrap-postinstall.scm syntax errors, path resolution, and Go detection
+5. Fixed customize script path resolution and postinstall/lib.sh INSTALL_ROOT usage
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -64,11 +66,17 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - 🎯 **Focus**: Guile-based postinstall workflow from GNOME config onward
 - 📝 **Developer docs**: See docs/POSTINSTALL_DEV.md for workflow
 
-**Framework-dual postinstall (READY FOR TESTING):**
+**Framework-dual postinstall (IN TESTING):**
 
 - ✅ All fixes complete → [See archive](archive/CHECKLIST_COMPLETED.md#framework-dual-postinstall-improvements-2025-11-15)
 - ✅ Bootstrap script fixes → [See archive](archive/CHECKLIST_COMPLETED.md#recent-bootstrap--path-resolution-fixes-2025-11-15)
-- 🧪 **NEXT**: Test full GNOME installation workflow on real hardware
+- ✅ GNOME launches successfully - display manager working
+- ⚠️ **CURRENT ISSUE**: Password/keyboard layout mismatch - password set with `ctrl:swapcaps` but GNOME uses default layout
+  - **Workaround**: Reset password from text console (Ctrl+Alt+F3, login as root, `passwd username`)
+  - **Root cause**: GNOME doesn't inherit system keyboard layout options, needs `setxkbmap` autostart script
+- ✅ **FIX IMPLEMENTED**: Automatic `setxkbmap` package addition and autostart script creation when GNOME + keyboard options detected (prevents issue for future users)
+- ✅ **FIX IMPLEMENTED**: Ctrl-C signal handling in installer with helpful recovery instructions
+- 🧪 **NEXT**: Test password reset and verify autostart script works after reconfigure
 
 **Bootstrap Command for Testing:**
 

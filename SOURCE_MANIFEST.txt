@@ -31,7 +31,7 @@ d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/in
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 6ff96526d341907e94c6cfd9d858928cc5faf7104cb09f5e1e61791fb92d3b77  ./lib/common_test.go
 35df22d4c35eb52c4a5cdb580cecfef62a4ee7a4a37e1b33c3ef03d0f47a05fb  ./lib/common.go
-af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-steps.go
+86a830b46773a21b29e27495a22182974c990a5ebe9bd86626e18af54154553e  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
@@ -40,7 +40,7 @@ af7a792e9144c6bfe4c1ff5dd6042d4594d5d675f9d3b0d67047dc6fc712386f  ./run-remote-s
 846f1ec4e17aa08200af7b74fb46f1c432f11c033998b4e533d5c0046a5033f9  lib/verify-guix-install.sh
 dd700229867cbb5dba178e1df492c382b0baa26701284f5ca33facd23442dc2f  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
-73b311f533afad02d14a97ec86c9d73523b607daa3e25eed75edcfa9c735a43e  postinstall/lib.sh
+d704fdd5957302ccaf854606f46a01da6b36fbb0bdf35a592034aa7fb1b63718  postinstall/lib.sh
 
 ## Guile Library Scripts
 

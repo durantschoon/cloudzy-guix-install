@@ -204,6 +204,71 @@ add_desktop() {
       fi
     fi
     
+    # For GNOME: Check if keyboard layout has options and configure accordingly
+    if [ "$desktop" = "gnome" ]; then
+      # Check if keyboard layout has options (like ctrl:swapcaps)
+      if grep -q "keyboard-layout" "$CONFIG_FILE" && grep -q "#:options" "$CONFIG_FILE"; then
+        info "Detected keyboard layout with options - configuring GNOME keyboard layout..."
+        
+        # Extract keyboard layout and options from config.scm
+        # Look for pattern like: (keyboard-layout "us" #:options '("ctrl:swapcaps"))
+        local layout=$(grep -A 3 "keyboard-layout" "$CONFIG_FILE" | grep -oP 'keyboard-layout "\K[^"]+' | head -1)
+        local options=$(grep -A 3 "keyboard-layout" "$CONFIG_FILE" | grep -oP '#:options.*"\K[^"]+' | head -1)
+        
+        if [ -n "$layout" ] && [ -n "$options" ]; then
+          # Add setxkbmap package if not already present
+          if ! grep -q "setxkbmap" "$CONFIG_FILE"; then
+            info "Adding setxkbmap package for GNOME keyboard layout configuration..."
+            
+            # Add setxkbmap to packages
+            if grep -q "(packages %base-packages)" "$CONFIG_FILE"; then
+              # Minimal config - expand to use append
+              safe_edit_config 's|(packages %base-packages)|(packages\n  (append (list (specification->package "setxkbmap"))\n          %base-packages))|'
+            elif grep -q "specification->package" "$CONFIG_FILE"; then
+              # Already has packages, add setxkbmap if not present
+              if ! grep -q '"setxkbmap"' "$CONFIG_FILE"; then
+                safe_edit_config '/specification->package/a\                (specification->package "setxkbmap")'
+              fi
+            fi
+            info "✓ setxkbmap package added"
+          fi
+          
+          # Create GNOME autostart script to set keyboard layout (if it doesn't exist)
+          local autostart_dir="$HOME/.config/autostart"
+          local autostart_file="$autostart_dir/keyboard-layout.desktop"
+          
+          if [ ! -f "$autostart_file" ]; then
+            mkdir -p "$autostart_dir"
+            
+            # Convert options format (e.g., "ctrl:swapcaps" -> "-option ctrl:swapcaps")
+            local setxkbmap_options="-option $options"
+            
+            cat > "$autostart_file" << EOF
+[Desktop Entry]
+Type=Application
+Name=Set Keyboard Layout
+Exec=setxkbmap $layout $setxkbmap_options
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+            
+            info "✓ GNOME autostart script created: ~/.config/autostart/keyboard-layout.desktop"
+            info "  This will automatically set keyboard layout ($layout with $options) when GNOME starts"
+            echo ""
+          else
+            info "GNOME autostart script already exists - skipping creation"
+          fi
+        else
+          warn "Could not extract keyboard layout/options from config.scm"
+          warn "You may need to manually configure GNOME keyboard layout"
+        fi
+      elif grep -q "keyboard-layout" "$CONFIG_FILE"; then
+        # Keyboard layout exists but no options - still might want to configure GNOME
+        info "Keyboard layout detected without options - GNOME should inherit system layout"
+      fi
+    fi
+    
     echo ""
     info "IMPORTANT: After running 'r' to reconfigure, you will need to:"
     info "  1. Log out of your current session"

@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	cloudzyi "github.com/durantschoon/cloudzy-guix-install/cloudzy/install"
 	frameworkduali "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
@@ -13,6 +15,39 @@ import (
 )
 
 func main() {
+	// Set up signal handler for Ctrl-C (SIGINT)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	
+	go func() {
+		<-sigChan
+		fmt.Println()
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  INSTALLATION INTERRUPTED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Println("The installation was interrupted (Ctrl-C).")
+		fmt.Println()
+		fmt.Println("To check installation status and complete if needed:")
+		fmt.Println()
+		fmt.Println("  1. Verify installation:")
+		fmt.Println("     /root/verify-guix-install.sh")
+		fmt.Println()
+		fmt.Println("  2. If verification fails, run recovery script:")
+		fmt.Println("     /root/recovery-complete-install.sh")
+		fmt.Println()
+		fmt.Println("The recovery script will:")
+		fmt.Println("  - Complete system initialization if needed")
+		fmt.Println("  - Set your user password")
+		fmt.Println("  - Download customization tools")
+		fmt.Println("  - Run verification again")
+		fmt.Println()
+		fmt.Println("DO NOT REBOOT until verification passes!")
+		fmt.Println()
+		os.Exit(130) // Standard exit code for SIGINT
+	}()
+
 	platform := getEnv("GUIX_PLATFORM", "cloudzy")
 
 	// Detect and bootstrap user channels
