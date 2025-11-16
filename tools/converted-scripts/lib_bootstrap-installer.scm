@@ -126,14 +126,99 @@
                 (format #t "  ✓ Set font: solar24x32~%")
                 (format #t "  ⚠ Could not set font (may need sudo)~%")))
            
-           ;; Font not found
+           ;; Font not found - ask user to choose
            (else
-            (format #t "  ⚠ Font '~a' not found in ~a~%" font-name font-dir)
-            (format #t "  Available fonts:~%")
-            (let ((fonts (scandir font-dir)))
-              (for-each (lambda (f) (format #t "    ~a~%" f))
-                        (take (or fonts '()) (min 10 (length (or fonts '()))))))
-            (format #t "  Font will be set after installation completes~%"))))
+            (format #t "~%  ⚠ Font '~a' not found in ~a~%" font-name font-dir)
+            (format #t "~%  Please choose a font from the list below, or keep the current font:~%~%")
+            
+            ;; Get all fonts and categorize them
+            (let* ((all-fonts (if (file-exists? font-dir)
+                                  (scandir font-dir)
+                                  '()))
+                   (font-bases (map (lambda (f)
+                                      (car (string-split f #\.)))
+                                    (filter (lambda (f)
+                                              (and (not (string=? f "."))
+                                                   (not (string=? f ".."))))
+                                            all-fonts)))
+                   (large-fonts (filter (lambda (f)
+                                          (or (string-contains f "24")
+                                              (string-contains f "32")
+                                              (string-contains f "36")))
+                                        font-bases))
+                   (other-fonts (filter (lambda (f)
+                                          (not (or (string-contains f "24")
+                                                   (string-contains f "32")
+                                                   (string-contains f "36"))))
+                                        font-bases))
+                   (sorted-large (sort large-fonts string<?))
+                   (sorted-other (sort other-fonts string<?))
+                   (total-count (+ (length sorted-large) (length sorted-other))))
+              
+              ;; Show large fonts first
+              (when (not (null? sorted-large))
+                (format #t "  Large fonts (recommended for high-DPI displays):~%")
+                (let loop ((fonts sorted-large) (idx 1))
+                  (when (not (null? fonts))
+                    (format #t "    ~2d) ~a~%" idx (car fonts))
+                    (loop (cdr fonts) (+ idx 1))))
+                (newline))
+              
+              ;; Show other fonts
+              (when (not (null? sorted-other))
+                (format #t "  Other available fonts:~%")
+                (let loop ((fonts sorted-other) (idx (+ (length sorted-large) 1)))
+                  (when (not (null? fonts))
+                    (format #t "    ~2d) ~a~%" idx (car fonts))
+                    (loop (cdr fonts) (+ idx 1))))
+                (newline))
+              
+              ;; Option to keep current font
+              (format #t "    ~2d) Keep current font (skip font change)~%~%" (+ total-count 1))
+              
+              ;; Prompt user
+              (let ((selected-font #f))
+                (let loop ()
+                  (format #t "  Enter your choice [1-~a]: " (+ total-count 1))
+                  (force-output)
+                  (let ((input (read-line)))
+                    (cond
+                     ((string->number input)
+                      (let ((choice (string->number input)))
+                        (cond
+                         ;; Large font selected
+                         ((and (>= choice 1) (<= choice (length sorted-large)))
+                          (set! selected-font (list-ref sorted-large (- choice 1))))
+                         ;; Other font selected
+                         ((and (> choice (length sorted-large))
+                               (<= choice total-count))
+                          (set! selected-font (list-ref sorted-other
+                                                         (- choice (length sorted-large) 1))))
+                         ;; Keep current font
+                         ((= choice (+ total-count 1))
+                          (format #t "  Keeping current font~%")
+                          (set! selected-font #f))
+                         ;; Invalid choice
+                         (else
+                          (format #t "  Invalid choice. Please enter a number between 1 and ~a~%"
+                                  (+ total-count 1))
+                          (loop)))))
+                     (else
+                      (format #t "  Invalid input. Please enter a number~%")
+                      (loop)))))
+                
+                ;; Set selected font if user chose one
+                (when selected-font
+                  (let* ((possible-fonts (list (string-append font-dir "/" selected-font ".psf")
+                                               (string-append font-dir "/" selected-font ".psfu")
+                                               (string-append font-dir "/" selected-font)))
+                         (font-found (find file-exists? possible-fonts)))
+                    (if font-found
+                        (let ((font-base (car (string-split font-found #\.))))
+                          (if (zero? (system (format #f "sudo setfont ~a 2>/dev/null" font-base)))
+                              (format #t "  ✓ Set font: ~a~%" (basename font-base))
+                              (format #t "  ⚠ Could not set font (may need sudo)~%")))
+                        (format #t "  ⚠ Could not set selected font~%"))))))))
         
         (begin
           (format #t "  ⚠ Font directory not found: ~a~%" font-dir)

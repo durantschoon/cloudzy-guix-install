@@ -101,10 +101,99 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
                 echo "  ⚠ setfont command not found"
             fi
         else
+            # Font not found - ask user to choose
+            echo ""
             echo "  ⚠ Font '${FONT_NAME}' not found in $FONT_DIR"
-            echo "  Available fonts:"
-            ls "$FONT_DIR" 2>/dev/null | head -10 | sed 's/^/    /' || echo "    (none found)"
-            echo "  Font will be set after installation completes"
+            echo ""
+            echo "  Please choose a font from the list below, or keep the current font:"
+            echo ""
+            
+            # List large fonts (containing 24, 32, or 36 in name) first, then all others
+            LARGE_FONTS=()
+            OTHER_FONTS=()
+            
+            if [[ -d "$FONT_DIR" ]]; then
+                while IFS= read -r font_file; do
+                    # Remove extensions to get base name
+                    font_base=$(echo "$font_file" | sed 's/\.psf.*$//')
+                    if [[ "$font_base" =~ (24|32|36) ]]; then
+                        LARGE_FONTS+=("$font_base")
+                    else
+                        OTHER_FONTS+=("$font_base")
+                    fi
+                done < <(ls "$FONT_DIR" 2>/dev/null | sort -u)
+            fi
+            
+            # Show large fonts first
+            if [[ ${#LARGE_FONTS[@]} -gt 0 ]]; then
+                echo "  Large fonts (recommended for high-DPI displays):"
+                for i in "${!LARGE_FONTS[@]}"; do
+                    printf "    %2d) %s\n" $((i+1)) "${LARGE_FONTS[$i]}"
+                done
+                echo ""
+            fi
+            
+            # Show other fonts
+            if [[ ${#OTHER_FONTS[@]} -gt 0 ]]; then
+                echo "  Other available fonts:"
+                start_num=$((${#LARGE_FONTS[@]} + 1))
+                for i in "${!OTHER_FONTS[@]}"; do
+                    printf "    %2d) %s\n" $((start_num + i)) "${OTHER_FONTS[$i]}"
+                done
+                echo ""
+            fi
+            
+            # Option to keep current font
+            total_fonts=$((${#LARGE_FONTS[@]} + ${#OTHER_FONTS[@]}))
+            echo "    $(($total_fonts + 1))) Keep current font (skip font change)"
+            echo ""
+            
+            # Prompt user
+            while true; do
+                read -p "  Enter your choice [1-$(($total_fonts + 1))]: " choice </dev/tty
+                
+                if [[ "$choice" =~ ^[0-9]+$ ]]; then
+                    if [[ "$choice" -ge 1 && "$choice" -le ${#LARGE_FONTS[@]} ]]; then
+                        SELECTED_FONT="${LARGE_FONTS[$((choice-1))]}"
+                        break
+                    elif [[ "$choice" -gt ${#LARGE_FONTS[@]} && "$choice" -le $total_fonts ]]; then
+                        SELECTED_FONT="${OTHER_FONTS[$((choice - ${#LARGE_FONTS[@]} - 1))]}"
+                        break
+                    elif [[ "$choice" -eq $(($total_fonts + 1)) ]]; then
+                        echo "  Keeping current font"
+                        SELECTED_FONT=""
+                        break
+                    else
+                        echo "  Invalid choice. Please enter a number between 1 and $(($total_fonts + 1))"
+                    fi
+                else
+                    echo "  Invalid input. Please enter a number"
+                fi
+            done
+            
+            # Set selected font if user chose one
+            if [[ -n "$SELECTED_FONT" ]]; then
+                # Try to find the font file
+                SELECTED_FONT_FOUND=""
+                if [[ -f "$FONT_DIR/${SELECTED_FONT}.psf" ]]; then
+                    SELECTED_FONT_FOUND="$FONT_DIR/${SELECTED_FONT}.psf"
+                elif [[ -f "$FONT_DIR/${SELECTED_FONT}.psfu" ]]; then
+                    SELECTED_FONT_FOUND="$FONT_DIR/${SELECTED_FONT}.psfu"
+                elif [[ -f "$FONT_DIR/${SELECTED_FONT}" ]]; then
+                    SELECTED_FONT_FOUND="$FONT_DIR/${SELECTED_FONT}"
+                fi
+                
+                if [[ -n "$SELECTED_FONT_FOUND" ]] && command -v setfont >/dev/null 2>&1; then
+                    FONT_BASE=$(echo "$SELECTED_FONT_FOUND" | sed 's/\.psf.*$//')
+                    if sudo setfont "$FONT_BASE" 2>/dev/null; then
+                        echo "  ✓ Set font: $(basename "$FONT_BASE")"
+                    else
+                        echo "  ⚠ Could not set font (may need sudo)"
+                    fi
+                else
+                    echo "  ⚠ Could not set selected font"
+                fi
+            fi
         fi
     else
         echo "  ⚠ Font directory not found: $FONT_DIR"
