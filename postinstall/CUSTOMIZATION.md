@@ -536,6 +536,27 @@ Combining all recommended services for a laptop:
 2. Reboot after reconfiguring (desktop services need clean boot)
 3. Check logs: `sudo journalctl -u gdm` (for GNOME)
 
+### Can't Log In to GNOME (Password Not Working)
+
+**Symptom:** Password works in text console but not at GNOME login screen (GDM)
+
+**Cause:** Keyboard layout mismatch - password was set with `ctrl:swapcaps` (or other options) but GDM login screen uses default layout
+
+**Quick Fix:**
+1. Switch to text console: Press `Ctrl+Alt+F3` or `Ctrl+Alt+F4`
+2. Log in with your username and password (terminal uses correct layout)
+3. Reset password using default layout:
+   ```bash
+   passwd yourusername
+   ```
+   (Type password using default US layout, without `ctrl:swapcaps`)
+4. Switch back to graphical login: Press `Alt+F7` or `Alt+F1`
+5. Log in with new password
+
+**Permanent Fix:** The autostart script (`~/.config/autostart/keyboard-layout.desktop`) sets keyboard layout after login, but GDM needs it configured before login. For now, use a password that works with the default layout, or configure GDM keyboard layout manually via dconf (requires additional setup).
+
+**Note:** Root/admin accounts: In Guix, you typically don't log in as root on the desktop. Users have `sudo` access. To set a root password: `sudo passwd root`
+
 ---
 
 ## Further Reading

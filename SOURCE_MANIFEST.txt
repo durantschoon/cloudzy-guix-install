@@ -40,7 +40,7 @@ a5181634d7936eec4610c210b4c19a0fe16a16e547d01d69e7a69f03b65e16dc  lib/bootstrap-
 846f1ec4e17aa08200af7b74fb46f1c432f11c033998b4e533d5c0046a5033f9  lib/verify-guix-install.sh
 dd700229867cbb5dba178e1df492c382b0baa26701284f5ca33facd23442dc2f  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
-c0109da327380259477053659717badaaa7fbe46fdba93b4ba1071c3fd9dc201  postinstall/lib.sh
+059b85ce60273fd679e7ca1feb27a4d84fc9f73a432786ab752a761855a9421b  postinstall/lib.sh
 
 ## Guile Library Scripts
 
@@ -53,3 +53,7 @@ c0109da327380259477053659717badaaa7fbe46fdba93b4ba1071c3fd9dc201  postinstall/li
 65a34a9aecbdcd3d41bd1b8b454ff89df15085fc71735110da23d5ad1a0d4a4a  framework-dual/postinstall/customize
 5954e6350f562826b52249d41fee153b3621047ffa7ad0ca6553c0fe87c8477a  framework/postinstall/customize
 59818d2f9db089e2803417be1cd73def4bff1529c3497049e2c6949520228d87  raspberry-pi/postinstall/customize
+
+## Documentation
+
+c69ef19e993b25a32a0c2a87e7f2d90b8f0d2550dcb194ef0e03f419e6115a56  postinstall/CUSTOMIZATION.md

@@ -256,6 +256,15 @@ EOF
             info "✓ GNOME autostart script created: ~/.config/autostart/keyboard-layout.desktop"
             info "  This will automatically set keyboard layout ($layout with $options) when GNOME starts"
             echo ""
+            warn "⚠️  IMPORTANT: GDM Login Screen Keyboard Layout"
+            warn "   The autostart script only runs AFTER you log in."
+            warn "   The GDM login screen may still use the default keyboard layout."
+            warn "   If you can't log in:"
+            warn "   1. Switch to text console (Ctrl+Alt+F3)"
+            warn "   2. Log in there (uses correct layout)"
+            warn "   3. Reset password: passwd yourusername (use default layout)"
+            warn "   4. Switch back to graphical login (Alt+F7)"
+            echo ""
           else
             info "GNOME autostart script already exists - skipping creation"
           fi
