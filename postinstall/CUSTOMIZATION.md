@@ -534,7 +534,28 @@ Combining all recommended services for a laptop:
 
 1. Make sure you added desktop service to config.scm
 2. Reboot after reconfiguring (desktop services need clean boot)
-3. Check logs: `sudo journalctl -u gdm` (for GNOME)
+3. Check what display manager services are available:
+   ```bash
+   sudo herd status
+   # Look for: gdm (GNOME), lightdm (Xfce/MATE/LXQt), or sddm (KDE)
+   ```
+4. Check if display manager is running:
+   ```bash
+   # For GNOME:
+   sudo herd status gdm
+   
+   # For Xfce/MATE/LXQt:
+   sudo herd status lightdm
+   ```
+5. If service not found, check your config.scm:
+   ```bash
+   grep -i "desktop-service-type\|gdm\|lightdm" /etc/config.scm
+   ```
+6. Check logs (if service exists):
+   ```bash
+   sudo journalctl -u gdm    # For GNOME
+   sudo journalctl -u lightdm  # For Xfce/MATE/LXQt
+   ```
 
 ### Can't Log In to GNOME (Password Not Working)
 
