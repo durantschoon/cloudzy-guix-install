@@ -109,31 +109,47 @@ cd ~/guix-customize
 
 ## 🔀 Parallel Projects
 
-### Batch Conversion System (Phase 2 - COMPLETED)
+### Batch Conversion System
 
 **Goal**: Automated bash-to-Guile conversion using Anthropic Batch API with comprehensive validation.
 
-**Current Status**: All tooling complete ✅ - Ready for production use
+**Status Summary:**
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Tools** | ✅ Complete | All batch conversion tools built and tested |
+| **Conversions** | ⏳ In Progress | 20 scripts converted, 7 critical scripts remain |
+| **Deployment** | ⏸️ Not Started | Converted scripts not yet integrated into main codebase |
+
+**Conversion Status:**
+
+**✅ Converted (20 scripts in `tools/converted-scripts/`):**
+- Postinstall recipes (development, fonts, spacemacs, doom-emacs, vanilla-emacs)
+- Some lib scripts (bootstrap-installer, clean-install, postinstall, recovery-complete-install, verify-guix-install, verify-postinstall, channel-utils)
+- Note: These are converted but not yet deployed/reviewed
+
+**⏳ Remaining Critical Scripts (7 in `lib/`):**
+1. `lib/bootstrap-installer.sh` (267 lines) - Bootstrap logic
+2. `lib/channel-utils.sh` (235 lines) - Channel/mirror selection
+3. `lib/clean-install.sh` (134 lines) - Installation wrapper
+4. `lib/postinstall.sh` (31 lines) - Channel utilities (priority: simplest)
+5. `lib/recovery-complete-install.sh` (458 lines) - Recovery flows
+6. `lib/verify-guix-install.sh` (305 lines) - Verification checks
+7. `lib/verify-postinstall.sh` - Post-install verification
+
+**Next Steps:**
+1. ⏳ Review and test converted scripts in `tools/converted-scripts/`
+2. ⏳ Convert remaining 7 critical scripts (priority: `lib/postinstall.sh`)
+3. ⏳ Deploy converted scripts (replace `.sh` references with `.scm`)
+4. ⏳ Add structured comments to remaining scripts before conversion
 
 **Documentation:**
 - **Getting Started**: [tools/README.md](tools/README.md) - Complete workflow and usage guide
 - **Detailed Plan**: [tools/BATCH_CONVERSION_PLAN.md](tools/BATCH_CONVERSION_PLAN.md) - Roadmap and enhancement plan
 - **Best Practices**: [docs/BATCH_CONVERSION_BEST_PRACTICES.md](docs/BATCH_CONVERSION_BEST_PRACTICES.md) - Pre-conversion preparation guide
-
-**Quick Summary:**
-
-- ✅ Phase 1: Core batch tools complete → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-system-2025-11-15)
-- ✅ Enhanced features complete → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
-- ⏳ Phase 2: Add validation (syntax checks, diff-based comparison, test account)
-- 📅 Phase 3: Execute first batch conversion (3 recipe scripts)
-- 📋 Future: Generalize system for any language pair (see [tools/GENERALIZATION_PLAN.md](tools/GENERALIZATION_PLAN.md))
-  - System is ~85% ready for generalization
-  - ~15 hardcoded values need parameterization (2-3 hours work)
-  - Architecture is well-separated and clean
+- **Deployment Guide**: [tools/DEPLOYMENT_CHECKLIST.md](tools/DEPLOYMENT_CHECKLIST.md) - Steps to deploy converted scripts
 
 **Why Parallel**: Can be developed independently while framework-dual testing proceeds. Low risk, high value for future script migrations.
-
-**Timeline**: 2-3 weeks to complete enhancements, then ready for production use.
 
 **Cost**: ~$0.12 for 3 scripts (50% savings vs interactive conversion)
 
