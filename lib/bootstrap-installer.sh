@@ -108,6 +108,9 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
             echo "  Please choose a font from the list below, or keep the current font:"
             echo ""
             
+            # Mark that we've interacted with user (stdin is working)
+            STDIN_VERIFIED=true
+            
             # List large fonts (containing 24, 32, or 36 in name) first, then all others
             LARGE_FONTS=()
             OTHER_FONTS=()
@@ -124,21 +127,41 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
                 done < <(ls "$FONT_DIR" 2>/dev/null | sort -u)
             fi
             
-            # Show large fonts first
+            # Show large fonts first (in multiple columns)
             if [[ ${#LARGE_FONTS[@]} -gt 0 ]]; then
                 echo "  Large fonts (recommended for high-DPI displays):"
-                for i in "${!LARGE_FONTS[@]}"; do
-                    printf "    %2d) %s\n" $((i+1)) "${LARGE_FONTS[$i]}"
+                # Calculate number of columns (3 columns, or fewer if not enough fonts)
+                COLS=3
+                ROWS=$(( (${#LARGE_FONTS[@]} + COLS - 1) / COLS ))
+                for ((row=0; row<ROWS; row++)); do
+                    printf "    "
+                    for ((col=0; col<COLS; col++)); do
+                        idx=$((row + col * ROWS))
+                        if [[ $idx -lt ${#LARGE_FONTS[@]} ]]; then
+                            printf "%2d) %-20s" $((idx+1)) "${LARGE_FONTS[$idx]}"
+                        fi
+                    done
+                    echo ""
                 done
                 echo ""
             fi
             
-            # Show other fonts
+            # Show other fonts (in multiple columns)
             if [[ ${#OTHER_FONTS[@]} -gt 0 ]]; then
                 echo "  Other available fonts:"
                 start_num=$((${#LARGE_FONTS[@]} + 1))
-                for i in "${!OTHER_FONTS[@]}"; do
-                    printf "    %2d) %s\n" $((start_num + i)) "${OTHER_FONTS[$i]}"
+                # Calculate number of columns (3 columns, or fewer if not enough fonts)
+                COLS=3
+                ROWS=$(( (${#OTHER_FONTS[@]} + COLS - 1) / COLS ))
+                for ((row=0; row<ROWS; row++)); do
+                    printf "    "
+                    for ((col=0; col<COLS; col++)); do
+                        idx=$((row + col * ROWS))
+                        if [[ $idx -lt ${#OTHER_FONTS[@]} ]]; then
+                            printf "%2d) %-20s" $((start_num + idx)) "${OTHER_FONTS[$idx]}"
+                        fi
+                    done
+                    echo ""
                 done
                 echo ""
             fi
@@ -148,9 +171,11 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
             echo "    $(($total_fonts + 1))) Keep current font (skip font change)"
             echo ""
             
-            # Prompt user
+            # Prompt user (stdin already verified by this point)
             while true; do
                 read -p "  Enter your choice [1-$(($total_fonts + 1))]: " choice </dev/tty
+                # Mark stdin as verified
+                STDIN_VERIFIED=true
                 
                 if [[ "$choice" =~ ^[0-9]+$ ]]; then
                     if [[ "$choice" -ge 1 && "$choice" -le ${#LARGE_FONTS[@]} ]]; then
@@ -202,10 +227,12 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
     echo ""
 fi
 
-# Test that stdin is working before proceeding
-echo "Testing stdin availability..."
-read -p "Press Enter to continue (or Ctrl+C to abort): " -r </dev/tty
-echo ""
+# Test that stdin is working before proceeding (skip if already verified via font selection)
+if [[ -z "${STDIN_VERIFIED:-}" ]]; then
+    echo "Testing stdin availability..."
+    read -p "Press Enter to continue (or Ctrl+C to abort): " -r </dev/tty
+    echo ""
+fi
 
 # Create temporary directory
 WORK_DIR=$(mktemp -d)

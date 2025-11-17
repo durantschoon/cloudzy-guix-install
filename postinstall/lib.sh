@@ -301,10 +301,27 @@ add_console_font() {
     return
   fi
   
-  # List available large fonts
+  # List available large fonts (in multiple columns)
   echo "Available large fonts:"
   if [ -d "/run/current-system/profile/share/consolefonts" ]; then
-    ls /run/current-system/profile/share/consolefonts/ 2>/dev/null | grep -E '24|32|36' | head -10 | sed 's/\.psf.*$//' | sort -u | nl -w2 -s') '
+    # Get list of fonts and display in columns
+    FONTS=($(ls /run/current-system/profile/share/consolefonts/ 2>/dev/null | grep -E '24|32|36' | head -10 | sed 's/\.psf.*$//' | sort -u))
+    if [ ${#FONTS[@]} -gt 0 ]; then
+      COLS=3
+      ROWS=$(( (${#FONTS[@]} + COLS - 1) / COLS ))
+      for ((row=0; row<ROWS; row++)); do
+        printf "  "
+        for ((col=0; col<COLS; col++)); do
+          idx=$((row + col * ROWS))
+          if [ $idx -lt ${#FONTS[@]} ]; then
+            printf "%-25s" "${FONTS[$idx]}"
+          fi
+        done
+        echo ""
+      done
+    else
+      echo "  (No large fonts found - will use default)"
+    fi
   else
     echo "  (Font directory not found - will use default)"
   fi
