@@ -1403,6 +1403,20 @@ func RunGuixSystemInitFreeSoftware() error {
 	fmt.Println()
 	fmt.Println("Estimated time: 5-30 minutes depending on substitutes")
 	fmt.Println()
+	
+	// Ensure /mnt/run exists (required for current-system symlink)
+	if err := os.MkdirAll("/mnt/run", 0755); err != nil {
+		return fmt.Errorf("failed to create /mnt/run directory: %w", err)
+	}
+	
+	// Check disk space before starting
+	cmd := exec.Command("df", "-h", "/mnt")
+	if output, err := cmd.Output(); err == nil {
+		fmt.Println("Disk space check:")
+		fmt.Println(string(output))
+		fmt.Println()
+	}
+
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
 	fmt.Println()
@@ -1415,6 +1429,13 @@ func RunGuixSystemInitFreeSoftware() error {
 			fmt.Printf("\n[RETRY %d/%d] Retrying guix system init...\n", attempt, maxRetries)
 			fmt.Println("Waiting 10 seconds before retry...")
 			fmt.Println()
+			
+			// Before retry, check daemon status and disk space
+			fmt.Println("Checking system state before retry...")
+			exec.Command("herd", "status", "guix-daemon").Run()
+			exec.Command("df", "-h", "/mnt").Run()
+			fmt.Println()
+			
 			time.Sleep(10 * time.Second)
 		}
 
@@ -1432,27 +1453,74 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println("Verifying that system init completed successfully...")
 		
 		// Check 1: Verify /mnt/run/current-system symlink is valid (key diagnostic from framework-dual)
-		if linkTarget, err := os.Readlink("/mnt/run/current-system"); err != nil {
+		linkTarget, err := os.Readlink("/mnt/run/current-system")
+		if err != nil {
 			lastErr = fmt.Errorf("guix system init completed but /mnt/run/current-system symlink is missing or broken: %w", err)
+			fmt.Printf("\n[WARN] Attempt %d: %v\n", attempt, lastErr)
+			fmt.Println("       This indicates the system generation was not built correctly.")
+			
+			// Try to find and create the symlink manually as a workaround
+			fmt.Println("       Attempting workaround: searching for system generation in store...")
+			cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
+			if output, err := cmd.Output(); err == nil {
+				systemPath := strings.TrimSpace(string(output))
+				if systemPath != "" {
+					fmt.Printf("       Found system generation: %s\n", systemPath)
+					if _, err := os.Stat(systemPath); err == nil {
+						// Try to create the symlink manually
+						os.Remove("/mnt/run/current-system") // Remove if exists
+						if err := os.Symlink(systemPath, "/mnt/run/current-system"); err == nil {
+							fmt.Printf("       [OK] Manually created symlink: /mnt/run/current-system -> %s\n", systemPath)
+							// Re-read the symlink
+							linkTarget, err = os.Readlink("/mnt/run/current-system")
+							if err != nil {
+								fmt.Printf("       [WARN] Failed to read symlink after creation: %v\n", err)
+								if attempt < maxRetries {
+									fmt.Println("       The command will automatically retry...")
+								}
+								continue
+							}
+							fmt.Println("       [OK] Symlink is now valid - continuing verification...")
+						} else {
+							fmt.Printf("       [WARN] Failed to create symlink: %v\n", err)
+							if attempt < maxRetries {
+								fmt.Println("       The command will automatically retry...")
+							}
+							continue
+						}
+					} else {
+						fmt.Printf("       [WARN] System generation path doesn't exist: %s\n", systemPath)
+						if attempt < maxRetries {
+							fmt.Println("       The command will automatically retry...")
+						}
+						continue
+					}
+				} else {
+					fmt.Println("       [WARN] No system generation found in /gnu/store")
+					if attempt < maxRetries {
+						fmt.Println("       The command will automatically retry...")
+					}
+					continue
+				}
+			} else {
+				if attempt < maxRetries {
+					fmt.Println("       The command will automatically retry...")
+				}
+				continue
+			}
+		}
+		
+		// Symlink exists - verify it points to a valid target
+		if _, err := os.Stat(linkTarget); err != nil {
+			lastErr = fmt.Errorf("guix system init completed but /mnt/run/current-system points to non-existent path: %s", linkTarget)
 			fmt.Printf("\n[WARN] Attempt %d: %v\n", attempt, lastErr)
 			fmt.Println("       This indicates the system generation was not built correctly.")
 			if attempt < maxRetries {
 				fmt.Println("       The command will automatically retry...")
 			}
 			continue
-		} else {
-			// Check if symlink target actually exists
-			if _, err := os.Stat(linkTarget); err != nil {
-				lastErr = fmt.Errorf("guix system init completed but /mnt/run/current-system points to non-existent path: %s", linkTarget)
-				fmt.Printf("\n[WARN] Attempt %d: %v\n", attempt, lastErr)
-				fmt.Println("       This indicates the system generation was not built correctly.")
-				if attempt < maxRetries {
-					fmt.Println("       The command will automatically retry...")
-				}
-				continue
-			}
-			fmt.Printf("[OK] System generation symlink valid: /mnt/run/current-system -> %s\n", linkTarget)
 		}
+		fmt.Printf("[OK] System generation symlink valid: /mnt/run/current-system -> %s\n", linkTarget)
 		
 		// Check 2: Verify kernel and initrd files exist
 		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
