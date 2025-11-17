@@ -2,7 +2,17 @@
 
 This archive contains all completed items from CHECKLIST.md, listed with newest items at the top.
 
-**Last Updated:** 2025-11-15
+**Last Updated:** 2025-11-16
+
+---
+
+## GNOME Keyboard Layout & Password Fixes (2025-11-16)
+
+- ✅ GNOME keyboard layout auto-configuration: Automatically creates `gsettings` autostart script when GNOME + keyboard options detected (Wayland-compatible, not setxkbmap)
+- ✅ Keyboard layout warning: Added warning when setting password during installation if `ctrl:swapcaps` is configured, instructing user to type password as if swap is NOT enabled (for GDM compatibility)
+- ✅ Ctrl-C signal handling: Installer now catches SIGINT/SIGTERM and provides helpful recovery instructions (run verify-guix-install.sh and recovery-complete-install.sh)
+- ✅ Updated autostart script to use `gsettings` instead of `setxkbmap` for Wayland/GNOME compatibility
+- ✅ Added troubleshooting documentation for GDM password issues and keyboard layout configuration
 
 ---
 

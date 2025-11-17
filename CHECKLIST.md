@@ -27,12 +27,10 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 
 ## ✅ Latest Completed Items
 
-**Most Recent (2025-11-15):**
-1. ✅ GNOME keyboard layout auto-configuration: Automatically adds `setxkbmap` package and creates autostart script when GNOME + keyboard options detected
-2. ✅ Ctrl-C signal handling: Installer now catches SIGINT and provides helpful recovery instructions
-3. ✅ Framework-dual GNOME testing: GNOME launches successfully, display manager working
-4. Fixed bootstrap-postinstall.scm syntax errors, path resolution, and Go detection
-5. Fixed customize script path resolution and postinstall/lib.sh INSTALL_ROOT usage
+**Most Recent:**
+1. ✅ GNOME keyboard layout auto-configuration (gsettings/Wayland-compatible) → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
+2. ✅ Ctrl-C signal handling with recovery instructions → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
+3. ✅ Keyboard layout warning during password setup → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -46,7 +44,6 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 
 - ✅ Phase 1: Library infrastructure complete → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-1-2025-11-15)
 - ✅ Phase 2: Update postinstall scripts to use Guile helper → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-2-2025-11-15)
-  - ⏳ Ready for real-world testing on framework-dual
 
 - ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
   - **Before converting**: Add structured comments to originals (see [docs/BATCH_CONVERSION_BEST_PRACTICES.md](docs/BATCH_CONVERSION_BEST_PRACTICES.md))
@@ -56,21 +53,17 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - **Workflow**: See [tools/README.md](tools/README.md) for batch conversion process
 
 - ✅ Batch Conversion Tools (COMPLETED) → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
-  - ⏳ Ready for review: Results available at tools/batch-results.jsonl
-  - **Usage Guide**: [tools/README.md](tools/README.md)
 
 **Testing Strategy:**
 
 - ✅ **Guile (.scm) scripts**: Fully tested in Docker + run-tests.sh → [See archive](archive/CHECKLIST_COMPLETED.md#testing-infrastructure-2025-11-15)
 - ⏸️ **Shell (.sh) scripts**: Not actively testing, will migrate to Guile
-- 🎯 **Focus**: Guile-based postinstall workflow from GNOME config onward
-- 📝 **Developer docs**: See docs/POSTINSTALL_DEV.md for workflow
 
 **Framework-dual postinstall (IN TESTING):**
 
 - ✅ All fixes complete → [See archive](archive/CHECKLIST_COMPLETED.md#framework-dual-postinstall-improvements-2025-11-15)
 - ✅ Bootstrap script fixes → [See archive](archive/CHECKLIST_COMPLETED.md#recent-bootstrap--path-resolution-fixes-2025-11-15)
-- ✅ GNOME launches successfully - display manager working
+- ✅ GNOME launches successfully - display manager working (but login issues remain - see current issues below)
 - ⚠️ **CURRENT ISSUES** (framework-dual testing):
   1. **Password login failure at GDM**: Password works at text console but fails at GNOME login screen
      - Password is lowercase letters only (no Caps Lock/Ctrl keys)
@@ -78,13 +71,12 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
      - Even after resetting password multiple times, still fails
      - New user created also has same issue
   2. **Keyboard layout mismatch**: Password set with `ctrl:swapcaps` but GDM uses default layout
-     - ✅ **FIX IMPLEMENTED**: Warning added when setting password during installation
-     - ✅ **FIX IMPLEMENTED**: Automatic `gsettings` autostart script creation (Wayland-compatible, not setxkbmap)
+     - ✅ **FIX IMPLEMENTED**: Warning added when setting password during installation → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
+     - ✅ **FIX IMPLEMENTED**: Automatic `gsettings` autostart script creation (Wayland-compatible) → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
   3. **User shell path issue**: New users created with `/bin/bash` which doesn't exist in Guix
      - Should use `/run/current-system/profile/bin/bash`
      - Fixed manually via `chsh` or editing `/etc/passwd`
   4. **Next step**: Try Xfce instead of GNOME to isolate if issue is GNOME/GDM-specific
-- ✅ **FIX IMPLEMENTED**: Ctrl-C signal handling in installer with helpful recovery instructions
 - 🧪 **NEXT**: Test Xfce login, verify if issue is GNOME-specific or affects all desktop environments
 
 **Bootstrap Command for Testing:**
