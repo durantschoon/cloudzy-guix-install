@@ -598,6 +598,40 @@ Combining all recommended services for a laptop:
    - If password was set during installation before keyboard config, it might have been set with ISO default layout
    - Reset password from console (which uses your config.scm layout) and type it as if GDM uses default US QWERTY
 
+**Troubleshooting Autostart Script Not Working:**
+
+If the autostart script exists but keyboard layout isn't being applied in GNOME:
+
+1. **Check if autostart file exists:**
+   ```bash
+   ls -la ~/.config/autostart/keyboard-layout.desktop
+   cat ~/.config/autostart/keyboard-layout.desktop
+   ```
+
+2. **Check if setxkbmap is installed:**
+   ```bash
+   which setxkbmap
+   setxkbmap -query
+   ```
+
+3. **Manually test the command:**
+   ```bash
+   setxkbmap us -option ctrl:swapcaps
+   ```
+   Then test: Caps Lock should now act as Ctrl, Ctrl should act as Caps Lock
+
+4. **If manual command works but autostart doesn't:**
+   - The autostart script might be running before X11 is fully initialized
+   - Try adding a delay or running it manually after login
+   - Or add it to your `~/.bashrc` or `~/.profile` as a workaround:
+     ```bash
+     setxkbmap us -option ctrl:swapcaps 2>/dev/null || true
+     ```
+
+5. **Check GNOME Settings:**
+   - Open Settings → Keyboard
+   - Check if keyboard layout is set there (GNOME Settings might override autostart)
+
 **Permanent Fix:** The autostart script (`~/.config/autostart/keyboard-layout.desktop`) sets keyboard layout after login, but GDM needs it configured before login. For now, use a password that works with the default layout, or configure GDM keyboard layout manually via dconf (requires additional setup).
 
 **Note:** Root/admin accounts: In Guix, you typically don't log in as root on the desktop. Users have `sudo` access. To set a root password: `sudo passwd root`
