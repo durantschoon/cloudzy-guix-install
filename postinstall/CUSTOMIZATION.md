@@ -540,24 +540,41 @@ Combining all recommended services for a laptop:
 
 **Symptom:** Password works in text console but not at GNOME login screen (GDM)
 
-**Cause:** Keyboard layout mismatch - password was set with `ctrl:swapcaps` (or other options) but GDM login screen uses default layout
+**Possible Causes:**
+
+1. **Keyboard layout mismatch** - Password was set with a different keyboard layout than GDM uses
+2. **Password set during installation** - Password might have been set before keyboard layout was configured
+3. **GDM using different base layout** - GDM might not be inheriting the system keyboard layout from `config.scm`
+4. **Num Lock state** - If password contains numbers, Num Lock state might differ between console and GDM
+5. **Special characters** - Password might contain characters that are mapped differently in GDM vs console
+
+**Diagnosis Steps:**
+
+1. **Check what keyboard layout GDM is using:**
+   - At the GDM login screen, look for a keyboard icon/layout indicator (usually in the top-right corner)
+   - Click it to see what layout is active
+   - Compare with what's in your `/etc/config.scm`
+
+2. **Check when password was set:**
+   - Was it set during installation (before keyboard layout was configured)?
+   - Was it set after configuring keyboard layout?
 
 **Quick Fix:**
+
 1. Switch to text console: Press `Ctrl+Alt+F3` or `Ctrl+Alt+F4`
 2. Log in with your username and password (terminal uses correct layout)
-3. Reset password - **you don't need to change config.scm**. When typing your new password, mentally "translate" it:
-   - The text console currently has `ctrl:swapcaps` enabled (from your config.scm)
-   - GDM uses the default layout (no swap)
-   - So when typing your password, type it as if Caps Lock and Ctrl are **NOT** swapped
-   - For example: if you want password "Hello123", type it normally (don't swap Caps Lock and Ctrl)
+3. **Reset password** - Set it fresh while logged into the console:
    ```bash
    passwd yourusername
    ```
-   This ensures the password will work in GDM which uses the default layout.
-4. Switch back to graphical login: Press `Alt+F7` or `Alt+F1`
-5. Log in with new password
+   **Important:** Type the password exactly as you want it to work in GDM. If GDM is using a different layout, you may need to mentally "translate" or use a password that works with both layouts.
 
-**Why this works:** Your `config.scm` already has `ctrl:swapcaps` configured, which applies to the text console. But GDM (the login screen) doesn't use this - it uses the default layout. So you need to set a password that works with the default layout. Once you log in, the autostart script will restore your `ctrl:swapcaps` layout for your desktop session.
+4. **If password contains numbers:** Make sure Num Lock state matches between console and GDM
+
+5. Switch back to graphical login: Press `Alt+F7` or `Alt+F1`
+6. Log in with new password
+
+**Alternative:** If the issue persists, try setting the password from within a GNOME session (if you can get in another way, like SSH or switching users), or check if GDM keyboard layout can be configured via dconf.
 
 **Permanent Fix:** The autostart script (`~/.config/autostart/keyboard-layout.desktop`) sets keyboard layout after login, but GDM needs it configured before login. For now, use a password that works with the default layout, or configure GDM keyboard layout manually via dconf (requires additional setup).
 
