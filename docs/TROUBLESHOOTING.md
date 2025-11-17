@@ -726,6 +726,133 @@ herd start guix-daemon
 
 ---
 
+## Corrupted Derivation Files
+
+### Symptom: "error parsing derivation ... expected string 'Derive(['"
+
+**What happened:** A derivation file in `/gnu/store` is corrupted, causing `guix system reconfigure` to fail.
+
+**⚠️ BEFORE DELETING ALL GENERATIONS** - Try these less destructive options first:
+
+#### Step 1: Find What's Referencing the Corrupted Derivation
+
+```bash
+# Find what's keeping the derivation "alive"
+sudo guix gc --referrers /gnu/store/...-corrupted-file.drv
+
+# This shows what's referencing it (system generation, user profile, etc.)
+```
+
+#### Step 2: Try to Repair the Corruption
+
+```bash
+# Attempt to repair corrupted store items
+sudo guix gc --verify=contents,repair
+
+# This may fix the corruption without needing to rebuild
+```
+
+#### Step 3: Check User Profiles (Not Just System Generations)
+
+```bash
+# List user profile generations that might reference it
+guix package --list-generations
+
+# Delete old user profile generations
+guix package --delete-generations=1m  # Delete older than 1 month
+
+# Then try garbage collection
+sudo guix gc
+```
+
+#### Step 4: Restart Daemon (Clears Cache)
+
+```bash
+# Daemon might have corrupted derivation cached
+herd restart guix-daemon
+
+# Wait a moment, then try reconfigure again
+sudo guix system reconfigure /etc/config.scm
+```
+
+#### Step 5: Force Rebuild with --fallback
+
+```bash
+# Force rebuild even if substitutes fail (may bypass corrupted derivation)
+sudo guix system reconfigure /etc/config.scm --fallback
+
+# Or use --no-grafts to avoid graft derivations
+sudo guix system reconfigure /etc/config.scm --no-grafts
+```
+
+#### Step 6: Remove Only Old System Generations (Not Current)
+
+```bash
+# List all system generations
+sudo guix system list-generations
+
+# Delete only old ones (keep current)
+sudo guix system delete-generations 1d  # Delete older than 1 day
+
+# Or delete specific old generation
+sudo guix system delete-generations <generation-number>
+
+# Then try deleting the corrupted derivation
+sudo guix gc --delete /gnu/store/...-corrupted-file.drv
+```
+
+#### Step 7: Manual Fix (Advanced - Only if Derivation File is Trivially Corrupted)
+
+```bash
+# If it's just a parsing error, you might be able to manually fix the .drv file
+# WARNING: This is risky and may cause inconsistencies
+
+# First, make a backup
+sudo cp /gnu/store/...-corrupted-file.drv /gnu/store/...-corrupted-file.drv.backup
+
+# Check what's wrong with it
+cat /gnu/store/...-corrupted-file.drv | head -20
+
+# If it's just missing a closing bracket or similar, you might fix it
+# But this is NOT recommended - better to rebuild
+```
+
+#### Step 8: Last Resort - Delete All Generations
+
+**Only if all above steps fail:**
+
+```bash
+# Delete all system generations (removes rollback capability)
+sudo guix system delete-generations
+
+# Delete all user profile generations
+guix package --delete-generations
+
+# Run garbage collection
+sudo guix gc
+
+# Now try to delete corrupted derivation
+sudo guix gc --delete /gnu/store/...-corrupted-file.drv
+
+# Rebuild system (will download/build everything again)
+sudo guix system reconfigure /etc/config.scm
+```
+
+**Why deleting all generations worked:** The corrupted derivation was referenced by the current system generation (which you can't delete). By deleting all generations, you removed all references, allowing the corrupted derivation to be garbage collected. However, this forces a complete rebuild.
+
+**Better approach:** If `guix gc --referrers` shows it's referenced by the current generation, you can:
+1. Make a small change to `config.scm` (add a comment, change a service option)
+2. Run `guix system reconfigure` - this creates a NEW generation
+3. The old generation (with corrupted derivation) can then be deleted
+4. The corrupted derivation will be garbage collected
+
+**Prevention:**
+- Run `guix gc --verify=contents` periodically to catch corruption early
+- Keep multiple generations for rollback (don't delete all at once)
+- Use `guix gc --verify=repair` if corruption is detected
+
+---
+
 ## Cow-Store Issues
 
 ### Cow-Store Not Redirecting
