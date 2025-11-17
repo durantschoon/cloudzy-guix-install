@@ -118,30 +118,38 @@ cd ~/guix-customize
 | Component | Status | Details |
 |-----------|--------|---------|
 | **Tools** | ✅ Complete | All batch conversion tools built and tested |
-| **Conversions** | ⏳ In Progress | 20 scripts converted, 7 critical scripts remain |
+| **Conversions** | ✅ Complete | All 20 scripts converted (7 lib scripts + 13 postinstall recipes) |
+| **Review** | ⏸️ Not Started | Converted scripts not yet reviewed or tested |
 | **Deployment** | ⏸️ Not Started | Converted scripts not yet integrated into main codebase |
 
 **Conversion Status:**
 
-**✅ Converted (20 scripts in `tools/converted-scripts/`):**
-- Postinstall recipes (development, fonts, spacemacs, doom-emacs, vanilla-emacs)
-- Some lib scripts (bootstrap-installer, clean-install, postinstall, recovery-complete-install, verify-guix-install, verify-postinstall, channel-utils)
-- Note: These are converted but not yet deployed/reviewed
+**✅ Converted Scripts (20 total in `tools/converted-scripts/`):**
 
-**⏳ Remaining Critical Scripts (7 in `lib/`):**
-1. `lib/bootstrap-installer.sh` (267 lines) - Bootstrap logic
-2. `lib/channel-utils.sh` (235 lines) - Channel/mirror selection
-3. `lib/clean-install.sh` (134 lines) - Installation wrapper
-4. `lib/postinstall.sh` (31 lines) - Channel utilities (priority: simplest)
-5. `lib/recovery-complete-install.sh` (458 lines) - Recovery flows
-6. `lib/verify-guix-install.sh` (305 lines) - Verification checks
-7. `lib/verify-postinstall.sh` - Post-install verification
+**Lib Scripts (7):**
+1. `lib_bootstrap-installer.scm` (from `lib/bootstrap-installer.sh` - 267 lines)
+2. `lib_channel-utils.scm` (from `lib/channel-utils.sh` - 235 lines)
+3. `lib_clean-install.scm` (from `lib/clean-install.sh` - 134 lines)
+4. `lib_postinstall.scm` (from `lib/postinstall.sh` - 31 lines)
+5. `lib_recovery-complete-install.scm` (from `lib/recovery-complete-install.sh` - 458 lines)
+6. `lib_verify-guix-install.scm` (from `lib/verify-guix-install.sh` - 305 lines)
+7. `lib_verify-postinstall.scm` (from `lib/verify-postinstall.sh`)
+
+**Postinstall Recipes (13):**
+- `postinstall/recipes/add-development.scm`
+- `postinstall/recipes/add-fonts.scm`
+- `postinstall/recipes/add-spacemacs.scm`
+- `postinstall/recipes/add-doom-emacs.scm`
+- `postinstall/recipes/add-vanilla-emacs.scm`
+- Plus test files and templates
+
+**⚠️ Important:** All scripts are converted but **not yet reviewed, tested, or deployed**. Original `.sh` versions still in use.
 
 **Next Steps:**
-1. ⏳ Review and test converted scripts in `tools/converted-scripts/`
-2. ⏳ Convert remaining 7 critical scripts (priority: `lib/postinstall.sh`)
-3. ⏳ Deploy converted scripts (replace `.sh` references with `.scm`)
-4. ⏳ Add structured comments to remaining scripts before conversion
+1. ⏳ **Review** converted scripts in `tools/converted-scripts/` for correctness
+2. ⏳ **Test** converted scripts (run tests, verify functionality matches bash versions)
+3. ⏳ **Deploy** converted scripts (replace `.sh` references with `.scm` in codebase)
+4. ⏳ **Remove** original `.sh` files after successful deployment
 
 **Documentation:**
 - **Getting Started**: [tools/README.md](tools/README.md) - Complete workflow and usage guide
