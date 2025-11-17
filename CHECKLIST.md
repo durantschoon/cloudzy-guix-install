@@ -71,12 +71,21 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - ✅ All fixes complete → [See archive](archive/CHECKLIST_COMPLETED.md#framework-dual-postinstall-improvements-2025-11-15)
 - ✅ Bootstrap script fixes → [See archive](archive/CHECKLIST_COMPLETED.md#recent-bootstrap--path-resolution-fixes-2025-11-15)
 - ✅ GNOME launches successfully - display manager working
-- ⚠️ **CURRENT ISSUE**: Password/keyboard layout mismatch - password set with `ctrl:swapcaps` but GNOME uses default layout
-  - **Workaround**: Reset password from text console (Ctrl+Alt+F3, login as root, `passwd username`)
-  - **Root cause**: GNOME doesn't inherit system keyboard layout options, needs `setxkbmap` autostart script
-- ✅ **FIX IMPLEMENTED**: Automatic `setxkbmap` package addition and autostart script creation when GNOME + keyboard options detected (prevents issue for future users)
+- ⚠️ **CURRENT ISSUES** (framework-dual testing):
+  1. **Password login failure at GDM**: Password works at text console but fails at GNOME login screen
+     - Password is lowercase letters only (no Caps Lock/Ctrl keys)
+     - Password works via `su` at console, but GDM rejects it
+     - Even after resetting password multiple times, still fails
+     - New user created also has same issue
+  2. **Keyboard layout mismatch**: Password set with `ctrl:swapcaps` but GDM uses default layout
+     - ✅ **FIX IMPLEMENTED**: Warning added when setting password during installation
+     - ✅ **FIX IMPLEMENTED**: Automatic `gsettings` autostart script creation (Wayland-compatible, not setxkbmap)
+  3. **User shell path issue**: New users created with `/bin/bash` which doesn't exist in Guix
+     - Should use `/run/current-system/profile/bin/bash`
+     - Fixed manually via `chsh` or editing `/etc/passwd`
+  4. **Next step**: Try Xfce instead of GNOME to isolate if issue is GNOME/GDM-specific
 - ✅ **FIX IMPLEMENTED**: Ctrl-C signal handling in installer with helpful recovery instructions
-- 🧪 **NEXT**: Test password reset and verify autostart script works after reconfigure
+- 🧪 **NEXT**: Test Xfce login, verify if issue is GNOME-specific or affects all desktop environments
 
 **Bootstrap Command for Testing:**
 
