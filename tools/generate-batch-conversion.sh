@@ -202,14 +202,36 @@ Test file structure:
 
 OUTPUT FORMAT:
 
-Provide TWO files:
+CRITICAL: Provide ONLY raw Scheme code. Do NOT wrap in markdown code blocks or use markdown formatting.
 
-1. The converted Guile script (complete .scm file content starting with shebang)
-2. The test file (complete test-<script-name>.scm file content)
+Provide TWO files in your response as RAW SCHEME CODE ONLY:
 
-Separate the two files with a clear delimiter:
+1. The converted Guile script (raw .scm file content starting with shebang #!/run/current-system/profile/bin/guile)
+2. The test file (raw test-<script-name>.scm file content)
+
+DO NOT include:
+- Markdown code fences (```scheme or ```)
+- Markdown headers (# Converted Script)
+- Any explanatory text or commentary
+- Any formatting except the raw Scheme code
+
+Format your response EXACTLY like this:
+
+#!/run/current-system/profile/bin/guile --no-auto-compile -s
+!#
+
+;;; Your converted Guile script here
+(use-modules ...)
+
 ---TEST FILE---
-Then provide the test file content.
+
+#!/run/current-system/profile/bin/guile --no-auto-compile -s
+!#
+
+;;; Your test file here
+(use-modules (srfi srfi-64) ...)
+
+The delimiter "---TEST FILE---" should appear on its own line between the two files.
 
 If the script is too simple to warrant tests, include a minimal test file that at least verifies the script can be loaded without errors.
 """.format(docs=docs, script_path=script_path, script_content=script_content)

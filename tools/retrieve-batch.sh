@@ -195,6 +195,30 @@ with open(results_file, 'r', encoding='utf-8') as f:
                     
                     content = message['content'][0]['text']
 
+                    # Strip markdown wrapping if present (defensive fallback)
+                    # Claude may still wrap in markdown despite instructions
+                    lines = content.split('\n')
+
+                    # Check if first line is markdown header
+                    if lines and lines[0].strip().startswith('# '):
+                        # Remove first line (markdown header)
+                        lines = lines[1:]
+
+                    # Check if next line is empty and following is code fence
+                    if len(lines) >= 2 and not lines[0].strip() and lines[1].strip().startswith('```'):
+                        # Remove empty line and code fence
+                        lines = lines[2:]
+                    elif lines and lines[0].strip().startswith('```'):
+                        # Remove code fence
+                        lines = lines[1:]
+
+                    # Check if last line is closing code fence
+                    if lines and lines[-1].strip() == '```':
+                        lines = lines[:-1]
+
+                    # Rejoin content
+                    content = '\n'.join(lines)
+
                     # Check if content contains test file delimiter
                     if '---TEST FILE---' in content:
                         # Split into script and test file
