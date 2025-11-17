@@ -545,13 +545,19 @@ Combining all recommended services for a laptop:
 **Quick Fix:**
 1. Switch to text console: Press `Ctrl+Alt+F3` or `Ctrl+Alt+F4`
 2. Log in with your username and password (terminal uses correct layout)
-3. Reset password using default layout:
+3. Reset password - **you don't need to change config.scm**. When typing your new password, mentally "translate" it:
+   - The text console currently has `ctrl:swapcaps` enabled (from your config.scm)
+   - GDM uses the default layout (no swap)
+   - So when typing your password, type it as if Caps Lock and Ctrl are **NOT** swapped
+   - For example: if you want password "Hello123", type it normally (don't swap Caps Lock and Ctrl)
    ```bash
    passwd yourusername
    ```
-   (Type password using default US layout, without `ctrl:swapcaps`)
+   This ensures the password will work in GDM which uses the default layout.
 4. Switch back to graphical login: Press `Alt+F7` or `Alt+F1`
 5. Log in with new password
+
+**Why this works:** Your `config.scm` already has `ctrl:swapcaps` configured, which applies to the text console. But GDM (the login screen) doesn't use this - it uses the default layout. So you need to set a password that works with the default layout. Once you log in, the autostart script will restore your `ctrl:swapcaps` layout for your desktop session.
 
 **Permanent Fix:** The autostart script (`~/.config/autostart/keyboard-layout.desktop`) sets keyboard layout after login, but GDM needs it configured before login. For now, use a password that works with the default layout, or configure GDM keyboard layout manually via dconf (requires additional setup).
 
