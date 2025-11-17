@@ -1994,6 +1994,24 @@ func SetUserPassword(username string) error {
 	fmt.Println("You will need this password to log in after first boot.")
 	fmt.Println()
 
+	// Check if keyboard layout has swap options (like ctrl:swapcaps)
+	// If so, warn user to type password as if swap is NOT enabled (for GDM compatibility)
+	configPath := "/mnt/etc/config.scm"
+	if configData, err := os.ReadFile(configPath); err == nil {
+		configStr := string(configData)
+		if strings.Contains(configStr, "keyboard-layout") && strings.Contains(configStr, "ctrl:swapcaps") {
+			fmt.Println("⚠️  IMPORTANT: Keyboard Layout Warning")
+			fmt.Println("   Your system is configured with Caps Lock ↔ Ctrl swap.")
+			fmt.Println("   However, the GNOME login screen (GDM) uses the DEFAULT layout (no swap).")
+			fmt.Println()
+			fmt.Println("   When typing your password:")
+			fmt.Println("   - Type it as if Caps Lock and Ctrl are NOT swapped")
+			fmt.Println("   - This ensures it will work at the GDM login screen")
+			fmt.Println("   - After logging in, your keyboard swap will be active")
+			fmt.Println()
+		}
+	}
+
 	passwdCmd := exec.Command("chroot", "/mnt", "/run/current-system/profile/bin/passwd", username)
 	passwdCmd.Stdin = os.Stdin
 	passwdCmd.Stdout = os.Stdout
@@ -2230,6 +2248,19 @@ echo ""
 echo "=== Setting User Password ==="
 echo "You need this password to log in after first boot."
 echo ""
+
+# Check if keyboard layout has swap options and warn user
+if grep -q "keyboard-layout" /mnt/etc/config.scm && grep -q "ctrl:swapcaps" /mnt/etc/config.scm; then
+    echo "⚠️  IMPORTANT: Keyboard Layout Warning"
+    echo "   Your system is configured with Caps Lock ↔ Ctrl swap."
+    echo "   However, the GNOME login screen (GDM) uses the DEFAULT layout (no swap)."
+    echo ""
+    echo "   When typing your password:"
+    echo "   - Type it as if Caps Lock and Ctrl are NOT swapped"
+    echo "   - This ensures it will work at the GDM login screen"
+    echo "   - After logging in, your keyboard swap will be active"
+    echo ""
+fi
 
 # Check if password is already set
 PASSWORD_SET=false
