@@ -38,19 +38,29 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 
 ## 🔄 Currently Working On
 
+**Two Active Fronts:**
+
+### Front 1: Framework-dual (Testing & Development)
+**Focus**: Real-world installation testing, GNOME configuration, troubleshooting
+
+**Status**: See "Framework-dual postinstall (IN TESTING)" section below
+
+### Front 2: Cloudzy (Guile Conversion & Testing)
+**Focus**: Complete conversion to `.scm` scripts and comprehensive testing
+
 **Guile Conversion Project (IN PROGRESS):**
 
 See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 
 - ✅ Phase 1: Library infrastructure complete → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-1-2025-11-15)
 - ✅ Phase 2: Update postinstall scripts to use Guile helper → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-2-2025-11-15)
-
-- ⏳ Phase 3: Convert critical lib/*.sh scripts to Guile
-  - **Before converting**: Add structured comments to originals (see [docs/BATCH_CONVERSION_BEST_PRACTICES.md](docs/BATCH_CONVERSION_BEST_PRACTICES.md))
-  - Priority: lib/postinstall.sh (simplest, 31 lines)
-  - Next: lib/clean-install.sh, lib/verify-guix-install.sh
-  - Later: bootstrap-installer.sh, recovery-complete-install.sh
-  - **Workflow**: See [tools/README.md](tools/README.md) for batch conversion process
+- ✅ Phase 3: All scripts converted (20 total) → See "Batch Conversion System" section below
+- ⏳ **Phase 4: Cloudzy Deployment** (CURRENT FOCUS)
+  - Review all converted scripts in `tools/converted-scripts/`
+  - Test converted scripts (verify functionality matches bash versions)
+  - Deploy converted scripts (replace `.sh` references with `.scm` in cloudzy codebase)
+  - Remove original `.sh` files after successful deployment
+  - **Goal**: Complete Guile conversion for cloudzy platform
 
 - ✅ Batch Conversion Tools (COMPLETED) → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
 
@@ -145,11 +155,12 @@ cd ~/guix-customize
 
 **⚠️ Important:** All scripts are converted but **not yet reviewed, tested, or deployed**. Original `.sh` versions still in use.
 
-**Next Steps:**
+**Next Steps (Cloudzy Focus):**
 1. ⏳ **Review** converted scripts in `tools/converted-scripts/` for correctness
 2. ⏳ **Test** converted scripts (run tests, verify functionality matches bash versions)
-3. ⏳ **Deploy** converted scripts (replace `.sh` references with `.scm` in codebase)
+3. ⏳ **Deploy** converted scripts (replace `.sh` references with `.scm` in cloudzy codebase)
 4. ⏳ **Remove** original `.sh` files after successful deployment
+5. ⏳ **Comprehensive testing** of cloudzy installer with all `.scm` scripts
 
 **Documentation:**
 - **Getting Started**: [tools/README.md](tools/README.md) - Complete workflow and usage guide
