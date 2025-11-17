@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -133,4 +130,3 @@
 ;; Run if called directly
 (when (batch-mode?)
   (add-fonts))
-```

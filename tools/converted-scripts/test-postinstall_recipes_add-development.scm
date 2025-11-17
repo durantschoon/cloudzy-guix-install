@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Test suite for add-development.scm
@@ -183,4 +181,3 @@
 (exit (if (zero? (test-runner-fail-count (test-runner-current)))
           0
           1))
-```

@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Tests for add-fonts.scm
@@ -180,4 +178,3 @@
   (let ((runner (test-runner-simple)))
     (test-runner-current runner)
     (exit (= (test-runner-fail-count runner) 0))))
-```

@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Test suite for recovery-complete-install.scm
@@ -99,4 +97,3 @@
       (cleanup-temp-file tmpfile)
       
       ;; Test
-      (an

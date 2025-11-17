@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -94,4 +91,3 @@ This script is typically loaded as a library by other scripts.
 ;;; Execute main if run as script (not loaded as library)
 (when (batch-mode?)
   (main (command-line)))
-```

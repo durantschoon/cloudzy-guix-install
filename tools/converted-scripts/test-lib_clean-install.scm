@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Test file for clean-install.scm
@@ -169,4 +167,3 @@
 
 ;;; Print test summary
 (format #t "~%Test run complete.~%")
-```

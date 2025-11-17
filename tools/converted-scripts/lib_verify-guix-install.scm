@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -425,4 +422,3 @@ Returns #t if directory exists, #f otherwise."
 ;; Run main if executed as script
 (when (batch-mode?)
   (main (command-line)))
-```

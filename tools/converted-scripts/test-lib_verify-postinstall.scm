@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; test-verify-postinstall.scm
@@ -169,4 +167,3 @@ abc123def456  lib/guile-config-helper.scm
 ;; Run tests if executed as script
 (when (string-suffix? "test-verify-postinstall.scm" (car (command-line)))
   (run-tests))
-```

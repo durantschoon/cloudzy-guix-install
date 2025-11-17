@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Tests for channel-utils.scm
@@ -187,4 +185,3 @@
 ;; Don't run tests automatically when loaded as module
 (when (string=? (basename (car (command-line))) "test-channel-utils.scm")
   (run-tests))
-```

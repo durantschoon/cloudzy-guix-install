@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Tests for add-spacemacs.scm
@@ -114,4 +112,3 @@
 
 ;;; Run tests
 (run-tests)
-```

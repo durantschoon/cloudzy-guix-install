@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; test-add-vanilla-emacs.scm --- Tests for add-vanilla-emacs.scm
@@ -194,4 +192,3 @@
 
 ;; Run tests when script is executed
 (run-tests)
-```

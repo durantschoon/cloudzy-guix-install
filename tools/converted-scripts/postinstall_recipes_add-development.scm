@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -197,4 +194,3 @@
               (string-append (dirname (dirname (getcwd))) 
                            "/postinstall/recipes/add-development.scm"))
   (main (command-line)))
-```

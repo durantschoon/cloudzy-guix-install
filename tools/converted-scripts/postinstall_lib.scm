@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -446,4 +443,3 @@
   (if (zero? (system "command -v clear >/dev/null 2>&1"))
       (system "clear")
       (display "\n\n========================================\n\n")))
-```

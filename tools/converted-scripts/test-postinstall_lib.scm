@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; test-lib.scm - Tests for postinstall/lib.scm
@@ -161,4 +159,3 @@
 
 ;;; Exit with test result status
 (exit (= (test-runner-fail-count (test-runner-current)) 0))
-```

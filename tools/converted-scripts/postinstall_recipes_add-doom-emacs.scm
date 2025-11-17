@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -393,4 +390,3 @@
 
 (when (string=? (car (command-line)) (basename (car (command-line))))
   (add-doom-emacs))
-```

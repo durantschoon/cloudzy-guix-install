@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Test suite for setup-config.scm
@@ -175,4 +173,3 @@
 
 ;; Print test summary
 (format #t "~%Test suite completed.~%")
-```

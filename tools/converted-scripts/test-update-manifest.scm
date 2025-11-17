@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; test-update-manifest.scm
@@ -162,4 +160,3 @@
 ;;; Display Results
 
 (display-test-results)
-```

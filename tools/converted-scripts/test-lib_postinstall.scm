@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; test-postinstall.scm - Tests for postinstall.scm
@@ -152,4 +150,3 @@
       (exit 1))))
 
 (display-test-summary)
-```

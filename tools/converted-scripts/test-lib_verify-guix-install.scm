@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Test suite for verify-guix-install.scm
@@ -248,4 +246,3 @@ nobody:x:65534:65534:Unprivileged user:/dev/null:/usr/sbin/nologin
 
 ;; Exit with appropriate code
 (exit (if (zero? (test-runner-fail-count (test-runner-current))) 0 1))
-```

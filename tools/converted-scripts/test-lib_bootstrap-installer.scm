@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; Test suite for bootstrap-installer.scm
@@ -172,4 +170,3 @@
 
 ;; Exit with error code if any tests failed
 (exit (zero? (test-runner-fail-count (test-runner-current))))
-```

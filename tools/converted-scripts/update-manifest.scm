@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -239,4 +236,3 @@
 ;;; Entry Point
 
 (generate-manifest)
-```

@@ -1,6 +1,3 @@
-# Converted Guile Script
-
-```scheme
 #!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
@@ -314,4 +311,3 @@
 
 ;; Run main function
 (main (command-line))
-```

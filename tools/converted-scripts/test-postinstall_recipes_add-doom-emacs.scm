@@ -1,5 +1,3 @@
-```scheme
-#!/run/current-system/profile/bin/guile --no-auto-compile -s
 !#
 
 ;;; test-add-doom-emacs.scm
@@ -120,4 +118,3 @@
  (lambda ()
    (let ((runner (test-runner-simple)))
      runner)))
-```
