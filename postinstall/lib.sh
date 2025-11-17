@@ -216,38 +216,24 @@ add_desktop() {
         local options=$(grep -A 3 "keyboard-layout" "$CONFIG_FILE" | grep -oP '#:options.*"\K[^"]+' | head -1)
         
         if [ -n "$layout" ] && [ -n "$options" ]; then
-          # Add setxkbmap package if not already present
-          if ! grep -q "setxkbmap" "$CONFIG_FILE"; then
-            info "Adding setxkbmap package for GNOME keyboard layout configuration..."
-            
-            # Add setxkbmap to packages
-            if grep -q "(packages %base-packages)" "$CONFIG_FILE"; then
-              # Minimal config - expand to use append
-              safe_edit_config 's|(packages %base-packages)|(packages\n  (append (list (specification->package "setxkbmap"))\n          %base-packages))|'
-            elif grep -q "specification->package" "$CONFIG_FILE"; then
-              # Already has packages, add setxkbmap if not present
-              if ! grep -q '"setxkbmap"' "$CONFIG_FILE"; then
-                safe_edit_config '/specification->package/a\                (specification->package "setxkbmap")'
-              fi
-            fi
-            info "✓ setxkbmap package added"
-          fi
-          
-          # Create GNOME autostart script to set keyboard layout (if it doesn't exist)
+          # GNOME uses Wayland by default, so we need to use gsettings instead of setxkbmap
+          # Create GNOME autostart script to set keyboard layout via gsettings (if it doesn't exist)
           local autostart_dir="$HOME/.config/autostart"
           local autostart_file="$autostart_dir/keyboard-layout.desktop"
           
           if [ ! -f "$autostart_file" ]; then
             mkdir -p "$autostart_dir"
             
-            # Convert options format (e.g., "ctrl:swapcaps" -> "-option ctrl:swapcaps")
-            local setxkbmap_options="-option $options"
+            # For Wayland/GNOME, use gsettings to configure keyboard options
+            # Format: gsettings set org.gnome.desktop.input-sources xkb-options "['ctrl:swapcaps']"
+            # Note: gsettings requires the options to be in a specific format
+            local gsettings_options="['$options']"
             
             cat > "$autostart_file" << EOF
 [Desktop Entry]
 Type=Application
 Name=Set Keyboard Layout
-Exec=setxkbmap $layout $setxkbmap_options
+Exec=sh -c 'gsettings set org.gnome.desktop.input-sources xkb-options "$gsettings_options" 2>/dev/null || true'
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -255,6 +241,7 @@ EOF
             
             info "✓ GNOME autostart script created: ~/.config/autostart/keyboard-layout.desktop"
             info "  This will automatically set keyboard layout ($layout with $options) when GNOME starts"
+            info "  Uses gsettings (for Wayland/GNOME) instead of setxkbmap (X11 only)"
             echo ""
             warn "⚠️  IMPORTANT: GDM Login Screen Keyboard Layout"
             warn "   The autostart script only runs AFTER you log in."
@@ -268,6 +255,9 @@ EOF
             warn "   5. Switch back to graphical login (Alt+F7)"
             warn "   Note: Password mismatch can occur even if password doesn't use swapped keys"
             warn "   Once logged in, your ctrl:swapcaps layout will be active"
+            echo ""
+            info "To manually configure keyboard layout in GNOME (if autostart doesn't work):"
+            info "  gsettings set org.gnome.desktop.input-sources xkb-options \"$gsettings_options\""
             echo ""
           else
             info "GNOME autostart script already exists - skipping creation"

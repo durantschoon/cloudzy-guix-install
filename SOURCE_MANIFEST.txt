@@ -40,7 +40,7 @@ a5181634d7936eec4610c210b4c19a0fe16a16e547d01d69e7a69f03b65e16dc  lib/bootstrap-
 846f1ec4e17aa08200af7b74fb46f1c432f11c033998b4e533d5c0046a5033f9  lib/verify-guix-install.sh
 dd700229867cbb5dba178e1df492c382b0baa26701284f5ca33facd23442dc2f  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
-6a29a516b3e46d9ae9f7580b4656ef554c99400e9f6d4b21d62e13a583042f2e  postinstall/lib.sh
+dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/lib.sh
 
 ## Guile Library Scripts
 
@@ -56,4 +56,4 @@ f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstal
 
 ## Documentation
 
-361b51696461fb04aed1180b8a53ddced00ee355b4bd0612392ee770cc27ce70  postinstall/CUSTOMIZATION.md
+f2d8a8a47a4f7a9cc689a7625d89e95a46eb2af89cb9614432124d7ae5f5e35c  postinstall/CUSTOMIZATION.md

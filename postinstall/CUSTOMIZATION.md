@@ -600,6 +600,8 @@ Combining all recommended services for a laptop:
 
 **Troubleshooting Autostart Script Not Working:**
 
+**Important:** GNOME uses Wayland by default (not X11), so `setxkbmap` won't work. The autostart script uses `gsettings` instead.
+
 If the autostart script exists but keyboard layout isn't being applied in GNOME:
 
 1. **Check if autostart file exists:**
@@ -608,29 +610,33 @@ If the autostart script exists but keyboard layout isn't being applied in GNOME:
    cat ~/.config/autostart/keyboard-layout.desktop
    ```
 
-2. **Check if setxkbmap is installed:**
+2. **Manually configure keyboard layout using gsettings (for Wayland/GNOME):**
    ```bash
-   which setxkbmap
-   setxkbmap -query
-   ```
-
-3. **Manually test the command:**
-   ```bash
-   setxkbmap us -option ctrl:swapcaps
+   # Set keyboard options (e.g., ctrl:swapcaps)
+   gsettings set org.gnome.desktop.input-sources xkb-options "['ctrl:swapcaps']"
+   
+   # Verify it was set
+   gsettings get org.gnome.desktop.input-sources xkb-options
    ```
    Then test: Caps Lock should now act as Ctrl, Ctrl should act as Caps Lock
 
-4. **If manual command works but autostart doesn't:**
-   - The autostart script might be running before X11 is fully initialized
-   - Try adding a delay or running it manually after login
-   - Or add it to your `~/.bashrc` or `~/.profile` as a workaround:
+3. **If gsettings command works but autostart doesn't:**
+   - The autostart script might be running before GNOME is fully initialized
+   - Try adding it to your `~/.bashrc` or `~/.profile` as a workaround:
      ```bash
-     setxkbmap us -option ctrl:swapcaps 2>/dev/null || true
+     gsettings set org.gnome.desktop.input-sources xkb-options "['ctrl:swapcaps']" 2>/dev/null || true
      ```
 
-5. **Check GNOME Settings:**
+4. **Check GNOME Settings:**
    - Open Settings → Keyboard
    - Check if keyboard layout is set there (GNOME Settings might override autostart)
+
+5. **Note about X11 vs Wayland:**
+   - If you're using X11 (not Wayland), you can use `setxkbmap`:
+     ```bash
+     setxkbmap us -option ctrl:swapcaps
+     ```
+   - To check which you're using: `echo $XDG_SESSION_TYPE` (should show "wayland" or "x11")
 
 **Permanent Fix:** The autostart script (`~/.config/autostart/keyboard-layout.desktop`) sets keyboard layout after login, but GDM needs it configured before login. For now, use a password that works with the default layout, or configure GDM keyboard layout manually via dconf (requires additional setup).
 
