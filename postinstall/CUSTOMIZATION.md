@@ -550,12 +550,20 @@ Combining all recommended services for a laptop:
 
 **Diagnosis Steps:**
 
-1. **Check what keyboard layout GDM is using:**
-   - At the GDM login screen, look for a keyboard icon/layout indicator (usually in the top-right corner)
-   - Click it to see what layout is active
-   - Compare with what's in your `/etc/config.scm`
+1. **Test what keyboard layout GDM is actually using:**
+   - At the GDM login screen, click in the password field
+   - Type a test string like "qwerty" or "asdf" (you won't see it, but it's being entered)
+   - If you type "q" and get "a" instead, GDM might be using Dvorak
+   - If characters don't match what you expect, GDM is using a different layout than your console
 
-2. **Check when password was set:**
+2. **Check your config.scm:**
+   ```bash
+   grep -A 3 "keyboard-layout" /etc/config.scm
+   ```
+   - Note what layout is configured (should be "us" for QWERTY)
+   - Check if there are any options like `#:options '("ctrl:swapcaps")`
+
+3. **Check when password was set:**
    - Was it set during installation (before keyboard layout was configured)?
    - Was it set after configuring keyboard layout?
 
@@ -574,7 +582,21 @@ Combining all recommended services for a laptop:
 5. Switch back to graphical login: Press `Alt+F7` or `Alt+F1`
 6. Log in with new password
 
-**Alternative:** If the issue persists, try setting the password from within a GNOME session (if you can get in another way, like SSH or switching users), or check if GDM keyboard layout can be configured via dconf.
+**Alternative Solutions:**
+
+1. **If GDM layout doesn't match config.scm:**
+   - GDM may not be inheriting the system keyboard layout properly
+   - Try resetting password from text console (which uses config.scm layout)
+   - Type password as if GDM is using the default US QWERTY layout
+
+2. **Test GDM layout directly:**
+   - At GDM login screen, type test characters in password field
+   - If "qwerty" produces different characters, GDM is using a different layout
+   - You may need to mentally translate your password to match GDM's layout
+
+3. **Check if password was set with wrong layout:**
+   - If password was set during installation before keyboard config, it might have been set with ISO default layout
+   - Reset password from console (which uses your config.scm layout) and type it as if GDM uses default US QWERTY
 
 **Permanent Fix:** The autostart script (`~/.config/autostart/keyboard-layout.desktop`) sets keyboard layout after login, but GDM needs it configured before login. For now, use a password that works with the default layout, or configure GDM keyboard layout manually via dconf (requires additional setup).
 
