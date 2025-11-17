@@ -100,9 +100,9 @@ check_pattern() {
         return 0
     else
         if [ "$critical" = "yes" ]; then
-            error "$description NOT FOUND: ${pattern} (CRITICAL)"
+            error "$description NOT FOUND: ${ROOT}${pattern} (CRITICAL)"
         else
-            warn "$description NOT FOUND: ${pattern}"
+            warn "$description NOT FOUND: ${ROOT}${pattern}"
         fi
         return 1
     fi
@@ -139,7 +139,7 @@ echo
 
 # EFI partition should be mounted
 if [ -d "${ROOT}/boot/efi/EFI" ]; then
-    ok "EFI partition mounted at /boot/efi"
+    ok "EFI partition mounted at ${ROOT}/boot/efi"
 
     # Check GRUB EFI binary (could be in different locations)
     if [ -f "${ROOT}/boot/efi/EFI/Guix/grubx64.efi" ]; then
@@ -147,13 +147,13 @@ if [ -d "${ROOT}/boot/efi/EFI" ]; then
     elif [ -f "${ROOT}/boot/efi/EFI/BOOT/BOOTX64.EFI" ]; then
         check_file "/boot/efi/EFI/BOOT/BOOTX64.EFI" "GRUB EFI binary (fallback)" yes
     else
-        error "GRUB EFI binary NOT FOUND in /boot/efi/EFI/"
+        error "GRUB EFI binary NOT FOUND in ${ROOT}/boot/efi/EFI/"
     fi
 
     # GRUB EFI config
     check_file "/boot/efi/EFI/Guix/grub.cfg" "GRUB EFI config" no
 else
-    error "EFI partition not mounted at /boot/efi"
+    error "EFI partition not mounted at ${ROOT}/boot/efi"
 fi
 
 echo
@@ -190,7 +190,7 @@ echo "=== User Accounts ==="
 echo
 
 if [ -f "${ROOT}/etc/passwd" ]; then
-    ok "Password file exists"
+    ok "Password file exists: ${ROOT}/etc/passwd"
 
     # List non-system users
     users=$(grep -E ":/home/.*:(bash|sh)" "${ROOT}/etc/passwd" 2>/dev/null | cut -d: -f1 || echo "")
@@ -206,10 +206,16 @@ if [ -f "${ROOT}/etc/passwd" ]; then
         done
     else
         warn "No regular user accounts found (only system accounts)"
-        info "  You may need to set a password: guix system chroot /mnt && passwd USERNAME"
+        if [ -n "$ROOT" ]; then
+            # Running from ISO - use simple chroot (guix system chroot doesn't exist yet)
+            info "  Set password: chroot /mnt /run/current-system/profile/bin/bash -c 'passwd USERNAME'"
+        else
+            # Running from installed system
+            info "  Set password: passwd USERNAME"
+        fi
     fi
 else
-    error "Password file /etc/passwd NOT FOUND"
+    error "Password file NOT FOUND: ${ROOT}/etc/passwd"
 fi
 
 echo
