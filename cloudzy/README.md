@@ -101,7 +101,9 @@ See `../../postinstall/CUSTOMIZATION.md` for detailed post-boot customization wo
 ## Environment Variables
 
 - `DEVICE`: Target storage device (auto-detected if not set)
-- `BOOT_MODE`: "uefi" or "bios" (auto-detected if not set)
+- `BOOT_MODE`: "uefi" or "bios" (default: "bios" for cloud VPS compatibility)
+  - Most cloud VPS providers (Oracle Cloud, Cloudzy, etc.) use BIOS/legacy boot
+  - Set `BOOT_MODE=uefi` if your VPS specifically requires UEFI
 - `SWAP_SIZE`: Swap file size (default: 4G)
 - `USER_NAME`: Login username (required)
 - `FULL_NAME`: Full name for user account (required)

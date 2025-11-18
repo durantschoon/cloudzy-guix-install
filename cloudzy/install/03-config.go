@@ -53,7 +53,7 @@ func (s *Step03Config) RunWarnings(state *State) error {
 	fmt.Printf("  FULL_NAME - %s (default: Guix User)\n", lib.GetEnvOrDefault(state.FullName, "Guix User"))
 	fmt.Printf("  TIMEZONE  - %s (default: America/New_York)\n", lib.GetEnvOrDefault(state.Timezone, "America/New_York"))
 	fmt.Printf("  HOST_NAME - %s (default: guix-system)\n", lib.GetEnvOrDefault(state.HostName, "guix-system"))
-	fmt.Printf("  BOOT_MODE - %s (default: auto-detect)\n", lib.GetEnvOrDefault(state.BootMode, "auto-detect"))
+	fmt.Printf("  BOOT_MODE - %s (default: bios for cloud VPS)\n", lib.GetEnvOrDefault(state.BootMode, "bios"))
 	fmt.Println()
 	fmt.Println("The generated config is minimal - customize after installation.")
 	fmt.Println("Idempotency: Skips generation if /mnt/etc/config.scm already exists")
