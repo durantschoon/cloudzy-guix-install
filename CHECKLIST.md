@@ -198,6 +198,38 @@ cd ~/guix-customize
 - ✅ Verification after guix system init: checks for kernel/initrd files and broken symlink, retries with manual copy if needed
 - ✅ VERBOSE=1 instructions added everywhere verify script is mentioned (helps debug file detection issues)
 
+**Oracle Cloud Free Tier Support (Future Work):**
+
+- ⏳ **Goal**: Adapt cloudzy installer to work on Oracle Cloud Free Tier VPS instances
+- **Why**: Oracle Cloud Free Tier offers ARM64 and x86_64 instances with generous free tier limits, expanding platform support
+- **Top 5 Things Needed to Update Cloudzy Scripts:**
+
+  1. **Device Detection Updates** (`cloudzy/install/01-partition.go`):
+     - Oracle Cloud may use different device naming (e.g., `/dev/sda` vs `/dev/vda`)
+     - May need to detect device type (NVMe, SCSI, VirtIO) and handle accordingly
+     - Oracle Cloud Free Tier ARM64 instances might use different storage controllers
+
+  2. **Boot Mode Detection** (`cloudzy/install/01-partition.go`, `lib/common.go`):
+     - Oracle Cloud Free Tier typically uses UEFI, but detection might differ
+     - May need to handle Oracle Cloud's specific EFI partition requirements
+     - Verify EFI partition detection works correctly in Oracle Cloud environment
+
+  3. **Network Configuration** (`cloudzy/install/03-config.go`, `postinstall/customize`):
+     - Oracle Cloud uses different network interface naming (may be `ens3` instead of `eth0`)
+     - May need Oracle Cloud-specific network service configuration
+     - Consider Oracle Cloud's cloud-init integration (if applicable)
+
+  4. **Console/Serial Access** (`lib/bootstrap-installer.sh`):
+     - Oracle Cloud uses web-based console access (different from Cloudzy's VNC/KVM)
+     - May need to handle serial console differently
+     - Font selection and display might need adjustments for Oracle Cloud console
+
+  5. **Storage and Partitioning** (`cloudzy/install/01-partition.go`):
+     - Oracle Cloud Free Tier has specific storage limits and configurations
+     - May need to handle Oracle Cloud's block volume attachments differently
+     - Consider Oracle Cloud's boot volume vs block volume distinction
+     - Verify partitioning works with Oracle Cloud's storage backend
+
 **Framework 13 Post-Install Process (2025-11-10):**
 
 Learned the complete workflow for getting Framework 13 fully operational after minimal install:
