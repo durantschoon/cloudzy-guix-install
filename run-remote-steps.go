@@ -50,14 +50,14 @@ func main() {
 
 	platform := getEnv("GUIX_PLATFORM", "cloudzy")
 
-	// Detect and bootstrap user channels
+	// Detect and bootstrap user channels (platform-aware)
 	fmt.Println("=== Channel Detection ===")
 	channelInfo, err := lib.DetectUserChannels()
 	if err != nil {
 		fatal("Failed to detect user channels: %v", err)
 	}
 
-	if err := lib.BootstrapUserChannels(channelInfo); err != nil {
+	if err := lib.BootstrapUserChannels(channelInfo, platform); err != nil {
 		fatal("Failed to bootstrap user channels: %v", err)
 	}
 

@@ -2815,7 +2815,7 @@ func DetectUserChannels() (*ChannelInfo, error) {
 }
 
 // BootstrapUserChannels downloads and sets up user's channel configuration
-func BootstrapUserChannels(channelInfo *ChannelInfo) error {
+func BootstrapUserChannels(channelInfo *ChannelInfo, platform string) error {
 	if channelInfo.HasExistingChannels {
 		fmt.Println("[INFO] User has existing channel configuration, skipping bootstrap")
 		return nil
@@ -2823,7 +2823,7 @@ func BootstrapUserChannels(channelInfo *ChannelInfo) error {
 	
 	if channelInfo.ChannelRepo == "" {
 		fmt.Println("[INFO] No channel repository specified, using default channels")
-		return SetupDefaultChannels()
+		return SetupDefaultChannels(platform)
 	}
 	
 	// Download user's channel configuration
@@ -2899,12 +2899,22 @@ func DownloadUserChannels(channelInfo *ChannelInfo) error {
 }
 
 // SetupDefaultChannels creates minimal channel setup for new users
-func SetupDefaultChannels() error {
+// Platform-aware: cloudzy gets free software only (no nonguix), framework platforms get nonguix
+func SetupDefaultChannels(platform string) error {
+	// Cloudzy doesn't need user channels (free software only)
+	// User can add channels manually after installation if needed
+	if platform == "cloudzy" {
+		fmt.Println("[INFO] Cloudzy platform detected - skipping user channel setup (free software only)")
+		fmt.Println("       User channels can be configured manually after installation if needed")
+		return nil
+	}
+	
 	configDir := filepath.Join(os.Getenv("HOME"), ".config", "guix")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 	
+	// Framework platforms get nonguix channel (needed for WiFi/firmware)
 	channelsContent := `(cons* (channel
         (name 'nonguix)
         (url "https://gitlab.com/nonguix/nonguix")
@@ -2923,6 +2933,7 @@ func SetupDefaultChannels() error {
 	
 	fmt.Println("[OK] Default channels configured (nonguix + official)")
 	fmt.Printf("     Channels file: %s\n", channelsPath)
+	fmt.Println("     Note: nonguix channel is required for Framework WiFi/firmware")
 	
 	return nil
 }
