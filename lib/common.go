@@ -691,8 +691,38 @@ func StartCowStore() error {
 func SetupGRUBEFI() error {
 	PrintSectionHeader("Setting up GRUB EFI bootloader")
 	
+	// CRITICAL: Verify EFI partition is mounted before proceeding
+	// GRUB EFI installation will fail if EFI partition is not accessible
+	if !isMountPoint("/mnt/boot/efi") {
+		fmt.Println("[WARN] EFI partition not mounted at /mnt/boot/efi")
+		fmt.Println("Attempting to mount EFI partition...")
+		
+		// Try to mount EFI partition by label
+		if err := os.MkdirAll("/mnt/boot/efi", 0755); err != nil {
+			return fmt.Errorf("failed to create /mnt/boot/efi directory: %w", err)
+		}
+		
+		cmd := exec.Command("mount", "LABEL=EFI", "/mnt/boot/efi")
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to mount EFI partition: %w. GRUB EFI installation requires EFI partition to be mounted", err)
+		}
+		fmt.Println("[OK] EFI partition mounted")
+	} else {
+		fmt.Println("[OK] EFI partition already mounted at /mnt/boot/efi")
+	}
+	
+	// Verify EFI partition is vfat (required for EFI)
+	cmd := exec.Command("df", "-T", "/mnt/boot/efi")
+	output, err := cmd.Output()
+	if err == nil {
+		if !strings.Contains(string(output), "vfat") && !strings.Contains(string(output), "fat32") {
+			return fmt.Errorf("EFI partition at /mnt/boot/efi is not vfat filesystem (required for EFI boot)")
+		}
+		fmt.Println("[OK] EFI partition is vfat filesystem")
+	}
+	
 	// Ensure the EFI directory structure exists
-	guixEfiDir := "/mnt/boot/efi/Guix"
+	guixEfiDir := "/mnt/boot/efi/EFI/Guix"
 	
 	// Create directories if they don't exist
 	if err := os.MkdirAll(guixEfiDir, 0755); err != nil {
@@ -700,8 +730,8 @@ func SetupGRUBEFI() error {
 	}
 	
 	// Check if we already have GRUB EFI files (from previous failed attempts)
-	grubEfiFile := "/mnt/boot/efi/Guix/grubx64.efi"
-	grubCfgLink := "/mnt/boot/efi/Guix/grub.cfg"
+	grubEfiFile := "/mnt/boot/efi/EFI/Guix/grubx64.efi"
+	grubCfgLink := "/mnt/boot/efi/EFI/Guix/grub.cfg"
 	
 	if _, err := os.Stat(grubEfiFile); err == nil {
 		fmt.Println("GRUB EFI files already exist, cleaning up...")
