@@ -176,12 +176,16 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
 ;; Customize after installation using: guix-customize
 
 (use-modules (gnu)
+             (gnu packages linux)
              (gnu system nss))
 
 (operating-system
  (host-name "%s")
  (timezone "%s")
  (locale "en_US.utf8")
+
+ ;; Linux-libre kernel (free software only)
+ (kernel linux-libre)
 
  (bootloader
   (bootloader-configuration
