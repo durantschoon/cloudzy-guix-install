@@ -173,6 +173,7 @@ mount LABEL=EFI /mnt/boot/efi
 
 # 2. Verify installation
 bash verify-guix-install.sh
+# For maximum verbosity: VERBOSE=1 bash verify-guix-install.sh
 
 # 3. Set user password (replace 'username' with your user)
 chroot /mnt /run/current-system/profile/bin/bash
@@ -338,6 +339,7 @@ ln -s $SYSTEM /mnt/run/current-system
 
 # Step 3: Verify and reboot
 bash verify-guix-install.sh
+# For maximum verbosity: VERBOSE=1 bash verify-guix-install.sh
 reboot
 ```
 
@@ -589,6 +591,7 @@ The `verify-guix-install.sh` script checks:
 2. Check logs for errors: `tail -100 /tmp/guix-install.log`
 3. Follow relevant section above to fix missing files
 4. Re-run verification: `bash verify-guix-install.sh`
+   - For maximum verbosity: `VERBOSE=1 bash verify-guix-install.sh`
 5. Only reboot when verification passes
 
 ### Manual Verification

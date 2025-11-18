@@ -33,6 +33,7 @@ func main() {
 		fmt.Println()
 		fmt.Println("  1. Verify installation:")
 		fmt.Println("     /root/verify-guix-install.sh")
+		fmt.Println("     (For maximum verbosity: VERBOSE=1 /root/verify-guix-install.sh)")
 		fmt.Println()
 		fmt.Println("  2. If verification fails, run recovery script:")
 		fmt.Println("     /root/recovery-complete-install.sh")

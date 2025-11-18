@@ -10,6 +10,10 @@
 #   From ISO:       ./verify-guix-install.sh
 #   From installed: sudo /usr/local/bin/verify-guix-install.sh
 #   From installed: sudo verify-guix-install  (if in PATH)
+#
+#   For maximum verbosity (shows debug output):
+#   VERBOSE=1 ./verify-guix-install.sh
+#   VERBOSE=1 sudo verify-guix-install
 
 set -u
 

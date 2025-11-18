@@ -40,6 +40,9 @@ This script verifies that all critical components of a Guix installation are pre
 # After running installation, before rebooting
 ./verify-guix-install.sh
 
+# For maximum verbosity (shows debug output):
+VERBOSE=1 ./verify-guix-install.sh
+
 # Should show:
 # ========================================
 #   INSTALLATION VERIFIED SUCCESSFULLY!
@@ -49,6 +52,7 @@ This script verifies that all critical components of a Guix installation are pre
 **If verification fails:**
 - DO NOT REBOOT
 - Review error messages
+- Run with verbose output for more details: `VERBOSE=1 ./verify-guix-install.sh`
 - Re-run `guix system init /mnt/etc/config.scm /mnt`
 - Run verification again
 
@@ -58,8 +62,12 @@ This script verifies that all critical components of a Guix installation are pre
 # If you encounter boot or system issues
 sudo verify-guix-install
 
+# For maximum verbosity (shows debug output):
+VERBOSE=1 sudo verify-guix-install
+
 # Or with full path:
 sudo /usr/local/bin/verify-guix-install
+VERBOSE=1 sudo /usr/local/bin/verify-guix-install
 ```
 
 ## Exit Codes

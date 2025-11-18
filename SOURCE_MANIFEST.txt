@@ -31,13 +31,13 @@ fd4d2bd06ae16eda6cb84cbc206531777ca64b338f0859594acef61f6ed034aa  ./framework/in
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 6ff96526d341907e94c6cfd9d858928cc5faf7104cb09f5e1e61791fb92d3b77  ./lib/common_test.go
 35b684db10b19351a05d542d431a4bc220d67eb78dc84810c9fddd53a1350add  ./lib/common.go
-a19ef643a962302ba8ce1b72aa6f4aec5c54842821ad664bbbd847b7d1cf0840  ./run-remote-steps.go
+1ed9ff3c7a62edb3b62fdd9afe94b805fd5489d5baa9868b2cbaa3119826bbc3  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
 a5181634d7936eec4610c210b4c19a0fe16a16e547d01d69e7a69f03b65e16dc  lib/bootstrap-installer.sh
 488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
-d8e9b2329ce479b16ee1ddcebfc6a585683de866b67094052a620471fc00738c  lib/verify-guix-install.sh
+a6ff35564fde0b42329aa4682572805832d412c61e317a483af4f210e578faa1  lib/verify-guix-install.sh
 45daabe66335b3b6f5588dcb7b5dd519e27bb2433817dd72524f2558d3c23711  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/lib.sh
