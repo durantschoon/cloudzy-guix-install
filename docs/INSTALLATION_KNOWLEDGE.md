@@ -534,23 +534,29 @@ guix system init /mnt/etc/config.scm /mnt
 
 ### Initrd Configuration
 
-**Critical**: Always specify the initrd explicitly in your `config.scm` file.
+**For Free Software Installations (Cloudzy, VPS, servers)**:
+- **Omit the initrd specification** - Let Guix use its default initrd generation
+- Guix will automatically create the correct initrd for your kernel and filesystem
+- Explicit initrd specification can cause "Invalid keyword" errors with `base-initrd`
 
 ```scheme
 (operating-system
   ;; ... other fields ...
   (kernel linux-libre)
-  (initrd (lambda (fs . rest)
-            (base-initrd fs rest)))
+  ;; No initrd specification - Guix uses defaults
   ;; ... rest of config ...
 )
 ```
 
-**Why Explicit Initrd Specification Matters**:
+**For Framework 13 (nonguix)**:
+- Use `(initrd microcode-initrd)` which properly handles kernel arguments
+- This is required for proprietary firmware support
 
+**Why This Matters**:
+
+- Default initrd generation automatically handles kernel modules
+- Prevents "Invalid keyword" errors when Guix passes kernel arguments
 - Ensures proper initrd generation for your specific filesystem setup
-- Prevents boot failures due to missing initrd files
-- Makes the configuration explicit and reproducible
 
 ### Critical Bug: Missing Kernel/Initrd Files (FIXED 2025-11-08)
 

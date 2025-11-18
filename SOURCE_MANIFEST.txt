@@ -9,7 +9,7 @@
 
 eb02a3ccd3a8e9b50729b9e56f7a33fc5fda54e8b8ac8f4d5f873be6aabcd7da  ./cloudzy/install/01-partition.go
 a3bec34f6eb852a75a5a602b2e6e4875d57fe2b6ab3741efc8843d44647df41e  ./cloudzy/install/02-mount.go
-c76fba9474df3882c0542a4880aa528c0b6ae555fead702a6e2064381984a8b0  ./cloudzy/install/03-config.go
+15da6f9f93643679a782178fd74a7c947852f25e1b2e019aea848a7610802c33  ./cloudzy/install/03-config.go
 804feef405a9149671a2920d7ed5d9f0b76ec41a8ab21bb88068cb2954b315cd  ./cloudzy/install/04-system-init.go
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
 2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go

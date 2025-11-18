@@ -187,9 +187,7 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
  ;; Linux-libre kernel (free software only)
  (kernel linux-libre)
 
- ;; Explicit initrd specification (ensures proper initrd generation)
- (initrd (lambda (fs . rest)
-           (base-initrd fs rest)))
+ ;; Initrd: Let Guix use default (automatically handles kernel and modules)
 
  (bootloader
   (bootloader-configuration
