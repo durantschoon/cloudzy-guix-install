@@ -1388,19 +1388,18 @@ func RunGuixSystemInitFreeSoftware() error {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
 	}
 
-	// WORKAROUND: Even for free software installs, guix system init can silently fail
-	// to copy kernel/initrd to /boot. Use the same 3-step approach as framework-dual:
-	// 1. Build system first (creates complete system with kernel/initrd)
-	// 2. Manually copy kernel/initrd to /boot
-	// 3. Run system init (just installs bootloader)
+	// CRITICAL FIX: guix system build doesn't produce kernel/initrd files.
+	// We must use guix system init directly, which builds everything AND installs it.
+	// guix system init creates the system generation with kernel/initrd AND installs the bootloader.
 
-	PrintSectionHeader("Building Guix System")
-	fmt.Println("Step 1/3: Building system closure (includes kernel)")
+	PrintSectionHeader("Installing Guix System")
+	fmt.Println("Running guix system init (builds system and installs bootloader)...")
 	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
 	fmt.Println()
 	fmt.Println("You should see:")
 	fmt.Println("  1. Downloading/building packages (including kernel)")
-	fmt.Println("  2. Final output: /gnu/store/...-system")
+	fmt.Println("  2. Building initrd")
+	fmt.Println("  3. Installing bootloader")
 	fmt.Println()
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
@@ -1419,201 +1418,32 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println()
 	}
 
-	// Step 1: Build the system (creates complete system in /gnu/store)
-	if err := RunCommandWithSpinner("guix", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
-		return fmt.Errorf("guix system build failed: %w", err)
+	// Run guix system init directly - this builds everything AND installs it
+	if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
+		return fmt.Errorf("guix system init failed: %w", err)
 	}
 
-	PrintSectionHeader("Copying Kernel Files")
-	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
-	fmt.Println("(Ensures kernel/initrd are present before bootloader installation)")
+	// Verify kernel/initrd were created by guix system init
+	PrintSectionHeader("Verifying Installation")
+	fmt.Println("Checking if kernel/initrd files were created...")
 	fmt.Println()
 
-	// Step 2: Find the built system and copy kernel/initrd to /boot
-	cmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to find built system: %w", err)
+	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
+	initrds, _ := filepath.Glob("/mnt/boot/initrd*")
+	
+	if len(kernels) == 0 {
+		return fmt.Errorf("CRITICAL: Kernel not found after guix system init. System will not boot. Please check config.scm has (kernel linux-libre) specified")
 	}
-	systemPath := strings.TrimSpace(string(output))
-	if systemPath == "" {
-		return fmt.Errorf("no system found in /gnu/store")
+	if len(initrds) == 0 {
+		return fmt.Errorf("CRITICAL: Initrd not found after guix system init. System will not boot. Please check config.scm configuration")
 	}
-
-	fmt.Printf("Found built system: %s\n", systemPath)
-
-	// Debug: List contents of system generation to help diagnose issues
-	fmt.Println("Checking system generation contents...")
-	cmd = exec.Command("ls", "-la", systemPath)
-	if output, err := cmd.Output(); err == nil {
-		fmt.Println(string(output))
-	} else {
-		fmt.Printf("Warning: Could not list system generation contents: %v\n", err)
-	}
+	
+	fmt.Printf("✓ Kernel found: %s\n", filepath.Base(kernels[0]))
+	fmt.Printf("✓ Initrd found: %s\n", filepath.Base(initrds[0]))
 	fmt.Println()
-
-	// Copy kernel - try multiple possible locations
-	kernelSrc := filepath.Join(systemPath, "kernel")
-	if _, err := os.Stat(kernelSrc); err != nil {
-		// Try alternative locations
-		fmt.Printf("Kernel not found at %s, trying alternative locations...\n", kernelSrc)
-		
-		// Try finding kernel in the store (might be a symlink or in a subdirectory)
-		cmd = exec.Command("bash", "-c", fmt.Sprintf("find %s -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -5", systemPath))
-		if output, err := cmd.Output(); err == nil {
-			alternatives := strings.TrimSpace(string(output))
-			if alternatives != "" {
-				fmt.Println("Found potential kernel files:")
-				fmt.Println(alternatives)
-				// Use the first one found
-				lines := strings.Split(alternatives, "\n")
-				if len(lines) > 0 && lines[0] != "" {
-					kernelSrc = lines[0]
-					fmt.Printf("Using alternative kernel location: %s\n", kernelSrc)
-				} else {
-					return fmt.Errorf("kernel not found in built system at %s (searched alternatives but none found)", filepath.Join(systemPath, "kernel"))
-				}
-			} else {
-				return fmt.Errorf("kernel not found in built system at %s (no alternatives found). System build may have failed or config.scm may be missing kernel configuration", filepath.Join(systemPath, "kernel"))
-			}
-		} else {
-			return fmt.Errorf("kernel not found in built system at %s (failed to search alternatives: %w). System build may have failed or config.scm may be missing kernel configuration", filepath.Join(systemPath, "kernel"), err)
-		}
-	}
-
-	kernelDest := "/mnt/boot/vmlinuz"
-	if err := exec.Command("cp", kernelSrc, kernelDest).Run(); err != nil {
-		return fmt.Errorf("failed to copy kernel from %s to %s: %w", kernelSrc, kernelDest, err)
-	}
-	fmt.Printf("✓ Copied kernel: %s -> %s\n", kernelSrc, kernelDest)
-
-	// Copy initrd - try multiple possible locations
-	initrdSrc := filepath.Join(systemPath, "initrd")
-	if _, err := os.Stat(initrdSrc); err != nil {
-		// Try alternative locations
-		fmt.Printf("Initrd not found at %s, trying alternative locations...\n", initrdSrc)
-		
-		// Try finding initrd in the store
-		cmd = exec.Command("bash", "-c", fmt.Sprintf("find %s -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -5", systemPath))
-		if output, err := cmd.Output(); err == nil {
-			alternatives := strings.TrimSpace(string(output))
-			if alternatives != "" {
-				fmt.Println("Found potential initrd files:")
-				fmt.Println(alternatives)
-				// Use the first one found
-				lines := strings.Split(alternatives, "\n")
-				if len(lines) > 0 && lines[0] != "" {
-					initrdSrc = lines[0]
-					fmt.Printf("Using alternative initrd location: %s\n", initrdSrc)
-				} else {
-					return fmt.Errorf("initrd not found in built system at %s (searched alternatives but none found)", filepath.Join(systemPath, "initrd"))
-				}
-			} else {
-				return fmt.Errorf("initrd not found in built system at %s (no alternatives found). System build may have failed or config.scm may be missing initrd configuration", filepath.Join(systemPath, "initrd"))
-			}
-		} else {
-			return fmt.Errorf("initrd not found in built system at %s (failed to search alternatives: %w). System build may have failed or config.scm may be missing initrd configuration", filepath.Join(systemPath, "initrd"), err)
-		}
-	}
-
-	initrdDest := "/mnt/boot/initrd"
-	if err := exec.Command("cp", initrdSrc, initrdDest).Run(); err != nil {
-		return fmt.Errorf("failed to copy initrd from %s to %s: %w", initrdSrc, initrdDest, err)
-	}
-	fmt.Printf("✓ Copied initrd: %s -> %s\n", initrdSrc, initrdDest)
-
-	// Create the current-system symlink
-	if err := os.Remove("/mnt/run/current-system"); err != nil && !os.IsNotExist(err) {
-		fmt.Printf("Warning: failed to remove old current-system symlink: %v\n", err)
-	}
-	if err := os.Symlink(systemPath, "/mnt/run/current-system"); err != nil {
-		return fmt.Errorf("failed to create current-system symlink: %w", err)
-	}
-	fmt.Printf("✓ Created symlink: /mnt/run/current-system -> %s\n", systemPath)
+	fmt.Println("✓ Installation verified - system should boot successfully")
 	fmt.Println()
-
-	PrintSectionHeader("Installing Bootloader")
-	fmt.Println("Step 3/3: Running guix system init to install bootloader")
-	fmt.Println("(System already built, this should be quick)")
-	fmt.Println()
-
-	// Step 3: Run system init (should now just install bootloader since system is already built)
-	maxRetries := 3
-	var lastErr error
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		if attempt > 1 {
-			fmt.Printf("\n[RETRY %d/%d] Retrying guix system init...\n", attempt, maxRetries)
-			fmt.Println("Waiting 10 seconds before retry...")
-			fmt.Println()
-			
-			// Before retry, check daemon status and disk space
-			fmt.Println("Checking system state before retry...")
-			exec.Command("herd", "status", "guix-daemon").Run()
-			exec.Command("df", "-h", "/mnt").Run()
-			fmt.Println()
-			
-			time.Sleep(10 * time.Second)
-		}
-
-		if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt"); err != nil {
-			lastErr = err
-			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
-			if attempt < maxRetries {
-				fmt.Println("The command will automatically retry...")
-			}
-			continue
-		}
-
-		// Verify that bootloader installation succeeded
-		fmt.Println()
-		fmt.Println("Verifying bootloader installation...")
-		
-		// Check kernel/initrd are still present (they should be)
-		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
-		initrds, _ := filepath.Glob("/mnt/boot/initrd*")
-		
-		if len(kernels) == 0 || len(initrds) == 0 {
-			lastErr = fmt.Errorf("kernel/initrd files missing after bootloader installation (kernel: %d, initrd: %d)", len(kernels), len(initrds))
-			fmt.Printf("\n[WARN] Attempt %d: Files missing: %v\n", attempt, lastErr)
-			if attempt < maxRetries {
-				fmt.Println("The command will automatically retry...")
-			}
-			continue
-		}
-
-		// Success - files are present
-		fmt.Printf("[OK] Kernel found: %s\n", filepath.Base(kernels[0]))
-		fmt.Printf("[OK] Initrd found: %s\n", filepath.Base(initrds[0]))
-		lastErr = nil
-		break
-	}
-
-	if lastErr != nil {
-		fmt.Println()
-		fmt.Println("========================================")
-		fmt.Println("  BOOTLOADER INSTALLATION FAILED")
-		fmt.Println("========================================")
-		fmt.Println()
-		fmt.Println("guix system init failed to install bootloader.")
-		fmt.Println("However, kernel and initrd are already in place.")
-		fmt.Println()
-		fmt.Println("DO NOT REBOOT - the bootloader may not be installed!")
-		fmt.Println()
-		fmt.Println("To fix this, run the recovery script:")
-		fmt.Println("  /root/recovery-complete-install.sh")
-		fmt.Println()
-		fmt.Println("Or try manually:")
-		fmt.Println("  1. Ensure daemon is running: herd start guix-daemon")
-		fmt.Println("  2. Re-run: guix system init --fallback /mnt/etc/config.scm /mnt")
-		fmt.Println("  3. Verify files exist: ls /mnt/boot/vmlinuz* /mnt/boot/initrd*")
-		fmt.Println()
-		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
-	}
-
-	fmt.Println()
-	fmt.Println("[OK] System init completed successfully - kernel, initrd, and bootloader present")
-	fmt.Println()
-
+	
 	return nil
 }
 
