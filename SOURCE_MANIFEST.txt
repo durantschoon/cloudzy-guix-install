@@ -25,7 +25,7 @@ e1de135e783616b3a7aab831a69b1e9cda6580e305a922c33c57bfd0a799c734  ./framework-du
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
 1c99cbbf8aa60bfdee75b7b098b52be66b4c39fb9d968e17243ca932f7d41793  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
-4afd540f9755d7e1d7ecff2ab6206ebe05cbf171ecc09835035a3d66379c6571  ./framework/install/03-config.go
+fd4d2bd06ae16eda6cb84cbc206531777ca64b338f0859594acef61f6ed034aa  ./framework/install/03-config.go
 649de33cd54bf86e8b994d8b349f87f058f80bb7ba58afa258b160753ef74cb4  ./framework/install/04-system-init.go
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go

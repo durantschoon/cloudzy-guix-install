@@ -40,10 +40,10 @@ func (s *Step03Config) RunWarnings(state *State) error {
 	lib.PrintStepHeader(3, "Configuration Generation")
 	fmt.Println()
 	fmt.Println("This step will:")
-	fmt.Println("  1. Get UUID of root partition")
-	fmt.Println("  2. Detect boot mode (UEFI or BIOS)")
-	fmt.Println("  3. Generate minimal Guix system configuration")
-	fmt.Println("  4. Write configuration to /mnt/etc/config.scm")
+	fmt.Println("  1. Detect boot mode (UEFI or BIOS)")
+	fmt.Println("  2. Generate minimal Guix system configuration")
+	fmt.Println("  3. Write configuration to /mnt/etc/config.scm")
+	fmt.Println("  4. Configuration uses partition labels (GUIX_ROOT, EFI)")
 	fmt.Println()
 	fmt.Println("Environment variables used by this step:")
 	fmt.Printf("  ROOT     - %s (from Step01)\n", state.Root)
@@ -229,9 +229,8 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
  (bootloader
   (bootloader-configuration
    (bootloader %s)
-   (target %s)
-   (timeout 5)
-   ))
+   (targets %s)
+   (timeout 5)))
 
  (file-systems
   (cons*          (file-system
