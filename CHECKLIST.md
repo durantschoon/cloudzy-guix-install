@@ -28,9 +28,9 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ Cloudzy initrd fix: Removed explicit base-initrd specification (fixes "Invalid keyword" error) → See "Testing cloudzy installer" section below
-2. ✅ VERBOSE=1 instructions added for verify script everywhere → Helps debug grub.cfg and file detection issues
-3. ✅ GNOME keyboard layout auto-configuration (gsettings/Wayland-compatible) → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
+1. ✅ **Framework 13 AMD GDM login fix**: Root cause identified (AMD GPU firmware issue) and Wingo-era channel pinning implemented → See "Framework-dual postinstall" section below
+2. ✅ Cloudzy initrd fix: Removed explicit base-initrd specification (fixes "Invalid keyword" error) → See "Testing cloudzy installer" section below
+3. ✅ VERBOSE=1 instructions added for verify script everywhere → Helps debug grub.cfg and file detection issues
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -73,21 +73,23 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 
 - ✅ All fixes complete → [See archive](archive/CHECKLIST_COMPLETED.md#framework-dual-postinstall-improvements-2025-11-15)
 - ✅ Bootstrap script fixes → [See archive](archive/CHECKLIST_COMPLETED.md#recent-bootstrap--path-resolution-fixes-2025-11-15)
-- ✅ GNOME launches successfully - display manager working (but login issues remain - see current issues below)
-- ⚠️ **CURRENT ISSUES** (framework-dual testing):
-  1. **Password login failure at GDM**: Password works at text console but fails at GNOME login screen
-     - Password is lowercase letters only (no Caps Lock/Ctrl keys)
-     - Password works via `su` at console, but GDM rejects it
-     - Even after resetting password multiple times, still fails
-     - New user created also has same issue
-  2. **Keyboard layout mismatch**: Password set with `ctrl:swapcaps` but GDM uses default layout
-     - ✅ **FIX IMPLEMENTED**: Warning added when setting password during installation → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
-     - ✅ **FIX IMPLEMENTED**: Automatic `gsettings` autostart script creation (Wayland-compatible) → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
-  3. **User shell path issue**: New users created with `/bin/bash` which doesn't exist in Guix
-     - Should use `/run/current-system/profile/bin/bash`
-     - Fixed manually via `chsh` or editing `/etc/passwd`
-  4. **Next step**: Try Xfce instead of GNOME to isolate if issue is GNOME/GDM-specific
-- 🧪 **NEXT**: Test Xfce login, verify if issue is GNOME-specific or affects all desktop environments
+- ✅ GNOME launches successfully - display manager working
+- ✅ **ROOT CAUSE IDENTIFIED**: GDM login loop is AMD GPU firmware issue, not authentication problem
+  - TTY login works perfectly
+  - GDM accepts password but drops back to login because GNOME session fails to start
+  - `dmesg` shows: `Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2`
+  - Issue: Current guix/nonguix master commits don't provide working AMD firmware for Framework 13 AMD
+- ✅ **FIX IMPLEMENTED**: Wingo-era channel pinning
+  - Created `wingolog-channels.scm` files for framework-dual and framework platforms
+  - Pins guix and nonguix to known-good commits from 2024-02-16 (Wingo's blog post)
+  - Guix commit: `91d80460296e2d5a01704d0f34fb966a45a165ae`
+  - NonGuix commit: `10318ef7dd53c946bae9ed63f7e0e8bb8941b6b1`
+  - Updated READMEs with usage instructions
+  - Updated docs/GNOME_LOGIN_TROUBLESHOOTING.md with complete root cause analysis
+- 🧪 **NEXT**: Test Wingo channel pinning on Framework 13 AMD
+  - May manually edit files rather than full reinstall
+  - Run: `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
+  - Expected: amdgpu firmware loads correctly, GDM/GNOME login works
 
 **Bootstrap Command for Testing:**
 
