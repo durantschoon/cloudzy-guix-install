@@ -30,7 +30,7 @@ d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/in
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 6ff96526d341907e94c6cfd9d858928cc5faf7104cb09f5e1e61791fb92d3b77  ./lib/common_test.go
-4589dfb6a1c51adcb1dffc1f045b1e21bed6d759fe201f86a0ee798e07f36068  ./lib/common.go
+379e472461a85cca617d416f8bfa699cd6adfa9b37ac5ef5e148b583fbfadd1b  ./lib/common.go
 86a830b46773a21b29e27495a22182974c990a5ebe9bd86626e18af54154553e  ./run-remote-steps.go
 
 ## Critical Shell Scripts
@@ -38,7 +38,7 @@ d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/in
 a5181634d7936eec4610c210b4c19a0fe16a16e547d01d69e7a69f03b65e16dc  lib/bootstrap-installer.sh
 488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
 5354e3d46c1d6496419807dd3d0007a80aa7f260ee3ec99bb4f76a056c4d1962  lib/verify-guix-install.sh
-dd700229867cbb5dba178e1df492c382b0baa26701284f5ca33facd23442dc2f  lib/recovery-complete-install.sh
+45daabe66335b3b6f5588dcb7b5dd519e27bb2433817dd72524f2558d3c23711  lib/recovery-complete-install.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/lib.sh
 

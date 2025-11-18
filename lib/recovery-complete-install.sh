@@ -154,144 +154,138 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         sleep 3
     done
 
-    # Build the system init command
+    # Use 3-step approach for both time-machine and free software installs
+    # This ensures kernel/initrd are always copied correctly
+    
     if [ "$USE_TIME_MACHINE" = true ]; then
-        INIT_CMD="guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\""
-    else
-        INIT_CMD="guix system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\""
-    fi
-
-    echo ""
-    echo "Running: $INIT_CMD"
-    echo ""
-    echo "This will take 5-15 minutes. Do NOT interrupt!"
-    echo "If it fails, you can re-run this script."
-    echo ""
-
-    # Run the init command
-    if eval "$INIT_CMD"; then
+        # Step 1: Build system with time-machine
         echo ""
-        echo "[OK] System init command completed"
-    else
+        echo "=== Step 1/3: Building System (with time-machine) ==="
+        echo "This will take 5-30 minutes depending on substitutes..."
         echo ""
-        echo "[ERROR] System init command failed!"
-        echo ""
-        echo "You can try running it manually:"
-        echo "  $INIT_CMD"
-        echo ""
-        echo "Or re-run this recovery script after fixing the issue."
-        exit 1
-    fi
-
-    # Verify that system init actually succeeded by checking for critical files
-    echo ""
-    echo "=== Verifying System Init Succeeded ==="
-    
-    # Check 1: Verify /mnt/run/current-system symlink is valid (key diagnostic from framework-dual)
-    if [ ! -L /mnt/run/current-system ]; then
-        echo "[ERROR] System init completed but /mnt/run/current-system symlink is missing!"
-        echo "This indicates the system generation was not built correctly."
-        echo ""
-        echo "Try running system init manually and check for errors:"
-        echo "  $INIT_CMD"
-        echo ""
-        exit 1
-    fi
-    
-    LINK_TARGET=$(readlink /mnt/run/current-system)
-    if [ ! -e "$LINK_TARGET" ]; then
-        echo "[ERROR] System init completed but /mnt/run/current-system points to non-existent path: $LINK_TARGET"
-        echo "This indicates the system generation was not built correctly."
-        echo ""
-        echo "Try running system init manually and check for errors:"
-        echo "  $INIT_CMD"
-        echo ""
-        exit 1
-    fi
-    echo "[OK] System generation symlink valid: /mnt/run/current-system -> $LINK_TARGET"
-    
-    # Check 2: Verify kernel and initrd files exist
-    if ! ls /mnt/boot/vmlinuz-* >/dev/null 2>&1; then
-        echo "[WARN] System init completed but kernel is still missing!"
-        echo "Attempting to manually copy kernel from system generation..."
         
-        # Try to copy kernel from system generation (fallback approach from framework-dual)
-        SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+        if ! guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
+            echo "[ERROR] System build failed!"
+            exit 1
+        fi
+        
+        # Step 2: Copy kernel/initrd
+        echo ""
+        echo "=== Step 2/3: Copying Kernel Files ==="
+        SYSTEM_PATH=$(ls -td /gnu/store/*-system 2>/dev/null | head -1)
+        if [ -z "$SYSTEM_PATH" ]; then
+            echo "[ERROR] No system generation found in /gnu/store"
+            exit 1
+        fi
+        
+        echo "Found system: $SYSTEM_PATH"
+        
         if [ -f "$SYSTEM_PATH/kernel" ]; then
-            if cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz 2>/dev/null; then
-                echo "[OK] Manually copied kernel from system generation"
-            else
-                echo "[ERROR] Failed to copy kernel from $SYSTEM_PATH/kernel"
-                echo "This means guix system init did not actually succeed."
-                echo ""
-                echo "Possible causes:"
-                echo "  - Disk space issues: df -h /mnt"
-                echo "  - Daemon issues: herd status guix-daemon"
-                echo "  - Store issues: ls -la /mnt/gnu/store | head"
-                echo ""
-                echo "Try running system init manually and check for errors:"
-                echo "  $INIT_CMD"
-                echo ""
-                exit 1
-            fi
+            cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz
+            echo "[OK] Copied kernel"
         else
-            echo "[ERROR] Kernel not found in system generation: $SYSTEM_PATH/kernel"
-            echo "This means guix system init did not actually succeed."
-            echo ""
-            echo "Possible causes:"
-            echo "  - Disk space issues: df -h /mnt"
-            echo "  - Daemon issues: herd status guix-daemon"
-            echo "  - Store issues: ls -la /mnt/gnu/store | head"
-            echo ""
-            echo "Try running system init manually and check for errors:"
-            echo "  $INIT_CMD"
-            echo ""
+            echo "[ERROR] Kernel not found in system generation"
             exit 1
         fi
-    fi
-    
-    if ! ls /mnt/boot/initrd-* >/dev/null 2>&1; then
-        echo "[WARN] System init completed but initrd is still missing!"
-        echo "Attempting to manually copy initrd from system generation..."
         
-        # Try to copy initrd from system generation (fallback approach from framework-dual)
-        SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
         if [ -f "$SYSTEM_PATH/initrd" ]; then
-            if cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd 2>/dev/null; then
-                echo "[OK] Manually copied initrd from system generation"
-            else
-                echo "[ERROR] Failed to copy initrd from $SYSTEM_PATH/initrd"
-                echo "This means guix system init did not actually succeed."
-                echo ""
-                echo "Possible causes:"
-                echo "  - Disk space issues: df -h /mnt"
-                echo "  - Daemon issues: herd status guix-daemon"
-                echo "  - Store issues: ls -la /mnt/gnu/store | head"
-                echo ""
-                echo "Try running system init manually and check for errors:"
-                echo "  $INIT_CMD"
-                echo ""
-                exit 1
-            fi
+            cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd
+            echo "[OK] Copied initrd"
         else
-            echo "[ERROR] Initrd not found in system generation: $SYSTEM_PATH/initrd"
-            echo "This means guix system init did not actually succeed."
-            echo ""
-            echo "Possible causes:"
-            echo "  - Disk space issues: df -h /mnt"
-            echo "  - Daemon issues: herd status guix-daemon"
-            echo "  - Store issues: ls -la /mnt/gnu/store | head"
-            echo ""
-            echo "Try running system init manually and check for errors:"
-            echo "  $INIT_CMD"
-            echo ""
+            echo "[ERROR] Initrd not found in system generation"
+            exit 1
+        fi
+        
+        # Create symlink
+        rm -f /mnt/run/current-system
+        ln -s "$SYSTEM_PATH" /mnt/run/current-system
+        echo "[OK] Created current-system symlink"
+        
+        # Step 3: Install bootloader
+        echo ""
+        echo "=== Step 3/3: Installing Bootloader ==="
+        echo "System already built, this should be quick..."
+        echo ""
+        
+        if ! guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
+            echo "[ERROR] Bootloader installation failed!"
+            echo "However, kernel and initrd are already in place."
+            exit 1
+        fi
+    else
+        # Free software install: Use same 3-step approach
+        echo ""
+        echo "=== Step 1/3: Building System (Free Software) ==="
+        echo "This will take 5-30 minutes depending on substitutes..."
+        echo ""
+        
+        if ! guix system build /mnt/etc/config.scm --substitute-urls="https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
+            echo "[ERROR] System build failed!"
+            exit 1
+        fi
+        
+        # Step 2: Copy kernel/initrd
+        echo ""
+        echo "=== Step 2/3: Copying Kernel Files ==="
+        SYSTEM_PATH=$(ls -td /gnu/store/*-system 2>/dev/null | head -1)
+        if [ -z "$SYSTEM_PATH" ]; then
+            echo "[ERROR] No system generation found in /gnu/store"
+            exit 1
+        fi
+        
+        echo "Found system: $SYSTEM_PATH"
+        
+        if [ -f "$SYSTEM_PATH/kernel" ]; then
+            cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz
+            echo "[OK] Copied kernel"
+        else
+            echo "[ERROR] Kernel not found in system generation"
+            exit 1
+        fi
+        
+        if [ -f "$SYSTEM_PATH/initrd" ]; then
+            cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd
+            echo "[OK] Copied initrd"
+        else
+            echo "[ERROR] Initrd not found in system generation"
+            exit 1
+        fi
+        
+        # Create symlink
+        rm -f /mnt/run/current-system
+        ln -s "$SYSTEM_PATH" /mnt/run/current-system
+        echo "[OK] Created current-system symlink"
+        
+        # Step 3: Install bootloader
+        echo ""
+        echo "=== Step 3/3: Installing Bootloader ==="
+        echo "System already built, this should be quick..."
+        echo ""
+        
+        if ! guix system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls="https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
+            echo "[ERROR] Bootloader installation failed!"
+            echo "However, kernel and initrd are already in place."
             exit 1
         fi
     fi
     
-    echo "[OK] Kernel and initrd are now present"
-    echo "     Kernel: $(ls /mnt/boot/vmlinuz-* | head -1 | xargs basename)"
-    echo "     Initrd: $(ls /mnt/boot/initrd-* | head -1 | xargs basename)"
+    # Verify installation succeeded
+    echo ""
+    echo "=== Verifying Installation ==="
+    
+    if ! ls /mnt/boot/vmlinuz* >/dev/null 2>&1; then
+        echo "[ERROR] Kernel still missing after installation!"
+        exit 1
+    fi
+    echo "[OK] Kernel present: $(ls /mnt/boot/vmlinuz* | head -1 | xargs basename)"
+    
+    if ! ls /mnt/boot/initrd* >/dev/null 2>&1; then
+        echo "[ERROR] Initrd still missing after installation!"
+        exit 1
+    fi
+    echo "[OK] Initrd present: $(ls /mnt/boot/initrd* | head -1 | xargs basename)"
+    
+    echo "[OK] Installation verification complete"
 else
     echo ""
     echo "[OK] System init already complete - skipping"
