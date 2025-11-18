@@ -2,7 +2,22 @@
 
 This archive contains all completed items from CHECKLIST.md, listed with newest items at the top.
 
-**Last Updated:** 2025-11-16
+**Last Updated:** 2025-01-XX
+
+---
+
+## Cloudzy Initrd Configuration Fix (2025-01-XX)
+
+- ✅ Fixed "Invalid keyword" error during config validation on cloudzy
+  - **Issue**: `base-initrd` function doesn't accept `#:linux` and `#:linux-modules` keyword arguments that Guix automatically passes when `(kernel linux-libre)` is specified
+  - **Error**: `Invalid keyword: (#:linux #<package linux-libre@6.0.10 ...> #:linux-modules ...)` during `guix system reconfigure --dry-run`
+  - **Root Cause**: Explicit initrd specification `(initrd (lambda (fs . rest) (base-initrd fs rest)))` conflicts with Guix's automatic kernel argument passing
+  - **Fix**: Removed explicit initrd specification for cloudzy - Guix uses default initrd generation which automatically handles kernel and modules correctly
+  - **Files Changed**: `cloudzy/install/03-config.go`, `docs/INSTALLATION_KNOWLEDGE.md`
+  - **Documentation**: Updated INSTALLATION_KNOWLEDGE.md to clarify:
+    - Free software installations (cloudzy, VPS): Omit initrd specification, use Guix defaults
+    - Framework 13 (nonguix): Use `(initrd microcode-initrd)` for proprietary firmware support
+- ✅ VERBOSE=1 instructions added for verify script everywhere (helps debug grub.cfg and file detection issues)
 
 ---
 

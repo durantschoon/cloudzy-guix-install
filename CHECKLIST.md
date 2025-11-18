@@ -28,9 +28,9 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ GNOME keyboard layout auto-configuration (gsettings/Wayland-compatible) → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
-2. ✅ Ctrl-C signal handling with recovery instructions → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
-3. ✅ Keyboard layout warning during password setup → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
+1. ✅ Cloudzy initrd fix: Removed explicit base-initrd specification (fixes "Invalid keyword" error) → See "Testing cloudzy installer" section below
+2. ✅ VERBOSE=1 instructions added for verify script everywhere → Helps debug grub.cfg and file detection issues
+3. ✅ GNOME keyboard layout auto-configuration (gsettings/Wayland-compatible) → [See archive](archive/CHECKLIST_COMPLETED.md#gnome-keyboard-layout--password-fixes-2025-11-16)
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -176,6 +176,12 @@ cd ~/guix-customize
 
 **Testing cloudzy installer with latest improvements:**
 
+- ✅ **Initrd configuration fix (2025-01-XX)**: Removed explicit `base-initrd` specification for cloudzy
+  - **Issue**: `base-initrd` doesn't accept `#:linux` and `#:linux-modules` keyword arguments that Guix passes when `(kernel linux-libre)` is specified
+  - **Error**: `Invalid keyword: (#:linux ...)` during config validation
+  - **Fix**: Omit initrd specification entirely for free software installations - Guix uses default initrd generation which automatically handles kernel and modules
+  - **Documentation**: Updated `INSTALLATION_KNOWLEDGE.md` to clarify when to use explicit initrd vs defaults
+  - **Status**: Fixed in `cloudzy/install/03-config.go`, ready for testing
 - ✅ 3-step kernel/initrd fix applied and tested
 - ✅ Color-coded output with cycling headers
 - ✅ Enhanced manifest verification with Quick checksum view
@@ -188,6 +194,7 @@ cd ~/guix-customize
 - ✅ Comprehensive verification at end: runs full verify-guix-install.sh script, ensures EFI mounted, prevents reboot if verification fails
 - ✅ Framework-dual kernel fixes applied to cloudzy: checks broken symlink, automatic fallback copy of kernel/initrd if missing
 - ✅ Verification after guix system init: checks for kernel/initrd files and broken symlink, retries with manual copy if needed
+- ✅ VERBOSE=1 instructions added everywhere verify script is mentioned (helps debug file detection issues)
 
 **Framework 13 Post-Install Process (2025-11-10):**
 
