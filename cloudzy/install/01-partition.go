@@ -164,7 +164,17 @@ func (s *Step01Partition) RunClean(state *State) error {
 		// Use state.BootMode if set (from env var), otherwise detect from environment
 		bootMode := state.BootMode
 		if bootMode == "" {
-			bootMode = lib.DetectBootMode()
+			detectedMode := lib.DetectBootMode()
+			// Cloudzy and most modern VPS providers use UEFI
+			// If detection fails (returns BIOS), default to UEFI for cloudzy
+			if detectedMode == "bios" {
+				fmt.Println("WARNING: BIOS boot mode detected, but Cloudzy VPS typically uses UEFI")
+				fmt.Println("  Defaulting to UEFI (most modern VPS providers use UEFI)")
+				fmt.Println("  If your VPS actually uses BIOS, set BOOT_MODE=bios env var")
+				bootMode = "uefi"
+			} else {
+				bootMode = detectedMode
+			}
 		}
 		fmt.Printf("Boot mode: %s\n", bootMode)
 		if state.BootMode != "" {

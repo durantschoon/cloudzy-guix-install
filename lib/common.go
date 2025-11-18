@@ -2656,6 +2656,14 @@ func DetectBootMode() string {
 			return "uefi"
 		}
 	}
+	
+	// Default to BIOS if UEFI not detected
+	// Note: Most modern VPS providers (Cloudzy, OVH, DigitalOcean, Vultr) use UEFI
+	// If BIOS is detected, it may be because:
+	// 1. The VPS actually uses BIOS (rare but possible)
+	// 2. The Guix ISO was booted in BIOS/CSM mode even though VPS supports UEFI
+	// 3. The detection failed (VPS doesn't expose /sys/firmware/efi properly)
+	// Users can override with BOOT_MODE=uefi env var if needed
 	return "bios"
 }
 
