@@ -188,7 +188,7 @@ Back on the Framework-13 TTY (where you can log in as your user):
 3. Run:
 
 ```bash
-sudo guix time-machine -C /home/durant/wingolog-channels.scm -- \
+sudo guix time-machine -C ~/wingolog-channels.scm -- \
   system reconfigure /etc/guix/framework-13.scm
 ```
 
