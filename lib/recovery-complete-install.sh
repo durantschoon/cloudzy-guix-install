@@ -180,21 +180,54 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         
         echo "Found system: $SYSTEM_PATH"
         
-        if [ -f "$SYSTEM_PATH/kernel" ]; then
-            cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz
-            echo "[OK] Copied kernel"
-        else
-            echo "[ERROR] Kernel not found in system generation"
-            exit 1
+        # Debug: List contents of system generation
+        echo "Checking system generation contents..."
+        ls -la "$SYSTEM_PATH" || true
+        echo ""
+        
+        # Copy kernel - try multiple possible locations
+        KERNEL_SRC="$SYSTEM_PATH/kernel"
+        if [ ! -f "$KERNEL_SRC" ]; then
+            echo "Kernel not found at $KERNEL_SRC, trying alternative locations..."
+            # Try finding kernel in the store (might be a symlink or in a subdirectory)
+            ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -5)
+            if [ -n "$ALTERNATIVES" ]; then
+                echo "Found potential kernel files:"
+                echo "$ALTERNATIVES"
+                # Use the first one found
+                KERNEL_SRC=$(echo "$ALTERNATIVES" | head -1)
+                echo "Using alternative kernel location: $KERNEL_SRC"
+            else
+                echo "[ERROR] Kernel not found in system generation at $SYSTEM_PATH/kernel"
+                echo "Searched for alternatives (kernel, vmlinuz*, bzImage) but none found"
+                exit 1
+            fi
         fi
         
-        if [ -f "$SYSTEM_PATH/initrd" ]; then
-            cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd
-            echo "[OK] Copied initrd"
-        else
-            echo "[ERROR] Initrd not found in system generation"
-            exit 1
+        cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+        echo "[OK] Copied kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
+        
+        # Copy initrd - try multiple possible locations
+        INITRD_SRC="$SYSTEM_PATH/initrd"
+        if [ ! -f "$INITRD_SRC" ]; then
+            echo "Initrd not found at $INITRD_SRC, trying alternative locations..."
+            # Try finding initrd in the store
+            ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -5)
+            if [ -n "$ALTERNATIVES" ]; then
+                echo "Found potential initrd files:"
+                echo "$ALTERNATIVES"
+                # Use the first one found
+                INITRD_SRC=$(echo "$ALTERNATIVES" | head -1)
+                echo "Using alternative initrd location: $INITRD_SRC"
+            else
+                echo "[ERROR] Initrd not found in system generation at $SYSTEM_PATH/initrd"
+                echo "Searched for alternatives (initrd*, initramfs*) but none found"
+                exit 1
+            fi
         fi
+        
+        cp "$INITRD_SRC" /mnt/boot/initrd
+        echo "[OK] Copied initrd: $INITRD_SRC -> /mnt/boot/initrd"
         
         # Create symlink
         rm -f /mnt/run/current-system
@@ -235,21 +268,54 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         
         echo "Found system: $SYSTEM_PATH"
         
-        if [ -f "$SYSTEM_PATH/kernel" ]; then
-            cp "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz
-            echo "[OK] Copied kernel"
-        else
-            echo "[ERROR] Kernel not found in system generation"
-            exit 1
+        # Debug: List contents of system generation
+        echo "Checking system generation contents..."
+        ls -la "$SYSTEM_PATH" || true
+        echo ""
+        
+        # Copy kernel - try multiple possible locations
+        KERNEL_SRC="$SYSTEM_PATH/kernel"
+        if [ ! -f "$KERNEL_SRC" ]; then
+            echo "Kernel not found at $KERNEL_SRC, trying alternative locations..."
+            # Try finding kernel in the store (might be a symlink or in a subdirectory)
+            ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -5)
+            if [ -n "$ALTERNATIVES" ]; then
+                echo "Found potential kernel files:"
+                echo "$ALTERNATIVES"
+                # Use the first one found
+                KERNEL_SRC=$(echo "$ALTERNATIVES" | head -1)
+                echo "Using alternative kernel location: $KERNEL_SRC"
+            else
+                echo "[ERROR] Kernel not found in system generation at $SYSTEM_PATH/kernel"
+                echo "Searched for alternatives (kernel, vmlinuz*, bzImage) but none found"
+                exit 1
+            fi
         fi
         
-        if [ -f "$SYSTEM_PATH/initrd" ]; then
-            cp "$SYSTEM_PATH/initrd" /mnt/boot/initrd
-            echo "[OK] Copied initrd"
-        else
-            echo "[ERROR] Initrd not found in system generation"
-            exit 1
+        cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+        echo "[OK] Copied kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
+        
+        # Copy initrd - try multiple possible locations
+        INITRD_SRC="$SYSTEM_PATH/initrd"
+        if [ ! -f "$INITRD_SRC" ]; then
+            echo "Initrd not found at $INITRD_SRC, trying alternative locations..."
+            # Try finding initrd in the store
+            ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -5)
+            if [ -n "$ALTERNATIVES" ]; then
+                echo "Found potential initrd files:"
+                echo "$ALTERNATIVES"
+                # Use the first one found
+                INITRD_SRC=$(echo "$ALTERNATIVES" | head -1)
+                echo "Using alternative initrd location: $INITRD_SRC"
+            else
+                echo "[ERROR] Initrd not found in system generation at $SYSTEM_PATH/initrd"
+                echo "Searched for alternatives (initrd*, initramfs*) but none found"
+                exit 1
+            fi
         fi
+        
+        cp "$INITRD_SRC" /mnt/boot/initrd
+        echo "[OK] Copied initrd: $INITRD_SRC -> /mnt/boot/initrd"
         
         # Create symlink
         rm -f /mnt/run/current-system
