@@ -22,6 +22,56 @@ else
     CONTEXT="Installed System (checking /)"
 fi
 
+# Detect platform
+detect_platform() {
+    # Check for channels.scm (framework-dual/framework use nonguix)
+    if [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
+        echo "framework-dual"
+        return
+    fi
+    
+    # Check for dual-boot (GUIX_ROOT filesystem with separate EFI)
+    if [ -f "${ROOT}/proc/mounts" ] || [ -f "/proc/mounts" ]; then
+        mounts_file="${ROOT}/proc/mounts"
+        [ ! -f "$mounts_file" ] && mounts_file="/proc/mounts"
+        if [ -f "$mounts_file" ]; then
+            mounts=$(cat "$mounts_file" 2>/dev/null)
+            if echo "$mounts" | grep -q "GUIX_ROOT" && echo "$mounts" | grep -q "/boot/efi"; then
+                echo "framework-dual"
+                return
+            fi
+        fi
+    fi
+    
+    # Check for Raspberry Pi
+    if [ -f "${ROOT}/sys/firmware/devicetree/base/model" ] || [ -f "/sys/firmware/devicetree/base/model" ]; then
+        model_file="${ROOT}/sys/firmware/devicetree/base/model"
+        [ ! -f "$model_file" ] && model_file="/sys/firmware/devicetree/base/model"
+        if [ -f "$model_file" ] && grep -q "Raspberry Pi" "$model_file" 2>/dev/null; then
+            echo "raspberry-pi"
+            return
+        fi
+    fi
+    
+    # Check for VPS vendors (cloudzy)
+    if [ -f "${ROOT}/sys/class/dmi/id/sys_vendor" ] || [ -f "/sys/class/dmi/id/sys_vendor" ]; then
+        vendor_file="${ROOT}/sys/class/dmi/id/sys_vendor"
+        [ ! -f "$vendor_file" ] && vendor_file="/sys/class/dmi/id/sys_vendor"
+        if [ -f "$vendor_file" ]; then
+            vendor=$(cat "$vendor_file" 2>/dev/null | tr '[:upper:]' '[:lower:]')
+            if echo "$vendor" | grep -qE "cloudzy|ovh|digitalocean|vultr"; then
+                echo "cloudzy"
+                return
+            fi
+        fi
+    fi
+    
+    # Default to framework
+    echo "framework"
+}
+
+PLATFORM=$(detect_platform)
+
 # Color output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,6 +85,7 @@ echo "  Guix Installation Verification"
 echo "=========================================="
 echo
 echo "Context: $CONTEXT"
+echo "Platform: $PLATFORM"
 echo "Checking: ${ROOT:-/}"
 echo
 
@@ -159,6 +210,24 @@ fi
 echo
 echo "=== System Configuration ==="
 echo
+
+# Platform-specific checks
+if [ "$PLATFORM" = "framework-dual" ] || [ "$PLATFORM" = "framework" ]; then
+    # Framework platforms use nonguix channel
+    if [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
+        ok "Nonguix channel configured: /tmp/channels.scm"
+    else
+        warn "Nonguix channel not found (expected for framework-dual/framework)"
+        info "  This is OK if using free software only"
+    fi
+elif [ "$PLATFORM" = "cloudzy" ]; then
+    # Cloudzy doesn't use channels.scm (free software only)
+    if [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
+        warn "Found channels.scm (unexpected for cloudzy - should be free software only)"
+    else
+        ok "No channels.scm (expected for cloudzy - free software only)"
+    fi
+fi
 
 # Config file
 if check_file "/etc/config.scm" "System configuration" yes; then
@@ -299,10 +368,17 @@ else
     echo "DO NOT REBOOT until errors are resolved."
     echo
     echo "Common fixes:"
-    echo "  - Re-run: guix system init /mnt/etc/config.scm /mnt"
+    if [ "$PLATFORM" = "framework-dual" ] || [ "$PLATFORM" = "framework" ]; then
+        echo "  - Re-run: guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt"
+    else
+        echo "  - Re-run: guix system init /mnt/etc/config.scm /mnt"
+    fi
     echo "  - Set user password: guix system chroot /mnt && passwd USERNAME"
     echo "  - Check disk space: df -h /mnt"
     echo "  - Review installation logs"
+    if [ "$PLATFORM" = "cloudzy" ]; then
+        echo "  - Platform: cloudzy (free software only - no nonguix channel needed)"
+    fi
     echo
     exit 1
 fi
