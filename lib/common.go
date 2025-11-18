@@ -1442,27 +1442,83 @@ func RunGuixSystemInitFreeSoftware() error {
 
 	fmt.Printf("Found built system: %s\n", systemPath)
 
-	// Copy kernel
+	// Debug: List contents of system generation to help diagnose issues
+	fmt.Println("Checking system generation contents...")
+	cmd = exec.Command("ls", "-la", systemPath)
+	if output, err := cmd.Output(); err == nil {
+		fmt.Println(string(output))
+	} else {
+		fmt.Printf("Warning: Could not list system generation contents: %v\n", err)
+	}
+	fmt.Println()
+
+	// Copy kernel - try multiple possible locations
 	kernelSrc := filepath.Join(systemPath, "kernel")
 	if _, err := os.Stat(kernelSrc); err != nil {
-		return fmt.Errorf("kernel not found in built system: %w", err)
+		// Try alternative locations
+		fmt.Printf("Kernel not found at %s, trying alternative locations...\n", kernelSrc)
+		
+		// Try finding kernel in the store (might be a symlink or in a subdirectory)
+		cmd = exec.Command("bash", "-c", fmt.Sprintf("find %s -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -5", systemPath))
+		if output, err := cmd.Output(); err == nil {
+			alternatives := strings.TrimSpace(string(output))
+			if alternatives != "" {
+				fmt.Println("Found potential kernel files:")
+				fmt.Println(alternatives)
+				// Use the first one found
+				lines := strings.Split(alternatives, "\n")
+				if len(lines) > 0 && lines[0] != "" {
+					kernelSrc = lines[0]
+					fmt.Printf("Using alternative kernel location: %s\n", kernelSrc)
+				} else {
+					return fmt.Errorf("kernel not found in built system at %s (searched alternatives but none found)", filepath.Join(systemPath, "kernel"))
+				}
+			} else {
+				return fmt.Errorf("kernel not found in built system at %s (no alternatives found). System build may have failed or config.scm may be missing kernel configuration", filepath.Join(systemPath, "kernel"))
+			}
+		} else {
+			return fmt.Errorf("kernel not found in built system at %s (failed to search alternatives: %w). System build may have failed or config.scm may be missing kernel configuration", filepath.Join(systemPath, "kernel"), err)
+		}
 	}
 
 	kernelDest := "/mnt/boot/vmlinuz"
 	if err := exec.Command("cp", kernelSrc, kernelDest).Run(); err != nil {
-		return fmt.Errorf("failed to copy kernel: %w", err)
+		return fmt.Errorf("failed to copy kernel from %s to %s: %w", kernelSrc, kernelDest, err)
 	}
 	fmt.Printf("✓ Copied kernel: %s -> %s\n", kernelSrc, kernelDest)
 
-	// Copy initrd
+	// Copy initrd - try multiple possible locations
 	initrdSrc := filepath.Join(systemPath, "initrd")
 	if _, err := os.Stat(initrdSrc); err != nil {
-		return fmt.Errorf("initrd not found in built system: %w", err)
+		// Try alternative locations
+		fmt.Printf("Initrd not found at %s, trying alternative locations...\n", initrdSrc)
+		
+		// Try finding initrd in the store
+		cmd = exec.Command("bash", "-c", fmt.Sprintf("find %s -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -5", systemPath))
+		if output, err := cmd.Output(); err == nil {
+			alternatives := strings.TrimSpace(string(output))
+			if alternatives != "" {
+				fmt.Println("Found potential initrd files:")
+				fmt.Println(alternatives)
+				// Use the first one found
+				lines := strings.Split(alternatives, "\n")
+				if len(lines) > 0 && lines[0] != "" {
+					initrdSrc = lines[0]
+					fmt.Printf("Using alternative initrd location: %s\n", initrdSrc)
+				} else {
+					return fmt.Errorf("initrd not found in built system at %s (searched alternatives but none found)", filepath.Join(systemPath, "initrd"))
+				}
+			} else {
+				return fmt.Errorf("initrd not found in built system at %s (no alternatives found). System build may have failed or config.scm may be missing initrd configuration", filepath.Join(systemPath, "initrd"))
+			}
+		} else {
+			return fmt.Errorf("initrd not found in built system at %s (failed to search alternatives: %w). System build may have failed or config.scm may be missing initrd configuration", filepath.Join(systemPath, "initrd"), err)
+		}
 	}
 
 	initrdDest := "/mnt/boot/initrd"
 	if err := exec.Command("cp", initrdSrc, initrdDest).Run(); err != nil {
-		return fmt.Errorf("failed to copy initrd: %w", err)
+		return fmt.Errorf("failed to copy initrd from %s to %s: %w", initrdSrc, initrdDest, err)
 	}
 	fmt.Printf("✓ Copied initrd: %s -> %s\n", initrdSrc, initrdDest)
 
