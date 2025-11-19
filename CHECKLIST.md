@@ -93,9 +93,16 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
     - **Root cause**: `/var/run/dbus` was a symlink → `/run/dbus` instead of actual directory
     - **Error**: `file name component is not a directory "/var/run/dbus"` in `mkdir-p/perms`
     - **Explanation**: Guix activation script expects to create/manage `/var/run/dbus` as real directory
-    - **Solution**: `sudo rm /var/run/dbus` then re-run reconfigure (Guix will create proper directory)
-    - **Follow-up**: After successful reconfigure, restart D-Bus: `sudo herd restart dbus` or reboot
-  - **Status**: D-Bus issue identified and solution in progress, awaiting reconfigure completion
+    - **Critical failure**: Partial reconfigure left system in broken state
+      - `sudo` fails with "pam_open_session: Error in Service module"
+      - `su -` fails with authentication error (PAM broken)
+      - System authentication/session management non-functional
+    - **Recovery**: Reboot to restore previous working generation
+    - **Correct procedure** (after reboot):
+      1. `sudo rm /var/run/dbus` (fix symlink BEFORE reconfigure)
+      2. `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
+      3. Reboot after successful reconfigure
+  - **Status**: Awaiting system reboot to restore working state, then retry with fixed procedure
 
 **Bootstrap Command for Testing:**
 
