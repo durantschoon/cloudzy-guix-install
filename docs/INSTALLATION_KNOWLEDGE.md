@@ -1689,4 +1689,207 @@ When you create a new shell script, determine if it's a **critical script** that
 
 ---
 
+## Filesystem Invariants After rsync/cp Operations
+
+**Context**: Our installer uses `rsync` (or `cp -a`) to copy `/gnu/store` and `/var/guix` from the ISO to the target disk (Step 02). This is necessary because the ISO's RAM filesystem is too small for installation. However, certain filesystem structures from the ISO must be corrected before booting the installed system.
+
+### Critical Fixes Required
+
+These are Guix-specific filesystem invariants that must hold for the system to boot correctly:
+
+#### 1. `/var/run` → `/run` symlink (CRITICAL)
+
+**Must be:**
+- `/run` = directory (tmpfs at boot)
+- `/var/run` → `/run` (symlink)
+
+**Problem if wrong:** If `/var/run` is a directory (copied from ISO), services fail to start:
+- guix-daemon won't start
+- NetworkManager fails
+- SSH server won't bind
+- Most systemd-style services break
+
+**Fix:**
+```bash
+rm -rf /mnt/var/run
+ln -sf /run /mnt/var/run
+```
+
+**Status in our installer:** ✅ Already handled in Step 02 (mount step creates correct structure)
+
+#### 2. `/var/guix` structure (IMPORTANT)
+
+**ISO contains temporary runtime data** that doesn't belong on installed systems:
+- `/var/guix/profiles/per-user/live-image-user` (ISO user, not real user)
+- Temporary daemon state
+- Wrong ownership
+
+**Correct structure:**
+```
+/var/guix/
+    profiles/     (must exist, created by installer)
+    db/           (must exist, created by installer)
+    daemon-socket/ (created at boot)
+    gcroots/      (must exist, created by installer)
+    userpool/     (created by installer)
+```
+
+**Our installer handles this:**
+```go
+// In Step 02, after copying /var/guix:
+criticalDirs := []string{
+    "/mnt/var/guix/profiles",
+    "/mnt/var/guix/gcroots",
+    "/mnt/var/guix/userpool",
+}
+// Ensures these exist with correct permissions
+```
+
+**Potential cleanup needed:**
+```bash
+# Remove ISO user profiles if they exist
+rm -rf /mnt/var/guix/profiles/per-user/live-image-user
+
+# Ensure correct ownership
+chown -R root:root /mnt/var/guix
+```
+
+#### 3. `/etc/mtab` (IMPORTANT for service startup)
+
+**Must be:**
+```bash
+/etc/mtab -> /proc/self/mounts  (symlink)
+```
+
+**Problem if wrong:** If it's a static file copied from ISO:
+- udev may fail
+- NetworkManager confused about mount state
+- Filesystem services misbehave
+
+**Fix:**
+```bash
+rm -f /mnt/etc/mtab
+ln -sf /proc/self/mounts /mnt/etc/mtab
+```
+
+**Status:** ⚠️ **TODO** - Should add this check to our installer
+
+### Likely Issues (Non-Critical but Recommended)
+
+#### 4. `/etc/resolv.conf` from ISO
+
+ISO's DNS config doesn't belong on installed system. Let NetworkManager recreate it:
+```bash
+rm -f /mnt/etc/resolv.conf
+```
+
+#### 5. `/etc/machine-id` from ISO
+
+Can cause D-Bus and elogind issues:
+```bash
+rm -f /mnt/etc/machine-id
+# System will regenerate on first boot
+```
+
+#### 6. ISO user home directory
+
+```bash
+rm -rf /mnt/home/live-image-user
+```
+
+### What `guix system init` Handles
+
+The official `guix system init` command (which we use in Step 04) automatically:
+- Creates `/etc` structure from config.scm
+- Sets up bootloader
+- Creates user accounts
+- Initializes `/var/guix/db` (Guix package database)
+- Creates system profile links
+
+However, it does **NOT** clean up ISO-specific runtime files that were copied by rsync.
+
+### Recommended Pre-Init Checklist
+
+Before running `guix system init`, verify:
+
+```bash
+# Check symlinks are correct
+ls -ld /mnt/var/run   # Should be symlink to /run
+ls -ld /mnt/etc/mtab  # Should be symlink to /proc/self/mounts
+
+# Check /var/guix structure
+ls /mnt/var/guix/     # Should have: profiles, gcroots, userpool, db
+ls /mnt/var/guix/profiles/per-user/  # Should NOT have 'live-image-user'
+
+# Check home directories
+ls /mnt/home/         # Should NOT have ISO user
+
+# Check machine-id
+ls -l /mnt/etc/machine-id  # Should not exist (will be regenerated)
+```
+
+### Recovery If System Won't Boot
+
+If the system was installed but won't boot properly, boot from ISO again and fix:
+
+```bash
+# Mount the installed system
+mount /dev/disk/by-label/GUIX_ROOT /mnt
+mount /dev/disk/by-label/EFI /mnt/boot/efi
+
+# Fix critical symlinks
+rm -rf /mnt/var/run && ln -sf /run /mnt/var/run
+rm -f /mnt/etc/mtab && ln -sf /proc/self/mounts /mnt/etc/mtab
+
+# Clean ISO artifacts
+rm -rf /mnt/var/guix/profiles/per-user/live-image-user
+rm -f /mnt/etc/machine-id
+rm -f /mnt/etc/resolv.conf
+rm -rf /mnt/home/live-image-user
+
+# Ensure correct ownership
+chown -R root:root /mnt/var/guix
+
+# Reboot and try again
+reboot
+```
+
+### Implementation Status in Our Installer
+
+| Issue | Handled | Location | Notes |
+|-------|---------|----------|-------|
+| `/var/run` symlink | ✅ Yes | Step 02 mount | Creates correct structure |
+| `/var/guix` dirs | ✅ Yes | Step 02 mount | Creates profiles, gcroots, userpool |
+| `/etc/mtab` symlink | ⚠️ No | - | **Should add this check** |
+| ISO user cleanup | ⚠️ No | - | Low priority (doesn't break boot) |
+| `/etc/machine-id` | ⚠️ No | - | System regenerates, but should clean |
+| `/etc/resolv.conf` | ⚠️ No | - | NetworkManager recreates, not critical |
+
+### Action Items
+
+To make our installer more robust, we should add to Step 02 or Step 03:
+
+```go
+// Clean up ISO artifacts that could cause boot issues
+func CleanupISOArtifacts() error {
+    artifacts := []string{
+        "/mnt/etc/machine-id",
+        "/mnt/etc/resolv.conf",
+        "/mnt/var/guix/profiles/per-user/live-image-user",
+    }
+
+    for _, path := range artifacts {
+        os.RemoveAll(path)  // Ignore errors - files may not exist
+    }
+
+    // Ensure critical symlinks
+    os.Remove("/mnt/etc/mtab")
+    os.Symlink("/proc/self/mounts", "/mnt/etc/mtab")
+
+    return nil
+}
+```
+
+---
+
 **Remember:** The Guix installation is more forgiving than it seems. Most failures can be recovered by re-running the same command without rebooting.
