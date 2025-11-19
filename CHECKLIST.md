@@ -86,10 +86,16 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - NonGuix commit: `10318ef7dd53c946bae9ed63f7e0e8bb8941b6b1`
   - Updated READMEs with usage instructions
   - Updated docs/GNOME_LOGIN_TROUBLESHOOTING.md with complete root cause analysis
-- 🧪 **NEXT**: Test Wingo channel pinning on Framework 13 AMD
-  - May manually edit files rather than full reinstall
-  - Run: `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
+- 🧪 **IN PROGRESS**: Testing Wingo channel pinning on Framework 13 AMD
+  - Running: `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
   - Expected: amdgpu firmware loads correctly, GDM/GNOME login works
+  - **Issue encountered**: D-Bus activation failure during system reconfigure
+    - **Root cause**: `/var/run/dbus` was a symlink → `/run/dbus` instead of actual directory
+    - **Error**: `file name component is not a directory "/var/run/dbus"` in `mkdir-p/perms`
+    - **Explanation**: Guix activation script expects to create/manage `/var/run/dbus` as real directory
+    - **Solution**: `sudo rm /var/run/dbus` then re-run reconfigure (Guix will create proper directory)
+    - **Follow-up**: After successful reconfigure, restart D-Bus: `sudo herd restart dbus` or reboot
+  - **Status**: D-Bus issue identified and solution in progress, awaiting reconfigure completion
 
 **Bootstrap Command for Testing:**
 
