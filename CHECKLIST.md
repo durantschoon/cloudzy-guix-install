@@ -102,7 +102,76 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
       1. `sudo rm /var/run/dbus` (fix symlink BEFORE reconfigure)
       2. `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
       3. Reboot after successful reconfigure
-  - **Status**: Awaiting system reboot to restore working state, then retry with fixed procedure
+  - **Status**: System rebooted, ready to apply proper fix
+  - **NEXT STEPS** (after reboot recovery):
+
+    **Step 1: Fix the layout without touching `/var/run` itself**
+
+    All we need is:
+    - `/var/run` stays a directory (that's fine)
+    - `/var/run/dbus` becomes a real directory that Guix can own
+
+    From a root shell (either `sudo -i` or single-user boot):
+
+    ```bash
+    # 1. Make sure /var/run exists and is a directory (it already is)
+    ls -ld /var/run
+
+    # 2. If /var/run/dbus is a symlink or file, remove it:
+    rm -f /var/run/dbus
+
+    # 3. Recreate it as a real directory:
+    mkdir -p /var/run/dbus
+
+    # 4. Give it the expected owner/permissions.
+    # On your system, 'messagebus' was uid 989 in the backtrace, so either:
+    chown messagebus:messagebus /var/run/dbus 2>/dev/null || chown 989:989 /var/run/dbus
+    chmod 755 /var/run/dbus
+
+    # 5. Optionally, restart dbus so live services stop complaining:
+    herd restart dbus-system 2>/dev/null || true
+    ```
+
+    Now `/var/run/dbus` is a normal directory, and `mkdir-p/perms "/var/run/dbus"` in Guix activation will be happy.
+
+    **Step 2: Remove the bad bit from install scripts**
+
+    Somewhere in the install scripts there's likely something like:
+
+    ```bash
+    ln -s /run/dbus /var/run/dbus
+    ```
+
+    or similar. That line needs to go. Let Guix activation and the dbus service manage `/var/run/dbus`.
+
+    Once that's gone, future `guix system reconfigure` and `guix time-machine ... system reconfigure` runs won't re-break the layout.
+
+    **Step 3: Then re-run time-machine reconfigure**
+
+    After the layout is fixed and scripts are corrected:
+
+    ```bash
+    sudo guix time-machine -C ~/wingolog-channels.scm -- \
+      system reconfigure /etc/config.scm
+    ```
+
+    Now activation should no longer die with:
+    ```
+    file name component is not a directory "/var/run/dbus"
+    ```
+
+    **About "atomic" operations:**
+
+    On a live multi-user system, there's no truly atomic "turn directory into symlink with all processes happy" trick. But:
+
+    - You don't actually need to replace `/var/run` with a symlink
+    - You do want to avoid ripping out `/var/run/dbus` while dbus is in use
+
+    Two safe patterns:
+    1. Do it from single-user mode (no sudo, no dbus, nothing is using it)
+    2. Or, if you're already root, change `/var/run/dbus` quickly to a directory and then restart dbus (`herd restart dbus-system`)
+
+    In other words: don't try to be clever and transactional; just don't touch it while you're relying on it for auth
 
 **Bootstrap Command for Testing:**
 
