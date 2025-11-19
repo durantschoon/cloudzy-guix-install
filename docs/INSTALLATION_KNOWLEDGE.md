@@ -1309,6 +1309,86 @@ guix system init /mnt/etc/config.scm /mnt
 - Tests daemon responsiveness with `guix build --version`
 - 8-second wait periods for daemon initialization
 
+### D-Bus Activation Failure: /var/run/dbus Symlink Issue
+
+**Problem:** `guix system reconfigure` fails with error: `file name component is not a directory "/var/run/dbus"` in `mkdir-p/perms`
+
+**Symptoms:**
+- System reconfigure fails during activation phase
+- Error mentions D-Bus directory creation
+- Partial reconfigure may leave system in broken state (PAM failures, sudo broken)
+- `/var/run/dbus` exists as a symlink to `/run/dbus` owned by root
+
+**Root Cause:**
+
+The Guix D-Bus activation script (`gnu/services/dbus.scm`) expects to manage `/var/run/dbus` creation itself:
+
+1. **Expected flow:**
+   - Activation script creates `/run/dbus` directory (owned by messagebus user, mode 0755)
+   - Activation script creates symlink `/var/run/dbus` → `/run/dbus`
+   - Script handles existing directories by migrating content if needed
+
+2. **What goes wrong:**
+   - Something creates `/var/run/dbus` as a symlink owned by root BEFORE activation runs
+   - When activation tries to use `mkdir-p/perms "/var/run/dbus" user #o755`, it fails
+   - The function expects to create a directory or manage an existing directory, not encounter a pre-existing symlink
+
+**Why It Matters:**
+
+If `guix system reconfigure` fails during D-Bus activation:
+- The activation script runs partially, leaving some services configured and others not
+- PAM configuration may be incomplete, breaking `sudo` and `su`
+- System authentication and session management becomes non-functional
+- **CRITICAL:** You may lose access to privileged operations until you reboot to previous generation
+
+**Prevention (before reconfiguring):**
+
+```bash
+# Check if the problematic symlink exists
+ls -la /var/run/dbus
+
+# If it's a symlink owned by root, remove it before reconfiguring
+sudo rm /var/run/dbus
+
+# Now safe to reconfigure
+sudo guix system reconfigure /etc/config.scm
+```
+
+**Recovery (if reconfigure already failed):**
+
+If you're stuck with broken PAM/sudo after a failed reconfigure:
+
+1. **Reboot immediately** to restore previous working generation:
+   ```bash
+   reboot
+   ```
+
+2. **After reboot**, select the previous working generation in GRUB menu
+
+3. **Once system is working again**, remove the problematic symlink:
+   ```bash
+   sudo rm /var/run/dbus
+   ```
+
+4. **Now retry the reconfigure:**
+   ```bash
+   sudo guix system reconfigure /etc/config.scm
+   ```
+
+**Investigation Needed:**
+
+The root question remains: **What is creating `/var/run/dbus` as a root-owned symlink before the D-Bus activation script runs?**
+
+Possible culprits:
+- Another service activation script running before D-Bus
+- GNOME desktop services (`%desktop-services`) setup
+- System initialization creating legacy compatibility symlinks
+- Previous failed activation leaving state behind
+
+This needs further investigation to find the actual source and prevent it from creating the symlink prematurely.
+
+**Related:** When using `guix time-machine` with channel pinning (e.g., Wingo-era channels for Framework 13 AMD), this issue may appear during the reconfigure process.
+
 ## 🆘 Recovery Script
 
 **New in 2024:** All installers now automatically generate a comprehensive recovery script at `/root/recovery-complete-install.sh` before running `guix system init`.
