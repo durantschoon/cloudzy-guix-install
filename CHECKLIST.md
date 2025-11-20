@@ -28,9 +28,9 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Framework 13 AMD GDM login fix**: Root cause identified (AMD GPU firmware issue) and Wingo-era channel pinning implemented → See "Framework-dual postinstall" section below
-2. ✅ Cloudzy initrd fix: Removed explicit base-initrd specification (fixes "Invalid keyword" error) → See "Testing cloudzy installer" section below
-3. ✅ VERBOSE=1 instructions added for verify script everywhere → Helps debug grub.cfg and file detection issues
+1. ✅ **Comprehensive filesystem recovery script**: Created `lib/recover-filesystem-invariants.sh` for complete recovery of systems with ISO artifact issues → [See archive](archive/CHECKLIST_COMPLETED.md#comprehensive-filesystem-recovery-script-2025-01-xx)
+2. ✅ **ISO artifacts cleanup**: Implemented `CleanupISOArtifacts()` function and recovery scripts → [See archive](archive/CHECKLIST_COMPLETED.md#iso-artifacts-cleanup-implementation-2025-01-xx)
+3. ✅ **Framework 13 AMD GDM login fix**: Root cause identified (AMD GPU firmware issue) and Wingo-era channel pinning implemented → See "Framework-dual postinstall" section below
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -89,92 +89,18 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - 🧪 **IN PROGRESS**: Testing Wingo channel pinning on Framework 13 AMD
   - Running: `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
   - Expected: amdgpu firmware loads correctly, GDM/GNOME login works
-  - ✅ **ROOT CAUSE FIXED**: ISO artifacts cleanup implemented
+  - ✅ **ISO artifacts cleanup complete** → [See archive](archive/CHECKLIST_COMPLETED.md#iso-artifacts-cleanup-implementation-2025-01-xx)
     - **Problem**: When copying `/var/guix` from ISO using rsync/cp, ISO's filesystem structure was copied
-    - **Issues**: `/var/run` copied as directory (should be symlink), `/etc/mtab` copied as file (should be symlink)
     - **Solution**: Added `CleanupISOArtifacts()` function to fix filesystem invariants after ISO copy
-    - **Implementation**: 
-      - Fixes `/var/run` → `/run` symlink (CRITICAL - prevents service failures)
-      - Fixes `/etc/mtab` → `/proc/self/mounts` symlink (IMPORTANT - prevents filesystem service issues)
-      - Removes ISO artifacts (`/etc/machine-id`, `/etc/resolv.conf`, ISO user profiles)
-      - Fixes `/var/guix` ownership
+    - **Implementation**: Fixes `/var/run` → `/run` symlink, `/etc/mtab` symlink, removes ISO artifacts
     - **Integration**: Added to all mount steps (cloudzy, framework, framework-dual)
-    - **One-time fix script**: Created `lib/fix-iso-artifacts.sh` for existing installations
+    - **Recovery scripts**:
+      - `lib/fix-iso-artifacts.sh` - Quick symlink fixes
+      - `lib/recover-filesystem-invariants.sh` - Complete recovery with system rebuild
     - **Status**: ✅ Complete - future installs automatically fix these issues
-  - **Previous issue** (now fixed): D-Bus activation failure during system reconfigure
-    - **Root cause**: `/var/run/dbus` was a symlink → `/run/dbus` instead of actual directory
-    - **Error**: `file name component is not a directory "/var/run/dbus"` in `mkdir-p/perms`
-    - **Explanation**: Guix activation script expects to create/manage `/var/run/dbus` as real directory
+  - ✅ **D-Bus activation failure fixed** → Root cause was ISO artifacts copying `/var/run` as directory
     - **Status**: ✅ Fixed by ensuring `/var/run` is correct symlink before system init
-  - **NEXT STEPS** (for existing installations):
-
-    **Step 1: Fix the layout without touching `/var/run` itself**
-
-    All we need is:
-    - `/var/run` stays a directory (that's fine)
-    - `/var/run/dbus` becomes a real directory that Guix can own
-
-    From a root shell (either `sudo -i` or single-user boot):
-
-    ```bash
-    # 1. Make sure /var/run exists and is a directory (it already is)
-    ls -ld /var/run
-
-    # 2. If /var/run/dbus is a symlink or file, remove it:
-    rm -f /var/run/dbus
-
-    # 3. Recreate it as a real directory:
-    mkdir -p /var/run/dbus
-
-    # 4. Give it the expected owner/permissions.
-    # On your system, 'messagebus' was uid 989 in the backtrace, so either:
-    chown messagebus:messagebus /var/run/dbus 2>/dev/null || chown 989:989 /var/run/dbus
-    chmod 755 /var/run/dbus
-
-    # 5. Optionally, restart dbus so live services stop complaining:
-    herd restart dbus-system 2>/dev/null || true
-    ```
-
-    Now `/var/run/dbus` is a normal directory, and `mkdir-p/perms "/var/run/dbus"` in Guix activation will be happy.
-
-    **Step 2: Remove the bad bit from install scripts**
-
-    Somewhere in the install scripts there's likely something like:
-
-    ```bash
-    ln -s /run/dbus /var/run/dbus
-    ```
-
-    or similar. That line needs to go. Let Guix activation and the dbus service manage `/var/run/dbus`.
-
-    Once that's gone, future `guix system reconfigure` and `guix time-machine ... system reconfigure` runs won't re-break the layout.
-
-    **Step 3: Then re-run time-machine reconfigure**
-
-    After the layout is fixed and scripts are corrected:
-
-    ```bash
-    sudo guix time-machine -C ~/wingolog-channels.scm -- \
-      system reconfigure /etc/config.scm
-    ```
-
-    Now activation should no longer die with:
-    ```
-    file name component is not a directory "/var/run/dbus"
-    ```
-
-    **About "atomic" operations:**
-
-    On a live multi-user system, there's no truly atomic "turn directory into symlink with all processes happy" trick. But:
-
-    - You don't actually need to replace `/var/run` with a symlink
-    - You do want to avoid ripping out `/var/run/dbus` while dbus is in use
-
-    Two safe patterns:
-    1. Do it from single-user mode (no sudo, no dbus, nothing is using it)
-    2. Or, if you're already root, change `/var/run/dbus` quickly to a directory and then restart dbus (`herd restart dbus-system`)
-
-    In other words: don't try to be clever and transactional; just don't touch it while you're relying on it for auth
+    - **For existing installations**: Use `lib/recover-filesystem-invariants.sh` for complete recovery
 
 **Bootstrap Command for Testing:**
 

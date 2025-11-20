@@ -6,6 +6,25 @@ This archive contains all completed items from CHECKLIST.md, listed with newest 
 
 ---
 
+## Comprehensive Filesystem Recovery Script (2025-01-XX)
+
+- ✅ **Comprehensive recovery script**: Created `lib/recover-filesystem-invariants.sh`
+  - Fixes filesystem layout (empties `/run`, fixes `/var/run`, `/var/lock` symlinks)
+  - Removes ISO artifacts (`/etc/machine-id`, `/etc/resolv.conf`, ISO user profiles)
+  - Optionally rebuilds system profile (chroot + `guix system reconfigure`)
+  - Supports `--skip-rebuild` option for faster fixes
+  - Auto-detects ISO vs installed system
+- ✅ **Documentation**: Updated `docs/INSTALLATION_KNOWLEDGE.md` with comprehensive recovery guide
+  - Added root cause explanation (why ISO artifacts cause persistent issues)
+  - Added complete step-by-step recovery procedure (Phases A-E)
+  - Added comparison table: `fix-iso-artifacts.sh` vs `recover-filesystem-invariants.sh`
+  - Explained why system profile rebuild is necessary
+- ✅ **Manifest**: Added `lib/recover-filesystem-invariants.sh` to SOURCE_MANIFEST.txt
+- **Use case**: For systems with persistent PAM/dbus/service failures after installation
+- **Recommendation**: Start with `fix-iso-artifacts.sh` for quick fixes, use `recover-filesystem-invariants.sh` if issues persist
+
+---
+
 ## ISO Artifacts Cleanup Implementation (2025-01-XX)
 
 - ✅ **ISO artifacts cleanup function**: Created `CleanupISOArtifacts()` in `lib/common.go`
