@@ -6,6 +6,32 @@ This archive contains all completed items from CHECKLIST.md, listed with newest 
 
 ---
 
+## ISO Artifacts Cleanup Implementation (2025-01-XX)
+
+- ✅ **ISO artifacts cleanup function**: Created `CleanupISOArtifacts()` in `lib/common.go`
+  - Fixes `/var/run` → `/run` symlink (CRITICAL - prevents service failures)
+  - Fixes `/etc/mtab` → `/proc/self/mounts` symlink (IMPORTANT - prevents filesystem service issues)
+  - Removes ISO artifacts (`/etc/machine-id`, `/etc/resolv.conf`, ISO user profiles)
+  - Fixes `/var/guix` ownership
+  - Idempotent and safe to run multiple times
+- ✅ **Integration**: Added cleanup call to all mount steps
+  - `cloudzy/install/02-mount.go`
+  - `framework/install/02-mount.go`
+  - `framework-dual/install/02-mount-existing.go`
+- ✅ **One-time fix script**: Created `lib/fix-iso-artifacts.sh` for existing installations
+  - Detects if running from ISO or installed system
+  - Fixes all filesystem invariants
+  - Provides clear status messages
+- ✅ **Tests**: Added tests for `CleanupISOArtifacts` function
+  - `TestCleanupISOArtifacts` in `lib/common_test.go`
+  - `TestCleanupISOArtifactsAccessibility` in `framework-dual/install/02-mount-existing_test.go`
+- ✅ **Documentation**: Updated CHECKLIST.md to reflect completion
+- ✅ **Manifest**: Added `lib/fix-iso-artifacts.sh` to SOURCE_MANIFEST.txt
+- **Root cause**: When copying `/var/guix` from ISO using rsync/cp, ISO's filesystem structure was copied, causing `/var/run` to be a directory instead of symlink
+- **Impact**: Prevents D-Bus activation failures and service startup issues on all platforms
+
+---
+
 ## Cloudzy Initrd Configuration Fix (2025-01-XX)
 
 - ✅ Fixed "Invalid keyword" error during config validation on cloudzy

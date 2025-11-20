@@ -187,3 +187,10 @@ func TestStatePersistence(t *testing.T) {
 		t.Errorf("Root not preserved: got %s", state.Root)
 	}
 }
+
+// TestCleanupISOArtifactsAccessibility tests that CleanupISOArtifacts is accessible
+func TestCleanupISOArtifactsAccessibility(t *testing.T) {
+	// Verify the function exists and can be called (will fail at runtime without /mnt, but compiles)
+	_ = lib.CleanupISOArtifacts
+	t.Log("CleanupISOArtifacts function is accessible")
+}

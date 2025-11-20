@@ -1505,6 +1505,150 @@ func IsMounted(path string) bool {
 	return cmd.Run() == nil
 }
 
+// CleanupISOArtifacts fixes filesystem invariants after copying from ISO
+// This must be called after rsync/cp operations that copy /var/guix from ISO
+// Fixes critical symlinks and removes ISO-specific artifacts that could cause boot/service issues
+func CleanupISOArtifacts() error {
+	fmt.Println()
+	fmt.Println("Cleaning up ISO artifacts and fixing filesystem invariants...")
+	fmt.Println()
+
+	// 1. Fix /var/run symlink (CRITICAL - prevents service failures)
+	varRunPath := "/mnt/var/run"
+	if info, err := os.Lstat(varRunPath); err == nil {
+		if info.IsDir() {
+			// It's a directory (copied from ISO) - remove and create symlink
+			fmt.Printf("  Fixing /var/run: removing directory, creating symlink...")
+			if err := os.RemoveAll(varRunPath); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to remove /mnt/var/run directory: %w", err)
+			}
+			if err := os.Symlink("/run", varRunPath); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to create /mnt/var/run symlink: %w", err)
+			}
+			fmt.Printf(" [FIXED]\n")
+		} else if info.Mode()&os.ModeSymlink != 0 {
+			// It's a symlink - verify it points to /run
+			target, err := os.Readlink(varRunPath)
+			if err != nil {
+				fmt.Printf("  Fixing /var/run: broken symlink, recreating...")
+				os.Remove(varRunPath)
+				if err := os.Symlink("/run", varRunPath); err != nil {
+					fmt.Printf(" [FAILED]: %v\n", err)
+					return fmt.Errorf("failed to recreate /mnt/var/run symlink: %w", err)
+				}
+				fmt.Printf(" [FIXED]\n")
+			} else if target != "/run" {
+				fmt.Printf("  Fixing /var/run: wrong target (%s), fixing...", target)
+				os.Remove(varRunPath)
+				if err := os.Symlink("/run", varRunPath); err != nil {
+					fmt.Printf(" [FAILED]: %v\n", err)
+					return fmt.Errorf("failed to fix /mnt/var/run symlink: %w", err)
+				}
+				fmt.Printf(" [FIXED]\n")
+			} else {
+				fmt.Printf("  /var/run symlink: [OK]\n")
+			}
+		}
+	} else if os.IsNotExist(err) {
+		// Doesn't exist - create symlink
+		fmt.Printf("  Creating /var/run symlink...")
+		if err := os.Symlink("/run", varRunPath); err != nil {
+			fmt.Printf(" [FAILED]: %v\n", err)
+			return fmt.Errorf("failed to create /mnt/var/run symlink: %w", err)
+		}
+		fmt.Printf(" [OK]\n")
+	} else {
+		fmt.Printf("  /var/run: [WARNING] %v\n", err)
+	}
+
+	// 2. Fix /etc/mtab symlink (IMPORTANT - prevents filesystem service issues)
+	mtabPath := "/mnt/etc/mtab"
+	if info, err := os.Lstat(mtabPath); err == nil {
+		if info.Mode()&os.ModeSymlink == 0 {
+			// It's a file (copied from ISO) - remove and create symlink
+			fmt.Printf("  Fixing /etc/mtab: removing file, creating symlink...")
+			if err := os.Remove(mtabPath); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to remove /mnt/etc/mtab file: %w", err)
+			}
+			if err := os.Symlink("/proc/self/mounts", mtabPath); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to create /mnt/etc/mtab symlink: %w", err)
+			}
+			fmt.Printf(" [FIXED]\n")
+		} else {
+			// It's a symlink - verify it points to /proc/self/mounts
+			target, err := os.Readlink(mtabPath)
+			if err != nil {
+				fmt.Printf("  Fixing /etc/mtab: broken symlink, recreating...")
+				os.Remove(mtabPath)
+				if err := os.Symlink("/proc/self/mounts", mtabPath); err != nil {
+					fmt.Printf(" [FAILED]: %v\n", err)
+					return fmt.Errorf("failed to recreate /mnt/etc/mtab symlink: %w", err)
+				}
+				fmt.Printf(" [FIXED]\n")
+			} else if target != "/proc/self/mounts" {
+				fmt.Printf("  Fixing /etc/mtab: wrong target (%s), fixing...", target)
+				os.Remove(mtabPath)
+				if err := os.Symlink("/proc/self/mounts", mtabPath); err != nil {
+					fmt.Printf(" [FAILED]: %v\n", err)
+					return fmt.Errorf("failed to fix /mnt/etc/mtab symlink: %w", err)
+				}
+				fmt.Printf(" [FIXED]\n")
+			} else {
+				fmt.Printf("  /etc/mtab symlink: [OK]\n")
+			}
+		}
+	} else if os.IsNotExist(err) {
+		// Doesn't exist - create symlink
+		fmt.Printf("  Creating /etc/mtab symlink...")
+		if err := os.Symlink("/proc/self/mounts", mtabPath); err != nil {
+			fmt.Printf(" [FAILED]: %v\n", err)
+			return fmt.Errorf("failed to create /mnt/etc/mtab symlink: %w", err)
+		}
+		fmt.Printf(" [OK]\n")
+	} else {
+		fmt.Printf("  /etc/mtab: [WARNING] %v\n", err)
+	}
+
+	// 3. Remove ISO-specific artifacts (non-critical, but recommended)
+	artifacts := []string{
+		"/mnt/etc/machine-id",                              // System regenerates on boot
+		"/mnt/etc/resolv.conf",                             // NetworkManager recreates
+		"/mnt/var/guix/profiles/per-user/live-image-user",  // ISO user profile
+		"/mnt/home/live-image-user",                        // ISO user home directory
+	}
+
+	for _, artifact := range artifacts {
+		if err := os.RemoveAll(artifact); err != nil {
+			if !os.IsNotExist(err) {
+				fmt.Printf("  Removing %s: [WARNING] %v\n", artifact, err)
+			}
+		} else {
+			fmt.Printf("  Removed ISO artifact: %s [OK]\n", artifact)
+		}
+	}
+
+	// 4. Ensure correct ownership of /var/guix (if it exists)
+	guixPath := "/mnt/var/guix"
+	if info, err := os.Stat(guixPath); err == nil && info.IsDir() {
+		// Try to fix ownership, but don't fail if chown doesn't work
+		if err := exec.Command("chown", "-R", "root:root", guixPath).Run(); err != nil {
+			fmt.Printf("  /var/guix ownership: [WARNING] chown failed: %v\n", err)
+		} else {
+			fmt.Printf("  /var/guix ownership: [OK]\n")
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("ISO cleanup complete.")
+	fmt.Println()
+
+	return nil
+}
+
 // CommandExists checks if a command exists in PATH
 func CommandExists(name string) bool {
 	_, err := exec.LookPath(name)

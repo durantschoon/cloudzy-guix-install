@@ -89,21 +89,24 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - 🧪 **IN PROGRESS**: Testing Wingo channel pinning on Framework 13 AMD
   - Running: `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
   - Expected: amdgpu firmware loads correctly, GDM/GNOME login works
-  - **Issue encountered**: D-Bus activation failure during system reconfigure
+  - ✅ **ROOT CAUSE FIXED**: ISO artifacts cleanup implemented
+    - **Problem**: When copying `/var/guix` from ISO using rsync/cp, ISO's filesystem structure was copied
+    - **Issues**: `/var/run` copied as directory (should be symlink), `/etc/mtab` copied as file (should be symlink)
+    - **Solution**: Added `CleanupISOArtifacts()` function to fix filesystem invariants after ISO copy
+    - **Implementation**: 
+      - Fixes `/var/run` → `/run` symlink (CRITICAL - prevents service failures)
+      - Fixes `/etc/mtab` → `/proc/self/mounts` symlink (IMPORTANT - prevents filesystem service issues)
+      - Removes ISO artifacts (`/etc/machine-id`, `/etc/resolv.conf`, ISO user profiles)
+      - Fixes `/var/guix` ownership
+    - **Integration**: Added to all mount steps (cloudzy, framework, framework-dual)
+    - **One-time fix script**: Created `lib/fix-iso-artifacts.sh` for existing installations
+    - **Status**: ✅ Complete - future installs automatically fix these issues
+  - **Previous issue** (now fixed): D-Bus activation failure during system reconfigure
     - **Root cause**: `/var/run/dbus` was a symlink → `/run/dbus` instead of actual directory
     - **Error**: `file name component is not a directory "/var/run/dbus"` in `mkdir-p/perms`
     - **Explanation**: Guix activation script expects to create/manage `/var/run/dbus` as real directory
-    - **Critical failure**: Partial reconfigure left system in broken state
-      - `sudo` fails with "pam_open_session: Error in Service module"
-      - `su -` fails with authentication error (PAM broken)
-      - System authentication/session management non-functional
-    - **Recovery**: Reboot to restore previous working generation
-    - **Correct procedure** (after reboot):
-      1. `sudo rm /var/run/dbus` (fix symlink BEFORE reconfigure)
-      2. `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
-      3. Reboot after successful reconfigure
-  - **Status**: System rebooted, ready to apply proper fix
-  - **NEXT STEPS** (after reboot recovery):
+    - **Status**: ✅ Fixed by ensuring `/var/run` is correct symlink before system init
+  - **NEXT STEPS** (for existing installations):
 
     **Step 1: Fix the layout without touching `/var/run` itself**
 

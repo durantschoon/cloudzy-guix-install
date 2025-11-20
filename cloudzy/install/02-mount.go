@@ -167,6 +167,12 @@ func (s *Step02Mount) RunClean(state *State) error {
 	}
 	fmt.Println("All critical directories created successfully")
 
+	// Clean up ISO artifacts and fix filesystem invariants
+	// This fixes /var/run symlink, /etc/mtab symlink, and removes ISO-specific files
+	if err := lib.CleanupISOArtifacts(); err != nil {
+		return fmt.Errorf("failed to cleanup ISO artifacts: %w", err)
+	}
+
     // Mount EFI by label
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
     if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {

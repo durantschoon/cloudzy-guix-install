@@ -49,6 +49,12 @@ if [ -f lib/recovery-complete-install.sh ]; then
     echo "$hash  lib/recovery-complete-install.sh" >> "$MANIFEST_FILE"
 fi
 
+# ISO artifacts fix script (one-time fix for existing installations)
+if [ -f lib/fix-iso-artifacts.sh ]; then
+    hash=$(shasum -a 256 lib/fix-iso-artifacts.sh | awk '{print $1}')
+    echo "$hash  lib/fix-iso-artifacts.sh" >> "$MANIFEST_FILE"
+fi
+
 # Post-install library
 if [ -f lib/postinstall.sh ]; then
     hash=$(shasum -a 256 lib/postinstall.sh | awk '{print $1}')
