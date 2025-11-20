@@ -55,6 +55,12 @@ if [ -f lib/fix-iso-artifacts.sh ]; then
     echo "$hash  lib/fix-iso-artifacts.sh" >> "$MANIFEST_FILE"
 fi
 
+# Comprehensive filesystem recovery script (complete recovery with system rebuild)
+if [ -f lib/recover-filesystem-invariants.sh ]; then
+    hash=$(shasum -a 256 lib/recover-filesystem-invariants.sh | awk '{print $1}')
+    echo "$hash  lib/recover-filesystem-invariants.sh" >> "$MANIFEST_FILE"
+fi
+
 # Post-install library
 if [ -f lib/postinstall.sh ]; then
     hash=$(shasum -a 256 lib/postinstall.sh | awk '{print $1}')
