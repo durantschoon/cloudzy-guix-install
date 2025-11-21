@@ -313,25 +313,58 @@ if [ "$SKIP_REBUILD" = false ]; then
             echo "This may take several minutes..."
             echo ""
             
-            # Try to chroot and rebuild
-            if chroot "$PREFIX" /run/current-system/profile/bin/bash -c "
-                echo 'Inside chroot, rebuilding system...'
-                if [ -f /etc/config.scm ]; then
-                    guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm
-                    echo 'System rebuild complete'
-                else
-                    echo 'ERROR: /etc/config.scm not found in chroot'
-                    exit 1
+            # Resolve bash path - chroot needs the actual path, not a symlink
+            # Try multiple possible bash locations
+            BASH_PATH=""
+            for bash_candidate in \
+                "/run/current-system/profile/bin/bash" \
+                "/bin/bash" \
+                "$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null || echo '')"
+            do
+                if [ -n "$bash_candidate" ] && [ -f "${PREFIX}${bash_candidate}" ]; then
+                    BASH_PATH="$bash_candidate"
+                    break
                 fi
-            "; then
-                status "OK" "System profile rebuilt"
+            done
+            
+            # If still not found, try to find bash in the store
+            if [ -z "$BASH_PATH" ]; then
+                # Look for bash in /gnu/store inside the chroot
+                BASH_STORE=$(find "${PREFIX}/gnu/store" -name "bash" -type f -path "*/bin/bash" 2>/dev/null | head -1)
+                if [ -n "$BASH_STORE" ]; then
+                    # Convert absolute path to chroot-relative path
+                    BASH_PATH="${BASH_STORE#${PREFIX}}"
+                fi
+            fi
+            
+            if [ -z "$BASH_PATH" ]; then
+                echo "WARNING: Could not find bash in chroot. Skipping system rebuild."
+                echo "You can rebuild manually after boot:"
+                echo "  sudo guix system reconfigure /etc/config.scm"
+                SKIP_REBUILD=true
             else
-                echo ""
-                echo "WARNING: System rebuild failed. You may need to rebuild manually:"
-                echo "  chroot /mnt /run/current-system/profile/bin/bash"
-                echo "  guix system reconfigure /etc/config.scm"
-                echo ""
-                status "WARNING" "System rebuild failed (non-fatal)"
+                echo "Using bash at: $BASH_PATH"
+                
+                # Try to chroot and rebuild
+                if chroot "$PREFIX" "$BASH_PATH" -c "
+                    echo 'Inside chroot, rebuilding system...'
+                    if [ -f /etc/config.scm ]; then
+                        guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm
+                        echo 'System rebuild complete'
+                    else
+                        echo 'ERROR: /etc/config.scm not found in chroot'
+                        exit 1
+                    fi
+                "; then
+                    status "OK" "System profile rebuilt"
+                else
+                    echo ""
+                    echo "WARNING: System rebuild failed. You may need to rebuild manually:"
+                    echo "  chroot $PREFIX $BASH_PATH"
+                    echo "  guix system reconfigure /etc/config.scm"
+                    echo ""
+                    status "WARNING" "System rebuild failed (non-fatal)"
+                fi
             fi
             
             # Unmount
