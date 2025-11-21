@@ -1553,7 +1553,10 @@ wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/li
 chmod +x recover-filesystem-invariants.sh
 
 # Mount your root partition first
-mount /dev/nvme0n1p4 /mnt  # Adjust partition as needed
+# if you know the partition exactly:
+# mount /dev/nvme0n1p4 /mnt  # Adjust partition as needed
+# or use the label which you should have (confirm with `lsblk -f`)
+mount $(blkid -L GUIX_ROOT) /mnt  
 
 # Run the script
 ./recover-filesystem-invariants.sh
