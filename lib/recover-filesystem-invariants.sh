@@ -95,6 +95,55 @@ status() {
     esac
 }
 
+# Resolve bash path BEFORE Phase B clears /run (so we can use it in Phase D)
+# This must happen before /run is cleared, otherwise /run/current-system will be gone
+BASH_PATH=""
+BASH_RESOLVED_PATH=""
+
+if [ "$RUNNING_FROM_ISO" = true ]; then
+    echo "Resolving bash path before Phase B clears /run..."
+    CURRENT_SYSTEM_SYMLINK="${PREFIX}/run/current-system"
+    
+    if [ -L "$CURRENT_SYSTEM_SYMLINK" ] || [ -d "$CURRENT_SYSTEM_SYMLINK" ]; then
+        if [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
+            # Resolve symlink to actual path
+            RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
+            if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
+                BASH_RESOLVED_PATH="$RESOLVED"
+                BASH_PATH="${RESOLVED#${PREFIX}}"
+                echo "  Resolved: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
+                echo "  Chroot path will be: $BASH_PATH"
+            fi
+        fi
+    fi
+    
+    # If not found via /run/current-system, try store search
+    if [ -z "$BASH_PATH" ]; then
+        echo "  Searching /gnu/store for bash..."
+        BASH_STORE=$(find "${PREFIX}/gnu/store" -name "bash" -type f -path "*/bin/bash" 2>/dev/null | head -1)
+        if [ -n "$BASH_STORE" ]; then
+            BASH_PATH="${BASH_STORE#${PREFIX}}"
+            BASH_RESOLVED_PATH="$BASH_STORE"
+            echo "  Found bash in store: $BASH_STORE"
+            echo "  Chroot path will be: $BASH_PATH"
+        fi
+    fi
+    
+    # Fallback to /bin/bash
+    if [ -z "$BASH_PATH" ] && [ -f "${PREFIX}/bin/bash" ]; then
+        BASH_PATH="/bin/bash"
+        BASH_RESOLVED_PATH="${PREFIX}/bin/bash"
+        echo "  Using fallback: $BASH_PATH"
+    fi
+    
+    if [ -z "$BASH_PATH" ]; then
+        echo "  WARNING: Could not resolve bash path. Phase D may skip system rebuild."
+    else
+        echo "  Bash path resolved successfully for Phase D"
+    fi
+    echo ""
+fi
+
 # Phase B: Fix filesystem layout
 echo "========================================"
 echo "Phase B: Fixing Filesystem Layout"
@@ -313,63 +362,20 @@ if [ "$SKIP_REBUILD" = false ]; then
             echo "This may take several minutes..."
             echo ""
             
-            # Resolve bash path - chroot needs the actual path, not a symlink
-            # Note: Phase B cleared /run, so /run/current-system may not exist
-            # Try multiple possible bash locations
-            BASH_PATH=""
-            BASH_RESOLVED_PATH=""
-            
-            # Check if /run/current-system exists and is valid (Phase B may have cleared /run)
-            CURRENT_SYSTEM_SYMLINK="${PREFIX}/run/current-system"
-            if [ -L "$CURRENT_SYSTEM_SYMLINK" ] || [ -d "$CURRENT_SYSTEM_SYMLINK" ]; then
-                # Check if symlink target exists
-                if [ -L "$CURRENT_SYSTEM_SYMLINK" ]; then
-                    LINK_TARGET=$(readlink "$CURRENT_SYSTEM_SYMLINK")
-                    if [ ! -e "${PREFIX}${LINK_TARGET}" ] && [ ! -e "$LINK_TARGET" ]; then
-                        echo "WARNING: /run/current-system symlink is broken (points to: $LINK_TARGET)"
-                        echo "  This is expected after Phase B cleared /run. Will search store for bash."
-                    else
-                        # Symlink is valid, try to use it
-                        if [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
-                            # Resolve symlink to actual path
-                            RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
-                            if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
-                                # Store both the resolved absolute path and chroot-relative path
-                                BASH_RESOLVED_PATH="$RESOLVED"
-                                BASH_PATH="${RESOLVED#${PREFIX}}"
-                                echo "Resolved symlink: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
-                            fi
-                        fi
-                    fi
-                elif [ -d "$CURRENT_SYSTEM_SYMLINK" ] && [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
-                    # It's a directory (not a symlink), try to use it directly
-                    RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
-                    if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
-                        BASH_RESOLVED_PATH="$RESOLVED"
-                        BASH_PATH="${RESOLVED#${PREFIX}}"
-                        echo "Resolved path from directory: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
-                    fi
-                fi
-            else
-                echo "NOTE: /run/current-system does not exist (Phase B cleared /run). Will search store for bash."
-            fi
-            
-            # Fallback to /bin/bash if standard path doesn't work
-            if [ -z "$BASH_PATH" ] && [ -f "${PREFIX}/bin/bash" ]; then
-                BASH_PATH="/bin/bash"
-                BASH_RESOLVED_PATH="${PREFIX}/bin/bash"
-                echo "Using fallback path: $BASH_PATH"
-            fi
-            
-            # Last resort: find bash in the store (most reliable after Phase B cleared /run)
+            # Use bash path resolved before Phase B cleared /run
+            # If not already resolved, try to find it now (shouldn't happen, but be safe)
             if [ -z "$BASH_PATH" ]; then
-                echo "Searching /gnu/store for bash..."
+                echo "WARNING: Bash path not resolved before Phase B. Searching now..."
+                # Try store search directly
                 BASH_STORE=$(find "${PREFIX}/gnu/store" -name "bash" -type f -path "*/bin/bash" 2>/dev/null | head -1)
                 if [ -n "$BASH_STORE" ]; then
-                    # Convert absolute path to chroot-relative path
                     BASH_PATH="${BASH_STORE#${PREFIX}}"
                     BASH_RESOLVED_PATH="$BASH_STORE"
                     echo "Found bash in store: $BASH_STORE"
+                elif [ -f "${PREFIX}/bin/bash" ]; then
+                    BASH_PATH="/bin/bash"
+                    BASH_RESOLVED_PATH="${PREFIX}/bin/bash"
+                    echo "Using fallback: $BASH_PATH"
                 fi
             fi
             
