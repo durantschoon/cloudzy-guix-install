@@ -316,20 +316,27 @@ if [ "$SKIP_REBUILD" = false ]; then
             # Resolve bash path - chroot needs the actual path, not a symlink
             # Try multiple possible bash locations
             BASH_PATH=""
-            for bash_candidate in \
-                "/run/current-system/profile/bin/bash" \
-                "/bin/bash" \
-                "$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null || echo '')"
-            do
-                if [ -n "$bash_candidate" ] && [ -f "${PREFIX}${bash_candidate}" ]; then
-                    BASH_PATH="$bash_candidate"
-                    break
-                fi
-            done
             
-            # If still not found, try to find bash in the store
+            # Try standard location first
+            if [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
+                # Resolve symlink to actual path
+                RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
+                if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
+                    # Convert to chroot-relative path
+                    BASH_PATH="${RESOLVED#${PREFIX}}"
+                else
+                    # If readlink fails, try the symlink path directly
+                    BASH_PATH="/run/current-system/profile/bin/bash"
+                fi
+            fi
+            
+            # Fallback to /bin/bash if standard path doesn't work
+            if [ -z "$BASH_PATH" ] && [ -f "${PREFIX}/bin/bash" ]; then
+                BASH_PATH="/bin/bash"
+            fi
+            
+            # Last resort: find bash in the store
             if [ -z "$BASH_PATH" ]; then
-                # Look for bash in /gnu/store inside the chroot
                 BASH_STORE=$(find "${PREFIX}/gnu/store" -name "bash" -type f -path "*/bin/bash" 2>/dev/null | head -1)
                 if [ -n "$BASH_STORE" ]; then
                     # Convert absolute path to chroot-relative path
@@ -345,25 +352,24 @@ if [ "$SKIP_REBUILD" = false ]; then
             else
                 echo "Using bash at: $BASH_PATH"
                 
-                # Try to chroot and rebuild
-                if chroot "$PREFIX" "$BASH_PATH" -c "
-                    echo 'Inside chroot, rebuilding system...'
-                    if [ -f /etc/config.scm ]; then
-                        guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm
-                        echo 'System rebuild complete'
-                    else
-                        echo 'ERROR: /etc/config.scm not found in chroot'
-                        exit 1
-                    fi
-                "; then
-                    status "OK" "System profile rebuilt"
+                # Verify the path exists before chrooting
+                if [ ! -f "${PREFIX}${BASH_PATH}" ]; then
+                    echo "ERROR: Bash path $BASH_PATH does not exist in chroot"
+                    echo "Skipping system rebuild."
+                    SKIP_REBUILD=true
                 else
-                    echo ""
-                    echo "WARNING: System rebuild failed. You may need to rebuild manually:"
-                    echo "  chroot $PREFIX $BASH_PATH"
-                    echo "  guix system reconfigure /etc/config.scm"
-                    echo ""
-                    status "WARNING" "System rebuild failed (non-fatal)"
+                # Try to chroot and rebuild
+                # Use single quotes for the command to avoid quote issues
+                if chroot "$PREFIX" "$BASH_PATH" -c 'echo "Inside chroot, rebuilding system..."; if [ -f /etc/config.scm ]; then guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm; echo "System rebuild complete"; else echo "ERROR: /etc/config.scm not found in chroot"; exit 1; fi'; then
+                        status "OK" "System profile rebuilt"
+                    else
+                        echo ""
+                        echo "WARNING: System rebuild failed. You may need to rebuild manually:"
+                        echo "  chroot $PREFIX $BASH_PATH"
+                        echo "  guix system reconfigure /etc/config.scm"
+                        echo ""
+                        status "WARNING" "System rebuild failed (non-fatal)"
+                    fi
                 fi
             fi
             
