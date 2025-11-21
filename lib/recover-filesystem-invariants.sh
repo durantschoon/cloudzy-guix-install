@@ -478,8 +478,23 @@ else
 fi
 
 echo ""
+echo "IMPORTANT: D-Bus /var/run/dbus Issue"
+echo "======================================"
+echo ""
+echo "If you reconfigure with 'guix system reconfigure' or 'guix time-machine'"
+echo "and get an error about '/var/run/dbus is not a directory', this is a"
+echo "known issue where something creates /var/run/dbus before D-Bus activation runs."
+echo ""
+echo "Before reconfiguring, check and remove /var/run/dbus if it exists:"
+echo "  sudo ls -la /var/run/dbus"
+echo "  sudo rm /var/run/dbus  # Remove if it's a symlink or directory"
+echo ""
+echo "Then reconfigure:"
+echo "  sudo guix system reconfigure /etc/config.scm"
+echo ""
 echo "If issues persist, check:"
 echo "  - /var/run.before-rebuild (backup of old /var/run)"
 echo "  - System logs: journalctl -b"
+echo "  - See docs/INSTALLATION_KNOWLEDGE.md section 'D-Bus Activation Failure'"
 echo ""
 
