@@ -316,23 +316,30 @@ if [ "$SKIP_REBUILD" = false ]; then
             # Resolve bash path - chroot needs the actual path, not a symlink
             # Try multiple possible bash locations
             BASH_PATH=""
+            BASH_RESOLVED_PATH=""
             
             # Try standard location first
             if [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
                 # Resolve symlink to actual path
                 RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
                 if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
-                    # Convert to chroot-relative path
+                    # Store both the resolved absolute path and chroot-relative path
+                    BASH_RESOLVED_PATH="$RESOLVED"
                     BASH_PATH="${RESOLVED#${PREFIX}}"
+                    echo "Resolved symlink: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
                 else
                     # If readlink fails, try the symlink path directly
                     BASH_PATH="/run/current-system/profile/bin/bash"
+                    BASH_RESOLVED_PATH="${PREFIX}${BASH_PATH}"
+                    echo "Using symlink path directly: $BASH_PATH"
                 fi
             fi
             
             # Fallback to /bin/bash if standard path doesn't work
             if [ -z "$BASH_PATH" ] && [ -f "${PREFIX}/bin/bash" ]; then
                 BASH_PATH="/bin/bash"
+                BASH_RESOLVED_PATH="${PREFIX}/bin/bash"
+                echo "Using fallback path: $BASH_PATH"
             fi
             
             # Last resort: find bash in the store
@@ -341,6 +348,8 @@ if [ "$SKIP_REBUILD" = false ]; then
                 if [ -n "$BASH_STORE" ]; then
                     # Convert absolute path to chroot-relative path
                     BASH_PATH="${BASH_STORE#${PREFIX}}"
+                    BASH_RESOLVED_PATH="$BASH_STORE"
+                    echo "Found bash in store: $BASH_STORE"
                 fi
             fi
             
@@ -350,21 +359,40 @@ if [ "$SKIP_REBUILD" = false ]; then
                 echo "  sudo guix system reconfigure /etc/config.scm"
                 SKIP_REBUILD=true
             else
-                echo "Using bash at: $BASH_PATH"
+                echo "Using bash at (chroot-relative): $BASH_PATH"
+                if [ -n "$BASH_RESOLVED_PATH" ]; then
+                    echo "Resolved absolute path: $BASH_RESOLVED_PATH"
+                fi
                 
                 # Verify the path exists before chrooting
                 if [ ! -f "${PREFIX}${BASH_PATH}" ]; then
                     echo "ERROR: Bash path $BASH_PATH does not exist in chroot"
+                    echo "  Checked: ${PREFIX}${BASH_PATH}"
+                    if [ -n "$BASH_RESOLVED_PATH" ]; then
+                        echo "  Resolved path: $BASH_RESOLVED_PATH"
+                    fi
                     echo "Skipping system rebuild."
                     SKIP_REBUILD=true
                 else
-                # Try to chroot and rebuild
-                # Use single quotes for the command to avoid quote issues
-                if chroot "$PREFIX" "$BASH_PATH" -c 'echo "Inside chroot, rebuilding system..."; if [ -f /etc/config.scm ]; then guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm; echo "System rebuild complete"; else echo "ERROR: /etc/config.scm not found in chroot"; exit 1; fi'; then
+                    # Try to chroot and rebuild
+                    # Use single quotes for the command to avoid quote issues
+                    echo "Attempting chroot with: chroot \"$PREFIX\" \"$BASH_PATH\" -c '...'"
+                    if chroot "$PREFIX" "$BASH_PATH" -c 'echo "Inside chroot, rebuilding system..."; if [ -f /etc/config.scm ]; then guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm; echo "System rebuild complete"; else echo "ERROR: /etc/config.scm not found in chroot"; exit 1; fi'; then
                         status "OK" "System profile rebuilt"
                     else
                         echo ""
-                        echo "WARNING: System rebuild failed. You may need to rebuild manually:"
+                        echo "WARNING: System rebuild failed."
+                        echo "Chroot command attempted:"
+                        echo "  chroot \"$PREFIX\" \"$BASH_PATH\" -c '...'"
+                        echo ""
+                        echo "Bash path details:"
+                        echo "  Chroot-relative: $BASH_PATH"
+                        if [ -n "$BASH_RESOLVED_PATH" ]; then
+                            echo "  Resolved absolute: $BASH_RESOLVED_PATH"
+                            echo "  File exists: $([ -f "$BASH_RESOLVED_PATH" ] && echo "YES" || echo "NO")"
+                        fi
+                        echo ""
+                        echo "You may need to rebuild manually:"
                         echo "  chroot $PREFIX $BASH_PATH"
                         echo "  guix system reconfigure /etc/config.scm"
                         echo ""
