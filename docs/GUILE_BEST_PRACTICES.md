@@ -13,16 +13,29 @@ For common mistakes, see [GUILE_GOTCHAS.md](GUILE_GOTCHAS.md).
 
 ## Table of Contents
 
-1. [Module System](#1-use-the-module-system-properly)
-2. [Separation of Concerns](#2-separate-concerns-repl-script-library)
-3. [Pure Functional Style](#3-prefer-pure-functional-definitions)
-4. [Tail Recursion](#4-use-tail-calls-and-recursion-carefully)
-5. [Incremental Development](#5-write-tests-and-develop-incrementally)
-6. [Code Readability](#6-code-readability-and-naming)
-7. [Abstraction Levels](#7-use-appropriate-abstraction-levels)
-8. [Performance](#8-mind-performance-when-needed)
-9. [Scheme Conventions](#9-follow-scheme-conventions)
-10. [Error Handling](#10-handle-errors-gracefully)
+- [Guile/Scheme Best Practices](#guilescheme-best-practices)
+  - [Table of Contents](#table-of-contents)
+  - [1. Use the Module System Properly](#1-use-the-module-system-properly)
+  - [2. Separate Concerns: REPL, Script, Library](#2-separate-concerns-repl-script-library)
+  - [3. Prefer Pure Functional Definitions](#3-prefer-pure-functional-definitions)
+  - [4. Use Tail Calls and Recursion Carefully](#4-use-tail-calls-and-recursion-carefully)
+  - [5. Write Tests and Develop Incrementally](#5-write-tests-and-develop-incrementally)
+  - [6. Code Readability and Naming](#6-code-readability-and-naming)
+  - [7. Use Appropriate Abstraction Levels](#7-use-appropriate-abstraction-levels)
+  - [8. Mind Performance When Needed](#8-mind-performance-when-needed)
+  - [9. Follow Scheme Conventions](#9-follow-scheme-conventions)
+  - [10. Handle Errors Gracefully](#10-handle-errors-gracefully)
+  - [Resources](#resources)
+    - [Recommended Learning Resources](#recommended-learning-resources)
+      - [1. Guile Reference Manual - "Programming in Scheme"](#1-guile-reference-manual---programming-in-scheme)
+      - [2. The Guile Hacker's Notebook](#2-the-guile-hackers-notebook)
+      - [3. Andy Wingo's Blog: "Wingolog"](#3-andy-wingos-blog-wingolog)
+      - [4. System Crafters Community Discussions](#4-system-crafters-community-discussions)
+    - [Official Documentation](#official-documentation)
+    - [Quick References](#quick-references)
+    - [Performance and Optimization](#performance-and-optimization)
+  - [Changelog](#changelog)
+    - [2024-11-15: Initial Creation](#2024-11-15-initial-creation)
 
 ---
 
@@ -388,7 +401,7 @@ Community discussions like "Is there a good learning material on Guile Scheme?"
 - Modules: [Modules](https://www.gnu.org/software/guile/manual/html_node/Modules.html)
 
 ### Performance and Optimization
-- [David Thompson: Optimizing Guile](https://dthompson.us/posts/optimize-guile.html)
+- [David Thompson: Optimizing Guile](https://dthompson.us/posts/optimizing-guile-scheme.html)
 - Guile compilation, bytecode, and performance considerations
 
 ---
