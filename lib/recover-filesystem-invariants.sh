@@ -314,25 +314,44 @@ if [ "$SKIP_REBUILD" = false ]; then
             echo ""
             
             # Resolve bash path - chroot needs the actual path, not a symlink
+            # Note: Phase B cleared /run, so /run/current-system may not exist
             # Try multiple possible bash locations
             BASH_PATH=""
             BASH_RESOLVED_PATH=""
             
-            # Try standard location first
-            if [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
-                # Resolve symlink to actual path
-                RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
-                if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
-                    # Store both the resolved absolute path and chroot-relative path
-                    BASH_RESOLVED_PATH="$RESOLVED"
-                    BASH_PATH="${RESOLVED#${PREFIX}}"
-                    echo "Resolved symlink: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
-                else
-                    # If readlink fails, try the symlink path directly
-                    BASH_PATH="/run/current-system/profile/bin/bash"
-                    BASH_RESOLVED_PATH="${PREFIX}${BASH_PATH}"
-                    echo "Using symlink path directly: $BASH_PATH"
+            # Check if /run/current-system exists and is valid (Phase B may have cleared /run)
+            CURRENT_SYSTEM_SYMLINK="${PREFIX}/run/current-system"
+            if [ -L "$CURRENT_SYSTEM_SYMLINK" ] || [ -d "$CURRENT_SYSTEM_SYMLINK" ]; then
+                # Check if symlink target exists
+                if [ -L "$CURRENT_SYSTEM_SYMLINK" ]; then
+                    LINK_TARGET=$(readlink "$CURRENT_SYSTEM_SYMLINK")
+                    if [ ! -e "${PREFIX}${LINK_TARGET}" ] && [ ! -e "$LINK_TARGET" ]; then
+                        echo "WARNING: /run/current-system symlink is broken (points to: $LINK_TARGET)"
+                        echo "  This is expected after Phase B cleared /run. Will search store for bash."
+                    else
+                        # Symlink is valid, try to use it
+                        if [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
+                            # Resolve symlink to actual path
+                            RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
+                            if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
+                                # Store both the resolved absolute path and chroot-relative path
+                                BASH_RESOLVED_PATH="$RESOLVED"
+                                BASH_PATH="${RESOLVED#${PREFIX}}"
+                                echo "Resolved symlink: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
+                            fi
+                        fi
+                    fi
+                elif [ -d "$CURRENT_SYSTEM_SYMLINK" ] && [ -f "${PREFIX}/run/current-system/profile/bin/bash" ]; then
+                    # It's a directory (not a symlink), try to use it directly
+                    RESOLVED=$(readlink -f "${PREFIX}/run/current-system/profile/bin/bash" 2>/dev/null)
+                    if [ -n "$RESOLVED" ] && [ -f "$RESOLVED" ]; then
+                        BASH_RESOLVED_PATH="$RESOLVED"
+                        BASH_PATH="${RESOLVED#${PREFIX}}"
+                        echo "Resolved path from directory: ${PREFIX}/run/current-system/profile/bin/bash -> $RESOLVED"
+                    fi
                 fi
+            else
+                echo "NOTE: /run/current-system does not exist (Phase B cleared /run). Will search store for bash."
             fi
             
             # Fallback to /bin/bash if standard path doesn't work
@@ -342,8 +361,9 @@ if [ "$SKIP_REBUILD" = false ]; then
                 echo "Using fallback path: $BASH_PATH"
             fi
             
-            # Last resort: find bash in the store
+            # Last resort: find bash in the store (most reliable after Phase B cleared /run)
             if [ -z "$BASH_PATH" ]; then
+                echo "Searching /gnu/store for bash..."
                 BASH_STORE=$(find "${PREFIX}/gnu/store" -name "bash" -type f -path "*/bin/bash" 2>/dev/null | head -1)
                 if [ -n "$BASH_STORE" ]; then
                     # Convert absolute path to chroot-relative path
