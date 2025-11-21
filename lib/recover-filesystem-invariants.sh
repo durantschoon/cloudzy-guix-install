@@ -198,7 +198,7 @@ if [ -e "$var_run" ]; then
 fi
 ln -sf /run "$var_run"
 if [ -L "$var_run" ] && [ "$(readlink "$var_run")" = "/run" ]; then
-    status "FIXED" "/var/run → /run symlink"
+    status "FIXED" "/var/run -> /run symlink"
 else
     status "ERROR" "/var/run symlink creation failed"
     exit 1
@@ -308,7 +308,7 @@ echo ""
 
 # Check /var/run
 if [ -L "$var_run" ] && [ "$(readlink "$var_run")" = "/run" ]; then
-    status "OK" "/var/run → /run symlink verified"
+    status "OK" "/var/run -> /run symlink verified"
 else
     status "ERROR" "/var/run symlink verification failed"
     exit 1
@@ -316,7 +316,7 @@ fi
 
 # Check /var/lock
 if [ -L "$var_lock" ] && [ "$(readlink "$var_lock")" = "/run/lock" ]; then
-    status "OK" "/var/lock → /run/lock symlink verified"
+    status "OK" "/var/lock -> /run/lock symlink verified"
 else
     status "ERROR" "/var/lock symlink verification failed"
     exit 1
@@ -324,7 +324,7 @@ fi
 
 # Check /etc/mtab
 if [ -L "$mtab" ] && [ "$(readlink "$mtab")" = "/proc/self/mounts" ]; then
-    status "OK" "/etc/mtab → /proc/self/mounts symlink verified"
+    status "OK" "/etc/mtab -> /proc/self/mounts symlink verified"
 else
     status "ERROR" "/etc/mtab symlink verification failed"
     exit 1
@@ -453,11 +453,11 @@ echo "Recovery Complete!"
 echo "========================================"
 echo ""
 echo "Filesystem invariants have been fixed:"
-echo "  ✓ /var/run → /run symlink"
-echo "  ✓ /var/lock → /run/lock symlink"
-echo "  ✓ /run directory cleaned"
-echo "  ✓ /var/tmp permissions fixed"
-echo "  ✓ ISO artifacts removed"
+echo "  [OK] /var/run -> /run symlink"
+echo "  [OK] /var/lock -> /run/lock symlink"
+echo "  [OK] /run directory cleaned"
+echo "  [OK] /var/tmp permissions fixed"
+echo "  [OK] ISO artifacts removed"
 echo ""
 
 if [ "$SKIP_REBUILD" = false ] && [ "$RUNNING_FROM_ISO" = true ]; then
