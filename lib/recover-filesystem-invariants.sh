@@ -121,10 +121,9 @@ run_dir="${PREFIX}/run"
 echo ""
 echo "Cleaning /run directory..."
 if [ -d "$run_dir" ]; then
-    # Count items before cleanup
-    item_count=$(find "$run_dir" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
-    if [ "$item_count" -gt 0 ]; then
-        echo "  Removing $item_count items from /run..."
+    # Check if directory has contents (without using wc, which may not be available)
+    if [ -n "$(ls -A "$run_dir" 2>/dev/null)" ]; then
+        echo "  Removing items from /run..."
         rm -rf "${run_dir:?}"/*
         rm -rf "${run_dir:?}"/.[!.]* "${run_dir:?}"/..?* 2>/dev/null || true
     fi
@@ -136,7 +135,7 @@ else
 fi
 
 # Verify /run is empty
-if [ "$(ls -A "$run_dir" 2>/dev/null | wc -l)" -eq 0 ]; then
+if [ -z "$(ls -A "$run_dir" 2>/dev/null)" ]; then
     status "OK" "/run is empty"
 else
     status "WARNING" "/run still contains items"
