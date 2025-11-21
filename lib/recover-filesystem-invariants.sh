@@ -190,7 +190,7 @@ else
     status "WARNING" "/run still contains items"
 fi
 
-# Create /var/run → /run symlink
+# Create /var/run -> /run symlink
 echo ""
 echo "Creating /var/run symlink..."
 if [ -e "$var_run" ]; then
@@ -204,7 +204,7 @@ else
     exit 1
 fi
 
-# Fix /var/lock → /run/lock symlink
+# Fix /var/lock -> /run/lock symlink
 var_lock="${PREFIX}/var/lock"
 echo ""
 echo "Fixing /var/lock symlink..."
