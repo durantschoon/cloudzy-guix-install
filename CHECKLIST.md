@@ -104,86 +104,60 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 
 **System Recovery Status (2025-01-XX):**
 
-### ✅ **System Health - All Critical Issues Resolved**
+### 🔄 **Fresh Start Approach - Clean Install Testing**
 
-**Original Problem:** Guix install was built by rsync'ing the live ISO, causing deep structural issues:
-- `/run` was copied as a real directory instead of tmpfs
-- `/var/run` was copied as a directory instead of symlink
-- Stale ISO sockets and runtime files in `/mnt/run`
-- ISO artifacts in `/etc/machine-id`, `/etc/mtab`, `/var/guix`
-- Activation scripts copied from ISO and out of sync
-- Result: PAM failed, sudo failed, reconfigure failed, dbus complained, system didn't boot cleanly
+**Previous Recovery Attempts:**
+- Original Problem: Guix install was built by rsync'ing the live ISO, causing deep structural issues:
+  - `/run` was copied as a real directory instead of tmpfs
+  - `/var/run` was copied as a directory instead of symlink
+  - Stale ISO sockets and runtime files in `/mnt/run`
+  - ISO artifacts in `/etc/machine-id`, `/etc/mtab`, `/var/guix`
+  - Activation scripts copied from ISO and out of sync
+  - Result: PAM failed, sudo failed, reconfigure failed, dbus complained, system didn't boot cleanly
 
-**✅ All System Problems Fixed:**
-- ✅ `/run` is now correctly mounted as tmpfs (no more ISO leftovers)
-- ✅ `sudo -v` works (confirms PAM, dbus, elogind, session services are healthy)
-- ✅ ISO artifacts removed (`/etc/mtab`, `/etc/machine-id`, `/etc/resolv.conf`, `/var/guix` ownership, `/run` stale contents)
-- ✅ `/mnt/run` cleaned (removed biggest source of corruption)
-- ✅ `/var/run` behavior understood: Current Guix intentionally recreates `/var/run` as a directory during early boot cleanup phase. This is **normal and correct** for this version (symlink approach coming in future patch upstream)
+**Recovery Lessons Learned:**
+- ✅ `/run` can be correctly mounted as tmpfs (fixes ISO leftovers)
+- ✅ `sudo -v` can work (confirms PAM, dbus, elogind, session services are healthy)
+- ✅ ISO artifacts can be removed (`/etc/mtab`, `/etc/machine-id`, `/etc/resolv.conf`, `/var/guix` ownership, `/run` stale contents)
+- ⚠️ **Could not prevent `/var/run` from returning as a directory**: Current Guix intentionally recreates `/var/run` as a directory during early boot cleanup phase. This is **normal and correct** for this version (symlink approach coming in future patch upstream), but caused issues with wingolog time-machine reconfigure
 
-**⚠️ Remaining Issue: Wingolog Time-Machine Reconfigure**
+**Current Status: Fresh Install Test**
+- ✅ **GUIX_ROOT partition wiped** (contents saved to external drive for reference)
+- 🧪 **Testing install script from empty partition** - Will verify that clean install avoids all ISO artifact issues from the start
+- **Goal**: Confirm that proper installation (not rsync from ISO) creates correct filesystem structure from the beginning
 
-The **only** remaining problem is with the `wingolog time-machine reconfigure` command:
-- Error: `/var/run/dbus is not a directory`
-- Root cause: Old Guix commit used by wingolog expects `/var/run/dbus` to be a directory
-- Constraint: Cannot safely create `/var/run/dbus` on running system (removing it kills sudo)
-- Solution: Must fix `/mnt/var/run/dbus` **offline from the ISO** in chroot environment
+**Action Plan for Fresh Install Test:**
 
-**✅ Chroot Environment Setup Understood:**
-- Issue: Chrooting with bash only (no Guix system profile) results in empty PATH
-- Fix: Inside chroot, run:
+1. **Boot the Guix ISO**
+2. **Run install script on empty GUIX_ROOT partition**
+3. **Verify clean install creates correct filesystem structure:**
+   - `/run` should be tmpfs (not a directory)
+   - `/var/run` behavior should be correct from the start
+   - No ISO artifacts should be present
+   - System should boot cleanly
+4. **Test wingolog time-machine reconfigure on clean install:**
+   - Verify if `/var/run/dbus` directory issue still occurs
+   - If needed, apply DNS and PATH fixes in chroot (see notes below)
+5. **Document results** - Compare clean install behavior vs recovered rsync install
+
+**Notes for Future Reference (if chroot fixes needed):**
+
+**DNS Fix for Chroot:**
+- Before entering chroot (on ISO shell):
+  ```sh
+  rm -f /mnt/etc/resolv.conf
+  cp /etc/resolv.conf /mnt/etc/resolv.conf
+  ```
+
+**PATH Fix Inside Chroot:**
+- After chrooting:
   ```sh
   SYSTEM=$(readlink -f /var/guix/profiles/system)
   export PATH="$SYSTEM/profile/bin:/run/setuid-programs:$PATH"
   hash -r
   ```
-- Then `guix` works inside chroot
 
-**✅ DNS Fix for Chroot Understood:**
-- Issue: Chroot environment has no DNS (cannot resolve hostnames)
-- Root cause: Chroot does NOT inherit ISO's `/etc/resolv.conf`
-- Fix: Before entering chroot (on ISO shell):
-  ```sh
-  rm -f /mnt/etc/resolv.conf
-  cp /etc/resolv.conf /mnt/etc/resolv.conf
-  ```
-- Alternative (if ISO has no resolv.conf): `echo "nameserver 1.1.1.1" > /mnt/etc/resolv.conf`
-- Test inside chroot: `ping -c 2 git.savannah.gnu.org` should work
-
-**Action Plan for Completing Wingolog Time-Machine Reconfigure:**
-
-1. **Boot the Guix ISO**
-2. **Mount root at `/mnt`**
-3. **Fix DNS for chroot:**
-   ```sh
-   rm -f /mnt/etc/resolv.conf
-   cp /etc/resolv.conf /mnt/etc/resolv.conf
-   ```
-4. **Fix `/mnt/var/run/dbus` as a directory** (offline, safe)
-5. **Chroot using bash from inside `/mnt`:**
-   ```sh
-   chroot /mnt /bin/bash
-   ```
-6. **Fix PATH inside chroot:**
-   ```sh
-   SYSTEM=$(readlink -f /var/guix/profiles/system)
-   export PATH="$SYSTEM/profile/bin:/run/setuid-programs:$PATH"
-   hash -r
-   ```
-7. **Verify DNS works:**
-   ```sh
-   ping -c 2 git.savannah.gnu.org
-   guix weather
-   ```
-8. **Run wingolog time-machine reconfigure:**
-   ```sh
-   guix time-machine -C /root/wingolog-channels.scm -- \
-     system reconfigure /etc/config.scm
-   ```
-9. **Exit chroot and unmount**
-10. **Reboot**
-
-**Status:** System is healthy and ready. Only remaining step is completing the time-machine reconfigure in chroot with proper DNS and PATH setup.
+**Status:** Starting fresh with clean install test. Previous partition contents saved to external drive for reference.
 
 **Bootstrap Command for Testing:**
 
