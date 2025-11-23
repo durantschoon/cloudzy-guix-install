@@ -101,22 +101,45 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
                 echo "  ⚠ setfont command not found"
             fi
         else
-            # Font not found - ask user to choose
-            echo ""
-            echo "  ⚠ Font '${FONT_NAME}' not found in $FONT_DIR"
-            echo ""
-            echo "  Please choose a font from the list below, or keep the current font:"
-            echo ""
-            
-            # Mark that we've interacted with user (stdin is working)
-            STDIN_VERIFIED=true
-            
-            # List large fonts (containing 24, 32, or 36 in name) first, then all others
-            LARGE_FONTS=()
-            OTHER_FONTS=()
+            # Font not found - but check if we're already using a large font
+            CURRENT_FONT=""
+            if command -v showconsolefont >/dev/null 2>&1; then
+                # Get current font info (this shows the font metadata)
+                CURRENT_FONT_INFO=$(showconsolefont 2>/dev/null | head -1)
+                # Extract font name if possible (format varies)
+                if [[ -n "$CURRENT_FONT_INFO" ]]; then
+                    CURRENT_FONT=$(echo "$CURRENT_FONT_INFO" | awk '{print $NF}')
+                fi
+            fi
+
+            # Check if current font is already a large font (24x32 or bigger)
+            if [[ -n "$CURRENT_FONT" ]] && [[ "$CURRENT_FONT" =~ (24|32|36) ]]; then
+                echo ""
+                echo "  ℹ Current font appears to be already large: $CURRENT_FONT"
+                echo "  Skipping font selection (already using a suitable font)"
+                echo ""
+            else
+                # Font not found - ask user to choose
+                echo ""
+                echo "  ⚠ Font '${FONT_NAME}' not found in $FONT_DIR"
+                echo ""
+                echo "  Please choose a font from the list below, or keep the current font:"
+                echo ""
+
+                # Mark that we've interacted with user (stdin is working)
+                STDIN_VERIFIED=true
+
+                # List large fonts (containing 24, 32, or 36 in name) first, then all others
+                LARGE_FONTS=()
+                OTHER_FONTS=()
             
             if [[ -d "$FONT_DIR" ]]; then
                 while IFS= read -r font_file; do
+                    # Skip README files and other non-font files
+                    if [[ "$font_file" =~ README ]] || [[ "$font_file" =~ readme ]]; then
+                        continue
+                    fi
+
                     # Remove extensions to get base name
                     font_base=$(echo "$font_file" | sed 's/\.psf.*$//')
                     if [[ "$font_base" =~ (24|32|36) ]]; then
@@ -219,6 +242,7 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
                     echo "  ⚠ Could not set selected font"
                 fi
             fi
+            fi  # End of "else" for current font check
         fi
     else
         echo "  ⚠ Font directory not found: $FONT_DIR"
