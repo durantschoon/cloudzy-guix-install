@@ -1613,7 +1613,101 @@ func CleanupISOArtifacts() error {
 		fmt.Printf("  /etc/mtab: [WARNING] %v\n", err)
 	}
 
-	// 3. Remove ISO-specific artifacts (non-critical, but recommended)
+	// 3. Fix /var/lock symlink (IMPORTANT - prevents lock file issues)
+	varLockPath := "/mnt/var/lock"
+	if info, err := os.Lstat(varLockPath); err == nil {
+		if info.IsDir() {
+			// It's a directory (copied from ISO) - remove and create symlink
+			fmt.Printf("  Fixing /var/lock: removing directory, creating symlink...")
+			if err := os.RemoveAll(varLockPath); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to remove /mnt/var/lock directory: %w", err)
+			}
+			if err := os.Symlink("/run/lock", varLockPath); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to create /mnt/var/lock symlink: %w", err)
+			}
+			fmt.Printf(" [FIXED]\n")
+		} else if info.Mode()&os.ModeSymlink != 0 {
+			// It's a symlink - verify it points to /run/lock
+			target, err := os.Readlink(varLockPath)
+			if err != nil {
+				fmt.Printf("  Fixing /var/lock: broken symlink, recreating...")
+				os.Remove(varLockPath)
+				if err := os.Symlink("/run/lock", varLockPath); err != nil {
+					fmt.Printf(" [FAILED]: %v\n", err)
+					return fmt.Errorf("failed to recreate /mnt/var/lock symlink: %w", err)
+				}
+				fmt.Printf(" [FIXED]\n")
+			} else if target != "/run/lock" {
+				fmt.Printf("  Fixing /var/lock: wrong target (%s), fixing...", target)
+				os.Remove(varLockPath)
+				if err := os.Symlink("/run/lock", varLockPath); err != nil {
+					fmt.Printf(" [FAILED]: %v\n", err)
+					return fmt.Errorf("failed to fix /mnt/var/lock symlink: %w", err)
+				}
+				fmt.Printf(" [FIXED]\n")
+			} else {
+				fmt.Printf("  /var/lock symlink: [OK]\n")
+			}
+		}
+	} else if os.IsNotExist(err) {
+		// Doesn't exist - create symlink
+		fmt.Printf("  Creating /var/lock symlink...")
+		if err := os.Symlink("/run/lock", varLockPath); err != nil {
+			fmt.Printf(" [FAILED]: %v\n", err)
+			return fmt.Errorf("failed to create /mnt/var/lock symlink: %w", err)
+		}
+		fmt.Printf(" [OK]\n")
+	} else {
+		fmt.Printf("  /var/lock: [WARNING] %v\n", err)
+	}
+
+	// 4. Empty /run directory (removes ISO runtime artifacts like sockets, PID files, dbus state)
+	runPath := "/mnt/run"
+	if info, err := os.Stat(runPath); err == nil && info.IsDir() {
+		entries, err := os.ReadDir(runPath)
+		if err != nil {
+			fmt.Printf("  /run directory cleanup: [WARNING] could not read: %v\n", err)
+		} else if len(entries) > 0 {
+			fmt.Printf("  Emptying /run directory (removing %d ISO runtime artifacts)...", len(entries))
+			// Remove all contents but keep the directory
+			for _, entry := range entries {
+				entryPath := filepath.Join(runPath, entry.Name())
+				if err := os.RemoveAll(entryPath); err != nil {
+					fmt.Printf("\n    WARNING: Failed to remove %s: %v", entryPath, err)
+				}
+			}
+			fmt.Printf(" [OK]\n")
+		} else {
+			fmt.Printf("  /run directory: already empty [OK]\n")
+		}
+	}
+
+	// 5. Fix /var/tmp permissions (sticky bit for proper temp file handling)
+	varTmpPath := "/mnt/var/tmp"
+	if info, err := os.Stat(varTmpPath); err == nil && info.IsDir() {
+		// Check if sticky bit is already set (mode & 01000)
+		if info.Mode().Perm() != 0o1777 {
+			fmt.Printf("  Fixing /var/tmp permissions (adding sticky bit)...")
+			if err := os.Chmod(varTmpPath, 0o1777); err != nil {
+				fmt.Printf(" [WARNING]: %v\n", err)
+			} else {
+				fmt.Printf(" [OK]\n")
+			}
+		} else {
+			fmt.Printf("  /var/tmp permissions: [OK]\n")
+		}
+	} else if os.IsNotExist(err) {
+		fmt.Printf("  Creating /var/tmp with correct permissions...")
+		if err := os.MkdirAll(varTmpPath, 0o1777); err != nil {
+			fmt.Printf(" [WARNING]: %v\n", err)
+		} else {
+			fmt.Printf(" [OK]\n")
+		}
+	}
+
+	// 6. Remove ISO-specific artifacts (non-critical, but recommended)
 	artifacts := []string{
 		"/mnt/etc/machine-id",                              // System regenerates on boot
 		"/mnt/etc/resolv.conf",                             // NetworkManager recreates
@@ -1631,7 +1725,7 @@ func CleanupISOArtifacts() error {
 		}
 	}
 
-	// 4. Ensure correct ownership of /var/guix (if it exists)
+	// 7. Ensure correct ownership of /var/guix (if it exists)
 	guixPath := "/mnt/var/guix"
 	if info, err := os.Stat(guixPath); err == nil && info.IsDir() {
 		// Try to fix ownership, but don't fail if chown doesn't work

@@ -2136,9 +2136,9 @@ At this point, your **on-disk layout** is clean and consistent.
 | Issue | Handled | Location | Notes |
 |-------|---------|----------|-------|
 | `/var/run` symlink | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` creates correct structure |
-| `/var/lock` symlink | ⚠️ Partial | Step 02 mount | Should be added to `CleanupISOArtifacts()` |
-| `/run` cleanup | ⚠️ No | - | Should empty `/run` directory (currently only fixes symlinks) |
-| `/var/tmp` permissions | ⚠️ No | - | Should set sticky bit (1777) |
+| `/var/lock` symlink | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` creates symlink to `/run/lock` |
+| `/run` cleanup | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` empties directory, removes ISO runtime junk |
+| `/var/tmp` permissions | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` sets sticky bit (1777) |
 | `/var/guix` dirs | ✅ Yes | Step 02 mount | Creates profiles, gcroots, userpool |
 | `/etc/mtab` symlink | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` fixes this |
 | ISO user cleanup | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` removes ISO user artifacts |
@@ -2146,12 +2146,12 @@ At this point, your **on-disk layout** is clean and consistent.
 | `/etc/resolv.conf` | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` removes this |
 | System profile rebuild | ⚠️ Manual | Recovery script | Requires chroot and `guix system reconfigure` |
 
-**Current Limitations:**
+**Current Status (2025-01-XX):**
 
-- Our installer's `CleanupISOArtifacts()` function fixes symlinks and removes artifacts, but **does not**:
-  - Empty the `/run` directory (may contain ISO runtime junk)
-  - Rebuild the system profile (activation scripts may still have wrong assumptions)
-  
+- ✅ **All filesystem invariants are now fixed** by the installer's `CleanupISOArtifacts()` function
+- ✅ **Fresh installs** will have correct filesystem structure from the start
+- ⚠️ **Existing systems** with ISO artifacts may still need recovery (see below)
+
 - **For complete recovery** of systems already installed with ISO artifacts, use the comprehensive recovery script: `lib/recover-filesystem-invariants.sh`
 
 ### Why System Profile Rebuild is Necessary
