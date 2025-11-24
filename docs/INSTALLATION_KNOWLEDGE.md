@@ -160,9 +160,11 @@ chroot /mnt /bin/bash
 
 Use **UPPERCASE with underscores** for all partition labels:
 
-- `EFI` → FAT32 ESP → mounted at `/boot/efi`
+- `EFI` → FAT32 ESP → mounted at `/boot/efi` (standard label, installer only looks for this)
 - `GUIX_ROOT` → ext4 → mounted at `/`
 - `DATA` (optional) → ext4/btrfs → mounted at `/data` (not `/home`)
+
+**Important**: The installer creates EFI partitions with the `EFI` label and only attempts to mount using this exact label. Do not use `ESP`, `BOOT`, or other variations - use `EFI` consistently.
 
 Verify labels:
 
@@ -322,9 +324,23 @@ unbound variable: linux-firmware
 
 **Solution**: Ensure nonguix channel is available before config generation.
 
+### Channels.scm Location
+
+**Location**: The installer creates `channels.scm` in the home directory (`~/channels.scm`, typically `/root/channels.scm` when running as root).
+
+**Why home directory instead of `/tmp`:**
+- `/tmp` can be cleaned during installation, causing `channels.scm` to disappear
+- Home directory persists throughout the installation process
+- More reliable for multi-step installations
+
+**The installer:**
+- Creates `~/channels.scm` during nonguix channel setup
+- Uses `GetChannelsPath()` helper that checks home directory first, then `/tmp` as fallback
+- All scripts check both locations for backward compatibility
+
 ### Troubleshooting Nonguix Channel Issues
 
-**Problem**: `/tmp/channels.scm` missing during installer re-runs
+**Problem**: `channels.scm` missing during installer re-runs
 
 **Symptoms:**
 - Config exists but channels.scm doesn't
@@ -335,14 +351,14 @@ unbound variable: linux-firmware
 
 **Solution**: The installer now checks for both config.scm AND channels.scm. If config exists but channels.scm is missing, it will:
 1. Prompt for nonguix consent
-2. Create /tmp/channels.scm
+2. Create `~/channels.scm` (home directory for persistence)
 3. Skip config file writing (already exists)
 4. Continue to system init with time-machine
 
 **Manual fix if needed:**
 ```bash
 # Remove config to trigger full re-generation
-rm /mnt/etc/config.scm /tmp/channels.scm
+rm /mnt/etc/config.scm ~/channels.scm
 
 # Re-run installer - will prompt for nonguix and create both files
 ```
