@@ -138,8 +138,8 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
             
             if [[ -d "$FONT_DIR" ]]; then
                 while IFS= read -r font_file; do
-                    # Skip README files and other non-font files
-                    if [[ "$font_file" =~ README ]] || [[ "$font_file" =~ readme ]]; then
+                    # Skip README, ERROR, and other non-font files
+                    if [[ "$font_file" =~ README ]] || [[ "$font_file" =~ readme ]] || [[ "$font_file" =~ ERROR ]]; then
                         continue
                     fi
 

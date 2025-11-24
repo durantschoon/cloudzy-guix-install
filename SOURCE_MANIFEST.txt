@@ -17,7 +17,7 @@ b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-
 e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 4a2b9a3e522b12f65632481ace3df50658573cbc17c82b9b0f746f77bfd05f14  ./framework-dual/install/01-partition-check.go
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
-3116496ce9079d78e69c9e72eb6a71a89651cfcb3421f608c7b36d0be5abdc96  ./framework-dual/install/02-mount-existing.go
+0e58d7a7fd4cb6d8f46fc14f49bbc0c83a0c9facd1525968f3a2c6bdf2f43013  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
 3a76fa2d63a10ab5a1666202f0b356c03f2eef833225f61c365e64c6585b45d5  ./framework-dual/install/03-config-dual-boot.go
 f4db2d457c28793f97aad67ba357a39af078a070c91f6e48de85f3a1383ee10b  ./framework-dual/install/04-system-init.go
@@ -35,7 +35,7 @@ f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_t
 
 ## Critical Shell Scripts
 
-24b8b56a9d72f876da47ae30be5eb8153e4acbbb79b06507c793b14e8f1e6948  lib/bootstrap-installer.sh
+d0e205a2e21dde2db94134de53d3991b9efa5ee93ffb2c3d2c4fa6787eea14ec  lib/bootstrap-installer.sh
 488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
 a6ff35564fde0b42329aa4682572805832d412c61e317a483af4f210e578faa1  lib/verify-guix-install.sh
 2490994d0562e4e78d8e38d2409e72ef49fd412936ab5b4ab9f7dd27d564dbb8  lib/recovery-complete-install.sh
