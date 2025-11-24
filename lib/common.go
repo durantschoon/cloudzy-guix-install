@@ -2937,6 +2937,36 @@ func FindEFIPartition(device string) (string, error) {
 }
 
 // FindGuixRootPartition finds a partition labeled 'GUIX_ROOT' or 'guix-root'
+// FindGuixRootPartitionAnyDevice searches for GUIX_ROOT partition across all block devices
+// Returns: (partition path, device path, error)
+// This is useful when you don't know which device contains the GUIX_ROOT partition
+func FindGuixRootPartitionAnyDevice() (string, string, error) {
+	// Get all block devices
+	cmd := exec.Command("lsblk", "-d", "-n", "-o", "NAME,TYPE")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to list block devices: %w", err)
+	}
+
+	var devices []string
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == "disk" {
+			devices = append(devices, "/dev/"+fields[0])
+		}
+	}
+
+	// Search each device for GUIX_ROOT partition
+	for _, device := range devices {
+		partition, err := FindGuixRootPartition(device)
+		if err == nil && partition != "" {
+			return partition, device, nil
+		}
+	}
+
+	return "", "", nil // Not found (not an error)
+}
+
 func FindGuixRootPartition(device string) (string, error) {
 	if device == "" {
 		return "", fmt.Errorf("DEVICE not set")

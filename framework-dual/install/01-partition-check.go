@@ -40,12 +40,30 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 		fmt.Println()
 	}
 
-	// Detect device
-	device, err := lib.DetectDeviceFromState(state.Device, "framework-dual")
+	// STRATEGY: First look for GUIX_ROOT partition across ALL devices
+	// This prevents accidentally using the USB installer device instead of the laptop drive
+	fmt.Println()
+	fmt.Println("=== Searching for existing GUIX_ROOT partition across all devices ===")
+	guixRootPart, guixDevice, err := lib.FindGuixRootPartitionAnyDevice()
 	if err != nil {
-		return err
+		fmt.Printf("Error searching for GUIX_ROOT: %v\n", err)
 	}
-	state.Device = device
+
+	var device string
+	if guixRootPart != "" && guixDevice != "" {
+		// Found GUIX_ROOT - use that device
+		fmt.Printf("Found GUIX_ROOT partition: %s on device %s\n", guixRootPart, guixDevice)
+		device = guixDevice
+		state.Device = device
+	} else {
+		// No GUIX_ROOT found - detect device normally
+		fmt.Println("No GUIX_ROOT partition found, detecting device...")
+		device, err = lib.DetectDeviceFromState(state.Device, "framework-dual")
+		if err != nil {
+			return err
+		}
+		state.Device = device
+	}
 
 	// Show current partition layout
 	fmt.Println()
@@ -65,10 +83,13 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	fmt.Println("=== Checking for Pop!_OS installation ===")
 	s.checkPopOS(state)
 
-	// Check for existing GUIX_ROOT partition
+	// Note: We already found GUIX_ROOT partition above (if it exists)
 	fmt.Println()
-	fmt.Println("=== Checking for existing GUIX_ROOT partition ===")
-	guixRootPart, err := lib.FindGuixRootPartition(state.Device)
+	fmt.Println("=== Verifying GUIX_ROOT partition on selected device ===")
+	if guixRootPart == "" {
+		// Double-check on the detected device
+		guixRootPart, err = lib.FindGuixRootPartition(state.Device)
+	}
 	if err != nil {
 		return err
 	}
