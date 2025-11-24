@@ -473,6 +473,9 @@ The `USEBIGFONT` environment variable enables automatic setting of a larger cons
 # Use default font (solar24x32)
 export USEBIGFONT="1"  # or "yes", "true", or "t"
 
+# Keep current font (skip font change)
+export USEBIGFONT="0"
+
 # Specify a custom font name (check what's available first)
 export USEBIGFONT="solar24x32"  # Explicitly use default
 export USEBIGFONT="<font-name>"  # Use any font found in consolefonts directory
