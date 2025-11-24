@@ -187,26 +187,12 @@ func (s *Step02Mount) RunClean(state *State) error {
 		return fmt.Errorf("failed to cleanup ISO artifacts: %w", err)
 	}
 
-    // Mount EFI - try different possible labels
+    // Mount EFI partition (standard label is "EFI")
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
-    efiLabels := []string{"EFI", "ESP", "BOOT"}
-    var mountErr error
-    
-    for _, label := range efiLabels {
-        fmt.Printf("Trying to mount EFI with label: %s\n", label)
-        if err := lib.MountByLabel(label, "/mnt/boot/efi"); err != nil {
-            mountErr = err
-            fmt.Printf("Failed to mount with label '%s': %v\n", label, err)
-            continue
-        }
-        fmt.Printf("Successfully mounted EFI with label: %s\n", label)
-        mountErr = nil
-        break
+    if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
+        return fmt.Errorf("failed to mount EFI partition (label: EFI): %w", err)
     }
-    
-    if mountErr != nil {
-        return fmt.Errorf("failed to mount EFI partition with any known label: %w", mountErr)
-    }
+    fmt.Println("Successfully mounted EFI partition")
 
 	// Verify EFI contents
 	fmt.Println("Checking EFI contents...")
