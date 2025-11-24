@@ -206,7 +206,7 @@ func (s *Step02MountExisting) RunClean(state *State) error {
     if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
         return fmt.Errorf("failed to mount EFI partition (label: EFI): %w", err)
     }
-    fmt.Println("Successfully mounted EFI partition")
+    // MountByLabel will print its own success message (or "already mounted" message)
 
 	// Verify EFI contents
 	fmt.Println("Checking EFI contents...")

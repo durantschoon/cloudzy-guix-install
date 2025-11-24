@@ -8,7 +8,7 @@
 ## Go Source Files
 
 5b4ff1586db975a0fc2f5b80a3494500d45f513d705dfec22114516ed054b4c3  ./cloudzy/install/01-partition.go
-255e05c888fd820d3b5c587c605427c47a91cea10552fca377c7d69385325986  ./cloudzy/install/02-mount.go
+ef5cc8642b785280e930bf80825fab32cf44f5ac755a7cb250ebd01feedcb120  ./cloudzy/install/02-mount.go
 af1874cedf600e6971e127c99e12aff946c074cda6c4024b3618d108dd594e29  ./cloudzy/install/03-config.go
 804feef405a9149671a2920d7ed5d9f0b76ec41a8ab21bb88068cb2954b315cd  ./cloudzy/install/04-system-init.go
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
@@ -17,20 +17,20 @@ b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-
 e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 992a35541e314aa7007e7ea6e39c14f8593803edb7191a63c1901a1f682dfba3  ./framework-dual/install/01-partition-check.go
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
-cce30b7cb1d1af9a09b4e7f45745e4d26b1bd12b76771275d40ad6da2692c62c  ./framework-dual/install/02-mount-existing.go
+a45e9807c0737a95de74bacc14c8347e8cbaab0c0abeaebfd841ea147f271282  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
 b5e4312b242bbeafd39afcf05717926099a6521866b5e41b98f4bc282fa8cb40  ./framework-dual/install/03-config-dual-boot.go
 0b10dddc6ec265f5ba31a3d67619a93d5ac559940d748e239c779580c294c61a  ./framework-dual/install/04-system-init.go
 b691772fd78460d59da49812277b6bc438b5412ebaafeb3fce3a5e8dd69e9ee9  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
-a21d9772b22a5aa851917d96b0a2a00090302fc5ac5d80fe7b4b9f828d46a9a9  ./framework/install/02-mount.go
+365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
 ae85de411b5ac7f22cbfb5b04020d412526e1c7984f78cc54b24dfd2fc450146  ./framework/install/03-config.go
 4a0900644d91d2704ca72ea023cd7828cf7a383a4230730955c92cd6796e537d  ./framework/install/04-system-init.go
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-51c14841e8496697ef19cc2213034c3037d4a5b801e00a978953a529e05a0217  ./lib/common.go
+7ec7b4f7162b70d14079250b2d1a3632c5fca0836c04e1b95d1a95aa6ea0f0b0  ./lib/common.go
 1ed9ff3c7a62edb3b62fdd9afe94b805fd5489d5baa9868b2cbaa3119826bbc3  ./run-remote-steps.go
 
 ## Critical Shell Scripts

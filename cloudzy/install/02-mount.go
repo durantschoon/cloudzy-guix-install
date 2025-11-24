@@ -192,6 +192,7 @@ func (s *Step02Mount) RunClean(state *State) error {
     if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
 		return err
 	}
+	// MountByLabel will print its own success message (or "already mounted" message)
 
 	// Verify EFI contents
 	fmt.Println("Checking EFI contents...")

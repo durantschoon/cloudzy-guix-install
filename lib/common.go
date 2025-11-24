@@ -1931,6 +1931,12 @@ func MountByLabel(label string, mountPoint string) error {
         return err
     }
     
+    // Check if already mounted - if so, skip mount attempt
+    if IsMounted(mountPoint) {
+        fmt.Printf("[OK] %s is already mounted\n", mountPoint)
+        return nil
+    }
+    
     // Check if the label exists
     labelPath := filepath.Join("/dev/disk/by-label", label)
     if _, err := os.Stat(labelPath); err != nil {
