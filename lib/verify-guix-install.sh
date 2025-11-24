@@ -43,7 +43,8 @@ fi
 # Detect platform
 detect_platform() {
     # Check for channels.scm (framework-dual/framework use nonguix)
-    if [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
+    # Check home directory first, then /tmp as fallback
+    if [ -f "${ROOT}/root/channels.scm" ] || [ -f "~/channels.scm" ] || [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
         echo "framework-dual"
         return
     fi
@@ -263,15 +264,27 @@ echo
 # Platform-specific checks
 if [ "$PLATFORM" = "framework-dual" ] || [ "$PLATFORM" = "framework" ]; then
     # Framework platforms use nonguix channel
-    if [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
-        ok "Nonguix channel configured: /tmp/channels.scm"
+    # Check home directory first, then /tmp as fallback
+    CHANNELS_PATH=""
+    if [ -f "${ROOT}/root/channels.scm" ]; then
+        CHANNELS_PATH="${ROOT}/root/channels.scm"
+    elif [ -f "~/channels.scm" ]; then
+        CHANNELS_PATH="~/channels.scm"
+    elif [ -f "${ROOT}/tmp/channels.scm" ]; then
+        CHANNELS_PATH="${ROOT}/tmp/channels.scm"
+    elif [ -f "/tmp/channels.scm" ]; then
+        CHANNELS_PATH="/tmp/channels.scm"
+    fi
+    
+    if [ -n "$CHANNELS_PATH" ]; then
+        ok "Nonguix channel configured: $CHANNELS_PATH"
     else
         warn "Nonguix channel not found (expected for framework-dual/framework)"
         info "  This is OK if using free software only"
     fi
 elif [ "$PLATFORM" = "cloudzy" ]; then
     # Cloudzy doesn't use channels.scm (free software only)
-    if [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
+    if [ -f "${ROOT}/root/channels.scm" ] || [ -f "~/channels.scm" ] || [ -f "${ROOT}/tmp/channels.scm" ] || [ -f "/tmp/channels.scm" ]; then
         warn "Found channels.scm (unexpected for cloudzy - should be free software only)"
     else
         ok "No channels.scm (expected for cloudzy - free software only)"
@@ -418,7 +431,15 @@ else
     echo
     echo "Common fixes:"
     if [ "$PLATFORM" = "framework-dual" ] || [ "$PLATFORM" = "framework" ]; then
-        echo "  - Re-run: guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt"
+        CHANNELS_PATH=""
+        if [ -f ~/channels.scm ]; then
+            CHANNELS_PATH="~/channels.scm"
+        elif [ -f /tmp/channels.scm ]; then
+            CHANNELS_PATH="/tmp/channels.scm"
+        else
+            CHANNELS_PATH="/tmp/channels.scm"  # Default fallback
+        fi
+        echo "  - Re-run: guix time-machine -C $CHANNELS_PATH -- system init /mnt/etc/config.scm /mnt"
     else
         echo "  - Re-run: guix system init /mnt/etc/config.scm /mnt"
     fi

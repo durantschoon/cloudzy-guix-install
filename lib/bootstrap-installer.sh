@@ -150,6 +150,8 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
                     # Font names like "Lat2-Terminus16.psf.gz" contain the size
                     if [[ "$font_base" =~ ([0-9]{2}) ]]; then
                         size="${BASH_REMATCH[1]}"
+                        # Strip leading zeros to avoid octal interpretation (08, 09 would fail)
+                        size=$((10#$size))
                         # Only include fonts with size >= 16
                         if [[ $size -ge 16 ]]; then
                             FONTS+=("$font_base")

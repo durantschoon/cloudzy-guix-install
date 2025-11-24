@@ -3,6 +3,7 @@ package install
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/durantschoon/cloudzy-guix-install/lib"
@@ -132,7 +133,14 @@ func (s *Step03Config) RunClean(state *State) error {
 	// Setup nonguix channel for proprietary firmware and kernel
 	fmt.Println()
 	fmt.Println("=== Configuring Nonguix Channel ===")
-	if _, err := os.Stat("/tmp/channels.scm"); err == nil {
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = "/root"
+	}
+	homeChannelsPath := filepath.Join(homeDir, "channels.scm")
+	if _, err := os.Stat(homeChannelsPath); err == nil {
+		fmt.Printf("Nonguix channel already configured (using existing %s)\n", homeChannelsPath)
+	} else if _, err := os.Stat("/tmp/channels.scm"); err == nil {
 		fmt.Println("Nonguix channel already configured (using existing /tmp/channels.scm)")
 	} else {
 		fmt.Println("Setting up nonguix channel for proprietary firmware...")

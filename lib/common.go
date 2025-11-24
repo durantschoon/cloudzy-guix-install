@@ -747,6 +747,24 @@ func SetupGRUBEFI() error {
 	return nil
 }
 
+// GetChannelsPath returns the path to channels.scm file
+// Checks home directory first (~/channels.scm), then /tmp/channels.scm as fallback
+func GetChannelsPath() string {
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = "/root" // Default to /root if HOME is not set
+	}
+	homeChannelsPath := filepath.Join(homeDir, "channels.scm")
+	
+	// Check home directory first
+	if _, err := os.Stat(homeChannelsPath); err == nil {
+		return homeChannelsPath
+	}
+	
+	// Fallback to /tmp/channels.scm for backward compatibility
+	return "/tmp/channels.scm"
+}
+
 // SetupNonguixChannel sets up the nonguix channel for proprietary firmware and kernel
 func SetupNonguixChannel() error {
 	fmt.Println("The Nonguix channel provides:")
@@ -794,7 +812,12 @@ func SetupNonguixChannel() error {
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
        %default-channels)`
 
-	channelsPath := "/tmp/channels.scm"
+	// Use home directory for persistence (survives /tmp cleanup)
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = "/root" // Default to /root if HOME is not set
+	}
+	channelsPath := filepath.Join(homeDir, "channels.scm")
 	if err := os.WriteFile(channelsPath, []byte(channelsContent), 0644); err != nil {
 		return fmt.Errorf("failed to create channels.scm: %w", err)
 	}
@@ -832,7 +855,7 @@ func SetupNonguixChannel() error {
 
 	fmt.Println()
 	fmt.Println("[OK] Nonguix channel setup complete")
-	fmt.Println("    Channel file created: /tmp/channels.scm")
+	fmt.Printf("    Channel file created: %s\n", channelsPath)
 	fmt.Println("    Will be used by 'guix time-machine' during system init")
 	fmt.Println()
 
@@ -1087,7 +1110,11 @@ func RunGuixSystemInit() error {
 	fmt.Println("---")
 	fmt.Println()
 
-	channelsPath := "/tmp/channels.scm"
+	channelsPath := GetChannelsPath()
+	// Verify channels.scm exists
+	if _, err := os.Stat(channelsPath); os.IsNotExist(err) {
+		return fmt.Errorf("channels.scm not found at %s - nonguix channel setup may have failed", channelsPath)
+	}
 
 	// Step 1: Build the system (creates complete system in /gnu/store)
 	if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
@@ -1184,7 +1211,7 @@ func RunGuixSystemInit() error {
 	if lastErr != nil {
 		fmt.Println()
 		fmt.Println("Bootloader installation failed. You can:")
-		fmt.Println("  1. Try manually: guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt")
+		fmt.Printf("  1. Try manually: guix time-machine -C %s -- system init /mnt/etc/config.scm /mnt\n", channelsPath)
 		fmt.Println("  2. Or reboot anyway - the kernel is already in place")
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
@@ -2154,7 +2181,7 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 # This script assumes:
 # - Partitions are formatted and mounted at /mnt
 # - /mnt/etc/config.scm exists
-# - /tmp/channels.scm exists (for nonguix)
+# - ~/channels.scm or /tmp/channels.scm exists (for nonguix)
 # - guix time-machine was run but may have failed or been interrupted
 
 set -e  # Exit on error
@@ -2213,11 +2240,18 @@ fi
 echo "[OK] Config exists: /mnt/etc/config.scm"
 
 # Check if channels.scm exists (needed for framework installers)
-if [ -f /tmp/channels.scm ]; then
-    echo "[OK] Channels file exists: /tmp/channels.scm"
+# Check home directory first, then /tmp as fallback
+CHANNELS_PATH=""
+if [ -f ~/channels.scm ]; then
+    CHANNELS_PATH="$HOME/channels.scm"
+    echo "[OK] Channels file exists: $CHANNELS_PATH"
+    USE_TIME_MACHINE=true
+elif [ -f /tmp/channels.scm ]; then
+    CHANNELS_PATH="/tmp/channels.scm"
+    echo "[OK] Channels file exists: $CHANNELS_PATH"
     USE_TIME_MACHINE=true
 else
-    echo "[WARN] No channels.scm - using plain guix system init"
+    echo "[WARN] No channels.scm found in ~/ or /tmp - using plain guix system init"
     USE_TIME_MACHINE=false
 fi
 
@@ -2305,7 +2339,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
 
     # Build the system init command
     if [ "$USE_TIME_MACHINE" = true ]; then
-        INIT_CMD="guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\""
+        INIT_CMD="guix time-machine -C $CHANNELS_PATH -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\""
     else
         INIT_CMD="guix system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\""
     fi
@@ -2470,7 +2504,7 @@ Hostname: $(grep 'host-name' /mnt/etc/config.scm | grep -oP '(?<=")[^"]+')
 Installation completed via recovery script.
 
 Config: /etc/config.scm
-Channels: $([ -f /tmp/channels.scm ] && echo "/tmp/channels.scm (nonguix)" || echo "default")
+Channels: $([ -f ~/channels.scm ] && echo "~/channels.scm (nonguix)" || ([ -f /tmp/channels.scm ] && echo "/tmp/channels.scm (nonguix)" || echo "default"))
 
 Next steps:
 1. Log in with your username and password

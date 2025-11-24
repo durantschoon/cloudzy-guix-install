@@ -5,7 +5,7 @@
 # This script assumes:
 # - Partitions are formatted and mounted at /mnt
 # - /mnt/etc/config.scm exists
-# - /tmp/channels.scm exists (for nonguix)
+# - ~/channels.scm or /tmp/channels.scm exists (for nonguix)
 # - guix time-machine was run but may have failed or been interrupted
 
 set -e  # Exit on error
@@ -64,11 +64,18 @@ fi
 echo "[OK] Config exists: /mnt/etc/config.scm"
 
 # Check if channels.scm exists (needed for framework installers)
-if [ -f /tmp/channels.scm ]; then
-    echo "[OK] Channels file exists: /tmp/channels.scm"
+# Check home directory first, then /tmp as fallback
+CHANNELS_PATH=""
+if [ -f ~/channels.scm ]; then
+    CHANNELS_PATH="$HOME/channels.scm"
+    echo "[OK] Channels file exists: $CHANNELS_PATH"
+    USE_TIME_MACHINE=true
+elif [ -f /tmp/channels.scm ]; then
+    CHANNELS_PATH="/tmp/channels.scm"
+    echo "[OK] Channels file exists: $CHANNELS_PATH"
     USE_TIME_MACHINE=true
 else
-    echo "[WARN] No channels.scm - using plain guix system init"
+    echo "[WARN] No channels.scm found in ~/ or /tmp - using plain guix system init"
     USE_TIME_MACHINE=false
 fi
 
@@ -164,7 +171,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         echo "This will take 5-30 minutes depending on substitutes..."
         echo ""
         
-        if ! guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
+        if ! guix time-machine -C "$CHANNELS_PATH" -- system build /mnt/etc/config.scm --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
             echo "[ERROR] System build failed!"
             exit 1
         fi
@@ -240,7 +247,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         echo "System already built, this should be quick..."
         echo ""
         
-        if ! guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
+        if ! guix time-machine -C "$CHANNELS_PATH" -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
             echo "[ERROR] Bootloader installation failed!"
             echo "However, kernel and initrd are already in place."
             exit 1
@@ -409,7 +416,7 @@ Hostname: $(grep 'host-name' /mnt/etc/config.scm | grep -oP '(?<=")[^"]+')
 Installation completed via recovery script.
 
 Config: /etc/config.scm
-Channels: $([ -f /tmp/channels.scm ] && echo "/tmp/channels.scm (nonguix)" || echo "default")
+Channels: $([ -f ~/channels.scm ] && echo "~/channels.scm (nonguix)" || ([ -f /tmp/channels.scm ] && echo "/tmp/channels.scm (nonguix)" || echo "default"))
 
 Next steps:
 1. Log in with your username and password

@@ -105,7 +105,8 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 
 	// Write helper scripts for manual recovery
 	// 1. Simple time-machine retry script
-	tmCmd := "guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n"
+	channelsPath := lib.GetChannelsPath()
+	tmCmd := fmt.Sprintf("guix time-machine -C %s -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n", channelsPath)
 	helperPath := "/root/guix-init-time-machine.sh"
 	if err := os.WriteFile(helperPath, []byte("#!/bin/sh\n"+tmCmd), 0755); err == nil {
 		fmt.Printf("Helper script written: %s\n", helperPath)

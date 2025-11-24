@@ -19,7 +19,7 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 	fmt.Println("  2. Activate swap for installation process")
 	fmt.Println("  3. Optionally run 'guix pull' (if RUN_GUIX_PULL env var is set, NOT recommended for framework-dual)")
     // For framework-dual we require nonguix via time-machine
-    fmt.Println("  4. Run 'guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt'")
+    fmt.Println("  4. Run 'guix time-machine -C ~/channels.scm -- system init /mnt/etc/config.scm /mnt'")
 	fmt.Println("  5. Set user password for first login")
 	fmt.Println("  6. Download customization tools to user's home directory")
 	fmt.Println("  7. Unmount all partitions")
@@ -109,7 +109,8 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 
     // Write helper scripts for manual recovery
     // 1. Simple time-machine retry script
-    tmCmd := "guix time-machine -C /tmp/channels.scm -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n"
+    channelsPath := lib.GetChannelsPath()
+    tmCmd := fmt.Sprintf("guix time-machine -C %s -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n", channelsPath)
     helperPath := "/root/guix-init-time-machine.sh"
     if err := os.WriteFile(helperPath, []byte("#!/bin/sh\n"+tmCmd), 0755); err == nil {
         fmt.Printf("Helper script written: %s\n", helperPath)
