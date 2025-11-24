@@ -52,13 +52,18 @@ echo ""
 
 # Set console font early if USEBIGFONT is set (before installer runs)
 if [[ -n "${USEBIGFONT:-}" ]]; then
-    echo "Setting larger console font (USEBIGFONT enabled)..."
-    
-    FONT_DIR="/run/current-system/profile/share/consolefonts"
-    FONT_NAME=""
-    
-    # Determine which font to use
-    if [[ "${USEBIGFONT}" == "1" ]] || [[ "${USEBIGFONT}" == "yes" ]] || [[ "${USEBIGFONT}" == "true" ]] || [[ "${USEBIGFONT}" == "t" ]]; then
+    # Check if user wants to keep current font (0 = skip font change)
+    if [[ "${USEBIGFONT}" == "0" ]]; then
+        echo "USEBIGFONT=0: Keeping current font (skipping font change)"
+        echo ""
+    else
+        echo "Setting larger console font (USEBIGFONT enabled)..."
+        
+        FONT_DIR="/run/current-system/profile/share/consolefonts"
+        FONT_NAME=""
+        
+        # Determine which font to use
+        if [[ "${USEBIGFONT}" == "1" ]] || [[ "${USEBIGFONT}" == "yes" ]] || [[ "${USEBIGFONT}" == "true" ]] || [[ "${USEBIGFONT}" == "t" ]]; then
         # Default to solar24x32 for boolean values
         FONT_NAME="solar24x32"
     else
@@ -238,6 +243,7 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
         echo "  Font will be set after installation completes"
     fi
     echo ""
+    fi  # End of "else" for USEBIGFONT != "0"
 fi
 
 # Test that stdin is working before proceeding (skip if already verified via font selection)
