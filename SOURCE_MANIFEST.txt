@@ -7,8 +7,8 @@
 
 ## Go Source Files
 
-b85ae86430c832b165a43b90ea82e955cbec95a1d5812064d91cd25d5a5526e6  ./cloudzy/install/01-partition.go
-e5f82aee5b00e8ad7f9f54f754902743d6751b98ebfa6bacb6266a34bedb2e20  ./cloudzy/install/02-mount.go
+5b4ff1586db975a0fc2f5b80a3494500d45f513d705dfec22114516ed054b4c3  ./cloudzy/install/01-partition.go
+dcc196e4c49cade1a6c06ad91bfc511ddbfbecc3d48d80e7d3547f16cd04b4ff  ./cloudzy/install/02-mount.go
 af1874cedf600e6971e127c99e12aff946c074cda6c4024b3618d108dd594e29  ./cloudzy/install/03-config.go
 804feef405a9149671a2920d7ed5d9f0b76ec41a8ab21bb88068cb2954b315cd  ./cloudzy/install/04-system-init.go
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
@@ -23,9 +23,9 @@ e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-du
 f4db2d457c28793f97aad67ba357a39af078a070c91f6e48de85f3a1383ee10b  ./framework-dual/install/04-system-init.go
 e1de135e783616b3a7aab831a69b1e9cda6580e305a922c33c57bfd0a799c734  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
-38f2fe0bad94ad5e16a215cca8a30175aee4fb01e6c1fc86b758230ade79e4a1  ./framework/install/02-mount.go
+02e4862abf13e92d0b720d6e426cfcb205c2377ee49371a388478e9a82a0d65e  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
-fd4d2bd06ae16eda6cb84cbc206531777ca64b338f0859594acef61f6ed034aa  ./framework/install/03-config.go
+7fc02c6357eaabe079eebf3a26ed8338411e7aec46d0de30f276cf80e3ee5cbf  ./framework/install/03-config.go
 649de33cd54bf86e8b994d8b349f87f058f80bb7ba58afa258b160753ef74cb4  ./framework/install/04-system-init.go
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
