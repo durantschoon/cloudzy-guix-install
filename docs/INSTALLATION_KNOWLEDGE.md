@@ -215,6 +215,8 @@ Always use `(file-system-label "LABEL_NAME")` instead of `(uuid "xxxx-xxxx" 'ext
 - **Benefits**: Cleaner separation, easier backup, shared access across systems
 - **Options**: `defaults,noatime` for better performance on data storage
 
+**Framework-dual specific**: The framework-dual installer uses the `DATA` environment variable (not `HOME_PARTITION`) to detect and mount the DATA partition. The partition should be labeled `DATA` and will be automatically detected during Step 01.
+
 ### BIOS vs UEFI Boot Modes
 
 **Critical**: The partition layout must match the boot mode.
