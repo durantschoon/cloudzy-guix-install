@@ -132,10 +132,10 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
                 # Mark that we've interacted with user (stdin is working)
                 STDIN_VERIFIED=true
 
-                # List large fonts (containing 24, 32, or 36 in name) first, then all others
-                LARGE_FONTS=()
-                OTHER_FONTS=()
-            
+                # Only list fonts with size >= 16 in name (large fonts for readability)
+                # This prevents small fonts (8, 10, 12, 14) from cluttering the display
+                FONTS=()
+
             if [[ -d "$FONT_DIR" ]]; then
                 while IFS= read -r font_file; do
                     # Skip README, ERROR, and other non-font files
@@ -145,83 +145,67 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
 
                     # Remove extensions to get base name
                     font_base=$(echo "$font_file" | sed 's/\.psf.*$//')
-                    if [[ "$font_base" =~ (24|32|36) ]]; then
-                        LARGE_FONTS+=("$font_base")
-                    else
-                        OTHER_FONTS+=("$font_base")
+
+                    # Extract all 2-digit numbers from font name
+                    # Font names like "Lat2-Terminus16.psf.gz" contain the size
+                    if [[ "$font_base" =~ ([0-9]{2}) ]]; then
+                        size="${BASH_REMATCH[1]}"
+                        # Only include fonts with size >= 16
+                        if [[ $size -ge 16 ]]; then
+                            FONTS+=("$font_base")
+                        fi
                     fi
                 done < <(ls "$FONT_DIR" 2>/dev/null | sort -u)
             fi
-            
-            # Show large fonts first (in multiple columns)
-            if [[ ${#LARGE_FONTS[@]} -gt 0 ]]; then
-                echo "  Large fonts (recommended for high-DPI displays):"
+
+            # Show fonts in multiple columns
+            if [[ ${#FONTS[@]} -gt 0 ]]; then
+                echo "  Available large fonts (size >= 16):"
                 # Calculate number of columns (3 columns, or fewer if not enough fonts)
                 COLS=3
-                ROWS=$(( (${#LARGE_FONTS[@]} + COLS - 1) / COLS ))
+                ROWS=$(( (${#FONTS[@]} + COLS - 1) / COLS ))
                 for ((row=0; row<ROWS; row++)); do
                     printf "    "
                     for ((col=0; col<COLS; col++)); do
                         idx=$((row + col * ROWS))
-                        if [[ $idx -lt ${#LARGE_FONTS[@]} ]]; then
-                            printf "%2d) %-20s" $((idx+1)) "${LARGE_FONTS[$idx]}"
+                        if [[ $idx -lt ${#FONTS[@]} ]]; then
+                            printf "%2d) %-25s" $((idx+1)) "${FONTS[$idx]}"
                         fi
                     done
                     echo ""
                 done
                 echo ""
             fi
-            
-            # Show other fonts (in multiple columns)
-            if [[ ${#OTHER_FONTS[@]} -gt 0 ]]; then
-                echo "  Other available fonts:"
-                start_num=$((${#LARGE_FONTS[@]} + 1))
-                # Calculate number of columns (3 columns, or fewer if not enough fonts)
-                COLS=3
-                ROWS=$(( (${#OTHER_FONTS[@]} + COLS - 1) / COLS ))
-                for ((row=0; row<ROWS; row++)); do
-                    printf "    "
-                    for ((col=0; col<COLS; col++)); do
-                        idx=$((row + col * ROWS))
-                        if [[ $idx -lt ${#OTHER_FONTS[@]} ]]; then
-                            printf "%2d) %-20s" $((start_num + idx)) "${OTHER_FONTS[$idx]}"
-                        fi
-                    done
-                    echo ""
-                done
-                echo ""
-            fi
-            
+
             # Option to keep current font
-            total_fonts=$((${#LARGE_FONTS[@]} + ${#OTHER_FONTS[@]}))
-            echo "    $(($total_fonts + 1))) Keep current font (skip font change)"
-            echo ""
-            
-            # Prompt user (stdin already verified by this point)
-            while true; do
-                read -p "  Enter your choice [1-$(($total_fonts + 1))]: " choice </dev/tty
-                # Mark stdin as verified
-                STDIN_VERIFIED=true
-                
-                if [[ "$choice" =~ ^[0-9]+$ ]]; then
-                    if [[ "$choice" -ge 1 && "$choice" -le ${#LARGE_FONTS[@]} ]]; then
-                        SELECTED_FONT="${LARGE_FONTS[$((choice-1))]}"
-                        break
-                    elif [[ "$choice" -gt ${#LARGE_FONTS[@]} && "$choice" -le $total_fonts ]]; then
-                        SELECTED_FONT="${OTHER_FONTS[$((choice - ${#LARGE_FONTS[@]} - 1))]}"
-                        break
-                    elif [[ "$choice" -eq $(($total_fonts + 1)) ]]; then
-                        echo "  Keeping current font"
-                        SELECTED_FONT=""
-                        break
+            total_fonts=${#FONTS[@]}
+            if [[ $total_fonts -gt 0 ]]; then
+                echo "    $(($total_fonts + 1))) Keep current font (skip font change)"
+                echo ""
+
+                # Prompt user (stdin already verified by this point)
+                while true; do
+                    read -p "  Enter your choice [1-$(($total_fonts + 1))]: " choice </dev/tty
+                    # Mark stdin as verified
+                    STDIN_VERIFIED=true
+
+                    if [[ "$choice" =~ ^[0-9]+$ ]]; then
+                        if [[ "$choice" -ge 1 && "$choice" -le $total_fonts ]]; then
+                            SELECTED_FONT="${FONTS[$((choice-1))]}"
+                            break
+                        elif [[ "$choice" -eq $(($total_fonts + 1)) ]]; then
+                            echo "  Keeping current font"
+                            SELECTED_FONT=""
+                            break
+                        else
+                            echo "  Invalid choice. Please enter a number between 1 and $(($total_fonts + 1))"
+                        fi
                     else
-                        echo "  Invalid choice. Please enter a number between 1 and $(($total_fonts + 1))"
+                        echo "  Invalid input. Please enter a number"
                     fi
-                else
-                    echo "  Invalid input. Please enter a number"
-                fi
-            done
-            
+                done
+            fi
+
             # Set selected font if user chose one
             if [[ -n "$SELECTED_FONT" ]]; then
                 # Try to find the font file

@@ -35,7 +35,7 @@ f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_t
 
 ## Critical Shell Scripts
 
-d0e205a2e21dde2db94134de53d3991b9efa5ee93ffb2c3d2c4fa6787eea14ec  lib/bootstrap-installer.sh
+798cf772e07e1bf9c06d317d959d5e3f893ad8d090104043713c4abd434f34b5  lib/bootstrap-installer.sh
 488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
 a6ff35564fde0b42329aa4682572805832d412c61e317a483af4f210e578faa1  lib/verify-guix-install.sh
 2490994d0562e4e78d8e38d2409e72ef49fd412936ab5b4ab9f7dd27d564dbb8  lib/recovery-complete-install.sh
