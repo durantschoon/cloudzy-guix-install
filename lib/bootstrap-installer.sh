@@ -14,7 +14,7 @@ REPO_REF="${GUIX_INSTALL_REF:-main}"
 CHANNEL_REPO=""
 CHANNEL_BRANCH="main"
 CHANNEL_PATH=""
-PLATFORM=""
+PLATFORM="${GUIX_PLATFORM:-}"  # Use environment variable if set
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -453,6 +453,14 @@ export GUIX_CHANNEL_PATH="$CHANNEL_PATH"
 
 # Export platform for Go installer
 export GUIX_PLATFORM="$PLATFORM"
+
+# Show which platform will be used
+if [[ -n "$PLATFORM" ]]; then
+    echo "Platform: $PLATFORM"
+else
+    echo "Platform: cloudzy (default)"
+    export GUIX_PLATFORM="cloudzy"
+fi
 
 # Run the installer
 echo ""
