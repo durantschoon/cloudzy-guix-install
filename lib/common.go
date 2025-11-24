@@ -1513,6 +1513,14 @@ func CleanupISOArtifacts() error {
 	fmt.Println("Cleaning up ISO artifacts and fixing filesystem invariants...")
 	fmt.Println()
 
+	// Ensure critical parent directories exist before creating symlinks
+	criticalDirs := []string{"/mnt/var", "/mnt/etc", "/mnt/run"}
+	for _, dir := range criticalDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
 	// 1. Fix /var/run symlink (CRITICAL - prevents service failures)
 	varRunPath := "/mnt/var/run"
 	if info, err := os.Lstat(varRunPath); err == nil {
