@@ -8,7 +8,7 @@
 ## Go Source Files
 
 5b4ff1586db975a0fc2f5b80a3494500d45f513d705dfec22114516ed054b4c3  ./cloudzy/install/01-partition.go
-dcc196e4c49cade1a6c06ad91bfc511ddbfbecc3d48d80e7d3547f16cd04b4ff  ./cloudzy/install/02-mount.go
+255e05c888fd820d3b5c587c605427c47a91cea10552fca377c7d69385325986  ./cloudzy/install/02-mount.go
 af1874cedf600e6971e127c99e12aff946c074cda6c4024b3618d108dd594e29  ./cloudzy/install/03-config.go
 804feef405a9149671a2920d7ed5d9f0b76ec41a8ab21bb88068cb2954b315cd  ./cloudzy/install/04-system-init.go
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
@@ -17,13 +17,13 @@ b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-
 e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 4a2b9a3e522b12f65632481ace3df50658573cbc17c82b9b0f746f77bfd05f14  ./framework-dual/install/01-partition-check.go
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
-0e58d7a7fd4cb6d8f46fc14f49bbc0c83a0c9facd1525968f3a2c6bdf2f43013  ./framework-dual/install/02-mount-existing.go
+05e798445eeb835425b7bf2f6b1569d989bb6ba5df97b79b5a907580449c9178  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
 3a76fa2d63a10ab5a1666202f0b356c03f2eef833225f61c365e64c6585b45d5  ./framework-dual/install/03-config-dual-boot.go
 f4db2d457c28793f97aad67ba357a39af078a070c91f6e48de85f3a1383ee10b  ./framework-dual/install/04-system-init.go
 e1de135e783616b3a7aab831a69b1e9cda6580e305a922c33c57bfd0a799c734  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
-02e4862abf13e92d0b720d6e426cfcb205c2377ee49371a388478e9a82a0d65e  ./framework/install/02-mount.go
+d7fa9fe2996195732a68092e55cd70d462ba0f9bcf76fc6f17f377818af8064f  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
 7fc02c6357eaabe079eebf3a26ed8338411e7aec46d0de30f276cf80e3ee5cbf  ./framework/install/03-config.go
 649de33cd54bf86e8b994d8b349f87f058f80bb7ba58afa258b160753ef74cb4  ./framework/install/04-system-init.go

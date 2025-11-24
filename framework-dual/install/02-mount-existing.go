@@ -91,10 +91,12 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 	}
 
 	// Check if already mounted and populated (idempotency)
-	if lib.IsMounted("/mnt") && lib.IsStorePopulated() {
+	storeAlreadyPopulated := lib.IsMounted("/mnt") && lib.IsStorePopulated()
+	if storeAlreadyPopulated {
 		fmt.Println("/mnt is already mounted and /mnt/gnu/store is populated")
 		fmt.Println("Skipping mount and store sync (idempotent - safe for reruns)")
-		return nil
+		fmt.Println("NOTE: Will still run ISO cleanup to ensure filesystem invariants are correct")
+		fmt.Println()
 	}
 
     // Basic label existence checks before mount
@@ -118,75 +120,80 @@ func (s *Step02MountExisting) RunClean(state *State) error {
         fmt.Printf("WARNING: Only %.1fGiB free on /mnt. Installation may fail due to low space.\n", avail)
     }
 
-	// Create directories
-	dirs := []string{"/mnt/gnu/store", "/mnt/var/guix"}
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create %s: %w", dir, err)
+	// Only sync store if not already populated
+	if !storeAlreadyPopulated {
+		// Create directories
+		dirs := []string{"/mnt/gnu/store", "/mnt/var/guix"}
+		for _, dir := range dirs {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("failed to create %s: %w", dir, err)
+			}
 		}
-	}
 
-	// Stop guix-daemon
-	fmt.Println("Stopping guix-daemon...")
-	if lib.CommandExists("herd") {
-		lib.RunCommand("herd", "stop", "guix-daemon")
+		// Stop guix-daemon
+		fmt.Println("Stopping guix-daemon...")
+		if lib.CommandExists("herd") {
+			lib.RunCommand("herd", "stop", "guix-daemon")
+		} else {
+			exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
+		}
+
+		// Copy store
+		start := time.Now()
+		fmt.Println("Syncing /gnu/store to /mnt/gnu/store...")
+
+		if lib.CommandExists("rsync") {
+			fmt.Println("Using rsync...")
+			if err := lib.RunCommand("rsync", "-aHAX", "--info=progress2,stats", "/gnu/store/.", "/mnt/gnu/store/."); err != nil {
+				return fmt.Errorf("rsync failed: %w", err)
+			}
+			fmt.Println("rsync completed successfully")
+		} else {
+			fmt.Println("rsync not available, using cp instead...")
+			if err := lib.RunCommand("cp", "-a", "/gnu/store/.", "/mnt/gnu/store/"); err != nil {
+				return fmt.Errorf("cp failed: %w", err)
+			}
+			fmt.Println("cp completed successfully")
+		}
+
+		elapsed := time.Since(start)
+		fmt.Printf("Time taken: %.0f seconds\n", elapsed.Seconds())
+
+		// Copy /var/guix for database consistency
+		fmt.Println("Copying /var/guix to /mnt/var/guix...")
+		if err := lib.RunCommand("cp", "-a", "/var/guix", "/mnt/var/"); err != nil {
+			return fmt.Errorf("failed to copy /var/guix: %w", err)
+		}
+
+		// Ensure critical directories exist in /mnt/var/guix
+		// guix system init will try to create these and will fail if they can't be created
+		fmt.Println()
+		fmt.Println("Pre-creating critical /var/guix directories...")
+		criticalDirs := []string{
+			"/mnt/var/guix/profiles",
+			"/mnt/var/guix/gcroots",
+			"/mnt/var/guix/userpool",
+		}
+		for _, dir := range criticalDirs {
+			fmt.Printf("  Creating %s...", dir)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				fmt.Printf(" [FAILED]: %v\n", err)
+				return fmt.Errorf("failed to create critical directory %s: %w", dir, err)
+			}
+			// Verify it was created and is accessible
+			if stat, err := os.Stat(dir); err != nil {
+				fmt.Printf(" [VERIFY FAILED]: %v\n", err)
+				return fmt.Errorf("created directory %s cannot be verified: %w", dir, err)
+			} else if !stat.IsDir() {
+				fmt.Printf(" [NOT A DIRECTORY]\n")
+				return fmt.Errorf("%s exists but is not a directory", dir)
+			}
+			fmt.Printf(" [OK]\n")
+		}
+		fmt.Println("All critical directories created successfully")
 	} else {
-		exec.Command("pkill", "-TERM", "-x", "guix-daemon").Run()
+		fmt.Println("Store already populated - proceeding directly to ISO cleanup")
 	}
-
-	// Copy store
-	start := time.Now()
-	fmt.Println("Syncing /gnu/store to /mnt/gnu/store...")
-
-	if lib.CommandExists("rsync") {
-		fmt.Println("Using rsync...")
-		if err := lib.RunCommand("rsync", "-aHAX", "--info=progress2,stats", "/gnu/store/.", "/mnt/gnu/store/."); err != nil {
-			return fmt.Errorf("rsync failed: %w", err)
-		}
-		fmt.Println("rsync completed successfully")
-	} else {
-		fmt.Println("rsync not available, using cp instead...")
-		if err := lib.RunCommand("cp", "-a", "/gnu/store/.", "/mnt/gnu/store/"); err != nil {
-			return fmt.Errorf("cp failed: %w", err)
-		}
-		fmt.Println("cp completed successfully")
-	}
-
-	elapsed := time.Since(start)
-	fmt.Printf("Time taken: %.0f seconds\n", elapsed.Seconds())
-
-	// Copy /var/guix for database consistency
-	fmt.Println("Copying /var/guix to /mnt/var/guix...")
-	if err := lib.RunCommand("cp", "-a", "/var/guix", "/mnt/var/"); err != nil {
-		return fmt.Errorf("failed to copy /var/guix: %w", err)
-	}
-
-	// Ensure critical directories exist in /mnt/var/guix
-	// guix system init will try to create these and will fail if they can't be created
-	fmt.Println()
-	fmt.Println("Pre-creating critical /var/guix directories...")
-	criticalDirs := []string{
-		"/mnt/var/guix/profiles",
-		"/mnt/var/guix/gcroots",
-		"/mnt/var/guix/userpool",
-	}
-	for _, dir := range criticalDirs {
-		fmt.Printf("  Creating %s...", dir)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			fmt.Printf(" [FAILED]: %v\n", err)
-			return fmt.Errorf("failed to create critical directory %s: %w", dir, err)
-		}
-		// Verify it was created and is accessible
-		if stat, err := os.Stat(dir); err != nil {
-			fmt.Printf(" [VERIFY FAILED]: %v\n", err)
-			return fmt.Errorf("created directory %s cannot be verified: %w", dir, err)
-		} else if !stat.IsDir() {
-			fmt.Printf(" [NOT A DIRECTORY]\n")
-			return fmt.Errorf("%s exists but is not a directory", dir)
-		}
-		fmt.Printf(" [OK]\n")
-	}
-	fmt.Println("All critical directories created successfully")
 
 	// Clean up ISO artifacts and fix filesystem invariants
 	// This fixes /var/run symlink, /etc/mtab symlink, and removes ISO-specific files
