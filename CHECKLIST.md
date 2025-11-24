@@ -28,9 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Comprehensive filesystem recovery script**: Created `lib/recover-filesystem-invariants.sh` for complete recovery of systems with ISO artifact issues → [See archive](archive/CHECKLIST_COMPLETED.md#comprehensive-filesystem-recovery-script-2025-01-xx)
-2. ✅ **ISO artifacts cleanup**: Implemented `CleanupISOArtifacts()` function and recovery scripts → [See archive](archive/CHECKLIST_COMPLETED.md#iso-artifacts-cleanup-implementation-2025-01-xx)
-3. ✅ **Framework 13 AMD GDM login fix**: Root cause identified (AMD GPU firmware issue) and Wingo-era channel pinning implemented → See "Framework-dual postinstall" section below
+1. ✅ **channels.scm persistence fix**: Moved channels.scm from `/tmp` to home directory (`~/channels.scm`) to prevent loss during installation → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#channels-scm-location)
+2. ✅ **Framework-dual DATA partition standardization**: Changed from `HOME_PARTITION` to `DATA` env var for consistency → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#data-partition-usage)
+3. ✅ **EFI partition label standardization**: Removed ESP/BOOT fallbacks, now only uses `EFI` label (matches partition creation) → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#label-convention)
+4. ✅ **USEBIGFONT=0 option**: Added ability to skip font change with `USEBIGFONT=0` to keep current font
+5. ✅ **Comprehensive filesystem recovery script**: Created `lib/recover-filesystem-invariants.sh` for complete recovery of systems with ISO artifact issues → [See archive](archive/CHECKLIST_COMPLETED.md#comprehensive-filesystem-recovery-script-2025-01-xx)
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
