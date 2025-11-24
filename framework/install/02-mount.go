@@ -189,7 +189,7 @@ func (s *Step02Mount) RunClean(state *State) error {
 
     // Mount EFI - try different possible labels
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
-    efiLabels := []string{"EFI", "efi", "ESP", "esp", "BOOT", "boot"}
+    efiLabels := []string{"EFI", "ESP", "BOOT"}
     var mountErr error
     
     for _, label := range efiLabels {

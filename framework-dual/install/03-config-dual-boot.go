@@ -55,7 +55,7 @@ func (s *Step03ConfigDualBoot) RunWarnings(state *State) error {
   fmt.Printf("  ROOT          - %s (from Step01)\n", state.Root)
   fmt.Printf("  EFI           - %s (from Step01)\n", state.EFI)
   if state.HomePartition != "" {
-    fmt.Printf("  HOME_PARTITION - %s (from Step01)\n", state.HomePartition)
+    fmt.Printf("  DATA - %s (from Step01)\n", state.HomePartition)
   }
   fmt.Println()
   fmt.Println("Optional environment variables (with defaults):")

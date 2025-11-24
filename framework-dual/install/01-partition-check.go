@@ -20,13 +20,13 @@ func (s *Step01PartitionCheck) RunWarnings(state *State) error {
 	fmt.Println("  2. Find your existing EFI partition (sets EFI env var)")
 	fmt.Println("  3. Check for existing 'GUIX_ROOT' partition")
 	fmt.Println("  4. Format GUIX_ROOT OR create new partition in free space")
-	fmt.Println("  5. Detect separate home partition if it exists (sets HOME_PARTITION)")
+	fmt.Println("  5. Detect separate DATA partition if it exists (sets DATA)")
 	fmt.Println()
 	fmt.Println("Environment variables set by this step:")
 	fmt.Println("  DEVICE        - Block device (e.g., /dev/nvme0n1)")
 	fmt.Println("  EFI           - EFI System Partition (e.g., /dev/nvme0n1p1)")
 	fmt.Println("  ROOT          - Guix root partition (e.g., /dev/nvme0n1p4)")
-	fmt.Println("  HOME_PARTITION - Separate home partition if found (optional)")
+	fmt.Println("  DATA          - Separate DATA partition if found (optional)")
 	fmt.Println()
 
 	// Check if running from Guix live ISO

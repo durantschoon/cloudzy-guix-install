@@ -58,7 +58,7 @@ func (s *Step02MountExisting) RunWarnings(state *State) error {
 	fmt.Println("     - Set /var/tmp permissions (sticky bit 1777)")
 	fmt.Println("     - Remove ISO-specific files (machine-id, resolv.conf, etc.)")
 	fmt.Println("  6. Mount EFI partition to /mnt/boot/efi")
-	fmt.Println("  7. Mount home partition to /mnt/home (if HOME_PARTITION is set)")
+	fmt.Println("  7. Mount DATA partition to /mnt/home (if DATA is set)")
 	fmt.Println("  8. Verify labels exist before mounting and warn on low free space")
 	fmt.Println()
 	fmt.Println("Note: Store is copied to disk to avoid 'no space left' errors.")
@@ -73,9 +73,9 @@ func (s *Step02MountExisting) RunWarnings(state *State) error {
 	fmt.Printf("  EFI           - %s (from Step01)\n", state.EFI)
 	fmt.Printf("  DEVICE        - %s (from Step01)\n", state.Device)
 	if state.HomePartition != "" {
-		fmt.Printf("  HOME_PARTITION - %s (from Step01)\n", state.HomePartition)
+		fmt.Printf("  DATA - %s (from Step01)\n", state.HomePartition)
 	} else {
-		fmt.Println("  HOME_PARTITION - (not set, home will be in root)")
+		fmt.Println("  DATA - (not set, home will be in root)")
 	}
 	fmt.Println()
 	fmt.Println("Idempotency: Skips store copy if /mnt/gnu/store already populated")
@@ -203,7 +203,7 @@ func (s *Step02MountExisting) RunClean(state *State) error {
 
     // Mount EFI - try different possible labels
 	fmt.Println("Mounting EFI to /mnt/boot/efi")
-    efiLabels := []string{"EFI", "efi", "ESP", "esp", "BOOT", "boot"}
+    efiLabels := []string{"EFI", "ESP", "BOOT"}
     var mountErr error
     
     for _, label := range efiLabels {

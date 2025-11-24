@@ -29,7 +29,7 @@ func NewState() *State {
 		Device:         os.Getenv("DEVICE"),
 		EFI:            os.Getenv("EFI"),
 		Root:           os.Getenv("ROOT"),
-		HomePartition:  os.Getenv("HOME_PARTITION"),
+		HomePartition:  os.Getenv("DATA"),
 		UserName:       os.Getenv("USER_NAME"),
 		FullName:       os.Getenv("FULL_NAME"),
 		Timezone:       os.Getenv("TIMEZONE"),
