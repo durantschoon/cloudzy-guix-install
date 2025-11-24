@@ -14,7 +14,6 @@ REPO_REF="${GUIX_INSTALL_REF:-main}"
 CHANNEL_REPO=""
 CHANNEL_BRANCH="main"
 CHANNEL_PATH=""
-PLATFORM="${GUIX_PLATFORM:-}"  # Use environment variable if set
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -31,11 +30,15 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
-            PLATFORM="$1"
-            shift
+            echo "Unknown argument: $1"
+            echo "Use GUIX_PLATFORM environment variable to set platform (cloudzy, framework, framework-dual)"
+            exit 1
             ;;
     esac
 done
+
+# Get platform from environment variable (default: cloudzy)
+PLATFORM="${GUIX_PLATFORM:-cloudzy}"
 
 echo "=== Guix Installer Bootstrap ==="
 echo "Repository: ${REPO_OWNER}"
@@ -455,12 +458,7 @@ export GUIX_CHANNEL_PATH="$CHANNEL_PATH"
 export GUIX_PLATFORM="$PLATFORM"
 
 # Show which platform will be used
-if [[ -n "$PLATFORM" ]]; then
-    echo "Platform: $PLATFORM"
-else
-    echo "Platform: cloudzy (default)"
-    export GUIX_PLATFORM="cloudzy"
-fi
+echo "Platform: $PLATFORM"
 
 # Run the installer
 echo ""
