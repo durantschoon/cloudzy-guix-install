@@ -2577,31 +2577,80 @@ fi
 
 // DetectDevice auto-detects the appropriate block device for the platform
 func DetectDevice(platform string) (string, error) {
+	// First, dynamically discover all available block devices
+	cmd := exec.Command("lsblk", "-d", "-n", "-o", "NAME,TYPE")
+	output, err := cmd.Output()
+
+	var availableDevices []string
+	if err == nil {
+		for _, line := range strings.Split(string(output), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 && fields[1] == "disk" {
+				device := "/dev/" + fields[0]
+				availableDevices = append(availableDevices, device)
+			}
+		}
+	}
+
+	// Build priority list based on platform
 	var candidates []string
-	
+
 	switch platform {
 	case "cloudzy":
-		// VPS platforms typically use these devices
-		candidates = []string{"/dev/vda", "/dev/sda", "/dev/nvme0n1"}
+		// VPS platforms: prefer vda, then sda, then nvme
+		candidates = []string{"/dev/vda", "/dev/sda"}
 	case "framework", "framework-dual":
-		// Framework laptops typically use NVMe or SATA
-		candidates = []string{"/dev/nvme0n1", "/dev/nvme1n1", "/dev/sda"}
+		// Framework laptops: prefer NVMe, then SATA
+		// Start with specific known NVMe paths, then add any discovered NVMe devices
+		candidates = []string{"/dev/nvme0n1", "/dev/nvme1n1"}
+		// Add any other discovered NVMe devices
+		for _, dev := range availableDevices {
+			if strings.Contains(dev, "nvme") && !contains(candidates, dev) {
+				candidates = append(candidates, dev)
+			}
+		}
+		candidates = append(candidates, "/dev/sda", "/dev/sdb")
 	default:
-		// Generic fallback
-		candidates = []string{"/dev/nvme0n1", "/dev/sda", "/dev/vda"}
+		// Generic fallback: NVMe first, then SATA, then VirtIO
+		candidates = []string{"/dev/nvme0n1"}
+		for _, dev := range availableDevices {
+			if strings.Contains(dev, "nvme") && !contains(candidates, dev) {
+				candidates = append(candidates, dev)
+			}
+		}
+		candidates = append(candidates, "/dev/sda", "/dev/vda")
 	}
-	
+
+	// Try each candidate in priority order
 	for _, device := range candidates {
 		if _, err := os.Stat(device); err == nil {
 			fmt.Printf("Auto-detected device: %s\n", device)
 			return device, nil
 		}
 	}
-	
+
+	// If nothing found, show available devices to help user
 	fmt.Println("Error: No suitable block device found.")
 	fmt.Println("Available block devices:")
-	RunCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
+	if len(availableDevices) > 0 {
+		for _, dev := range availableDevices {
+			fmt.Printf("  %s\n", dev)
+		}
+	} else {
+		RunCommand("lsblk", "-d", "-n", "-o", "NAME,SIZE,TYPE")
+	}
+
 	return "", fmt.Errorf("no suitable block device found")
+}
+
+// Helper function to check if slice contains string
+func contains(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }
 
 // IsPartitionFormatted checks if a partition has a filesystem
