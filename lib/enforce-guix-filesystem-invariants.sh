@@ -24,10 +24,17 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-rebuild    Skip chroot/system rebuild step (faster, but may not fix activation scripts)"
             echo "  --help, -h        Show this help message"
             echo ""
+            echo "Environment Variables:"
+            echo "  CHANNELS_PATH     Path to custom channels.scm for guix time-machine"
+            echo "                    (e.g., for wingolog kernel or other custom channels)"
+            echo ""
             echo "This script:"
             echo "  1. Fixes filesystem layout (/var/run, /var/lock, /run cleanup)"
-            echo "  2. Removes ISO artifacts (machine-id, resolv.conf, etc.)"
-            echo "  3. Optionally rebuilds system profile (chroot + guix system reconfigure)"
+            echo "  2. Replaces resolv.conf for chroot networking (critical for downloads)"
+            echo "  3. Removes ISO artifacts (machine-id, etc.)"
+            echo "  4. Optionally rebuilds system profile (chroot + guix system reconfigure)"
+            echo "     - Sets up PATH to include system profile binaries"
+            echo "     - Supports custom channels via CHANNELS_PATH or auto-detection"
             echo ""
             exit 0
             ;;
@@ -269,10 +276,9 @@ else
     status "OK" "/etc/mtab symlink"
 fi
 
-# Remove ISO artifacts
+# Remove ISO artifacts (except resolv.conf - handled separately)
 artifacts=(
     "${PREFIX}/etc/machine-id"
-    "${PREFIX}/etc/resolv.conf"
     "${PREFIX}/var/guix/profiles/per-user/live-image-user"
     "${PREFIX}/home/live-image-user"
 )
@@ -287,6 +293,27 @@ for artifact in "${artifacts[@]}"; do
         status "SKIP" "Not found: $artifact"
     fi
 done
+
+# Set up resolv.conf for chroot networking
+# This is critical - without it, chroot can't download packages
+echo ""
+echo "Setting up resolv.conf for chroot networking..."
+if [ "$RUNNING_FROM_ISO" = true ]; then
+    if [ -f /etc/resolv.conf ]; then
+        rm -f "${PREFIX}/etc/resolv.conf"
+        cp /etc/resolv.conf "${PREFIX}/etc/resolv.conf"
+        status "OK" "Copied ISO's resolv.conf for chroot networking"
+    else
+        status "WARNING" "ISO's /etc/resolv.conf not found - chroot may lack networking"
+    fi
+else
+    # Running from installed system - keep existing resolv.conf
+    if [ -f "${PREFIX}/etc/resolv.conf" ]; then
+        status "OK" "Keeping existing resolv.conf (not running from ISO)"
+    else
+        status "WARNING" "${PREFIX}/etc/resolv.conf not found"
+    fi
+fi
 
 # Fix /var/guix ownership
 if [ -d "${PREFIX}/var/guix" ]; then
@@ -400,10 +427,52 @@ if [ "$SKIP_REBUILD" = false ]; then
                     echo "Skipping system rebuild."
                     SKIP_REBUILD=true
                 else
+                    # Set up PATH for chroot (mimics user's manual process)
+                    echo "Setting up PATH for chroot environment..."
+
+                    # Determine channels path - support custom channels (e.g., wingolog)
+                    CHANNELS_PATH="${CHANNELS_PATH:-}"
+                    if [ -z "$CHANNELS_PATH" ]; then
+                        # Check common locations for channels file
+                        for channels_file in "${PREFIX}/root/.config/guix/channels.scm" \
+                                           "${PREFIX}/home/*/config/guix/channels.scm" \
+                                           "/root/.config/guix/channels.scm"; do
+                            if [ -f "$channels_file" ]; then
+                                CHANNELS_PATH="$channels_file"
+                                break
+                            fi
+                        done
+                    fi
+
+                    # Build the guix reconfigure command
+                    if [ -n "$CHANNELS_PATH" ] && [ -f "$CHANNELS_PATH" ]; then
+                        echo "Using custom channels from: $CHANNELS_PATH"
+                        CHANNELS_PATH_IN_CHROOT="${CHANNELS_PATH#${PREFIX}}"
+                        RECONFIGURE_CMD="guix time-machine -C $CHANNELS_PATH_IN_CHROOT -- system reconfigure /etc/config.scm"
+                    else
+                        echo "Using default Guix channels"
+                        RECONFIGURE_CMD="guix system reconfigure /etc/config.scm"
+                    fi
+
                     # Try to chroot and rebuild
                     # Use single quotes for the command to avoid quote issues
                     echo "Attempting chroot with: chroot \"$PREFIX\" \"$BASH_PATH\" -c '...'"
-                    if chroot "$PREFIX" "$BASH_PATH" -c 'echo "Inside chroot, rebuilding system..."; if [ -f /etc/config.scm ]; then guix system reconfigure /etc/config.scm || guix system reconfigure --root=/ /etc/config.scm; echo "System rebuild complete"; else echo "ERROR: /etc/config.scm not found in chroot"; exit 1; fi'; then
+                    if chroot "$PREFIX" "$BASH_PATH" -c "
+                        echo 'Inside chroot, setting up environment...'
+                        # Set up PATH to include system profile (mimics user's manual process)
+                        SYSTEM=\$(readlink -f /var/guix/profiles/system)
+                        export PATH=\"\$SYSTEM/profile/bin:/run/setuid-programs:\$PATH\"
+                        echo 'PATH set to: '\$PATH
+
+                        echo 'Rebuilding system...'
+                        if [ -f /etc/config.scm ]; then
+                            $RECONFIGURE_CMD || $RECONFIGURE_CMD --fallback
+                            echo 'System rebuild complete'
+                        else
+                            echo 'ERROR: /etc/config.scm not found in chroot'
+                            exit 1
+                        fi
+                    "; then
                         status "OK" "System profile rebuilt"
                     else
                         echo ""
