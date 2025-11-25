@@ -302,16 +302,52 @@ if [ "$RUNNING_FROM_ISO" = true ]; then
     if [ -f /etc/resolv.conf ]; then
         rm -f "${PREFIX}/etc/resolv.conf"
         cp /etc/resolv.conf "${PREFIX}/etc/resolv.conf"
-        status "OK" "Copied ISO's resolv.conf for chroot networking"
+
+        # CRITICAL: Verify the copy succeeded
+        if [ -f "${PREFIX}/etc/resolv.conf" ] && [ -s "${PREFIX}/etc/resolv.conf" ]; then
+            status "OK" "Copied ISO's resolv.conf for chroot networking"
+        else
+            status "ERROR" "Failed to copy resolv.conf - file is missing or empty"
+            echo ""
+            echo "CRITICAL: resolv.conf is required for chroot networking!"
+            echo "Without it, guix system reconfigure cannot download packages."
+            echo ""
+            echo "Debug info:"
+            echo "  Source: /etc/resolv.conf exists: $([ -f /etc/resolv.conf ] && echo 'YES' || echo 'NO')"
+            echo "  Dest: ${PREFIX}/etc/resolv.conf exists: $([ -f "${PREFIX}/etc/resolv.conf" ] && echo 'YES' || echo 'NO')"
+            if [ -f "${PREFIX}/etc/resolv.conf" ]; then
+                echo "  Dest size: $(stat -f%z "${PREFIX}/etc/resolv.conf" 2>/dev/null || stat -c%s "${PREFIX}/etc/resolv.conf" 2>/dev/null || echo 'unknown') bytes"
+            fi
+            echo ""
+            exit 1
+        fi
     else
-        status "WARNING" "ISO's /etc/resolv.conf not found - chroot may lack networking"
+        status "ERROR" "ISO's /etc/resolv.conf not found"
+        echo ""
+        echo "CRITICAL: Cannot proceed without resolv.conf!"
+        echo "The ISO must have /etc/resolv.conf for networking."
+        echo ""
+        echo "Troubleshooting:"
+        echo "  1. Check if networking is working: ping -c 1 8.8.8.8"
+        echo "  2. Check if DNS is configured: cat /etc/resolv.conf"
+        echo "  3. If missing, manually create it with:"
+        echo "     echo 'nameserver 8.8.8.8' > /etc/resolv.conf"
+        echo ""
+        exit 1
     fi
 else
     # Running from installed system - keep existing resolv.conf
     if [ -f "${PREFIX}/etc/resolv.conf" ]; then
         status "OK" "Keeping existing resolv.conf (not running from ISO)"
     else
-        status "WARNING" "${PREFIX}/etc/resolv.conf not found"
+        status "ERROR" "${PREFIX}/etc/resolv.conf not found"
+        echo ""
+        echo "WARNING: resolv.conf is missing from the installed system."
+        echo "This may cause networking issues during system rebuild."
+        echo ""
+        echo "You can continue, but chroot operations may fail."
+        echo "Press Enter to continue anyway, or Ctrl-C to abort..."
+        read -r </dev/tty
     fi
 fi
 
