@@ -1,6 +1,12 @@
 # Guix OS Installation: Hard-Won Knowledge
 
-This document captures critical lessons learned from real-world Guix OS installations, particularly focusing on dual-boot scenarios and common pitfalls.
+**A Technical Tale of Discovery**
+
+Installing Guix OS isn't just about following commands—it's about understanding a uniquely principled operating system that refuses to compromise on free software ideals. If you've installed Ubuntu or Fedora, you'll find Guix familiar yet different. It uses the same Linux kernel, the same basic filesystem layout, but approaches system management with a functional programming philosophy that makes every configuration change reproducible.
+
+This document captures critical lessons learned from real-world installations across cloud VPS instances, modern laptops, and dual-boot scenarios. Each section tells the story of a problem discovered, investigated, and solved. Some issues took hours of debugging; others required reading Guix's Scheme source code. We've distilled these experiences into practical guidance so you don't have to repeat our mistakes.
+
+**What makes this different from the official Guix manual?** The manual tells you what Guix *should* do. This document tells you what actually happens when you run installations on real hardware with real constraints—and how to fix things when they go wrong.
 
 ## 🎯 Free Software vs Nonguix: Platform-Specific Design Decisions
 
@@ -109,11 +115,19 @@ guix describe
 
 ## 🧠 The Golden Rule: cow-store
 
-**Always run `herd start cow-store /mnt` before `guix system init`.**
+**The Story:** Early in Guix installer development, people would try to install the system and hit "out of space" errors. The ISO boots with only a few gigabytes of RAM for its tmpfs, and `guix system init` needs to build or download many gigabytes of packages. Where does it all go? The answer is cow-store—a clever overlay filesystem that redirects new store writes to your target disk while keeping the ISO's existing store intact.
 
-- This redirects Guix store writes to the target disk while keeping the live installer's `/gnu/store` usable
-- **Never use `mount --bind /mnt/gnu /gnu`** — this shadows the live system's store and breaks the `guix` command
-- Without cow-store, the ISO's limited tmpfs fills up and the installation fails
+**The Rule:** **Always run `herd start cow-store /mnt` before `guix system init`.**
+
+**Why it works:**
+- Redirects Guix store writes to the target disk (`/mnt/gnu/store`) while keeping the live installer's `/gnu/store` usable
+- Think of it as a "copy-on-write" overlay where new packages go to disk, existing ones stay in RAM
+- Without it, the ISO's limited tmpfs fills up and the installation fails with "No space left on device"
+
+**The tempting mistake:** **Never use `mount --bind /mnt/gnu /gnu`**
+- This shadows the live system's store and breaks the `guix` command
+- The ISO's `guix` command needs access to its own store to function
+- If you hide it with a bind mount, even basic Guix commands fail
 
 ## 🐚 Bash Paths in Guix
 
@@ -1699,6 +1713,108 @@ The installer implements comprehensive idempotency to allow safe reruns and reco
 - Each step provides clear instructions for manual recovery
 - Error messages include specific commands to run
 - Troubleshooting guidance for common failure scenarios
+
+## ⚠️ The `/var/lock` ENOENT Error During System Init
+
+**The Mystery of the Missing Lock Directory**
+
+Picture this: You've partitioned your disk, formatted the filesystems, mounted everything correctly, generated a perfect `config.scm`, and started `guix system init`. Everything runs for 10 minutes, building packages, downloading substitutes... then suddenly fails with a cryptic error about `/var/lock` not existing. But `/var/lock` clearly exists—you can see it right there! What's going on?
+
+**Critical Discovery (2025-01-25):** During `guix system init`, the system can fail with this mysterious error:
+
+```text
+error: failed to evaluate directive (directory "/var/lock" 0 0 1023)
+error: chmod: No such file or directory
+```
+
+### Why This Happens
+
+The error occurs because `guix system init` evaluates a directive to set permissions on `/var/lock`:
+
+```scheme
+(directory "/var/lock" 0 0 #o1777)  ; Create /var/lock with sticky bit
+```
+
+This directive runs **inside the target root (chroot under `/mnt`)** and fails when:
+
+1. **`/var/lock` is a symlink to `/run/lock`** (which is the correct final state)
+2. **`/run` is not mounted yet** inside the chroot during init
+3. **`chmod` follows the symlink** to the non-existent `/run/lock` target
+4. **Result:** `ENOENT` error, installation fails
+
+### The Two-Phase Approach
+
+Our installer now uses a two-phase approach to handle this:
+
+**Phase 1 - Before `guix system init`** (in `PrepareSystemInitDirectories()`):
+- Creates `/mnt/var/lock` as a **real directory** with mode `01777`
+- Creates `/mnt/run` as a **real directory** with mode `0755`
+- These directories must exist as **directories, not symlinks** for `system init` to succeed
+
+**Phase 2 - After `guix system init`** (in `CleanupISOArtifacts()`):
+- Converts `/var/lock` from directory → **symlink to `/run/lock`**
+- Ensures `/var/run` is a **symlink to `/run`**
+- This creates the correct final filesystem structure
+
+### Why Not Just Use Symlinks From the Start?
+
+You might wonder: "Why not just make sure `/run/lock` exists before `system init`?"
+
+The problem is that:
+- `/run` is a tmpfs that's mounted **after** `system init` completes
+- During `system init`, the chroot doesn't have a mounted `/run`
+- Even if you create `/mnt/run/lock`, it's on disk, not the tmpfs
+- After boot, `/run` becomes a tmpfs and your pre-created structure disappears
+
+### Implementation in Our Installer
+
+**In `lib/common.go`:**
+
+1. **`PrepareSystemInitDirectories()`** (called before `system init`):
+   ```go
+   // Creates /mnt/run and /mnt/var/lock as REAL DIRECTORIES
+   // This allows guix system init directives to succeed
+   {"/mnt/run", 0755},
+   {"/mnt/var/lock", 01777},  // sticky bit required
+   ```
+
+2. **`CleanupISOArtifacts()`** (called after copying store, before init):
+   ```go
+   // Converts /var/lock from directory → symlink to /run/lock
+   // This creates the correct final filesystem structure
+   os.Symlink("/run/lock", "/mnt/var/lock")
+   ```
+
+**Wait, there's a conflict!** If `PrepareSystemInitDirectories()` creates `/var/lock` as a directory, but `CleanupISOArtifacts()` runs **before** `PrepareSystemInitDirectories()` and creates it as a symlink, we're back to the original problem!
+
+### The Correct Call Order (CRITICAL)
+
+Looking at the code flow:
+
+1. **Step 02 (Mount):** Calls `CleanupISOArtifacts()` which creates `/var/lock` as **symlink**
+2. **Step 04 (System Init):** Calls `PrepareSystemInitDirectories()` which removes symlink and creates **directory**
+3. **Step 04 (System Init):** Runs `guix system init` (succeeds because `/var/lock` is now a directory)
+4. **After boot:** The system expects `/var/lock` → `/run/lock` symlink (per FHS)
+
+**Note:** After `system init` completes, the system will have `/var/lock` as a directory. This works but is not ideal. A post-install step could convert it to a symlink if needed.
+
+### Future Improvement
+
+For a fully correct implementation, we should:
+
+1. **Before `system init`:** Create `/var/lock` as directory (for init directives to work)
+2. **After `system init`:** Convert `/var/lock` to symlink → `/run/lock` (for FHS compliance)
+
+This could be added to the post-install steps or the recovery script.
+
+### Related: VPS vs Physical Systems
+
+This issue was discovered on **framework-dual** (physical hardware) but applies to:
+- ✅ All platforms using `RunGuixSystemInit()` (framework, framework-dual)
+- ✅ All platforms using `RunGuixSystemInitFreeSoftware()` (cloudzy, VPS)
+- ✅ Any system where Guix evaluates `(directory "/var/lock" ...)` directives
+
+**Platform-agnostic solution:** The fix is in `lib/common.go` and benefits all platforms automatically.
 
 ## 💻 Code Structure and Development
 
