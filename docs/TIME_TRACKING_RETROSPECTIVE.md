@@ -42,16 +42,16 @@ Based on git commit timestamps and conversation patterns:
 
 **Use git commit messages with time estimates:**
 
-```bash
-git commit -m "[2h] Fix /var/lock ENOENT error during guix system init
+Example commit message format:
 
-Spent ~2 hours debugging:
-- 30m: Reproduced error, read Guix source
-- 1h: Understood chroot behavior, tested solutions
-- 30m: Implemented two-phase fix, verified
+    [2h] Fix /var/lock ENOENT error during guix system init
 
-This estimates the ACTUAL time spent, not the commit timestamp delta."
-```
+    Spent ~2 hours debugging:
+    - 30m: Reproduced error, read Guix source
+    - 1h: Understood chroot behavior, tested solutions
+    - 30m: Implemented two-phase fix, verified
+
+    This estimates the ACTUAL time spent, not the commit timestamp delta.
 
 **Why this works:**
 - Captures effort at commit time (while fresh in memory)
@@ -60,258 +60,248 @@ This estimates the ACTUAL time spent, not the commit timestamp delta."
 
 ### 2. Decision Log (ADR - Architecture Decision Records)
 
-Create `docs/decisions/` directory with timestamped decisions:
+Create `docs/decisions/` directory with timestamped decisions.
 
-```markdown
-# 001-use-environment-variables-for-platform-selection.md
+Example file `001-use-environment-variables-for-platform-selection.md`:
 
-Date: 2025-11-23
-Status: Accepted (replaces command-line flags)
-Time spent: ~1 hour (including 3 commits to change approach)
+    # 001-use-environment-variables-for-platform-selection.md
 
-## Context
-Initially used `-s cloudzy` flag, but env vars are more standard for installers.
+    Date: 2025-11-23
+    Status: Accepted (replaces command-line flags)
+    Time spent: ~1 hour (including 3 commits to change approach)
 
-## Decision
-Use GUIX_PLATFORM environment variable only.
+    ## Context
+    Initially used `-s cloudzy` flag, but env vars are more standard for installers.
 
-## Consequences
-- Simpler CLI interface
-- Consistent with installer conventions (DEVICE, USER_NAME, etc.)
-- **Time sink:** Should have used env vars from start
+    ## Decision
+    Use GUIX_PLATFORM environment variable only.
 
-## Time Investment
-- Initial implementation with flags: 20m
-- Realization env vars better: 10m (conversation)
-- Refactor to env vars: 30m (2 commits)
+    ## Consequences
+    - Simpler CLI interface
+    - Consistent with installer conventions (DEVICE, USER_NAME, etc.)
+    - **Time sink:** Should have used env vars from start
 
-Total: 1 hour that could have been 20 minutes with upfront design.
-```
+    ## Time Investment
+    - Initial implementation with flags: 20m
+    - Realization env vars better: 10m (conversation)
+    - Refactor to env vars: 30m (2 commits)
+
+    Total: 1 hour that could have been 20 minutes with upfront design.
 
 ### 3. Problem Discovery Log
 
-Create `docs/problems/` directory tracking when issues were found:
+Create `docs/problems/` directory tracking when issues were found.
 
-```markdown
-# kernel-initrd-missing-after-system-init.md
+Example file `kernel-initrd-missing-after-system-init.md`:
 
-## Discovery Timeline
+    ## Discovery Timeline
 
-**2025-11-25 14:20** - Issue first reported
-- User: "We have no kernel files under /mnt/boot"
-- Expected: vmlinuz*, initrd* files
-- Found: Only efi/ and grub/ directories
+    **2025-11-25 14:20** - Issue first reported
+    - User: "We have no kernel files under /mnt/boot"
+    - Expected: vmlinuz*, initrd* files
+    - Found: Only efi/ and grub/ directories
 
-**2025-11-25 14:25** - Initial investigation (30m)
-- Checked if guix system init completed (yes)
-- Checked /gnu/store for built system (yes, has kernel/initrd)
-- Hypothesis: Files not being copied from store to /boot/
+    **2025-11-25 14:25** - Initial investigation (30m)
+    - Checked if guix system init completed (yes)
+    - Checked /gnu/store for built system (yes, has kernel/initrd)
+    - Hypothesis: Files not being copied from store to /boot/
 
-**2025-11-25 14:55** - Breakthrough (1h spent debugging)
-- Manual copy from store works!
-- Realized: guix time-machine + nonguix doesn't copy kernel files
-- Workaround: Build system → Copy kernel manually → Run init
+    **2025-11-25 14:55** - Breakthrough (1h spent debugging)
+    - Manual copy from store works!
+    - Realized: guix time-machine + nonguix doesn't copy kernel files
+    - Workaround: Build system → Copy kernel manually → Run init
 
-**2025-11-25 15:30** - Implementation (1h)
-- Added 3-step workaround to RunGuixSystemInit()
-- Added auto-retry verification
-- Added diagnostic logging
+    **2025-11-25 15:30** - Implementation (1h)
+    - Added 3-step workaround to RunGuixSystemInit()
+    - Added auto-retry verification
+    - Added diagnostic logging
 
-**Total time: ~2.5 hours**
+    **Total time: ~2.5 hours**
 
-## What Slowed Us Down
-- Initially thought it was a permissions issue (30m wasted)
-- Didn't check store immediately (should have been first step)
+    ## What Slowed Us Down
+    - Initially thought it was a permissions issue (30m wasted)
+    - Didn't check store immediately (should have been first step)
 
-## What Would Speed This Up Next Time
-1. Check store FIRST when boot files missing
-2. Compare store contents vs /boot/ immediately
-3. Document "kernel in store but not in /boot" as known pattern
-```
+    ## What Would Speed This Up Next Time
+    1. Check store FIRST when boot files missing
+    2. Compare store contents vs /boot/ immediately
+    3. Document "kernel in store but not in /boot" as known pattern
 
 ### 4. Time-Complexity Matrix
 
-Create `docs/TIME_MATRIX.md` to track over time:
+Create `docs/TIME_MATRIX.md` to track over time.
 
-```markdown
-# Feature Time-Complexity Matrix
+Example content:
 
-| Feature | Initial Est. | Actual Time | Complexity | Reason for Delta |
-|---------|-------------|-------------|------------|------------------|
-| Basic partition | 1h | 2h | Medium | Edge cases with NVMe detection |
-| Mount by label | 30m | 2h | High | Label priority issues, casing |
-| Config generation | 1h | 1h | Low | Straightforward |
-| System init | 2h | 6h | **Very High** | /var/lock bug + kernel workaround |
-| Recovery scripts | 1h | 3h | Medium | Iterative improvements |
+    # Feature Time-Complexity Matrix
 
-## High-Complexity Indicators
-- **System init** was underestimated by 3x due to:
-  - Undocumented Guix behaviors (/var/lock directive)
-  - Nonguix + time-machine quirks (kernel copy)
-  - Required reading Guix source code
-  - Multiple iteration cycles
+    | Feature | Initial Est. | Actual Time | Complexity | Reason for Delta |
+    |---------|-------------|-------------|------------|------------------|
+    | Basic partition | 1h | 2h | Medium | Edge cases with NVMe detection |
+    | Mount by label | 30m | 2h | High | Label priority issues, casing |
+    | Config generation | 1h | 1h | Low | Straightforward |
+    | System init | 2h | 6h | **Very High** | /var/lock bug + kernel workaround |
+    | Recovery scripts | 1h | 3h | Medium | Iterative improvements |
 
-**Learning:** When working with Guix internals (system init, profiles, generations),
-multiply time estimates by 2-3x for unknown bugs.
-```
+    ## High-Complexity Indicators
+    - **System init** was underestimated by 3x due to:
+      - Undocumented Guix behaviors (/var/lock directive)
+      - Nonguix + time-machine quirks (kernel copy)
+      - Required reading Guix source code
+      - Multiple iteration cycles
+
+    **Learning:** When working with Guix internals (system init, profiles, generations),
+    multiply time estimates by 2-3x for unknown bugs.
 
 ### 5. Daily/Session Logs
 
-At end of each session, write `docs/dev-log/YYYY-MM-DD.md`:
+At end of each session, write `docs/dev-log/YYYY-MM-DD.md`.
 
-```markdown
-# 2025-11-25 Development Log
+Example session log format:
 
-## Session: 14:00 - 17:00 (3 hours)
+    # 2025-11-25 Development Log
 
-### Accomplished
-- [x] Fixed /var/lock ENOENT error (2h)
-- [x] Added kernel/initrd verification (1h)
+    ## Session: 14:00 - 17:00 (3 hours)
 
-### Time Breakdown
-- 14:00-14:30: Reproduced /var/lock error
-- 14:30-15:30: Understood chroot directives, implemented fix
-- 15:30-15:45: Break
-- 15:45-16:45: Discovered kernel files missing, added verification
+    ### Accomplished
+    - [x] Fixed /var/lock ENOENT error (2h)
+    - [x] Added kernel/initrd verification (1h)
 
-### Blockers Encountered
-1. `/var/lock` symlink → directory chroot issue (1.5h debugging)
-2. Kernel files not copied by system init (0.5h to discover)
+    ### Time Breakdown
+    - 14:00-14:30: Reproduced /var/lock error
+    - 14:30-15:30: Understood chroot directives, implemented fix
+    - 15:30-15:45: Break
+    - 15:45-16:45: Discovered kernel files missing, added verification
 
-### Tomorrow's Plan
-- Add diagnostic logging for kernel copy process
-- Test on VPS to ensure fix is platform-agnostic
+    ### Blockers Encountered
+    1. `/var/lock` symlink → directory chroot issue (1.5h debugging)
+    2. Kernel files not copied by system init (0.5h to discover)
 
-### Time Sinks to Avoid
-- Spent 30m thinking permissions issue (was wrong hypothesis)
-- Should have checked store first → saved 30m
-```
+    ### Tomorrow's Plan
+    - Add diagnostic logging for kernel copy process
+    - Test on VPS to ensure fix is platform-agnostic
+
+    ### Time Sinks to Avoid
+    - Spent 30m thinking permissions issue (was wrong hypothesis)
+    - Should have checked store first → saved 30m
 
 ### 6. Automated Time Tracking
 
-Use git hooks to prompt for time estimates:
+Use git hooks to prompt for time estimates.
 
-**`.git/hooks/prepare-commit-msg`:**
-```bash
-#!/run/current-system/profile/bin/bash
+Example `.git/hooks/prepare-commit-msg`:
 
-# Prompt for time estimate
-echo ""
-echo "Estimated time spent on this change? (e.g., 30m, 2h, 15m)"
-read -p "Time: " time_est
+    #!/run/current-system/profile/bin/bash
 
-if [ -n "$time_est" ]; then
-    # Prepend time to commit message
-    echo "[$time_est] $(cat "$1")" > "$1"
-fi
-```
+    # Prompt for time estimate
+    echo ""
+    echo "Estimated time spent on this change? (e.g., 30m, 2h, 15m)"
+    read -p "Time: " time_est
+
+    if [ -n "$time_est" ]; then
+        # Prepend time to commit message
+        echo "[$time_est] $(cat "$1")" > "$1"
+    fi
 
 ### 7. Post-Mortem Analysis
 
-After major features, write `docs/postmortems/FEATURE-NAME.md`:
+After major features, write `docs/postmortems/FEATURE-NAME.md`.
 
-```markdown
-# Post-Mortem: Guix System Init Implementation
+Example post-mortem structure:
 
-## Timeline
-- Start: 2025-11-23 (basic impl)
-- Finish: 2025-11-25 (fully working with recovery)
-- Total: 2 days, ~10 hours invested
+    # Post-Mortem: Guix System Init Implementation
 
-## What Went Well
-- Two-phase /var/lock approach works perfectly
-- Auto-retry for kernel files is robust
-- Good error messages guide recovery
+    ## Timeline
+    - Start: 2025-11-23 (basic impl)
+    - Finish: 2025-11-25 (fully working with recovery)
+    - Total: 2 days, ~10 hours invested
 
-## What Went Wrong
-1. **Underestimated Guix complexity** (6h vs 2h estimate)
-2. **Didn't check documentation first** (could have found /var/lock issue documented)
-3. **Assumed kernel copy was automatic** (wasted 1h debugging before checking store)
+    ## What Went Well
+    - Two-phase /var/lock approach works perfectly
+    - Auto-retry for kernel files is robust
+    - Good error messages guide recovery
 
-## Time Analysis
-| Phase | Estimated | Actual | Delta |
-|-------|-----------|--------|-------|
-| Basic impl | 2h | 2h | ✓ On target |
-| /var/lock fix | 1h | 2h | +1h (unknown issue) |
-| Kernel workaround | 1h | 4h | +3h (undocumented quirk) |
-| Recovery + verify | 1h | 2h | +1h (more robust than planned) |
+    ## What Went Wrong
+    1. **Underestimated Guix complexity** (6h vs 2h estimate)
+    2. **Didn't check documentation first** (could have found /var/lock issue documented)
+    3. **Assumed kernel copy was automatic** (wasted 1h debugging before checking store)
 
-**Total: 5h estimated → 10h actual (2x factor)**
+    ## Time Analysis
+    | Phase | Estimated | Actual | Delta |
+    |-------|-----------|--------|-------|
+    | Basic impl | 2h | 2h | ✓ On target |
+    | /var/lock fix | 1h | 2h | +1h (unknown issue) |
+    | Kernel workaround | 1h | 4h | +3h (undocumented quirk) |
+    | Recovery + verify | 1h | 2h | +1h (more robust than planned) |
 
-## Lessons for Next Time
-1. **Guix internals are complex** - multiply estimates by 2x
-2. **Check store first** when boot files missing
-3. **Read upstream issues** before debugging (might be known)
-4. **Write tests for edge cases** (idempotency, missing files)
+    **Total: 5h estimated → 10h actual (2x factor)**
 
-## Process Improvements
-- [ ] Add "Check Guix bug tracker" to debugging checklist
-- [ ] Document common Guix quirks in KNOWN_ISSUES.md
-- [ ] Add time estimates to commit messages
-- [ ] Create TIME_MATRIX.md for future features
-```
+    ## Lessons for Next Time
+    1. **Guix internals are complex** - multiply estimates by 2x
+    2. **Check store first** when boot files missing
+    3. **Read upstream issues** before debugging (might be known)
+    4. **Write tests for edge cases** (idempotency, missing files)
+
+    ## Process Improvements
+    - [ ] Add "Check Guix bug tracker" to debugging checklist
+    - [ ] Document common Guix quirks in KNOWN_ISSUES.md
+    - [ ] Add time estimates to commit messages
+    - [ ] Create TIME_MATRIX.md for future features
 
 ## Recommended Tools
 
 ### Time Tracking Tools
+
 1. **git-hours** - Estimates time from commit history
-   ```bash
-   npm install -g git-hours
-   git hours
-   ```
+
+        npm install -g git-hours
+        git hours
 
 2. **git-stats** - Visualizes commit patterns
-   ```bash
-   npm install -g git-stats
-   git-stats
-   ```
+
+        npm install -g git-stats
+        git-stats
 
 3. **Manual time log** - Simple markdown file
-   ```bash
-   echo "2025-11-25 14:00-17:00 (3h) - System init fixes" >> docs/TIME_LOG.md
-   ```
+
+        echo "2025-11-25 14:00-17:00 (3h) - System init fixes" >> docs/TIME_LOG.md
 
 ### Process Tracking
+
 1. **ADR Tools** - Architecture decision records
-   ```bash
-   npm install -g adr-tools
-   adr init docs/decisions
-   adr new "Use environment variables for platform"
-   ```
 
-2. **Daily Dev Logs** - Template generator
-   ```bash
-   # Create daily log script
-   cat > log-today.sh << 'EOF'
-   #!/bin/bash
-   DATE=$(date +%Y-%m-%d)
-   LOG_FILE="docs/dev-log/$DATE.md"
-   mkdir -p docs/dev-log
+        npm install -g adr-tools
+        adr init docs/decisions
+        adr new "Use environment variables for platform"
 
-   if [ ! -f "$LOG_FILE" ]; then
-       cat > "$LOG_FILE" << TEMPLATE
-   # $DATE Development Log
+2. **Daily Dev Logs** - Template generator script example:
 
-   ## Session: START-END (Xh)
+        #!/bin/bash
+        DATE=$(date +%Y-%m-%d)
+        LOG_FILE="docs/dev-log/$DATE.md"
+        mkdir -p docs/dev-log
 
-   ### Accomplished
-   - [ ]
+        if [ ! -f "$LOG_FILE" ]; then
+            cat > "$LOG_FILE" << TEMPLATE
+        # $DATE Development Log
 
-   ### Time Breakdown
-   - START-END:
+        ## Session: START-END (Xh)
 
-   ### Blockers
-   1.
+        ### Accomplished
+        - [ ]
 
-   ### Tomorrow
-   -
-   TEMPLATE
-   fi
+        ### Time Breakdown
+        - START-END:
 
-   $EDITOR "$LOG_FILE"
-   EOF
-   chmod +x log-today.sh
-   ```
+        ### Blockers
+        1.
+
+        ### Tomorrow
+        -
+        TEMPLATE
+        fi
+
+        $EDITOR "$LOG_FILE"
 
 ## Summary: Minimum Viable Time Tracking
 
@@ -325,18 +315,16 @@ These three practices will give you 80% of the value with minimal overhead.
 
 ## Example Time Tracking Workflow
 
-```bash
-# Start of day
-./log-today.sh  # Creates/opens today's dev log
+    # Start of day
+    ./log-today.sh  # Creates/opens today's dev log
 
-# During work
-git commit -m "[30m] Fix label priority in device detection"
+    # During work
+    git commit -m "[30m] Fix label priority in device detection"
 
-# End of day
-# Update dev log with accomplishments, time breakdown, blockers
+    # End of day
+    # Update dev log with accomplishments, time breakdown, blockers
 
-# End of feature
-# Write post-mortem: what took longest, why, lessons learned
-```
+    # End of feature
+    # Write post-mortem: what took longest, why, lessons learned
 
 This creates a trail that future you (or other developers) can follow to understand where time was spent and how to improve the process.
