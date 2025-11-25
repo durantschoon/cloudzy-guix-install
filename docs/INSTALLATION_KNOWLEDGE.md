@@ -1816,6 +1816,122 @@ This issue was discovered on **framework-dual** (physical hardware) but applies 
 
 **Platform-agnostic solution:** The fix is in `lib/common.go` and benefits all platforms automatically.
 
+## 🔧 The 3-Step Kernel/Initrd Workaround
+
+**The Mystery Continues:** After fixing the `/var/lock` issue, we discovered another problem on hardware platforms (Framework 13): `guix system init` would complete successfully, but the system wouldn't boot because `/boot/vmlinuz*` and `/boot/initrd*` files were missing!
+
+### The Original Problem
+
+Running `guix system init` with nonguix (for hardware drivers) would:
+1. ✅ Build the complete system with kernel in `/gnu/store`
+2. ✅ Install GRUB bootloader
+3. ❌ **Not copy kernel/initrd to `/boot/`**
+
+This appears to be a bug or limitation when using `guix time-machine` with nonguix channels. The system generation exists in the store with a working kernel, but `system init` doesn't copy the files where GRUB expects them.
+
+### The Discovery Process
+
+**What we tried (that didn't work):**
+1. Running `guix system init` alone → kernel files not copied
+2. Re-running `system init` multiple times → same result
+3. Checking if it was a permissions issue → no, files just weren't copied
+
+**The breakthrough:** Manually copying kernel/initrd from the built system generation to `/boot/` before running `system init` made the system bootable!
+
+### The 3-Step Workaround
+
+**Implementation in `RunGuixSystemInit()` (lib/common.go:1120):**
+
+```go
+// Step 1: Build the complete system (includes kernel)
+guix time-machine -C ~/channels.scm -- system build /mnt/etc/config.scm
+
+// Step 2: Manually copy kernel and initrd from the built system
+systemPath := "/gnu/store/*-system"  // Find the latest built system
+cp $systemPath/kernel /mnt/boot/vmlinuz
+cp $systemPath/initrd /mnt/boot/initrd
+
+// Step 3: Run system init (now just installs bootloader)
+guix time-machine -C ~/channels.scm -- system init /mnt/etc/config.scm /mnt
+```
+
+### Why This Works
+
+**The key insight:**
+1. `guix system build` creates a complete system closure in `/gnu/store/` including:
+   - Kernel at `$system/kernel`
+   - Initrd at `$system/initrd`
+   - All packages and configurations
+
+2. By manually copying kernel/initrd to `/boot/` **before** running `system init`, GRUB finds the files it needs
+
+3. `system init` then:
+   - Sees the system is already built (uses cached build)
+   - Installs the bootloader (GRUB)
+   - Sets up symlinks to the system generation
+   - Doesn't try to rebuild (because it's cached)
+
+### Automatic Recovery with Retry
+
+**New in this version:** `VerifyAndRecoverKernelFiles(3)` runs after `system init`:
+
+```go
+// Automatically detects and fixes missing/corrupt kernel files
+if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
+    // Shows clear error message with recovery instructions
+}
+```
+
+**What it does:**
+1. Checks if `/mnt/boot/vmlinuz*` and `/mnt/boot/initrd*` exist
+2. Validates file sizes (kernel > 5MB, initrd > 10MB)
+3. If missing or too small:
+   - Finds the system generation symlink
+   - Copies kernel/initrd from the generation
+   - Retries up to 3 times with 10-second delays
+4. Reports success or provides recovery guidance
+
+### Platform Differences
+
+**Hardware platforms (Framework 13, Framework-dual):**
+- Use `RunGuixSystemInit()` with 3-step workaround
+- Needs nonguix for hardware drivers
+- Kernel/initrd copy is essential
+
+**VPS platforms (Cloudzy):**
+- Use `RunGuixSystemInitFreeSoftware()` without workaround
+- Free software drivers only
+- No kernel copy needed (works correctly)
+
+**Why the difference?**
+The issue appears related to using `guix time-machine` with nonguix channels on physical hardware. VPS installs using only Guix's official channels don't exhibit this behavior.
+
+### Success Criteria
+
+After this workaround, you should see:
+```bash
+ls -lh /mnt/boot/
+# Should show:
+# vmlinuz   (5-15 MB)
+# initrd    (10-40 MB)
+# grub/     (directory)
+```
+
+### Related Code
+
+- **Implementation:** [lib/common.go:1120-1268](lib/common.go#L1120) - `RunGuixSystemInit()`
+- **Verification:** [lib/common.go:1470-1618](lib/common.go#L1470) - `VerifyAndRecoverKernelFiles()`
+- **Called by:** framework/install/04-system-init.go, framework-dual/install/04-system-init.go
+
+### Future Investigation
+
+Questions remaining:
+- Is this a bug in `guix system init` when using time-machine?
+- Does it affect other hardware platforms (Raspberry Pi, Pinebook)?
+- Could we upstream a fix to Guix?
+
+For now, the workaround is reliable and automatically recovers from failures.
+
 ## 💻 Code Structure and Development
 
 ### Platform-Specific vs Shared Code
