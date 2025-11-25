@@ -1076,22 +1076,68 @@ func ImportPrebuiltKernel(narPath string) error {
 	return nil
 }
 
+// PrepareSystemInitDirectories ensures critical directories exist as real directories
+// (not symlinks) before running guix system init. This prevents ENOENT errors when
+// guix system init tries to chmod directories like /var/lock.
+func PrepareSystemInitDirectories() error {
+	fmt.Println()
+	fmt.Println("Preparing directories for system init...")
+
+	// Critical directories that must exist as real directories (not symlinks)
+	// before guix system init runs. If these are symlinks to non-existent targets,
+	// chmod operations will fail with ENOENT.
+	criticalDirs := []struct {
+		path string
+		mode os.FileMode
+	}{
+		{"/mnt/run", 0755},
+		{"/mnt/var/lock", 01777}, // sticky bit required
+	}
+
+	for _, dir := range criticalDirs {
+		// Remove any existing symlink or directory
+		if err := os.RemoveAll(dir.path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove %s: %w", dir.path, err)
+		}
+
+		// Create as a real directory
+		if err := os.MkdirAll(dir.path, dir.mode); err != nil {
+			return fmt.Errorf("failed to create %s: %w", dir.path, err)
+		}
+
+		// Set permissions explicitly (MkdirAll may not set them correctly)
+		if err := os.Chmod(dir.path, dir.mode); err != nil {
+			return fmt.Errorf("failed to chmod %s: %w", dir.path, err)
+		}
+
+		fmt.Printf("[OK] Created %s (mode %o)\n", dir.path, dir.mode)
+	}
+
+	fmt.Println()
+	return nil
+}
+
 // RunGuixSystemInit runs guix system init with retry logic
 func RunGuixSystemInit() error {
 	// Ensure daemon is running before validation (validation needs daemon)
 	if err := EnsureGuixDaemonRunning(); err != nil {
 		return fmt.Errorf("failed to ensure guix-daemon is running: %w", err)
 	}
-	
+
 	// Validate config after daemon is confirmed running
 	configPath := "/mnt/etc/config.scm"
 	if err := ValidateGuixConfig(configPath); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
-	
+
 	// Setup GRUB EFI if needed
 	if err := SetupGRUBEFI(); err != nil {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
+	}
+
+	// Prepare critical directories before system init
+	if err := PrepareSystemInitDirectories(); err != nil {
+		return fmt.Errorf("failed to prepare system init directories: %w", err)
 	}
 	
 	// WORKAROUND: guix system init has a bug where it doesn't copy kernel/initrd to /boot
@@ -1445,6 +1491,11 @@ func RunGuixSystemInitFreeSoftware() error {
 		return fmt.Errorf("GRUB EFI setup failed: %w", err)
 	}
 
+	// Prepare critical directories before system init
+	if err := PrepareSystemInitDirectories(); err != nil {
+		return fmt.Errorf("failed to prepare system init directories: %w", err)
+	}
+
 	// CRITICAL FIX: guix system build doesn't produce kernel/initrd files.
 	// We must use guix system init directly, which builds everything AND installs it.
 	// guix system init creates the system generation with kernel/initrd AND installs the bootloader.
@@ -1461,11 +1512,6 @@ func RunGuixSystemInitFreeSoftware() error {
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
 	fmt.Println()
-
-	// Ensure /mnt/run exists (required for current-system symlink)
-	if err := os.MkdirAll("/mnt/run", 0755); err != nil {
-		return fmt.Errorf("failed to create /mnt/run directory: %w", err)
-	}
 	
 	// Check disk space before starting
 	cmd := exec.Command("df", "-h", "/mnt")
