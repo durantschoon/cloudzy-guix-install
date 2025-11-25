@@ -130,16 +130,43 @@ func (s *Step04SystemInit) RunClean(state *State) error {
         fmt.Printf("Warning: Failed to write recovery script %s: %v\n", recoveryPath, err)
     }
 
-	// Import pre-built kernel if available (avoids disk space issues)
-	// User can pre-build kernel on Mac with Docker using: ./prebuild-kernel.sh
-	// Then transfer linux-kernel.nar to /root/ on the Guix ISO
-	if err := lib.ImportPrebuiltKernel("/root/linux-kernel.nar"); err != nil {
-		fmt.Printf("Warning: Failed to import pre-built kernel: %v\n", err)
-		fmt.Println("  Will attempt to build kernel during system init (may fail if low disk space)")
-	}
-
 	// Run guix system init with retry logic (includes daemon startup)
 	if err := lib.RunGuixSystemInit(); err != nil {
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  SYSTEM INIT FAILED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Printf("Error: %v\n", err)
+		fmt.Println()
+		fmt.Println("You can try to recover by running:")
+		fmt.Printf("  %s\n", recoveryPath)
+		fmt.Println()
+		fmt.Println("Or verify what succeeded:")
+		fmt.Println("  /root/verify-guix-install.sh")
+		fmt.Println()
+		return err
+	}
+
+	// Verify and recover kernel/initrd files with auto-retry
+	if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  KERNEL/INITRD VERIFICATION FAILED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Printf("Error: %v\n", err)
+		fmt.Println()
+		fmt.Println("CRITICAL: System will not boot without kernel/initrd files!")
+		fmt.Println()
+		fmt.Println("To recover, run:")
+		fmt.Printf("  %s\n", recoveryPath)
+		fmt.Println()
+		fmt.Println("This will:")
+		fmt.Println("  1. Attempt to copy kernel/initrd from system generation")
+		fmt.Println("  2. Complete remaining installation steps")
+		fmt.Println("  3. Verify everything before reboot")
+		fmt.Println()
 		return err
 	}
 
@@ -150,11 +177,34 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 
 	// Verify installation succeeded
 	if err := lib.VerifyInstallation(); err != nil {
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  INSTALLATION VERIFICATION FAILED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Printf("Error: %v\n", err)
+		fmt.Println()
+		fmt.Println("To complete installation, run:")
+		fmt.Printf("  %s\n", recoveryPath)
+		fmt.Println()
 		return err
 	}
 
 	// Set user password
 	if err := lib.SetUserPassword(state.UserName); err != nil {
+		fmt.Println()
+		fmt.Println("========================================")
+		fmt.Println("  PASSWORD SETUP FAILED")
+		fmt.Println("========================================")
+		fmt.Println()
+		fmt.Printf("Error: %v\n", err)
+		fmt.Println()
+		fmt.Println("You can set the password later by running:")
+		fmt.Printf("  %s\n", recoveryPath)
+		fmt.Println()
+		fmt.Println("Or manually after reboot with:")
+		fmt.Println("  sudo passwd " + state.UserName)
+		fmt.Println()
 		return err
 	}
 
@@ -185,7 +235,21 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	lib.RunCommand("umount", "-R", "/mnt")
 
 	fmt.Println()
-	fmt.Println("=== Installation Complete ===")
+	fmt.Println("========================================")
+	fmt.Println("  INSTALLATION COMPLETE!")
+	fmt.Println("========================================")
+	fmt.Println()
+	fmt.Println("Your Guix system is ready to boot.")
+	fmt.Println()
+	fmt.Println("Helpful scripts available on the ISO:")
+	fmt.Println("  - Verify installation: /root/verify-guix-install.sh")
+	fmt.Println("  - Recovery/completion: " + recoveryPath)
+	fmt.Println("  - Filesystem invariants: lib/enforce-guix-filesystem-invariants.sh")
+	fmt.Println()
+	fmt.Println("After first boot:")
+	fmt.Println("  - Verification: sudo verify-guix-install (installed in /usr/local/bin)")
+	fmt.Println("  - Customization: ~/guix-customize/customize")
+	fmt.Println()
 	fmt.Println("System will reboot now...")
 	fmt.Println()
 

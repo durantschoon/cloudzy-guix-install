@@ -1467,6 +1467,156 @@ func RunComprehensiveVerification(recoveryScriptPath string) error {
 	return nil
 }
 
+// VerifyAndRecoverKernelFiles checks if kernel/initrd exist and attempts recovery if missing
+// This handles the case where guix system init succeeds but doesn't copy kernel files
+func VerifyAndRecoverKernelFiles(maxAttempts int) error {
+	fmt.Println()
+	PrintSectionHeader("Verifying Kernel and Initrd Files")
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			fmt.Printf("\n[RETRY %d/%d] Attempting to recover kernel/initrd files...\n", attempt, maxAttempts)
+			fmt.Println()
+		}
+
+		// Check for kernel files (with wildcards for version numbers)
+		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
+		initrds, _ := filepath.Glob("/mnt/boot/initrd*")
+
+		kernelMissing := len(kernels) == 0
+		initrdMissing := len(initrds) == 0
+
+		if !kernelMissing && !initrdMissing {
+			// Both exist - verify they're real files with reasonable size
+			kernelSize := int64(0)
+			initrdSize := int64(0)
+
+			if info, err := os.Stat(kernels[0]); err == nil {
+				kernelSize = info.Size()
+			}
+			if info, err := os.Stat(initrds[0]); err == nil {
+				initrdSize = info.Size()
+			}
+
+			// Kernel should be at least 5MB, initrd at least 10MB (typical sizes)
+			if kernelSize > 5*1024*1024 && initrdSize > 10*1024*1024 {
+				fmt.Printf("[OK] Kernel found: %s (%.1f MB)\n", filepath.Base(kernels[0]), float64(kernelSize)/1024/1024)
+				fmt.Printf("[OK] Initrd found: %s (%.1f MB)\n", filepath.Base(initrds[0]), float64(initrdSize)/1024/1024)
+				fmt.Println()
+				return nil
+			}
+
+			// Files exist but are suspiciously small
+			fmt.Printf("[WARN] Kernel/initrd files exist but are too small:\n")
+			fmt.Printf("       Kernel: %.1f MB (expected > 5 MB)\n", float64(kernelSize)/1024/1024)
+			fmt.Printf("       Initrd: %.1f MB (expected > 10 MB)\n", float64(initrdSize)/1024/1024)
+		}
+
+		// Files are missing or too small - attempt recovery
+		fmt.Println()
+		if kernelMissing {
+			fmt.Println("[ERROR] Kernel file missing from /mnt/boot/")
+		}
+		if initrdMissing {
+			fmt.Println("[ERROR] Initrd file missing from /mnt/boot/")
+		}
+
+		// Check if system generation exists
+		systemLink := "/mnt/run/current-system"
+		if _, err := os.Lstat(systemLink); err != nil {
+			fmt.Printf("[ERROR] System generation symlink missing: %s\n", systemLink)
+			fmt.Println("        Cannot recover - system was not built successfully")
+			if attempt < maxAttempts {
+				fmt.Println()
+				fmt.Println("Waiting 10 seconds before retry...")
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			return fmt.Errorf("system generation not found - installation incomplete")
+		}
+
+		// Follow the symlink to find the system generation
+		systemPath, err := filepath.EvalSymlinks(systemLink)
+		if err != nil {
+			fmt.Printf("[ERROR] System generation symlink is broken: %v\n", err)
+			if attempt < maxAttempts {
+				fmt.Println()
+				fmt.Println("Waiting 10 seconds before retry...")
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			return fmt.Errorf("broken system generation symlink: %w", err)
+		}
+
+		fmt.Printf("[INFO] Found system generation: %s\n", systemPath)
+
+		// Try to copy kernel and initrd from system generation
+		fmt.Println()
+		fmt.Println("Attempting to recover kernel/initrd from system generation...")
+
+		recovered := true
+
+		// Copy kernel if missing
+		if kernelMissing || (len(kernels) > 0 && func() bool {
+			info, _ := os.Stat(kernels[0])
+			return info.Size() < 5*1024*1024
+		}()) {
+			kernelSrc := filepath.Join(systemPath, "kernel")
+			if _, err := os.Stat(kernelSrc); err != nil {
+				fmt.Printf("[ERROR] Kernel not found in system generation: %s\n", kernelSrc)
+				recovered = false
+			} else {
+				kernelDest := "/mnt/boot/vmlinuz"
+				if err := exec.Command("cp", "-f", kernelSrc, kernelDest).Run(); err != nil {
+					fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
+					recovered = false
+				} else {
+					if info, err := os.Stat(kernelDest); err == nil {
+						fmt.Printf("[OK] Recovered kernel: %s (%.1f MB)\n", kernelDest, float64(info.Size())/1024/1024)
+					}
+				}
+			}
+		}
+
+		// Copy initrd if missing
+		if initrdMissing || (len(initrds) > 0 && func() bool {
+			info, _ := os.Stat(initrds[0])
+			return info.Size() < 10*1024*1024
+		}()) {
+			initrdSrc := filepath.Join(systemPath, "initrd")
+			if _, err := os.Stat(initrdSrc); err != nil {
+				fmt.Printf("[ERROR] Initrd not found in system generation: %s\n", initrdSrc)
+				recovered = false
+			} else {
+				initrdDest := "/mnt/boot/initrd"
+				if err := exec.Command("cp", "-f", initrdSrc, initrdDest).Run(); err != nil {
+					fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
+					recovered = false
+				} else {
+					if info, err := os.Stat(initrdDest); err == nil {
+						fmt.Printf("[OK] Recovered initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
+					}
+				}
+			}
+		}
+
+		if recovered {
+			fmt.Println()
+			fmt.Println("[OK] Successfully recovered kernel/initrd files")
+			fmt.Println()
+			return nil
+		}
+
+		if attempt < maxAttempts {
+			fmt.Println()
+			fmt.Println("Recovery attempt failed. Waiting 10 seconds before retry...")
+			time.Sleep(10 * time.Second)
+		}
+	}
+
+	return fmt.Errorf("failed to recover kernel/initrd files after %d attempts", maxAttempts)
+}
+
 // isMountPoint checks if a path is a mount point
 func isMountPoint(path string) bool {
 	cmd := exec.Command("mountpoint", "-q", path)

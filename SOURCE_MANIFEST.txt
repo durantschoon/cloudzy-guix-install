@@ -20,17 +20,17 @@ e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-du
 a45e9807c0737a95de74bacc14c8347e8cbaab0c0abeaebfd841ea147f271282  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
 b5e4312b242bbeafd39afcf05717926099a6521866b5e41b98f4bc282fa8cb40  ./framework-dual/install/03-config-dual-boot.go
-0b10dddc6ec265f5ba31a3d67619a93d5ac559940d748e239c779580c294c61a  ./framework-dual/install/04-system-init.go
+9d8dda1371fccca53dcf9b36c5538927b04644f447c8d4d64b0a25553af65a32  ./framework-dual/install/04-system-init.go
 b691772fd78460d59da49812277b6bc438b5412ebaafeb3fce3a5e8dd69e9ee9  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
 365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
 ae85de411b5ac7f22cbfb5b04020d412526e1c7984f78cc54b24dfd2fc450146  ./framework/install/03-config.go
-4a0900644d91d2704ca72ea023cd7828cf7a383a4230730955c92cd6796e537d  ./framework/install/04-system-init.go
+3fc8da569478eb0a0700baa6e5a29dec9d2389d303290aae0a30838694e723ec  ./framework/install/04-system-init.go
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-2cd0f796c795731d72e5d68b04c5b7c6da8d20bd273d2c2e8773b3036b3f181f  ./lib/common.go
+ebfb4af55f8689192f4a7020e5aacbadf6c6a1b93b6c267ff20edbb622495066  ./lib/common.go
 1ed9ff3c7a62edb3b62fdd9afe94b805fd5489d5baa9868b2cbaa3119826bbc3  ./run-remote-steps.go
 
 ## Critical Shell Scripts
@@ -40,7 +40,6 @@ d389e2e071c523cee6216504e42cdc132138c3992f432f80ab08a0d34ca0b85c  lib/bootstrap-
 e59161142768e53e575d1e8a200d7ea325049e7f42ae2e9d9a47e4237b6a4e91  lib/verify-guix-install.sh
 3192ac93c828b6858bd6b232cf6f1ec2c2aa153af8575d65ab3a4f4f67d9d380  lib/recovery-complete-install.sh
 7ba7183ec8de691428cf30aed2c550e085b79869644e4a64fd44a68c0769597f  lib/fix-iso-artifacts.sh
-b6b140fc64e76ea0c322b4328a6e2d0e4fb7305ea885a2e98a7268cc6a45b8a1  lib/recover-filesystem-invariants.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/lib.sh
 
