@@ -1163,7 +1163,11 @@ func RunGuixSystemInit() error {
 	}
 
 	// Step 1: Build the system (creates complete system in /gnu/store)
-	if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
+	// Capture the output to get the system path
+	buildCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stderr = os.Stderr
+	if err := buildCmd.Run(); err != nil {
 		return fmt.Errorf("guix system build failed: %w", err)
 	}
 
@@ -1174,42 +1178,86 @@ func RunGuixSystemInit() error {
 
 	// Step 2: Find the built system and copy kernel/initrd to /boot
 	// The system build creates /gnu/store/*-system with kernel and initrd
+	fmt.Println("Searching for built system in /gnu/store...")
 	cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
 	output, err := cmd.Output()
 	if err != nil {
+		fmt.Printf("[ERROR] Failed to find built system: %v\n", err)
+		fmt.Println("Listing all *-system directories:")
+		exec.Command("bash", "-c", "ls -ld /gnu/store/*-system 2>/dev/null | head -10").Run()
 		return fmt.Errorf("failed to find built system: %w", err)
 	}
 	systemPath := strings.TrimSpace(string(output))
 	if systemPath == "" {
+		fmt.Println("[ERROR] No system found in /gnu/store")
+		fmt.Println("Listing /gnu/store contents:")
+		exec.Command("bash", "-c", "ls /gnu/store/ | grep system | head -20").Run()
 		return fmt.Errorf("no system found in /gnu/store")
 	}
 
-	fmt.Printf("Found built system: %s\n", systemPath)
+	fmt.Printf("[INFO] Found built system: %s\n", systemPath)
+
+	// List contents of system directory to verify kernel/initrd are there
+	fmt.Println("[INFO] Contents of system directory:")
+	listCmd := exec.Command("ls", "-lh", systemPath)
+	listCmd.Stdout = os.Stdout
+	listCmd.Stderr = os.Stderr
+	listCmd.Run()
 
 	// Copy kernel
+	fmt.Println()
 	kernelSrc := filepath.Join(systemPath, "kernel")
-	if _, err := os.Stat(kernelSrc); err != nil {
+	fmt.Printf("[INFO] Checking for kernel at: %s\n", kernelSrc)
+	if info, err := os.Stat(kernelSrc); err != nil {
+		fmt.Printf("[ERROR] Kernel not found: %v\n", err)
 		return fmt.Errorf("kernel not found in built system: %w", err)
+	} else {
+		fmt.Printf("[OK] Kernel found (%.1f MB)\n", float64(info.Size())/1024/1024)
 	}
 
-	// Determine kernel version from the kernel path
 	kernelDest := "/mnt/boot/vmlinuz"
-	if err := exec.Command("cp", kernelSrc, kernelDest).Run(); err != nil {
+	fmt.Printf("[INFO] Copying kernel to: %s\n", kernelDest)
+	if err := exec.Command("cp", "-v", kernelSrc, kernelDest).Run(); err != nil {
+		fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
 		return fmt.Errorf("failed to copy kernel: %w", err)
 	}
-	fmt.Printf("✓ Copied kernel: %s -> %s\n", kernelSrc, kernelDest)
+
+	// Verify the copy
+	if info, err := os.Stat(kernelDest); err != nil {
+		fmt.Printf("[ERROR] Kernel not found at destination after copy: %v\n", err)
+		return fmt.Errorf("kernel copy verification failed: %w", err)
+	} else {
+		fmt.Printf("[OK] Kernel copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
+	}
 
 	// Copy initrd
+	fmt.Println()
 	initrdSrc := filepath.Join(systemPath, "initrd")
-	if _, err := os.Stat(initrdSrc); err != nil {
+	fmt.Printf("[INFO] Checking for initrd at: %s\n", initrdSrc)
+	if info, err := os.Stat(initrdSrc); err != nil {
+		fmt.Printf("[ERROR] Initrd not found: %v\n", err)
 		return fmt.Errorf("initrd not found in built system: %w", err)
+	} else {
+		fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(info.Size())/1024/1024)
 	}
 
 	initrdDest := "/mnt/boot/initrd"
-	if err := exec.Command("cp", initrdSrc, initrdDest).Run(); err != nil {
+	fmt.Printf("[INFO] Copying initrd to: %s\n", initrdDest)
+	if err := exec.Command("cp", "-v", initrdSrc, initrdDest).Run(); err != nil {
+		fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
 		return fmt.Errorf("failed to copy initrd: %w", err)
 	}
-	fmt.Printf("✓ Copied initrd: %s -> %s\n", initrdSrc, initrdDest)
+
+	// Verify the copy
+	if info, err := os.Stat(initrdDest); err != nil {
+		fmt.Printf("[ERROR] Initrd not found at destination after copy: %v\n", err)
+		return fmt.Errorf("initrd copy verification failed: %w", err)
+	} else {
+		fmt.Printf("[OK] Initrd copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
+	}
+
+	fmt.Println()
+	fmt.Println("[SUCCESS] Kernel and initrd files copied to /mnt/boot/")
 
 	// Create the current-system symlink
 	if err := os.Remove("/mnt/run/current-system"); err != nil && !os.IsNotExist(err) {
