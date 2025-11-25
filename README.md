@@ -3,6 +3,8 @@
 Modular scripts for installing minimal Guix OS on different platforms with
 automated hardware detection, safety checks, and guided workflows.
 
+**AI-Assisted Development:** This project was developed with significant contributions from Claude (Anthropic), ChatGPT-4 (OpenAI), and Cursor's native LLM agents. The codebase, documentation, and troubleshooting guides were collaboratively created through iterative human-AI pairing.
+
 buymeacoffee.com/durantschoon (🙏 help support my LLM habit)
 
 ## ⚠️ Choose Your Platform
@@ -41,6 +43,19 @@ Replace `<platform>` with: `cloudzy`, `framework`, or `framework-dual`
 Only use on fresh systems.
 
 See [`QUICKSTART.md`](QUICKSTART.md) for complete instructions.
+
+## 📖 Documentation Guide
+
+**Choose your documentation path:**
+
+- 🚀 **New to Guix?** → [`QUICKSTART.md`](QUICKSTART.md) - Simple, step-by-step guide
+- 🔧 **Experienced with Guix?** → [`docs/GUIDE_SEASONED_GUIX.md`](docs/GUIDE_SEASONED_GUIX.md) - Advanced configuration, channel pinning, custom packages
+- 💻 **Setting up dual-boot?** → [`docs/GUIDE_DUAL_BOOT.md`](docs/GUIDE_DUAL_BOOT.md) - Framework 13 + Pop!_OS dual-boot guide
+- 📚 **Need technical reference?** → [`docs/GUIDE_REFERENCE.md`](docs/GUIDE_REFERENCE.md) - Troubleshooting, technical deep-dives, recovery
+- 👨‍💻 **Contributing to this project?** → [`docs/GUIDE_CONTRIBUTING.md`](docs/GUIDE_CONTRIBUTING.md) - Developer documentation, code patterns, testing
+- 🖥️ **Platform-specific help?** → See platform READMEs: [`cloudzy/README.md`](cloudzy/README.md), [`framework/README.md`](framework/README.md), [`raspberry-pi/README.md`](raspberry-pi/README.md)
+
+**Not sure where to start?** See [`docs/README.md`](docs/README.md) for complete documentation navigation with suggested reading paths.
 
 ## Quick Navigation
 
@@ -470,20 +485,22 @@ The `USEBIGFONT` environment variable enables automatic setting of a larger cons
 
 **Usage:**
 ```bash
+# Keep current font (skip font change) - EASIEST OPTION
+export USEBIGFONT="0"
+
 # Use default font (solar24x32)
 export USEBIGFONT="1"  # or "yes", "true", or "t"
 
-# Keep current font (skip font change)
-export USEBIGFONT="0"
-
-# Specify a custom font name (check what's available first)
+# Specify a custom font name (matches on prefix, handles .psf, .psfu, .psf.gz, etc.)
 export USEBIGFONT="solar24x32"  # Explicitly use default
+export USEBIGFONT="solar24x36"  # Matches solar24x36.psf, solar24x36.psf.gz, etc.
 export USEBIGFONT="<font-name>"  # Use any font found in consolefonts directory
 ```
 
 **What it does:**
 - Sets a larger console font immediately when bootstrap script starts
-- If you specify a font name, it uses that font (if available)
+- **`USEBIGFONT="0"`** - Keeps current font (easiest option, no font change)
+- If you specify a font name, it matches on prefix (handles `.psf`, `.psfu`, `.psf.gz`, etc.)
 - If you use boolean values ("1", "yes", "true", "t"), defaults to `solar24x32`
 - If specified font is not found, falls back to `solar24x32`
 - Makes installer output easier to read during installation

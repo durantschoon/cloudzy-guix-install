@@ -28,11 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **channels.scm persistence fix**: Moved channels.scm from `/tmp` to home directory (`~/channels.scm`) to prevent loss during installation → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#channels-scm-location)
-2. ✅ **Framework-dual DATA partition standardization**: Changed from `HOME_PARTITION` to `DATA` env var for consistency → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#data-partition-usage)
-3. ✅ **EFI partition label standardization**: Removed ESP/BOOT fallbacks, now only uses `EFI` label (matches partition creation) → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#label-convention)
-4. ✅ **USEBIGFONT=0 option**: Added ability to skip font change with `USEBIGFONT=0` to keep current font
-5. ✅ **Comprehensive filesystem recovery script**: Created `lib/recover-filesystem-invariants.sh` for complete recovery of systems with ISO artifact issues → [See archive](archive/CHECKLIST_COMPLETED.md#comprehensive-filesystem-recovery-script-2025-01-xx)
+1. ✅ **Font prefix matching fix**: Fixed font detection to match on prefix (handles `.psf`, `.psfu`, `.psf.gz`, etc.) - now finds `solar24x36` even if file is `solar24x36.psf.gz`
+2. ✅ **USEBIGFONT=0 documentation**: Clarified that `USEBIGFONT=0` is the easiest option to keep current font (no font change)
+3. ✅ **Documentation paths organization**: Created 6 documentation paths with guides for beginners, experienced users, dual-boot, reference, contributing, and platform-specific
+4. ✅ **channels.scm persistence fix**: Moved channels.scm from `/tmp` to home directory (`~/channels.scm`) to prevent loss during installation → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#channels-scm-location)
+5. ✅ **Framework-dual DATA partition standardization**: Changed from `HOME_PARTITION` to `DATA` env var for consistency → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#data-partition-usage)
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -410,6 +410,39 @@ Ensure readable GRUB theme and visible timeout; add explicit chainloader entry f
 - ❌ GRUB theme not customized
 
 **Impact:** ⭐⭐ Medium - Smoother dual-boot selection
+
+---
+
+#### 2a. Generalize Dual-Boot Documentation and Configuration
+
+**Status:** ❌ Not implemented
+
+Make the dual-boot section more generic and helpful for users dual-booting with other OSes (not just Pop!_OS), and enable easy high-level configuration.
+
+**Goals:**
+
+- Generalize `docs/GUIDE_DUAL_BOOT.md` to work with any Linux distribution (Ubuntu, Fedora, Arch, etc.), not just Pop!_OS
+- Make installer scripts configurable at a high level for different dual-boot scenarios
+- Document common dual-boot patterns (systemd-boot, GRUB, Windows, etc.)
+- Enable contributions from others who modify scripts for their own dual-boot setups
+- Provide clear extension points for customizing bootloader detection and configuration
+
+**Current limitations:**
+
+- Documentation assumes Pop!_OS (systemd-boot) as the existing OS
+- Installer scripts have Pop!_OS-specific detection logic
+- GRUB configuration assumes Pop!_OS chainloading pattern
+- Limited guidance for other bootloader types (GRUB, Windows Boot Manager, etc.)
+
+**Proposed approach:**
+
+- Extract Pop!_OS-specific logic into configurable parameters
+- Document bootloader detection patterns for common distributions
+- Create extension guide for contributors adapting scripts to other OSes
+- Add high-level configuration options (bootloader type, detection method, etc.)
+- Include examples for common dual-boot scenarios (Ubuntu, Fedora, Arch, Windows)
+
+**Impact:** ⭐⭐⭐ High - Makes dual-boot installer useful for broader audience, enables community contributions
 
 ---
 

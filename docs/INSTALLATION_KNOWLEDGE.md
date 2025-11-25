@@ -1719,7 +1719,7 @@ The installer implements comprehensive idempotency to allow safe reruns and reco
 
 Picture this: You've partitioned your disk, formatted the filesystems, mounted everything correctly, generated a perfect `config.scm`, and started `guix system init`. Everything runs for 10 minutes, building packages, downloading substitutes... then suddenly fails with a cryptic error about `/var/lock` not existing. But `/var/lock` clearly exists—you can see it right there! What's going on?
 
-**Critical Discovery (2025-01-25):** During `guix system init`, the system can fail with this mysterious error:
+**Critical Discovery (2025-11-25):** During `guix system init`, the system can fail with this mysterious error:
 
 ```text
 error: failed to evaluate directive (directory "/var/lock" 0 0 1023)
@@ -2395,7 +2395,7 @@ At this point, your **on-disk layout** is clean and consistent.
 | `/etc/resolv.conf` | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` removes this |
 | System profile rebuild | ⚠️ Manual | Recovery script | Requires chroot and `guix system reconfigure` |
 
-**Current Status (2025-01-XX):**
+**Current Status (2025-11-25):**
 
 - ✅ **All filesystem invariants are now fixed** by the installer's `CleanupISOArtifacts()` function
 - ✅ **Fresh installs** will have correct filesystem structure from the start

@@ -72,14 +72,26 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
     fi
     
     if [[ -d "$FONT_DIR" ]]; then
-        # Check if the specified font exists (with or without extension)
+        # Check if the specified font exists (match on prefix, handles .psf, .psfu, .psf.gz, etc.)
         FONT_FOUND=""
+        # First try exact matches
         if [[ -f "$FONT_DIR/${FONT_NAME}.psf" ]]; then
             FONT_FOUND="$FONT_DIR/${FONT_NAME}.psf"
         elif [[ -f "$FONT_DIR/${FONT_NAME}.psfu" ]]; then
             FONT_FOUND="$FONT_DIR/${FONT_NAME}.psfu"
         elif [[ -f "$FONT_DIR/${FONT_NAME}" ]]; then
             FONT_FOUND="$FONT_DIR/${FONT_NAME}"
+        else
+            # Try prefix matching (handles .psf.gz, .psfu.gz, etc.)
+            # Match files that start with font name followed by a dot
+            while IFS= read -r font_file; do
+                # Extract base name (remove .psf, .psfu, .psf.gz, etc.)
+                font_base=$(echo "$font_file" | sed 's/\.psf.*$//' | sed 's/\.psfu.*$//')
+                if [[ "$font_base" == "$FONT_NAME" ]]; then
+                    FONT_FOUND="$FONT_DIR/$font_file"
+                    break
+                fi
+            done < <(ls "$FONT_DIR" 2>/dev/null | grep -E "^${FONT_NAME}\.")
         fi
         
         # If specified font not found, try default solar24x32
@@ -215,14 +227,26 @@ if [[ -n "${USEBIGFONT:-}" ]]; then
 
             # Set selected font if user chose one
             if [[ -n "$SELECTED_FONT" ]]; then
-                # Try to find the font file
+                # Try to find the font file (match on prefix, handles .psf, .psfu, .psf.gz, etc.)
                 SELECTED_FONT_FOUND=""
+                # First try exact matches
                 if [[ -f "$FONT_DIR/${SELECTED_FONT}.psf" ]]; then
                     SELECTED_FONT_FOUND="$FONT_DIR/${SELECTED_FONT}.psf"
                 elif [[ -f "$FONT_DIR/${SELECTED_FONT}.psfu" ]]; then
                     SELECTED_FONT_FOUND="$FONT_DIR/${SELECTED_FONT}.psfu"
                 elif [[ -f "$FONT_DIR/${SELECTED_FONT}" ]]; then
                     SELECTED_FONT_FOUND="$FONT_DIR/${SELECTED_FONT}"
+                else
+                    # Try prefix matching (handles .psf.gz, .psfu.gz, etc.)
+                    # Match files that start with font name followed by a dot
+                    while IFS= read -r font_file; do
+                        # Extract base name (remove .psf, .psfu, .psf.gz, etc.)
+                        font_base=$(echo "$font_file" | sed 's/\.psf.*$//' | sed 's/\.psfu.*$//')
+                        if [[ "$font_base" == "$SELECTED_FONT" ]]; then
+                            SELECTED_FONT_FOUND="$FONT_DIR/$font_file"
+                            break
+                        fi
+                    done < <(ls "$FONT_DIR" 2>/dev/null | grep -E "^${SELECTED_FONT}\.")
                 fi
                 
                 if [[ -n "$SELECTED_FONT_FOUND" ]] && command -v setfont >/dev/null 2>&1; then
