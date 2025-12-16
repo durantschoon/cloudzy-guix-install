@@ -2683,6 +2683,24 @@ func SetUserPassword(username string) error {
 	return nil
 }
 
+// WriteTimeMachineHelperScript writes a simple helper script for manually retrying
+// guix time-machine system init if the installer aborts
+func WriteTimeMachineHelperScript(scriptPath string) error {
+	channelsPath := GetChannelsPath()
+	tmCmd := fmt.Sprintf("guix time-machine -C %s -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls=\"https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org\"\n", channelsPath)
+	
+	scriptContent := "#!/bin/sh\n" + tmCmd
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+		return fmt.Errorf("failed to write helper script to %s: %w", scriptPath, err)
+	}
+	
+	fmt.Printf("Helper script written: %s\n", scriptPath)
+	fmt.Println("If the installer aborts, you can rerun the init with:")
+	fmt.Printf("  %s\n", scriptPath)
+	
+	return nil
+}
+
 // WriteRecoveryScript writes a comprehensive recovery script for completing installation
 // after guix time-machine succeeds but post-install steps may have failed
 // Reads the actual recovery script from lib/recovery-complete-install.sh (not hardcoded)
