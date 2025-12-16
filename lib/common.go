@@ -3,6 +3,7 @@ package lib
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -1820,6 +1821,14 @@ func RunGuixSystemInitFreeSoftware() error {
 		return fmt.Errorf("guix system build failed: %w", err)
 	}
 
+	// #region agent log
+	logDebug("lib/common.go:1821", "After guix system build", map[string]interface{}{
+		"hypothesisId": "A",
+		"step": "after_build",
+		"checking": "system_generation_exists",
+	})
+	// #endregion
+
 	PrintSectionHeader("Copying Kernel Files")
 	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
 	fmt.Println("(Workaround for guix system init bug)")
@@ -1987,8 +1996,43 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println("Bootloader installation failed. You can:")
 		fmt.Println("  1. Try manually: guix system init /mnt/etc/config.scm /mnt")
 		fmt.Println("  2. Or reboot anyway - the kernel is already in place")
+		// #region agent log
+		logDebug("lib/common.go:1999", "guix system init failed", map[string]interface{}{
+			"hypothesisId": "D",
+			"step":         "guix_system_init_failed",
+			"error":        lastErr.Error(),
+		})
+		// #endregion
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
+
+	// #region agent log
+	// Check state immediately after guix system init succeeds
+	kernelAfterInit, _ := os.Stat("/mnt/boot/vmlinuz")
+	initrdAfterInit, _ := os.Stat("/mnt/boot/initrd")
+	bootFiles, _ := filepath.Glob("/mnt/boot/*")
+	bootFileList := []string{}
+	for _, f := range bootFiles {
+		bootFileList = append(bootFileList, filepath.Base(f))
+	}
+	var kernelAfterSize int64
+	var initrdAfterSize int64
+	if kernelAfterInit != nil {
+		kernelAfterSize = kernelAfterInit.Size()
+	}
+	if initrdAfterInit != nil {
+		initrdAfterSize = initrdAfterInit.Size()
+	}
+	logDebug("lib/common.go:2002", "After guix system init succeeds", map[string]interface{}{
+		"hypothesisId": "D",
+		"step":         "after_guix_system_init",
+		"kernelExists": kernelAfterInit != nil,
+		"initrdExists": initrdAfterInit != nil,
+		"kernelSize":   kernelAfterSize,
+		"initrdSize":   initrdAfterSize,
+		"bootFiles":    bootFileList,
+	})
+	// #endregion
 
 	// Verify kernel/initrd still exist after Step 3 (guix system init can remove them)
 	fmt.Println()
@@ -1999,6 +2043,14 @@ func RunGuixSystemInitFreeSoftware() error {
 	if len(kernels) == 0 || len(initrds) == 0 {
 		// Try to recover from system generation
 		fmt.Println("[WARN] Kernel/initrd missing after bootloader install - attempting recovery...")
+		// #region agent log
+		logDebug("lib/common.go:2037", "Kernel/initrd missing, starting recovery", map[string]interface{}{
+			"hypothesisId": "D",
+			"step":         "before_recovery",
+			"kernelCount":  len(kernels),
+			"initrdCount":  len(initrds),
+		})
+		// #endregion
 		if err := VerifyAndRecoverKernelFiles(3); err != nil {
 			return fmt.Errorf("failed to recover kernel/initrd files: %w", err)
 		}
@@ -2009,7 +2061,35 @@ func RunGuixSystemInitFreeSoftware() error {
 	fmt.Println("✓ Installation verified - system should boot successfully")
 	fmt.Println()
 	}
-	
+
+	// #region agent log
+	// Final check after VerifyAndRecoverKernelFiles
+	kernelFinal, _ := os.Stat("/mnt/boot/vmlinuz")
+	initrdFinal, _ := os.Stat("/mnt/boot/initrd")
+	bootFilesFinal, _ := filepath.Glob("/mnt/boot/*")
+	bootFileListFinal := []string{}
+	for _, f := range bootFilesFinal {
+		bootFileListFinal = append(bootFileListFinal, filepath.Base(f))
+	}
+	var kernelFinalSize int64
+	var initrdFinalSize int64
+	if kernelFinal != nil {
+		kernelFinalSize = kernelFinal.Size()
+	}
+	if initrdFinal != nil {
+		initrdFinalSize = initrdFinal.Size()
+	}
+	logDebug("lib/common.go:2052", "After VerifyAndRecoverKernelFiles", map[string]interface{}{
+		"hypothesisId": "D",
+		"step":         "after_verify_recover",
+		"kernelExists": kernelFinal != nil,
+		"initrdExists": initrdFinal != nil,
+		"kernelSize":   kernelFinalSize,
+		"initrdSize":   initrdFinalSize,
+		"bootFiles":    bootFileListFinal,
+	})
+	// #endregion
+
 	return nil
 }
 
@@ -2738,6 +2818,33 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 	fmt.Println()
 
 	return nil
+}
+
+// logDebug writes a debug log entry in NDJSON format to the debug log file
+func logDebug(location, message string, data map[string]interface{}) {
+	logPath := "/Users/durant/Repos/ds/cloudzy-guix-install/.cursor/debug.log"
+	logEntry := map[string]interface{}{
+		"timestamp": time.Now().UnixMilli(),
+		"location":  location,
+		"message":   message,
+		"sessionId": "debug-session",
+		"runId":     "run1",
+		"data":      data,
+	}
+	if hypothesisId, ok := data["hypothesisId"]; ok {
+		logEntry["hypothesisId"] = hypothesisId
+	}
+	jsonData, err := json.Marshal(logEntry)
+	if err != nil {
+		return // Silently fail if JSON encoding fails
+	}
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return // Silently fail if file open fails
+	}
+	defer f.Close()
+	f.Write(jsonData)
+	f.WriteString("\n")
 }
 
 // Device detection and validation functions

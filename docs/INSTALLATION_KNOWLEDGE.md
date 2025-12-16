@@ -1870,6 +1870,164 @@ guix time-machine -C ~/channels.scm -- system init /mnt/etc/config.scm /mnt
    - Sets up symlinks to the system generation
    - Doesn't try to rebuild (because it's cached)
 
+### The Kernel File Journey: A Step-by-Step Narrative
+
+**Understanding Where Kernel Files Come From and Where They Should Go**
+
+When debugging why kernel files aren't appearing in `/boot/`, it's critical to understand the complete journey these files take from source to destination. This narrative breaks down each step so we can identify exactly where the process breaks.
+
+#### Step 1: Kernel Source - Where Do Kernel Files Originate?
+
+**The Beginning:** Kernel files don't come from "the internet" directly. Instead:
+
+1. **Guix builds the kernel** from source code (or downloads pre-built substitutes)
+   - For free software installs (cloudzy): Uses `linux-libre` kernel package
+   - For nonguix installs (framework-dual): Uses `linux` kernel package from nonguix channel
+   - The kernel package is specified in `/mnt/etc/config.scm` as `(kernel linux-libre)` or `(kernel linux)`
+
+2. **During `guix system build`**, Guix:
+   - Downloads or builds the kernel package
+   - Compiles it into a binary executable
+   - Creates an initrd (initial RAM disk) with necessary modules
+   - Packages everything into a **system generation** at `/gnu/store/*-system/`
+
+3. **The system generation** (`/gnu/store/xxxxx-system/`) contains:
+   - `kernel` - The compiled Linux kernel binary (typically 5-15 MB)
+   - `initrd` - The initial RAM disk (typically 10-40 MB)
+   - `boot` directory - Contains GRUB configuration
+   - Other system files (binaries, libraries, etc.)
+
+**Key Point:** The kernel files are **created locally** during the build process, not downloaded as separate files. They're part of the system generation closure.
+
+#### Step 2: Finding the System Generation
+
+**After `guix system build` completes:**
+
+1. **The installer searches for the newest system generation:**
+   ```bash
+   ls -td /gnu/store/*-system 2>/dev/null | head -1
+   ```
+   - This finds the most recently created `*-system` directory
+   - The directory name looks like: `/gnu/store/abc123def456-...-system`
+   - This is where the kernel and initrd files should be
+
+2. **Verification:** The installer lists contents of the system directory:
+   ```bash
+   ls -lh /gnu/store/xxxxx-system/
+   ```
+   - Should show: `kernel`, `initrd`, `boot/`, and other files
+   - If `kernel` or `initrd` are missing here, the build failed silently
+
+**Potential Failure Point:** If no `*-system` directories exist, or if the newest one doesn't contain `kernel` and `initrd`, the build step failed.
+
+#### Step 3: Copying Kernel Files to /boot
+
+**The Manual Copy Step (for cloudzy with 3-step workaround):**
+
+1. **Source location:** `/gnu/store/xxxxx-system/kernel` and `/gnu/store/xxxxx-system/initrd`
+   - These are the files created during Step 1 (build)
+
+2. **Destination location:** `/mnt/boot/vmlinuz` and `/mnt/boot/initrd`
+   - `/mnt` is the mount point for the target disk's root partition
+   - `/mnt/boot/` is where GRUB expects to find kernel files
+   - Files are named `vmlinuz` (kernel) and `initrd` (initrd) for GRUB compatibility
+
+3. **The copy command:**
+   ```bash
+   cp /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
+   cp /gnu/store/xxxxx-system/initrd /mnt/boot/initrd
+   ```
+
+4. **Verification after copy:**
+   - Check that `/mnt/boot/vmlinuz` exists and has reasonable size (> 5 MB)
+   - Check that `/mnt/boot/initrd` exists and has reasonable size (> 10 MB)
+   - Verify file permissions are correct
+
+**Potential Failure Points:**
+- Copy command fails silently (permissions, disk space, path issues)
+- Files copied but immediately removed/overwritten
+- Files copied to wrong location
+- Copy succeeds but verification fails
+
+#### Step 4: Running guix system init
+
+**After kernel files are copied:**
+
+1. **`guix system init` runs** to install the bootloader:
+   ```bash
+   guix system init /mnt/etc/config.scm /mnt
+   ```
+   - This should be quick since the system is already built
+   - Main job: Install GRUB bootloader and create `/mnt/boot/grub/grub.cfg`
+
+2. **What `guix system init` does:**
+   - Creates `/mnt/run/current-system` symlink → `/gnu/store/xxxxx-system`
+   - Installs GRUB to `/mnt/boot/efi/EFI/guix/grubx64.efi` (UEFI) or disk MBR (BIOS)
+   - Generates `/mnt/boot/grub/grub.cfg` with kernel/initrd paths
+   - **May remove or overwrite** existing kernel files in `/mnt/boot/`
+
+**Critical Issue:** `guix system init` may remove the kernel files we just copied! This is why we need to verify again after Step 4.
+
+#### Step 5: Post-Init Verification and Recovery
+
+**After `guix system init` completes:**
+
+1. **Check if files still exist:**
+   ```bash
+   ls /mnt/boot/vmlinuz*  # Should show vmlinuz
+   ls /mnt/boot/initrd*   # Should show initrd
+   ```
+
+2. **If files are missing:**
+   - Find the system generation: `readlink /mnt/run/current-system`
+   - Copy again from system generation: `cp $SYSTEM_PATH/kernel /mnt/boot/vmlinuz`
+   - Retry up to 3 times with delays
+
+3. **Final verification:**
+   - Check file sizes are reasonable
+   - Check GRUB config references correct paths
+   - List all files in `/mnt/boot/` to see what's actually there
+
+#### Debugging Checklist: Where Are Kernel Files At Each Step?
+
+When debugging kernel file issues, check each step:
+
+1. **After `guix system build`:**
+   - ✅ Does `/gnu/store/*-system/` directory exist?
+   - ✅ Does it contain `kernel` file? (check size: should be 5-15 MB)
+   - ✅ Does it contain `initrd` file? (check size: should be 10-40 MB)
+   - ❌ If NO: Build failed - check build logs
+
+2. **After finding system generation:**
+   - ✅ What path was found? (log it)
+   - ✅ What files are in that directory? (list them)
+   - ❌ If system generation not found: Search failed - check `/gnu/store/` contents
+
+3. **Before copying:**
+   - ✅ Does source file exist? (`/gnu/store/xxxxx-system/kernel`)
+   - ✅ What is its size?
+   - ✅ Does destination directory exist? (`/mnt/boot/`)
+   - ✅ Is there disk space?
+
+4. **After copying:**
+   - ✅ Does `/mnt/boot/vmlinuz` exist?
+   - ✅ Does `/mnt/boot/initrd` exist?
+   - ✅ What are their sizes? (should match source files)
+   - ❌ If NO: Copy failed - check permissions, disk space, errors
+
+5. **After `guix system init`:**
+   - ✅ Do files still exist?
+   - ✅ What files are in `/mnt/boot/`? (list all)
+   - ✅ Is `/mnt/run/current-system` a valid symlink?
+   - ❌ If files missing: `guix system init` removed them - need recovery
+
+6. **After recovery:**
+   - ✅ Do files exist now?
+   - ✅ What are their final sizes?
+   - ✅ Are they referenced in GRUB config?
+
+**This step-by-step breakdown allows us to pinpoint exactly where kernel files are getting lost.**
+
 ### Automatic Recovery with Retry
 
 **New in this version:** `VerifyAndRecoverKernelFiles(3)` runs after `system init`:
