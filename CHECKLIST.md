@@ -28,11 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Font prefix matching fix**: Fixed font detection to match on prefix (handles `.psf`, `.psfu`, `.psf.gz`, etc.) - now finds `solar24x36` even if file is `solar24x36.psf.gz`
-2. ✅ **USEBIGFONT=0 documentation**: Clarified that `USEBIGFONT=0` is the easiest option to keep current font (no font change)
-3. ✅ **Documentation paths organization**: Created 6 documentation paths with guides for beginners, experienced users, dual-boot, reference, contributing, and platform-specific
-4. ✅ **channels.scm persistence fix**: Moved channels.scm from `/tmp` to home directory (`~/channels.scm`) to prevent loss during installation → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#channels-scm-location)
-5. ✅ **Framework-dual DATA partition standardization**: Changed from `HOME_PARTITION` to `DATA` env var for consistency → See [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md#data-partition-usage)
+1. ✅ **Auto-recovery from hung processes**: Added automatic process termination and recovery script suggestion after 10 consecutive "hung" warnings (10 minutes) in `RunCommandWithSpinner` → Prevents installer from hanging indefinitely on cloudzy VPS
+2. ✅ **Recovery script automatic kernel/initrd recovery**: Added automatic recovery logic for missing kernel/initrd files after `guix system init` reports success but files are missing → Attempts to copy from system generation, handles free software installs
+3. ✅ **Recovery script exit trap verification**: Added EXIT trap to recovery script that runs verification regardless of how script exits → Ensures critical files are checked even on early exit or errors
+4. ✅ **Recovery script automatic rerun on verification failure**: Added prompt to automatically rerun recovery if verification fails → Prevents infinite loops with proper flag management
+5. ✅ **Font prefix matching fix**: Fixed font detection to match on prefix (handles `.psf`, `.psfu`, `.psf.gz`, etc.) - now finds `solar24x36` even if file is `solar24x36.psf.gz`
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -248,6 +248,21 @@ cd ~/guix-customize
 
 **Testing cloudzy installer with latest improvements:**
 
+- ✅ **Auto-recovery from hung processes (2025-01-XX)**: Added automatic process termination after 10 consecutive "hung" warnings
+  - **Issue**: Installer could hang indefinitely on cloudzy VPS during `guix system init` phase
+  - **Fix**: `RunCommandWithSpinner` now detects hung processes (no output + log not growing for 15+ minutes) and automatically stops after 10 warnings
+  - **Behavior**: Kills hung process and suggests running recovery script
+  - **Status**: Implemented in `lib/common.go`, prevents indefinite hangs
+- ✅ **Recovery script automatic kernel/initrd recovery (2025-01-XX)**: Added recovery logic for missing kernel/initrd after `guix system init`
+  - **Issue**: `guix system init` reports success but kernel/initrd files are missing (especially on free software installs)
+  - **Fix**: Recovery script now attempts to copy kernel/initrd from system generation if missing after init
+  - **Behavior**: Finds system generation, copies kernel/initrd, creates symlink, verifies files exist
+  - **Status**: Implemented in `lib/recovery-complete-install.sh`, handles both time-machine and free software paths
+- ✅ **Recovery script exit trap verification (2025-01-XX)**: Added EXIT trap to ensure verification always runs
+  - **Issue**: If recovery script exits early (error, interrupt), verification might not run
+  - **Fix**: EXIT trap runs verification function regardless of exit method
+  - **Behavior**: Checks kernel/initrd, runs comprehensive verification script, offers automatic rerun if fails
+  - **Status**: Implemented with proper loop prevention flags
 - ✅ **Initrd configuration fix (2025-01-XX)**: Removed explicit `base-initrd` specification for cloudzy
   - **Issue**: `base-initrd` doesn't accept `#:linux` and `#:linux-modules` keyword arguments that Guix passes when `(kernel linux-libre)` is specified
   - **Error**: `Invalid keyword: (#:linux ...)` during config validation
