@@ -30,7 +30,7 @@ ae85de411b5ac7f22cbfb5b04020d412526e1c7984f78cc54b24dfd2fc450146  ./framework/in
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-220fd899244e846635dab9731dc3dea0dce61fa6d10135dea78006878a32a1c3  ./lib/common.go
+5ca248bf9619a0e239b5ebc440f82bece582edb20a9c9b17d7f6ed7da47b358e  ./lib/common.go
 1ed9ff3c7a62edb3b62fdd9afe94b805fd5489d5baa9868b2cbaa3119826bbc3  ./run-remote-steps.go
 
 ## Critical Shell Scripts
