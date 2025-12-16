@@ -674,10 +674,46 @@ if [ "$PASSWORD_SET" = false ]; then
     fi
 fi
 
+# Detect platform if not set (similar to verify script)
+detect_platform() {
+    # Use environment variable if set
+    if [ -n "$GUIX_PLATFORM" ]; then
+        echo "$GUIX_PLATFORM"
+        return
+    fi
+    
+    # Check for channels.scm (framework-dual/framework use nonguix)
+    if [ -f ~/channels.scm ] || [ -f /tmp/channels.scm ]; then
+        echo "framework-dual"
+        return
+    fi
+    
+    # Check for dual-boot (GUIX_ROOT filesystem with separate EFI)
+    if mountpoint -q /mnt && [ -f /proc/mounts ]; then
+        if grep -q "GUIX_ROOT" /proc/mounts && grep -q "/boot/efi" /proc/mounts; then
+            echo "framework-dual"
+            return
+        fi
+    fi
+    
+    # Check for VPS vendors (cloudzy)
+    if [ -f /sys/class/dmi/id/sys_vendor ]; then
+        vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        if echo "$vendor" | grep -qE "cloudzy|ovh|digitalocean|vultr"; then
+            echo "cloudzy"
+            return
+        fi
+    fi
+    
+    # Default to cloudzy (most common VPS case)
+    echo "cloudzy"
+}
+
 # Download customization tools
 echo ""
 echo "=== Downloading Customization Tools ==="
-PLATFORM="${GUIX_PLATFORM:-framework-dual}"
+PLATFORM=$(detect_platform)
+echo "[INFO] Detected platform: $PLATFORM"
 USER_HOME="/mnt/home/$USERNAME"
 CUSTOMIZE_DIR="$USER_HOME/guix-customize"
 
