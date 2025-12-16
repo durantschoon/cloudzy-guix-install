@@ -302,6 +302,8 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         SYSTEM_PATH=$(ls -td /gnu/store/*-system 2>/dev/null | head -1)
         if [ -z "$SYSTEM_PATH" ]; then
             echo "[ERROR] No system generation found in /gnu/store"
+            echo "The system build may have failed silently."
+            echo "Please check /tmp/guix-install.log for errors"
             exit 1
         fi
         
@@ -312,10 +314,16 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         ls -la "$SYSTEM_PATH" || true
         echo ""
         
-        # Copy kernel - try multiple possible locations
-        KERNEL_SRC="$SYSTEM_PATH/kernel"
-        if [ ! -f "$KERNEL_SRC" ]; then
-            echo "Kernel not found at $KERNEL_SRC, trying alternative locations..."
+        # CRITICAL: Verify kernel/initrd exist in system generation BEFORE copying
+        # If they don't exist, the build failed silently (common with amdgpu/nonguix issues)
+        KERNEL_SRC=""
+        INITRD_SRC=""
+        
+        # Find kernel - try multiple possible locations
+        if [ -f "$SYSTEM_PATH/kernel" ]; then
+            KERNEL_SRC="$SYSTEM_PATH/kernel"
+        else
+            echo "Kernel not found at $SYSTEM_PATH/kernel, trying alternative locations..."
             # Try finding kernel in the store (might be a symlink or in a subdirectory)
             ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -5)
             if [ -n "$ALTERNATIVES" ]; then
@@ -324,20 +332,32 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 # Use the first one found
                 KERNEL_SRC=$(echo "$ALTERNATIVES" | head -1)
                 echo "Using alternative kernel location: $KERNEL_SRC"
-            else
-                echo "[ERROR] Kernel not found in system generation at $SYSTEM_PATH/kernel"
-                echo "Searched for alternatives (kernel, vmlinuz*, bzImage) but none found"
-                exit 1
             fi
         fi
         
-        cp "$KERNEL_SRC" /mnt/boot/vmlinuz
-        echo "[OK] Copied kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
+        if [ -z "$KERNEL_SRC" ] || [ ! -f "$KERNEL_SRC" ]; then
+            echo ""
+            echo "[ERROR] Kernel not found in system generation!"
+            echo "System path: $SYSTEM_PATH"
+            echo "Searched for: kernel, vmlinuz*, bzImage"
+            echo ""
+            echo "This usually means:"
+            echo "  1. The system build failed silently (check config.scm for kernel specification)"
+            echo "  2. AMD GPU firmware issues (amdgpu) may have caused build failure"
+            echo "  3. Nonguix channel may not be properly configured"
+            echo ""
+            echo "Please check:"
+            echo "  - /tmp/guix-install.log for build errors"
+            echo "  - config.scm has (kernel linux) or (kernel linux-libre) specified"
+            echo "  - channels.scm includes nonguix channel correctly"
+            exit 1
+        fi
         
-        # Copy initrd - try multiple possible locations
-        INITRD_SRC="$SYSTEM_PATH/initrd"
-        if [ ! -f "$INITRD_SRC" ]; then
-            echo "Initrd not found at $INITRD_SRC, trying alternative locations..."
+        # Find initrd - try multiple possible locations
+        if [ -f "$SYSTEM_PATH/initrd" ]; then
+            INITRD_SRC="$SYSTEM_PATH/initrd"
+        else
+            echo "Initrd not found at $SYSTEM_PATH/initrd, trying alternative locations..."
             # Try finding initrd in the store
             ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -5)
             if [ -n "$ALTERNATIVES" ]; then
@@ -346,15 +366,50 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 # Use the first one found
                 INITRD_SRC=$(echo "$ALTERNATIVES" | head -1)
                 echo "Using alternative initrd location: $INITRD_SRC"
-            else
-                echo "[ERROR] Initrd not found in system generation at $SYSTEM_PATH/initrd"
-                echo "Searched for alternatives (initrd*, initramfs*) but none found"
-                exit 1
             fi
         fi
         
+        if [ -z "$INITRD_SRC" ] || [ ! -f "$INITRD_SRC" ]; then
+            echo ""
+            echo "[ERROR] Initrd not found in system generation!"
+            echo "System path: $SYSTEM_PATH"
+            echo "Searched for: initrd*, initramfs*"
+            echo ""
+            echo "This usually means the system build failed silently."
+            echo "Please check /tmp/guix-install.log for errors"
+            exit 1
+        fi
+        
+        # Verify file sizes are reasonable (kernel > 5MB, initrd > 10MB)
+        KERNEL_SIZE=$(stat -f%z "$KERNEL_SRC" 2>/dev/null || stat -c%s "$KERNEL_SRC" 2>/dev/null || echo "0")
+        INITRD_SIZE=$(stat -f%z "$INITRD_SRC" 2>/dev/null || stat -c%s "$INITRD_SRC" 2>/dev/null || echo "0")
+        
+        if [ "$KERNEL_SIZE" -lt 5242880 ]; then
+            echo "[WARN] Kernel file is suspiciously small (%.1f MB) - may be corrupted" "$(echo "scale=1; $KERNEL_SIZE/1024/1024" | bc)"
+        fi
+        if [ "$INITRD_SIZE" -lt 10485760 ]; then
+            echo "[WARN] Initrd file is suspiciously small (%.1f MB) - may be corrupted" "$(echo "scale=1; $INITRD_SIZE/1024/1024" | bc)"
+        fi
+        
+        # Copy kernel
+        cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+        echo "[OK] Copied kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz ($(echo "scale=1; $KERNEL_SIZE/1024/1024" | bc) MB)"
+        
+        # Verify kernel copy succeeded
+        if [ ! -f /mnt/boot/vmlinuz ]; then
+            echo "[ERROR] Kernel copy failed - file not found at destination!"
+            exit 1
+        fi
+        
+        # Copy initrd
         cp "$INITRD_SRC" /mnt/boot/initrd
-        echo "[OK] Copied initrd: $INITRD_SRC -> /mnt/boot/initrd"
+        echo "[OK] Copied initrd: $INITRD_SRC -> /mnt/boot/initrd ($(echo "scale=1; $INITRD_SIZE/1024/1024" | bc) MB)"
+        
+        # Verify initrd copy succeeded
+        if [ ! -f /mnt/boot/initrd ]; then
+            echo "[ERROR] Initrd copy failed - file not found at destination!"
+            exit 1
+        fi
         
         # Create symlink
         rm -f /mnt/run/current-system
@@ -366,6 +421,18 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         echo "=== Step 3/3: Installing Bootloader ==="
         echo "System already built, this should be quick..."
         echo ""
+        
+        # CRITICAL: Verify kernel/initrd exist BEFORE Step 3
+        # If they're missing, don't even try to install bootloader
+        if [ ! -f /mnt/boot/vmlinuz ] || [ ! -f /mnt/boot/initrd ]; then
+            echo ""
+            echo "[ERROR] Kernel/initrd files missing before bootloader install!"
+            echo "This should not happen - Step 2 should have copied them."
+            echo ""
+            echo "Kernel exists: $([ -f /mnt/boot/vmlinuz ] && echo 'YES' || echo 'NO')"
+            echo "Initrd exists: $([ -f /mnt/boot/initrd ] && echo 'YES' || echo 'NO')"
+            exit 1
+        fi
         
         if ! guix time-machine -C "$CHANNELS_PATH" -- system init --fallback -v6 /mnt/etc/config.scm /mnt --substitute-urls="https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"; then
             echo "[ERROR] Bootloader installation failed!"
