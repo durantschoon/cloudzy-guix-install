@@ -73,9 +73,9 @@ func (s *Step02MountExisting) RunWarnings(state *State) error {
 	fmt.Printf("  EFI           - %s (from Step01)\n", state.EFI)
 	fmt.Printf("  DEVICE        - %s (from Step01)\n", state.Device)
 	if state.HomePartition != "" {
-		fmt.Printf("  DATA - %s (from Step01)\n", state.HomePartition)
+		fmt.Printf("  DATA          - %s (from Step01)\n", state.HomePartition)
 	} else {
-		fmt.Println("  DATA - (not set, home will be in root)")
+		fmt.Println("  DATA          - (not set, home will be in root)")
 	}
 	fmt.Println()
 	fmt.Println("Idempotency: Skips store copy if /mnt/gnu/store already populated")
