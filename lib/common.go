@@ -1277,6 +1277,21 @@ func RunGuixSystemInit() error {
 	fmt.Println("(System already built, this should be quick)")
 	fmt.Println()
 
+	// CRITICAL: Verify daemon is actually running RIGHT BEFORE we need it
+	// Previous verification may have been too early, and intermediate steps
+	// might have affected the daemon. Verify again immediately before use.
+	fmt.Println("Verifying guix-daemon is running and responsive before system init...")
+	if err := isDaemonReady(); err != nil {
+		fmt.Printf("[WARN] Daemon not ready: %v\n", err)
+		fmt.Println("Restarting daemon to ensure it's available...")
+		if err := EnsureGuixDaemonRunning(); err != nil {
+			return fmt.Errorf("failed to ensure guix-daemon is running before system init: %w", err)
+		}
+	} else {
+		fmt.Println("[OK] guix-daemon is running and responsive")
+	}
+	fmt.Println()
+
 	// Step 3: Run system init (should now just install bootloader since system is already built)
 	maxRetries := 3
 	var lastErr error
@@ -1286,6 +1301,17 @@ func RunGuixSystemInit() error {
 			fmt.Println("Waiting 10 seconds before retry...")
 			fmt.Println()
 			time.Sleep(10 * time.Second)
+			
+			// Re-verify daemon before each retry
+			fmt.Println("Verifying guix-daemon is still running before retry...")
+			if err := isDaemonReady(); err != nil {
+				fmt.Printf("[WARN] Daemon not ready before retry: %v\n", err)
+				fmt.Println("Restarting daemon...")
+				if err := EnsureGuixDaemonRunning(); err != nil {
+					fmt.Printf("[ERROR] Failed to restart daemon: %v\n", err)
+				}
+			}
+			fmt.Println()
 		}
 
 		if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
@@ -1724,6 +1750,21 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println(string(output))
 		fmt.Println()
 	}
+
+	// CRITICAL: Verify daemon is actually running RIGHT BEFORE we need it
+	// Previous verification may have been too early, and intermediate steps
+	// might have affected the daemon. Verify again immediately before use.
+	fmt.Println("Verifying guix-daemon is running and responsive before system init...")
+	if err := isDaemonReady(); err != nil {
+		fmt.Printf("[WARN] Daemon not ready: %v\n", err)
+		fmt.Println("Restarting daemon to ensure it's available...")
+		if err := EnsureGuixDaemonRunning(); err != nil {
+			return fmt.Errorf("failed to ensure guix-daemon is running before system init: %w", err)
+		}
+	} else {
+		fmt.Println("[OK] guix-daemon is running and responsive")
+	}
+	fmt.Println()
 
 	// Run guix system init directly - this builds everything AND installs it
 	if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {

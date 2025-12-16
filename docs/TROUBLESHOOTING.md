@@ -727,6 +727,33 @@ rm -f /var/guix/daemon-socket/socket.lock
 herd start guix-daemon
 ```
 
+### Cloudzy: Daemon Not Started After Installation (Before Reboot)
+
+**Symptom:** Installation completes but `guix-daemon` is not running, causing issues after reboot
+
+**When this happens:** After Step 4 (System Init) completes on Cloudzy VPS installations
+
+**Root Cause:** The daemon is stopped during Step 2 (Mount) to copy the store, and may not restart properly before the installer completes and reboots.
+
+**Solution:**
+```bash
+# Before rebooting, exit the installer (Ctrl+C or let it finish)
+# Then manually start the daemon:
+
+herd start guix-daemon
+
+# Verify it's running
+herd status guix-daemon
+guix build --version
+
+# Now safe to reboot
+reboot
+```
+
+**Why this matters:** The installed system needs the daemon running to function properly. If the daemon isn't started before reboot, you may encounter issues after first boot.
+
+**Note:** This is specific to Cloudzy VPS installations. Framework installers handle daemon startup differently.
+
 ---
 
 ## Corrupted Derivation Files

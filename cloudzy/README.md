@@ -77,6 +77,30 @@ Located in `install/` - Run from Guix live ISO to create minimal bootable system
 
 These scripts are called automatically by `run-remote-steps.sh`.
 
+## ⚠️ Important: Daemon Startup Before Reboot
+
+**After Step 4 completes, before rebooting:**
+
+The installer stops `guix-daemon` during Step 2 (Mount) to copy the store. Before rebooting, you should verify the daemon is running:
+
+```bash
+# Check if daemon is running
+herd status guix-daemon
+
+# If not running, start it:
+herd start guix-daemon
+
+# Verify it's working
+guix build --version
+
+# Now safe to reboot
+reboot
+```
+
+**Why:** The installed system needs the daemon running to function properly. If the daemon isn't started before reboot, you may encounter issues after first boot.
+
+**Note:** If the installer completes successfully, it should start the daemon automatically. However, if you encounter any issues or want to be extra safe, manually start it before rebooting.
+
 ## Customization Tools (Post-Boot Phase)
 
 Located in `postinstall/` - Run after booting into installed minimal Guix system.
