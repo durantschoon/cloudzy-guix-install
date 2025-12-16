@@ -372,6 +372,111 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
             echo "However, kernel and initrd are already in place."
             exit 1
         fi
+        
+        # CRITICAL: Verify kernel/initrd still exist after Step 3
+        # guix system init can sometimes remove or overwrite files
+        # This matches the verification done in RunGuixSystemInit() for framework-dual
+        echo ""
+        echo "=== Verifying Kernel/Initrd After Bootloader Install ==="
+        KERNEL_STILL_MISSING=false
+        INITRD_STILL_MISSING=false
+        
+        if ! ls /mnt/boot/vmlinuz* >/dev/null 2>&1; then
+            echo "[WARN] Kernel missing after bootloader install - attempting recovery..."
+            KERNEL_STILL_MISSING=true
+        else
+            echo "[OK] Kernel still present: $(ls /mnt/boot/vmlinuz* | head -1 | xargs basename)"
+        fi
+        
+        if ! ls /mnt/boot/initrd* >/dev/null 2>&1; then
+            echo "[WARN] Initrd missing after bootloader install - attempting recovery..."
+            INITRD_STILL_MISSING=true
+        else
+            echo "[OK] Initrd still present: $(ls /mnt/boot/initrd* | head -1 | xargs basename)"
+        fi
+        
+        # If files are missing, recover from system generation
+        if [ "$KERNEL_STILL_MISSING" = true ] || [ "$INITRD_STILL_MISSING" = true ]; then
+            echo ""
+            echo "=== Recovering Missing Kernel/Initrd Files ==="
+            
+            # Use the system path we already found, or find it again
+            if [ -z "$SYSTEM_PATH" ] || [ ! -d "$SYSTEM_PATH" ]; then
+                # Try symlink first
+                if [ -L /mnt/run/current-system ]; then
+                    SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+                    echo "Found system generation via symlink: $SYSTEM_PATH"
+                else
+                    # Find most recent system generation
+                    SYSTEM_PATH=$(ls -td /gnu/store/*-system 2>/dev/null | head -1)
+                    if [ -n "$SYSTEM_PATH" ]; then
+                        echo "Found system generation: $SYSTEM_PATH"
+                    fi
+                fi
+            fi
+            
+            if [ -z "$SYSTEM_PATH" ] || [ ! -d "$SYSTEM_PATH" ]; then
+                echo "[ERROR] Could not find system generation to recover from!"
+                echo "System init may have failed silently."
+                exit 1
+            fi
+            
+            # Recover kernel if missing
+            if [ "$KERNEL_STILL_MISSING" = true ]; then
+                KERNEL_SRC="$SYSTEM_PATH/kernel"
+                if [ ! -f "$KERNEL_SRC" ]; then
+                    ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -1)
+                    if [ -n "$ALTERNATIVES" ]; then
+                        KERNEL_SRC="$ALTERNATIVES"
+                    fi
+                fi
+                
+                if [ -f "$KERNEL_SRC" ]; then
+                    cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+                    echo "[OK] Recovered kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
+                    KERNEL_STILL_MISSING=false
+                else
+                    echo "[ERROR] Kernel not found in system generation: $SYSTEM_PATH"
+                fi
+            fi
+            
+            # Recover initrd if missing
+            if [ "$INITRD_STILL_MISSING" = true ]; then
+                INITRD_SRC="$SYSTEM_PATH/initrd"
+                if [ ! -f "$INITRD_SRC" ]; then
+                    ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -1)
+                    if [ -n "$ALTERNATIVES" ]; then
+                        INITRD_SRC="$ALTERNATIVES"
+                    fi
+                fi
+                
+                if [ -f "$INITRD_SRC" ]; then
+                    cp "$INITRD_SRC" /mnt/boot/initrd
+                    echo "[OK] Recovered initrd: $INITRD_SRC -> /mnt/boot/initrd"
+                    INITRD_STILL_MISSING=false
+                else
+                    echo "[ERROR] Initrd not found in system generation: $SYSTEM_PATH"
+                fi
+            fi
+            
+            # Ensure symlink is correct
+            if [ ! -L /mnt/run/current-system ] || [ "$(readlink -f /mnt/run/current-system)" != "$SYSTEM_PATH" ]; then
+                rm -f /mnt/run/current-system
+                ln -s "$SYSTEM_PATH" /mnt/run/current-system
+                echo "[OK] Updated current-system symlink"
+            fi
+            
+            # Final check
+            if [ "$KERNEL_STILL_MISSING" = true ] || [ "$INITRD_STILL_MISSING" = true ]; then
+                echo ""
+                echo "[ERROR] Recovery failed - kernel/initrd still missing!"
+                echo "System will not boot without these files."
+                exit 1
+            else
+                echo ""
+                echo "[OK] Successfully recovered kernel/initrd files"
+            fi
+        fi
     else
         # Free software install: Use guix system init directly
         # CRITICAL FIX: guix system build doesn't produce kernel/initrd files.
