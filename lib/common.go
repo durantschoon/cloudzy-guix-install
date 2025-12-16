@@ -1381,6 +1381,14 @@ func RunGuixSystemInit() error {
 		return fmt.Errorf("guix system init failed after %d attempts: %w", maxRetries, lastErr)
 	}
 
+	// CRITICAL: Verify kernel/initrd still exist after Step 3 (guix system init can remove them)
+	// This matches the verification done in framework-dual/install/04-system-init.go
+	fmt.Println()
+	PrintSectionHeader("Verifying Kernel/Initrd After Bootloader Install")
+	if err := VerifyAndRecoverKernelFiles(3); err != nil {
+		return fmt.Errorf("kernel/initrd verification failed after bootloader install: %w", err)
+	}
+
 	return nil
 }
 
