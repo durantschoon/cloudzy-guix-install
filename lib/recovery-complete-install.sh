@@ -12,6 +12,8 @@
 RUN_VERIFICATION_ON_EXIT=true
 VERIFICATION_PASSED=false
 VERIFICATION_ALREADY_RUN=false
+RECOVERY_RETRY_COUNT="${RECOVERY_RETRY_COUNT:-0}"  # Track retry attempts
+MAX_RETRY_ATTEMPTS=3
 
 # Function to run verification and handle failures
 run_final_verification() {
@@ -50,21 +52,46 @@ run_final_verification() {
         echo "CRITICAL: Kernel or initrd files are missing!"
         echo "The system will NOT boot without these files."
         echo ""
-        read -p "Would you like to automatically rerun recovery to fix this? [Y/n] " -r </dev/tty
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        
+        # Check if we've exceeded retry limit
+        if [ "$RECOVERY_RETRY_COUNT" -ge "$MAX_RETRY_ATTEMPTS" ]; then
+            echo "========================================"
+            echo "  RECOVERY FAILED AFTER $MAX_RETRY_ATTEMPTS ATTEMPTS"
+            echo "========================================"
             echo ""
-            echo "Rerunning recovery script..."
+            echo "The recovery script has been run $MAX_RETRY_ATTEMPTS times but kernel/initrd files"
+            echo "are still missing. Manual intervention is required."
             echo ""
-            # Disable trap for the new execution
-            trap - EXIT
-            # Re-execute this script (will start fresh)
-            exec "$0"
-        else
+            echo "What happened:"
+            echo "  - Attempted to recover kernel/initrd files $MAX_RETRY_ATTEMPTS times"
+            echo "  - Each attempt completed but files were still missing"
             echo ""
-            echo "Recovery cancelled. Please run manually:"
-            echo "  $0"
+            echo "Possible causes:"
+            echo "  1. System build is failing silently (check /tmp/guix-install.log)"
+            echo "  2. Kernel/initrd not being created in system generation"
+            echo "  3. Filesystem or permissions issues preventing file copy"
+            echo "  4. AMD GPU firmware issues (framework-dual) causing build failures"
+            echo ""
+            echo "Next steps:"
+            echo "  1. Check logs: cat /tmp/guix-install.log | tail -100"
+            echo "  2. Verify config.scm has kernel specified: grep -A 5 kernel /mnt/etc/config.scm"
+            echo "  3. Check system generation: ls -la /gnu/store/*-system | head -5"
+            echo "  4. Try manual recovery:"
+            echo "     SYSTEM=\$(ls -td /gnu/store/*-system | head -1)"
+            echo "     cp \$SYSTEM/kernel /mnt/boot/vmlinuz"
+            echo "     cp \$SYSTEM/initrd /mnt/boot/initrd"
+            echo ""
             return 1
         fi
+        
+        # Increment retry counter and automatically retry
+        RECOVERY_RETRY_COUNT=$((RECOVERY_RETRY_COUNT + 1))
+        echo "Automatically retrying recovery (attempt $RECOVERY_RETRY_COUNT/$MAX_RETRY_ATTEMPTS)..."
+        echo ""
+        # Disable trap for the new execution
+        trap - EXIT
+        # Re-execute this script with incremented retry count
+        RECOVERY_RETRY_COUNT=$RECOVERY_RETRY_COUNT exec "$0"
     fi
     
     # Run comprehensive verification script if available
@@ -89,21 +116,31 @@ run_final_verification() {
             echo ""
             echo "[WARN] Comprehensive verification found issues"
             echo ""
-            read -p "Would you like to automatically rerun recovery to fix issues? [Y/n] " -r </dev/tty
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            
+            # Check if we've exceeded retry limit
+            if [ "$RECOVERY_RETRY_COUNT" -ge "$MAX_RETRY_ATTEMPTS" ]; then
+                echo "========================================"
+                echo "  RECOVERY FAILED AFTER $MAX_RETRY_ATTEMPTS ATTEMPTS"
+                echo "========================================"
                 echo ""
-                echo "Rerunning recovery script..."
+                echo "The recovery script has been run $MAX_RETRY_ATTEMPTS times but verification"
+                echo "still fails. Manual intervention is required."
                 echo ""
-                # Disable trap for the new execution
-                trap - EXIT
-                # Re-execute this script (will start fresh)
-                exec "$0"
-            else
+                echo "Run the verification script manually to see details:"
+                echo "  $VERIFY_SCRIPT"
                 echo ""
-                echo "Recovery cancelled. Please review errors above."
                 set -e
                 return 1
             fi
+            
+            # Increment retry counter and automatically retry
+            RECOVERY_RETRY_COUNT=$((RECOVERY_RETRY_COUNT + 1))
+            echo "Automatically retrying recovery (attempt $RECOVERY_RETRY_COUNT/$MAX_RETRY_ATTEMPTS)..."
+            echo ""
+            # Disable trap for the new execution
+            trap - EXIT
+            # Re-execute this script with incremented retry count
+            RECOVERY_RETRY_COUNT=$RECOVERY_RETRY_COUNT exec "$0"
         fi
         set -e
     else
@@ -131,7 +168,11 @@ trap cleanup_and_verify EXIT
 set -e  # Exit on error (after trap is set)
 
 echo "=== Guix Installation Recovery Script ==="
-echo ""
+if [ "$RECOVERY_RETRY_COUNT" -gt 0 ]; then
+    echo ""
+    echo "  [RETRY ATTEMPT $RECOVERY_RETRY_COUNT/$MAX_RETRY_ATTEMPTS]"
+    echo ""
+fi
 echo "This script will:"
 echo "  1. Verify current installation state"
 echo "  2. Re-run guix system init if needed (with time-machine)"
@@ -139,12 +180,17 @@ echo "  3. Set user password"
 echo "  4. Download customization tools"
 echo "  5. Configure dual-boot GRUB (if framework-dual)"
 echo "  6. Write installation receipt"
-echo "  7. Prepare for reboot"
+echo "  7. Run verification (will auto-retry up to $MAX_RETRY_ATTEMPTS times if needed)"
 echo ""
-read -p "Continue? [Y/n] " -r </dev/tty
-if [[ $REPLY =~ ^[Nn]$ ]]; then
-    echo "Aborted."
-    exit 0
+if [ "$RECOVERY_RETRY_COUNT" -eq 0 ]; then
+    read -p "Continue? [Y/n] " -r </dev/tty
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+else
+    echo "Automatically continuing (retry attempt $RECOVERY_RETRY_COUNT)..."
+    echo ""
 fi
 
 # Check if we're on Guix ISO
