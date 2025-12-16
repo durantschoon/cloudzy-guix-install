@@ -171,7 +171,7 @@ echo "=== Guix Installation Recovery Script ==="
 if [ "$RECOVERY_RETRY_COUNT" -gt 0 ]; then
     echo ""
     echo "  [RETRY ATTEMPT $RECOVERY_RETRY_COUNT/$MAX_RETRY_ATTEMPTS]"
-    echo ""
+echo ""
 fi
 echo "This script will:"
 echo "  1. Verify current installation state"
@@ -183,10 +183,10 @@ echo "  6. Write installation receipt"
 echo "  7. Run verification (will auto-retry up to $MAX_RETRY_ATTEMPTS times if needed)"
 echo ""
 if [ "$RECOVERY_RETRY_COUNT" -eq 0 ]; then
-    read -p "Continue? [Y/n] " -r </dev/tty
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
-        echo "Aborted."
-        exit 0
+read -p "Continue? [Y/n] " -r </dev/tty
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    echo "Aborted."
+    exit 0
     fi
 else
     echo "Automatically continuing (retry attempt $RECOVERY_RETRY_COUNT)..."
@@ -367,7 +367,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         
         # Find kernel - try multiple possible locations
         if [ -f "$SYSTEM_PATH/kernel" ]; then
-            KERNEL_SRC="$SYSTEM_PATH/kernel"
+        KERNEL_SRC="$SYSTEM_PATH/kernel"
         else
             echo "Kernel not found at $SYSTEM_PATH/kernel, trying alternative locations..."
             # Try finding kernel in the store (might be a symlink or in a subdirectory)
@@ -401,7 +401,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         
         # Find initrd - try multiple possible locations
         if [ -f "$SYSTEM_PATH/initrd" ]; then
-            INITRD_SRC="$SYSTEM_PATH/initrd"
+        INITRD_SRC="$SYSTEM_PATH/initrd"
         else
             echo "Initrd not found at $SYSTEM_PATH/initrd, trying alternative locations..."
             # Try finding initrd in the store
@@ -444,8 +444,8 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
         # Verify kernel copy succeeded
         if [ ! -f /mnt/boot/vmlinuz ]; then
             echo "[ERROR] Kernel copy failed - file not found at destination!"
-            exit 1
-        fi
+                exit 1
+            fi
         
         # Copy initrd
         cp "$INITRD_SRC" /mnt/boot/initrd
@@ -718,7 +718,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 echo "  1. /tmp/guix-install.log for errors"
                 echo "  2. Verify config.scm has (kernel linux-libre) specified"
                 echo "  3. Try re-running: guix system init /mnt/etc/config.scm /mnt"
-                exit 1
+            exit 1
             else
                 echo ""
                 echo "[OK] Successfully recovered kernel/initrd files"

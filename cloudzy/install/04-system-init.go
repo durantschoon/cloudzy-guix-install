@@ -98,8 +98,8 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	configPath := "/mnt/etc/config.scm"
 	bootMode := lib.DetectBootModeFromConfig(configPath)
 	if bootMode == "uefi" {
-		if err := lib.VerifyESP(); err != nil {
-			return err
+	if err := lib.VerifyESP(); err != nil {
+		return err
 		}
 	} else {
 		fmt.Println("[OK] BIOS boot mode detected - skipping EFI verification (GRUB will be installed to disk MBR)")
