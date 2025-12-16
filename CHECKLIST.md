@@ -28,11 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Auto-recovery from hung processes**: Added automatic process termination and recovery script suggestion after 10 consecutive "hung" warnings (10 minutes) in `RunCommandWithSpinner` → Prevents installer from hanging indefinitely on cloudzy VPS
-2. ✅ **Recovery script automatic kernel/initrd recovery**: Added automatic recovery logic for missing kernel/initrd files after `guix system init` reports success but files are missing → Attempts to copy from system generation, handles free software installs
-3. ✅ **Recovery script exit trap verification**: Added EXIT trap to recovery script that runs verification regardless of how script exits → Ensures critical files are checked even on early exit or errors
-4. ✅ **Recovery script automatic rerun on verification failure**: Added prompt to automatically rerun recovery if verification fails → Prevents infinite loops with proper flag management
-5. ✅ **Font prefix matching fix**: Fixed font detection to match on prefix (handles `.psf`, `.psfu`, `.psf.gz`, etc.) - now finds `solar24x36` even if file is `solar24x36.psf.gz`
+1. ✅ **Recovery script kernel/initrd verification improvements**: Added comprehensive verification for framework-dual recovery → Verifies kernel/initrd exist in system generation BEFORE copying, verifies files copied successfully, verifies before Step 3 bootloader install, better error messages for AMD GPU/nonguix issues
+2. ✅ **Recovery script platform auto-detection**: Added automatic platform detection (framework-dual vs cloudzy) if GUIX_PLATFORM not set → Uses same detection logic as verify script, ensures correct customize script downloaded
+3. ✅ **Auto-recovery from hung processes**: Added automatic process termination and recovery script suggestion after 10 consecutive "hung" warnings (10 minutes) in `RunCommandWithSpinner` → Prevents installer from hanging indefinitely on cloudzy VPS
+4. ✅ **Recovery script automatic kernel/initrd recovery**: Added automatic recovery logic for missing kernel/initrd files after `guix system init` reports success but files are missing → Attempts to copy from system generation, handles both time-machine and free software installs
+5. ✅ **Recovery script exit trap verification**: Added EXIT trap to recovery script that runs verification regardless of how script exits → Ensures critical files are checked even on early exit or errors
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -248,6 +248,17 @@ cd ~/guix-customize
 
 **Testing cloudzy installer with latest improvements:**
 
+- ⚠️ **Kernel/initrd installation issues (2025-01-XX)**: Both cloudzy and framework-dual experiencing kernel file installation failures
+  - **Framework-dual**: Uses 3-step approach (build → copy → bootloader), but kernel files may be missing from system generation if build fails silently (AMD GPU firmware issues)
+  - **Cloudzy**: Uses single-step `guix system init` (free software), but also reporting missing kernel files after successful init
+  - **Root cause**: `guix system init` can report success even when kernel/initrd files are not created/copied to `/boot/`
+  - **Current status**: Recovery script has improved verification, but underlying issue persists - both platforms need kernel/initrd recovery logic
+  - **Next steps**: Investigate why `guix system init` succeeds but doesn't create kernel files on cloudzy (should work correctly per docs)
+- ✅ **Recovery script kernel/initrd verification improvements (2025-01-XX)**: Added comprehensive verification for framework-dual
+  - **Issue**: Recovery script reported "bootloader installed successfully" even when kernel files were missing
+  - **Fix**: Verify kernel/initrd exist in system generation BEFORE copying, verify files copied successfully, verify before Step 3 bootloader install
+  - **Behavior**: Fails early with clear error messages if kernel files missing, prevents false success messages
+  - **Status**: Implemented in `lib/recovery-complete-install.sh`, better error messages for AMD GPU/nonguix issues
 - ✅ **Auto-recovery from hung processes (2025-01-XX)**: Added automatic process termination after 10 consecutive "hung" warnings
   - **Issue**: Installer could hang indefinitely on cloudzy VPS during `guix system init` phase
   - **Fix**: `RunCommandWithSpinner` now detects hung processes (no output + log not growing for 15+ minutes) and automatically stops after 10 warnings
