@@ -1684,9 +1684,15 @@ func RunGuixSystemInitFreeSoftware() error {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 
-	// Setup GRUB EFI if needed
-	if err := SetupGRUBEFI(); err != nil {
-		return fmt.Errorf("GRUB EFI setup failed: %w", err)
+	// Setup GRUB EFI only for UEFI boot mode (BIOS uses grub-bootloader, not grub-efi-bootloader)
+	bootMode := DetectBootModeFromConfig(configPath)
+	if bootMode == "uefi" {
+		if err := SetupGRUBEFI(); err != nil {
+			return fmt.Errorf("GRUB EFI setup failed: %w", err)
+		}
+	} else {
+		fmt.Println("[OK] BIOS boot mode detected - skipping EFI setup (GRUB will be installed to disk MBR)")
+		fmt.Println()
 	}
 
 	// Prepare critical directories before system init
@@ -3160,6 +3166,30 @@ func DetectBootMode() string {
 	// 3. The detection failed (VPS doesn't expose /sys/firmware/efi properly)
 	// Users can override with BOOT_MODE=uefi env var if needed
 	return "bios"
+}
+
+// DetectBootModeFromConfig detects boot mode from config.scm file
+// Returns "uefi" if grub-efi-bootloader is found, "bios" if grub-bootloader is found
+// Returns empty string if neither is found or file can't be read
+func DetectBootModeFromConfig(configPath string) string {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return ""
+	}
+	
+	contentStr := string(content)
+	
+	// Check for UEFI bootloader (grub-efi-bootloader)
+	if strings.Contains(contentStr, "grub-efi-bootloader") {
+		return "uefi"
+	}
+	
+	// Check for BIOS bootloader (grub-bootloader)
+	if strings.Contains(contentStr, "grub-bootloader") {
+		return "bios"
+	}
+	
+	return ""
 }
 
 // DetectPartitions detects the EFI and root partition paths for a device

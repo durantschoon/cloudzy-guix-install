@@ -93,9 +93,17 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 		fmt.Println()
 	}
 
-	// Verify EFI is properly mounted as vfat
-	if err := lib.VerifyESP(); err != nil {
-		return err
+	// Verify EFI is properly mounted as vfat (only for UEFI boot mode)
+	// For BIOS boot, GRUB is installed to disk MBR, not EFI partition
+	configPath := "/mnt/etc/config.scm"
+	bootMode := lib.DetectBootModeFromConfig(configPath)
+	if bootMode == "uefi" {
+		if err := lib.VerifyESP(); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("[OK] BIOS boot mode detected - skipping EFI verification (GRUB will be installed to disk MBR)")
+		fmt.Println()
 	}
 
 	// Start cow-store to redirect store writes to target disk
