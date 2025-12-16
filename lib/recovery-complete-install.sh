@@ -8,7 +8,127 @@
 # - ~/channels.scm or /tmp/channels.scm exists (for nonguix)
 # - guix time-machine was run but may have failed or been interrupted
 
-set -e  # Exit on error
+# Track if we should run verification on exit and prevent infinite loops
+RUN_VERIFICATION_ON_EXIT=true
+VERIFICATION_PASSED=false
+VERIFICATION_ALREADY_RUN=false
+
+# Function to run verification and handle failures
+run_final_verification() {
+    # Prevent infinite loops - if we're already running verification, don't run again
+    if [ "$VERIFICATION_ALREADY_RUN" = true ]; then
+        return 0
+    fi
+    VERIFICATION_ALREADY_RUN=true
+    
+    echo ""
+    echo "========================================"
+    echo "  FINAL VERIFICATION"
+    echo "========================================"
+    echo ""
+    
+    # Always verify kernel/initrd are present (critical check)
+    KERNEL_MISSING=false
+    INITRD_MISSING=false
+    
+    if ! ls /mnt/boot/vmlinuz* >/dev/null 2>&1; then
+        echo "[ERROR] Kernel file missing from /mnt/boot/"
+        KERNEL_MISSING=true
+    else
+        echo "[OK] Kernel present: $(ls /mnt/boot/vmlinuz* | head -1 | xargs basename)"
+    fi
+    
+    if ! ls /mnt/boot/initrd* >/dev/null 2>&1; then
+        echo "[ERROR] Initrd file missing from /mnt/boot/"
+        INITRD_MISSING=true
+    else
+        echo "[OK] Initrd present: $(ls /mnt/boot/initrd* | head -1 | xargs basename)"
+    fi
+    
+    if [ "$KERNEL_MISSING" = true ] || [ "$INITRD_MISSING" = true ]; then
+        echo ""
+        echo "CRITICAL: Kernel or initrd files are missing!"
+        echo "The system will NOT boot without these files."
+        echo ""
+        read -p "Would you like to automatically rerun recovery to fix this? [Y/n] " -r </dev/tty
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo ""
+            echo "Rerunning recovery script..."
+            echo ""
+            # Disable trap for the new execution
+            trap - EXIT
+            # Re-execute this script (will start fresh)
+            exec "$0"
+        else
+            echo ""
+            echo "Recovery cancelled. Please run manually:"
+            echo "  $0"
+            return 1
+        fi
+    fi
+    
+    # Run comprehensive verification script if available
+    VERIFY_SCRIPT=""
+    if [ -f /root/verify-guix-install.sh ]; then
+        VERIFY_SCRIPT="/root/verify-guix-install.sh"
+    elif [ -f ./verify-guix-install.sh ]; then
+        VERIFY_SCRIPT="./verify-guix-install.sh"
+    fi
+    
+    if [ -n "$VERIFY_SCRIPT" ]; then
+        echo "Running comprehensive verification script..."
+        echo ""
+        # Temporarily disable set -e for verification (we'll handle errors manually)
+        set +e
+        if bash "$VERIFY_SCRIPT"; then
+            VERIFICATION_PASSED=true
+            echo ""
+            echo "[OK] Comprehensive verification passed"
+        else
+            VERIFICATION_PASSED=false
+            echo ""
+            echo "[WARN] Comprehensive verification found issues"
+            echo ""
+            read -p "Would you like to automatically rerun recovery to fix issues? [Y/n] " -r </dev/tty
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                echo ""
+                echo "Rerunning recovery script..."
+                echo ""
+                # Disable trap for the new execution
+                trap - EXIT
+                # Re-execute this script (will start fresh)
+                exec "$0"
+            else
+                echo ""
+                echo "Recovery cancelled. Please review errors above."
+                set -e
+                return 1
+            fi
+        fi
+        set -e
+    else
+        # No verify script available, but kernel/initrd check passed
+        VERIFICATION_PASSED=true
+        echo "[OK] Basic verification passed (kernel/initrd present)"
+    fi
+    
+    return 0
+}
+
+# Trap to run verification on exit (unless we're already in verification)
+# Use a function wrapper to handle errors gracefully
+cleanup_and_verify() {
+    if [ "$RUN_VERIFICATION_ON_EXIT" = true ] && [ "$VERIFICATION_ALREADY_RUN" = false ]; then
+        # Temporarily disable set -e so trap doesn't exit on verification failure
+        set +e
+        run_final_verification
+        set -e
+    fi
+}
+
+trap cleanup_and_verify EXIT
+
+set -e  # Exit on error (after trap is set)
 
 echo "=== Guix Installation Recovery Script ==="
 echo ""
@@ -271,21 +391,121 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
             exit 1
         fi
         
-        # Verify kernel/initrd were created
+        # Verify kernel/initrd were created - if missing, try to recover
         echo ""
-        echo "=== Verifying Installation ==="
+        echo "=== Verifying Installation (Post-Init) ==="
+        KERNEL_MISSING=false
+        INITRD_MISSING=false
+        
         if ! ls /mnt/boot/vmlinuz* >/dev/null 2>&1; then
             echo "[ERROR] Kernel not found after guix system init!"
-            echo "System will not boot. Please check config.scm has (kernel linux-libre) specified"
-            exit 1
+            KERNEL_MISSING=true
+        else
+            echo "[OK] Kernel found: $(ls /mnt/boot/vmlinuz* | head -1 | xargs basename)"
         fi
+        
         if ! ls /mnt/boot/initrd* >/dev/null 2>&1; then
             echo "[ERROR] Initrd not found after guix system init!"
-            echo "System will not boot. Please check config.scm configuration"
-            exit 1
+            INITRD_MISSING=true
+        else
+            echo "[OK] Initrd found: $(ls /mnt/boot/initrd* | head -1 | xargs basename)"
         fi
-        echo "[OK] Kernel found: $(ls /mnt/boot/vmlinuz* | head -1 | xargs basename)"
-        echo "[OK] Initrd found: $(ls /mnt/boot/initrd* | head -1 | xargs basename)"
+        
+        # If kernel/initrd are missing, try to recover from system generation
+        if [ "$KERNEL_MISSING" = true ] || [ "$INITRD_MISSING" = true ]; then
+            echo ""
+            echo "=== Attempting Kernel/Initrd Recovery ==="
+            echo "System init reported success but files are missing."
+            echo "Attempting to recover from system generation..."
+            echo ""
+            
+            # Find the system generation
+            SYSTEM_PATH=""
+            if [ -L /mnt/run/current-system ]; then
+                SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+                echo "Found system generation via symlink: $SYSTEM_PATH"
+            else
+                # Try to find the most recent system generation
+                SYSTEM_PATH=$(ls -td /gnu/store/*-system 2>/dev/null | head -1)
+                if [ -n "$SYSTEM_PATH" ]; then
+                    echo "Found system generation: $SYSTEM_PATH"
+                fi
+            fi
+            
+            if [ -z "$SYSTEM_PATH" ] || [ ! -d "$SYSTEM_PATH" ]; then
+                echo "[ERROR] Could not find system generation to recover from!"
+                echo "System init may have failed silently."
+                echo ""
+                echo "Please check:"
+                echo "  1. /tmp/guix-install.log for errors"
+                echo "  2. Verify config.scm has (kernel linux-libre) specified"
+                echo "  3. Try re-running: guix system init /mnt/etc/config.scm /mnt"
+                exit 1
+            fi
+            
+            # Try to copy kernel
+            if [ "$KERNEL_MISSING" = true ]; then
+                KERNEL_SRC="$SYSTEM_PATH/kernel"
+                if [ ! -f "$KERNEL_SRC" ]; then
+                    # Try alternative locations
+                    ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'kernel' -o -name 'vmlinuz*' -o -name 'bzImage' 2>/dev/null | head -1)
+                    if [ -n "$ALTERNATIVES" ]; then
+                        KERNEL_SRC="$ALTERNATIVES"
+                    fi
+                fi
+                
+                if [ -f "$KERNEL_SRC" ]; then
+                    cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+                    echo "[OK] Recovered kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
+                    KERNEL_MISSING=false
+                else
+                    echo "[ERROR] Kernel not found in system generation: $SYSTEM_PATH"
+                fi
+            fi
+            
+            # Try to copy initrd
+            if [ "$INITRD_MISSING" = true ]; then
+                INITRD_SRC="$SYSTEM_PATH/initrd"
+                if [ ! -f "$INITRD_SRC" ]; then
+                    # Try alternative locations
+                    ALTERNATIVES=$(find "$SYSTEM_PATH" -name 'initrd*' -o -name 'initramfs*' 2>/dev/null | head -1)
+                    if [ -n "$ALTERNATIVES" ]; then
+                        INITRD_SRC="$ALTERNATIVES"
+                    fi
+                fi
+                
+                if [ -f "$INITRD_SRC" ]; then
+                    cp "$INITRD_SRC" /mnt/boot/initrd
+                    echo "[OK] Recovered initrd: $INITRD_SRC -> /mnt/boot/initrd"
+                    INITRD_MISSING=false
+                else
+                    echo "[ERROR] Initrd not found in system generation: $SYSTEM_PATH"
+                fi
+            fi
+            
+            # Create symlink if missing
+            if [ ! -L /mnt/run/current-system ]; then
+                rm -f /mnt/run/current-system
+                ln -s "$SYSTEM_PATH" /mnt/run/current-system
+                echo "[OK] Created current-system symlink"
+            fi
+            
+            # Final check
+            if [ "$KERNEL_MISSING" = true ] || [ "$INITRD_MISSING" = true ]; then
+                echo ""
+                echo "[ERROR] Recovery failed - kernel/initrd still missing!"
+                echo "System will not boot without these files."
+                echo ""
+                echo "Please check:"
+                echo "  1. /tmp/guix-install.log for errors"
+                echo "  2. Verify config.scm has (kernel linux-libre) specified"
+                echo "  3. Try re-running: guix system init /mnt/etc/config.scm /mnt"
+                exit 1
+            else
+                echo ""
+                echo "[OK] Successfully recovered kernel/initrd files"
+            fi
+        fi
     fi
     
     # Final verification (for both paths)
@@ -427,63 +647,15 @@ Installation log: /tmp/guix-install.log (if available)
 EOF
 echo "[OK] Installation receipt written to $RECEIPT_PATH"
 
-# Final verification using comprehensive verification script
-echo ""
-echo "=== Final Verification ==="
+# Mark that we're about to run verification explicitly
+# This prevents the trap from running it again
+RUN_VERIFICATION_ON_EXIT=false
 
-# Try to use verify-guix-install.sh if available for comprehensive check
-VERIFY_SCRIPT=""
-if [ -f /root/verify-guix-install.sh ]; then
-    VERIFY_SCRIPT="/root/verify-guix-install.sh"
-elif [ -f ./verify-guix-install.sh ]; then
-    VERIFY_SCRIPT="./verify-guix-install.sh"
-fi
-
-if [ -n "$VERIFY_SCRIPT" ]; then
-    echo "Running comprehensive verification..."
-    echo ""
-    if bash "$VERIFY_SCRIPT"; then
-        ALL_GOOD=true
-    else
-        ALL_GOOD=false
-    fi
-else
-    # Fallback to basic checks if verify script not available
-    echo "Note: Using basic verification (verify-guix-install.sh not found)"
-    echo ""
-    ALL_GOOD=true
-
-    if ! ls /mnt/boot/vmlinuz-* >/dev/null 2>&1; then
-        echo "[ERROR] No kernel installed!"
-        ALL_GOOD=false
-    else
-        echo "[OK] Kernel: $(ls /mnt/boot/vmlinuz-* | head -1 | xargs basename)"
-    fi
-
-    if ! ls /mnt/boot/initrd-* >/dev/null 2>&1; then
-        echo "[ERROR] No initrd installed!"
-        ALL_GOOD=false
-    else
-        echo "[OK] Initrd: $(ls /mnt/boot/initrd-* | head -1 | xargs basename)"
-    fi
-
-    if [ -f /mnt/boot/efi/EFI/Guix/grubx64.efi ] || [ -f /mnt/boot/efi/EFI/guix/grubx64.efi ]; then
-        echo "[OK] GRUB EFI bootloader installed"
-    else
-        echo "[ERROR] No GRUB EFI bootloader!"
-        ALL_GOOD=false
-    fi
-
-    if [ -f /mnt/boot/grub/grub.cfg ]; then
-        echo "[OK] GRUB config exists"
-    else
-        echo "[ERROR] No GRUB config!"
-        ALL_GOOD=false
-    fi
-fi
+# Run final verification explicitly
+run_final_verification
 
 echo ""
-if [ "$ALL_GOOD" = true ]; then
+if [ "$VERIFICATION_PASSED" = true ]; then
     echo "=== Installation Complete! ==="
     echo ""
     echo "The system is ready to boot."
