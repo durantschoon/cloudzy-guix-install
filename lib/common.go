@@ -135,7 +135,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
     spinnerTicker := time.NewTicker(200 * time.Millisecond)
     defer progressTicker.Stop()
     defer spinnerTicker.Stop()
-    
+
     // Track consecutive "hung" warnings (when log is not growing)
     consecutiveHungWarnings := 0
     const maxHungWarnings = 10 // Auto-recover after 10 consecutive warnings (10 minutes)
@@ -210,8 +210,8 @@ func RunCommandWithSpinner(name string, args ...string) error {
                     timestamp, formatDuration(elapsed), logGrowth))
                 fmt.Println("         Check: tail -f /tmp/guix-install.log")
                 fmt.Println("         Or: ps aux | grep guix")
-                    if logGrowth == "" {
-                        fmt.Println("         Log not growing - likely hung!")
+                if logGrowth == "" {
+                    fmt.Println("         Log not growing - likely hung!")
                         consecutiveHungWarnings++
                         
                         // After 10 consecutive warnings (10 minutes), auto-recover
@@ -251,7 +251,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
                     } else {
                         // Log is growing, reset counter
                         consecutiveHungWarnings = 0
-                    }
+                }
             } else if elapsed > 5*time.Minute {
                 PrintInfo(fmt.Sprintf("[%s] No output for %s (normal for some phases)%s",
                     timestamp, formatDuration(elapsed), logGrowth))
@@ -1766,17 +1766,12 @@ func RunGuixSystemInitFreeSoftware() error {
 	// Setup GRUB EFI only for UEFI boot mode (BIOS uses grub-bootloader, not grub-efi-bootloader)
 	bootMode := DetectBootModeFromConfig(configPath)
 	if bootMode == "uefi" {
-		if err := SetupGRUBEFI(); err != nil {
-			return fmt.Errorf("GRUB EFI setup failed: %w", err)
-		}
+	if err := SetupGRUBEFI(); err != nil {
+		return fmt.Errorf("GRUB EFI setup failed: %w", err)
+	}
 	} else {
 		fmt.Println("[OK] BIOS boot mode detected - skipping EFI setup (GRUB will be installed to disk MBR)")
 		fmt.Println()
-	}
-
-	// Prepare critical directories before system init
-	if err := PrepareSystemInitDirectories(); err != nil {
-		return fmt.Errorf("failed to prepare system init directories: %w", err)
 	}
 
 	// WORKAROUND: guix system init has a bug where it doesn't copy kernel/initrd to /boot
@@ -1795,7 +1790,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	fmt.Println("Progress output below:")
 	fmt.Println("---")
 	fmt.Println()
-
+	
 	// Check disk space before starting
 	cmd := exec.Command("df", "-h", "/mnt")
 	if output, err := cmd.Output(); err == nil {
@@ -1930,6 +1925,14 @@ func RunGuixSystemInitFreeSoftware() error {
 	fmt.Println("(System already built, this should be quick)")
 	fmt.Println()
 
+	// CRITICAL: Prepare directories RIGHT BEFORE system init (not before build)
+	// This ensures /var/lock is a directory (not symlink) when guix system init chroots
+	// CleanupISOArtifacts() in Step 02 creates /var/lock as symlink, but guix system init
+	// needs it as a directory because /run is not mounted during chroot
+	if err := PrepareSystemInitDirectories(); err != nil {
+		return fmt.Errorf("failed to prepare system init directories: %w", err)
+	}
+
 	// CRITICAL: Verify daemon is actually running RIGHT BEFORE we need it
 	fmt.Println("Verifying guix-daemon is running and responsive before system init...")
 	if err := isDaemonReady(); err != nil {
@@ -1965,7 +1968,7 @@ func RunGuixSystemInitFreeSoftware() error {
 			fmt.Println()
 		}
 
-		if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
+	if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			if attempt < maxRetries {
@@ -1980,7 +1983,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	}
 
 	if lastErr != nil {
-		fmt.Println()
+	fmt.Println()
 		fmt.Println("Bootloader installation failed. You can:")
 		fmt.Println("  1. Try manually: guix system init /mnt/etc/config.scm /mnt")
 		fmt.Println("  2. Or reboot anyway - the kernel is already in place")
@@ -1992,7 +1995,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	PrintSectionHeader("Verifying Kernel/Initrd After Bootloader Install")
 	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
 	initrds, _ := filepath.Glob("/mnt/boot/initrd*")
-
+	
 	if len(kernels) == 0 || len(initrds) == 0 {
 		// Try to recover from system generation
 		fmt.Println("[WARN] Kernel/initrd missing after bootloader install - attempting recovery...")
@@ -2000,13 +2003,13 @@ func RunGuixSystemInitFreeSoftware() error {
 			return fmt.Errorf("failed to recover kernel/initrd files: %w", err)
 		}
 	} else {
-		fmt.Printf("✓ Kernel found: %s\n", filepath.Base(kernels[0]))
-		fmt.Printf("✓ Initrd found: %s\n", filepath.Base(initrds[0]))
-		fmt.Println()
-		fmt.Println("✓ Installation verified - system should boot successfully")
-		fmt.Println()
+	fmt.Printf("✓ Kernel found: %s\n", filepath.Base(kernels[0]))
+	fmt.Printf("✓ Initrd found: %s\n", filepath.Base(initrds[0]))
+	fmt.Println()
+	fmt.Println("✓ Installation verified - system should boot successfully")
+	fmt.Println()
 	}
-
+	
 	return nil
 }
 
