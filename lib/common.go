@@ -135,6 +135,10 @@ func RunCommandWithSpinner(name string, args ...string) error {
     spinnerTicker := time.NewTicker(200 * time.Millisecond)
     defer progressTicker.Stop()
     defer spinnerTicker.Stop()
+    
+    // Track consecutive "hung" warnings (when log is not growing)
+    consecutiveHungWarnings := 0
+    const maxHungWarnings = 10 // Auto-recover after 10 consecutive warnings (10 minutes)
 
     for {
         select {
@@ -153,6 +157,8 @@ func RunCommandWithSpinner(name string, args ...string) error {
                 spinnerActive = false
             }
             lastOutputTime = time.Now()
+            // Reset hung warning counter when we get output
+            consecutiveHungWarnings = 0
 
         case <-spinnerTicker.C:
             // Show spinner when quiet
@@ -204,9 +210,48 @@ func RunCommandWithSpinner(name string, args ...string) error {
                     timestamp, formatDuration(elapsed), logGrowth))
                 fmt.Println("         Check: tail -f /tmp/guix-install.log")
                 fmt.Println("         Or: ps aux | grep guix")
-                if logGrowth == "" {
-                    fmt.Println("         Log not growing - likely hung!")
-                }
+                    if logGrowth == "" {
+                        fmt.Println("         Log not growing - likely hung!")
+                        consecutiveHungWarnings++
+                        
+                        // After 10 consecutive warnings (10 minutes), auto-recover
+                        if consecutiveHungWarnings >= maxHungWarnings {
+                            fmt.Println()
+                            fmt.Println("========================================")
+                            fmt.Println("  PROCESS APPEARS HUNG - AUTO-RECOVERY")
+                            fmt.Println("========================================")
+                            fmt.Println()
+                            fmt.Printf("No output and log not growing for %d consecutive checks (%d minutes).\n", consecutiveHungWarnings, consecutiveHungWarnings)
+                            fmt.Println("The process will be stopped and recovery script will be suggested.")
+                            fmt.Println()
+                            
+                            // Kill the hung process
+                            fmt.Println("Stopping hung process...")
+                            if cmd.Process != nil {
+                                cmd.Process.Kill()
+                                cmd.Process.Wait() // Wait for it to exit
+                            }
+                            
+                            fmt.Println()
+                            fmt.Println("The installation process has been stopped.")
+                            fmt.Println()
+                            fmt.Println("To recover and complete installation, run:")
+                            fmt.Println("  /root/recovery-complete-install.sh")
+                            fmt.Println()
+                            fmt.Println("The recovery script will:")
+                            fmt.Println("  1. Check installation state")
+                            fmt.Println("  2. Re-run guix system init if needed")
+                            fmt.Println("  3. Complete any remaining steps")
+                            fmt.Println()
+                            
+                            return fmt.Errorf("process hung - stopped after %d consecutive warnings. Run recovery script to continue", consecutiveHungWarnings)
+                        } else {
+                            fmt.Printf("         (%d/%d consecutive warnings - will auto-recover after %d)\n", consecutiveHungWarnings, maxHungWarnings, maxHungWarnings)
+                        }
+                    } else {
+                        // Log is growing, reset counter
+                        consecutiveHungWarnings = 0
+                    }
             } else if elapsed > 5*time.Minute {
                 PrintInfo(fmt.Sprintf("[%s] No output for %s (normal for some phases)%s",
                     timestamp, formatDuration(elapsed), logGrowth))
