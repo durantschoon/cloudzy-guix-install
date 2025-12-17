@@ -1974,7 +1974,7 @@ file /mnt/boot/vmlinuz
    cp -L /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
    cp -L /gnu/store/xxxxx-system/initrd /mnt/boot/initrd
    ```
-   
+
    **Why `-L` is required:** On Cloudzy (free-software installs), `kernel` and `initrd` in the system generation are symlinks pointing to other store paths. Without `-L`, you'll copy the symlink itself (a few bytes) instead of the actual kernel binary (5-15 MB).
 
 4. **Verification after copy:**
