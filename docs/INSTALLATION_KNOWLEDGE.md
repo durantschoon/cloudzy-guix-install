@@ -1892,12 +1892,48 @@ When debugging why kernel files aren't appearing in `/boot/`, it's critical to u
    - Packages everything into a **system generation** at `/gnu/store/*-system/`
 
 3. **The system generation** (`/gnu/store/xxxxx-system/`) contains:
-   - `kernel` - The compiled Linux kernel binary (typically 5-15 MB)
-   - `initrd` - The initial RAM disk (typically 10-40 MB)
-   - `boot` directory - Contains GRUB configuration
+   - `kernel` - **CRITICAL: This is a SYMLINK, not a direct file!** Points to `/gnu/store/xxxxx-profile/` which contains the actual kernel binary
+   - `initrd` - **CRITICAL: This is also a SYMLINK!** Points to `/gnu/store/xxxxx-raw-initrd/initrd.cpio.gz`
+   - `boot` directory - Contains GRUB configuration (may not exist in free-software installs)
    - Other system files (binaries, libraries, etc.)
 
 **Key Point:** The kernel files are **created locally** during the build process, not downloaded as separate files. They're part of the system generation closure.
+
+**⚠️ CRITICAL DISCOVERY (2025-01-XX):** On Cloudzy (free-software-only installs), the `kernel` and `initrd` entries in the system generation are **symlinks**, not direct files. This was discovered through runtime investigation:
+
+```bash
+# System generation structure (from actual investigation):
+/gnu/store/xifx2s3agj121725skhp5jg1yz5b8gmj-system/
+├── kernel -> /gnu/store/7bb40hayqnba9p7kcg9vavwyjvjw8lcl-profile  (SYMLINK!)
+├── initrd -> /gnu/store/hza6k7h6z72y70898vxkx0ap44c9q1s5-raw-initrd/initrd.cpio.gz  (SYMLINK!)
+├── boot -> /gnu/store/sayynz11yqy5z5hy0rnp16j03vxj2v1n-boot  (SYMLINK)
+└── ... (other symlinks)
+```
+
+**Why This Matters:**
+- When copying kernel files, you must **dereference symlinks** using `cp -L` or `cp --dereference`
+- Using `cp` without `-L` will copy the symlink itself, not the actual kernel binary
+- The symlink target (`/gnu/store/7bb40hayqnba9p7kcg9vavwyjvjw8lcl-profile`) contains the actual kernel binary
+- The initrd symlink points to a `.cpio.gz` file inside another store path
+
+**Correct Copy Command:**
+```bash
+# WRONG - Copies symlink, not actual file:
+cp /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
+
+# CORRECT - Dereferences symlink to copy actual kernel:
+cp -L /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
+# OR
+cp --dereference /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
+```
+
+**Verification:**
+After copying, verify the file is actually a binary (not a symlink):
+```bash
+file /mnt/boot/vmlinuz
+# Should show: "Linux kernel x86 boot executable bzImage, version ..."
+# NOT: "symbolic link to ..."
+```
 
 #### Step 2: Finding the System Generation
 
@@ -1932,11 +1968,14 @@ When debugging why kernel files aren't appearing in `/boot/`, it's critical to u
    - `/mnt/boot/` is where GRUB expects to find kernel files
    - Files are named `vmlinuz` (kernel) and `initrd` (initrd) for GRUB compatibility
 
-3. **The copy command:**
+3. **The copy command (CRITICAL: Must dereference symlinks):**
    ```bash
-   cp /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
-   cp /gnu/store/xxxxx-system/initrd /mnt/boot/initrd
+   # Use -L flag to dereference symlinks and copy actual files
+   cp -L /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
+   cp -L /gnu/store/xxxxx-system/initrd /mnt/boot/initrd
    ```
+   
+   **Why `-L` is required:** On Cloudzy (free-software installs), `kernel` and `initrd` in the system generation are symlinks pointing to other store paths. Without `-L`, you'll copy the symlink itself (a few bytes) instead of the actual kernel binary (5-15 MB).
 
 4. **Verification after copy:**
    - Check that `/mnt/boot/vmlinuz` exists and has reasonable size (> 5 MB)
@@ -2029,15 +2068,21 @@ When debugging kernel file issues, check each step:
 
 3. **Before copying:**
    - ✅ Does source file exist? (`/gnu/store/xxxxx-system/kernel`)
-   - ✅ What is its size?
+   - ✅ **Is it a symlink or direct file?** (`ls -l /gnu/store/xxxxx-system/kernel`)
+   - ✅ **If symlink, what does it point to?** (`readlink /gnu/store/xxxxx-system/kernel`)
+   - ✅ **Does the symlink target exist?** (`ls -l $(readlink -f /gnu/store/xxxxx-system/kernel)`)
+   - ✅ What is the actual file size? (symlink will be tiny, actual kernel should be 5-15 MB)
    - ✅ Does destination directory exist? (`/mnt/boot/`)
    - ✅ Is there disk space?
 
 4. **After copying:**
    - ✅ Does `/mnt/boot/vmlinuz` exist?
    - ✅ Does `/mnt/boot/initrd` exist?
-   - ✅ What are their sizes? (should match source files)
+   - ✅ **Is it a real file or symlink?** (`file /mnt/boot/vmlinuz` should show "Linux kernel", not "symbolic link")
+   - ✅ What are their sizes? (should be 5-15 MB for kernel, 10-40 MB for initrd - NOT a few bytes!)
+   - ✅ Verify file type: `file /mnt/boot/vmlinuz` should show "Linux kernel x86 boot executable"
    - ❌ If NO: Copy failed - check permissions, disk space, errors
+   - ❌ If file is tiny (< 1 KB): You copied the symlink instead of the actual file - use `cp -L`
 
 5. **After `guix system init`:**
    - ✅ Do files still exist?
@@ -2174,12 +2219,18 @@ if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
 - Kernel/initrd copy is essential
 
 **VPS platforms (Cloudzy):**
-- Use `RunGuixSystemInitFreeSoftware()` without workaround
-- Free software drivers only
-- No kernel copy needed (works correctly)
+- Use `RunGuixSystemInitFreeSoftware()` with 3-step workaround (re-introduced after discovery)
+- Free software drivers only (`linux-libre` kernel)
+- **CRITICAL:** Kernel/initrd are symlinks in system generation - must use `cp -L` to dereference
+- Kernel copy IS needed - `guix system init` doesn't copy kernel files to `/boot/` even in free-software mode
 
 **Why the difference?**
-The issue appears related to using `guix time-machine` with nonguix channels on physical hardware. VPS installs using only Guix's official channels don't exhibit this behavior.
+- Framework platforms use `guix time-machine` with nonguix channels, which creates different store structure
+- Cloudzy uses standard `guix system init` but still has the kernel-copy bug
+- Both platforms require manual kernel/initrd copying, but Cloudzy's kernel files are symlinks requiring `-L` flag
+
+**Cloudzy-Specific Issue:**
+On Cloudzy, the system generation's `kernel` entry is a symlink to `/gnu/store/xxxxx-profile/`, not a direct kernel binary. When copying, you must use `cp -L` to dereference the symlink and copy the actual kernel file. Without `-L`, you'll copy a tiny symlink file instead of the 5-15 MB kernel binary, causing boot failures.
 
 ### Success Criteria
 

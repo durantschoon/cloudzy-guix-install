@@ -1263,7 +1263,7 @@ func RunGuixSystemInit() error {
 
 	kernelDest := "/mnt/boot/vmlinuz"
 	fmt.Printf("[INFO] Copying kernel to: %s\n", kernelDest)
-	if err := exec.Command("cp", "-v", kernelSrc, kernelDest).Run(); err != nil {
+	if err := exec.Command("cp", "-Lv", kernelSrc, kernelDest).Run(); err != nil {
 		fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
 		return fmt.Errorf("failed to copy kernel: %w", err)
 	}
@@ -1289,7 +1289,7 @@ func RunGuixSystemInit() error {
 
 	initrdDest := "/mnt/boot/initrd"
 	fmt.Printf("[INFO] Copying initrd to: %s\n", initrdDest)
-	if err := exec.Command("cp", "-v", initrdSrc, initrdDest).Run(); err != nil {
+	if err := exec.Command("cp", "-Lv", initrdSrc, initrdDest).Run(); err != nil {
 		fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
 		return fmt.Errorf("failed to copy initrd: %w", err)
 	}
@@ -1750,7 +1750,7 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 					"kernelSize":   info.Size(),
 				})
 				// #endregion
-				if err := exec.Command("cp", "-f", kernelSrc, kernelDest).Run(); err != nil {
+				if err := exec.Command("cp", "-Lf", kernelSrc, kernelDest).Run(); err != nil {
 					fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
 					// #region agent log
 					logDebug("lib/common.go:1712", "Kernel copy failed", map[string]interface{}{
@@ -1811,7 +1811,7 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 					"initrdSize":   info.Size(),
 				})
 				// #endregion
-				if err := exec.Command("cp", "-f", initrdSrc, initrdDest).Run(); err != nil {
+				if err := exec.Command("cp", "-Lf", initrdSrc, initrdDest).Run(); err != nil {
 					fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
 					// #region agent log
 					logDebug("lib/common.go:1750", "Initrd copy failed", map[string]interface{}{
@@ -2194,7 +2194,7 @@ func RunGuixSystemInitFreeSoftware() error {
 		if len(kernels) == 0 && kernelSrc != "" {
 			kernelDest := "/mnt/boot/vmlinuz"
 			if info, err := os.Stat(kernelSrc); err == nil {
-				if err := exec.Command("cp", "-f", kernelSrc, kernelDest).Run(); err == nil {
+				if err := exec.Command("cp", "-Lf", kernelSrc, kernelDest).Run(); err == nil {
 					fmt.Printf("[OK] Proactively copied kernel: %s (%.1f MB)\n", kernelDest, float64(info.Size())/1024/1024)
 					// #region agent log
 					logDebug("lib/common.go:2175", "Proactively copied kernel", map[string]interface{}{
@@ -2213,7 +2213,7 @@ func RunGuixSystemInitFreeSoftware() error {
 		if len(initrds) == 0 && initrdSrc != "" {
 			initrdDest := "/mnt/boot/initrd"
 			if info, err := os.Stat(initrdSrc); err == nil {
-				if err := exec.Command("cp", "-f", initrdSrc, initrdDest).Run(); err == nil {
+				if err := exec.Command("cp", "-Lf", initrdSrc, initrdDest).Run(); err == nil {
 					fmt.Printf("[OK] Proactively copied initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
 					// #region agent log
 					logDebug("lib/common.go:2190", "Proactively copied initrd", map[string]interface{}{

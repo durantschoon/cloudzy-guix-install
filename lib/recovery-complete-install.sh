@@ -437,8 +437,8 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
             echo "[WARN] Initrd file is suspiciously small (%.1f MB) - may be corrupted" "$(echo "scale=1; $INITRD_SIZE/1024/1024" | bc)"
         fi
         
-        # Copy kernel
-        cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+        # Copy kernel (use -L to dereference symlinks)
+        cp -L "$KERNEL_SRC" /mnt/boot/vmlinuz
         echo "[OK] Copied kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz ($(echo "scale=1; $KERNEL_SIZE/1024/1024" | bc) MB)"
         
         # Verify kernel copy succeeded
@@ -447,8 +447,8 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 exit 1
             fi
         
-        # Copy initrd
-        cp "$INITRD_SRC" /mnt/boot/initrd
+        # Copy initrd (use -L to dereference symlinks)
+        cp -L "$INITRD_SRC" /mnt/boot/initrd
         echo "[OK] Copied initrd: $INITRD_SRC -> /mnt/boot/initrd ($(echo "scale=1; $INITRD_SIZE/1024/1024" | bc) MB)"
         
         # Verify initrd copy succeeded
@@ -545,7 +545,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 fi
                 
                 if [ -f "$KERNEL_SRC" ]; then
-                    cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+                    cp -L "$KERNEL_SRC" /mnt/boot/vmlinuz
                     echo "[OK] Recovered kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
                     KERNEL_STILL_MISSING=false
                 else
@@ -564,7 +564,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 fi
                 
                 if [ -f "$INITRD_SRC" ]; then
-                    cp "$INITRD_SRC" /mnt/boot/initrd
+                    cp -L "$INITRD_SRC" /mnt/boot/initrd
                     echo "[OK] Recovered initrd: $INITRD_SRC -> /mnt/boot/initrd"
                     INITRD_STILL_MISSING=false
                 else
@@ -673,7 +673,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 fi
                 
                 if [ -f "$KERNEL_SRC" ]; then
-                    cp "$KERNEL_SRC" /mnt/boot/vmlinuz
+                    cp -L "$KERNEL_SRC" /mnt/boot/vmlinuz
                     echo "[OK] Recovered kernel: $KERNEL_SRC -> /mnt/boot/vmlinuz"
                     KERNEL_MISSING=false
                 else
@@ -693,7 +693,7 @@ if [ "$NEED_SYSTEM_INIT" = true ]; then
                 fi
                 
                 if [ -f "$INITRD_SRC" ]; then
-                    cp "$INITRD_SRC" /mnt/boot/initrd
+                    cp -L "$INITRD_SRC" /mnt/boot/initrd
                     echo "[OK] Recovered initrd: $INITRD_SRC -> /mnt/boot/initrd"
                     INITRD_MISSING=false
                 else
