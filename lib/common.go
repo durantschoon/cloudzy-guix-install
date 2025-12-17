@@ -2087,7 +2087,117 @@ func RunGuixSystemInitFreeSoftware() error {
 			"checkedPaths": alternativeKernelPaths,
 		})
 		// #endregion
-		return fmt.Errorf("kernel not found in system generation at %s (checked: %v). This indicates guix system build (free software mode) does not create kernel files", systemPath, alternativeKernelPaths)
+		
+		// CRITICAL DISCOVERY: guix system build (free software mode) does NOT create kernel files
+		// The system generation only contains ["gnu","gnu.go","guix"] - no kernel, no initrd
+		// Alternative approach: Build kernel package separately using guix build
+		fmt.Println()
+		fmt.Println("[WARN] Kernel files not found in system generation after guix system build")
+		fmt.Println("This indicates that guix system build (free software mode) does not create kernel files.")
+		fmt.Println()
+		fmt.Println("Attempting alternative approach: Building kernel package separately...")
+		fmt.Println("(guix build linux-libre should create the kernel binary)")
+		fmt.Println()
+		
+		// Build kernel package separately
+		// #region agent log
+		logDebug("lib/common.go:1905", "Before guix build linux-libre", map[string]interface{}{
+			"hypothesisId": "H",
+			"step":         "before_guix_build_kernel",
+		})
+		// #endregion
+		
+		buildKernelCmd := exec.Command("guix", "build", "linux-libre", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+		buildKernelCmd.Stdout = os.Stdout
+		buildKernelCmd.Stderr = os.Stderr
+		if err := buildKernelCmd.Run(); err != nil {
+			// #region agent log
+			logDebug("lib/common.go:1915", "guix build linux-libre failed", map[string]interface{}{
+				"hypothesisId": "H",
+				"step":         "guix_build_kernel_failed",
+				"error":        err.Error(),
+			})
+			// #endregion
+			return fmt.Errorf("guix build linux-libre failed: %w", err)
+		}
+		
+		// Find the kernel package output
+		findKernelCmd := exec.Command("bash", "-c", "guix build linux-libre --substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org 2>&1 | tail -1")
+		kernelOutput, err := findKernelCmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to find kernel package path: %w", err)
+		}
+		kernelPackagePath := strings.TrimSpace(string(kernelOutput))
+		
+		// #region agent log
+		logDebug("lib/common.go:1930", "Kernel package path found", map[string]interface{}{
+			"hypothesisId": "H",
+			"step":         "kernel_package_path_found",
+			"kernelPackagePath": kernelPackagePath,
+		})
+		// #endregion
+		
+		// Check for kernel binary in the package
+		// Kernel packages typically have the kernel at: $package/bzImage or $package/vmlinux
+		kernelPackagePaths := []string{
+			filepath.Join(kernelPackagePath, "bzImage"),
+			filepath.Join(kernelPackagePath, "vmlinux"),
+			filepath.Join(kernelPackagePath, "boot", "bzImage"),
+			filepath.Join(kernelPackagePath, "boot", "vmlinux"),
+		}
+		
+		kernelFound2 := false
+		var kernelSrc2 string
+		for _, altPath := range kernelPackagePaths {
+			if info, err := os.Stat(altPath); err == nil {
+				isSymlink := false
+				if linkInfo, err := os.Lstat(altPath); err == nil {
+					isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+				}
+				// #region agent log
+				logDebug("lib/common.go:1950", "Kernel found in package", map[string]interface{}{
+					"hypothesisId": "H",
+					"step":         "kernel_found_in_package",
+					"kernelPath":   altPath,
+					"isSymlink":    isSymlink,
+					"size":         info.Size(),
+				})
+				// #endregion
+				kernelSrc2 = altPath
+				kernelFound2 = true
+				break
+			}
+		}
+		
+		if !kernelFound2 {
+			// List package contents for debugging
+			entries2, err := os.ReadDir(kernelPackagePath)
+			entryNames2 := []string{}
+			if err == nil {
+				for _, entry := range entries2 {
+					entryNames2 = append(entryNames2, entry.Name())
+				}
+			}
+			// #region agent log
+			logDebug("lib/common.go:1970", "Kernel not found in package, listing contents", map[string]interface{}{
+				"hypothesisId": "H",
+				"step":         "kernel_not_found_in_package",
+				"kernelPackagePath": kernelPackagePath,
+				"checkedPaths": kernelPackagePaths,
+				"packageEntries": entryNames2,
+			})
+			// #endregion
+			return fmt.Errorf("kernel binary not found in linux-libre package at %s (checked: %v, package contents: %v). This indicates a fundamental issue with kernel file location in free-software-only installs", kernelPackagePath, kernelPackagePaths, entryNames2)
+		}
+		
+		// Use the kernel from the package
+		kernelSrc = kernelSrc2
+		
+		// For initrd, we still need to build it separately or get it from guix system init
+		// For now, we'll try to build initrd separately or skip it and let guix system init create it
+		fmt.Println("[INFO] Kernel found in package, but initrd still needs to be created")
+		fmt.Println("       Will attempt to create initrd during guix system init")
+		fmt.Println()
 	}
 
 	// #region agent log
