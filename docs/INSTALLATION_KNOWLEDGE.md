@@ -2217,13 +2217,14 @@ When debugging kernel file issues, check each step:
 
 **Log Location:**
 
-- Debug logs written to `/tmp/debug.log` on the install machine
+- Kernel tracking logs written to `/tmp/kernel_tracking.log` on the install machine
 - NDJSON format (one JSON object per line)
 - Includes hypothesis IDs, step names, file paths, sizes, errors
+- Primarily tracks kernel/initrd operations, also includes related system init operations
 
-**Using Debug Logs:**
+**Using Kernel Tracking Logs:**
 
-After running the installer, retrieve `/tmp/debug.log` and analyze:
+After running the installer, retrieve `/tmp/kernel_tracking.log` and analyze:
 - Which steps completed successfully
 - Where kernel files were found (or not found)
 - What recovery attempts were made

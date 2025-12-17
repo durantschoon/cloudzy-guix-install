@@ -2244,8 +2244,8 @@ func RunGuixSystemInitFreeSoftware() error {
 			} else {
 				fmt.Println("[INFO] Daemon is still responsive - error may be unrelated to connection")
 			}
-			fmt.Println()
-			
+	fmt.Println()
+
 			if attempt < maxRetries {
 				fmt.Println("The command will automatically retry...")
 			}
@@ -2323,11 +2323,11 @@ func RunGuixSystemInitFreeSoftware() error {
 			return fmt.Errorf("failed to recover kernel/initrd files after bootloader install: %w", err)
 		}
 	} else {
-		fmt.Printf("✓ Kernel found: %s\n", filepath.Base(kernels[0]))
-		fmt.Printf("✓ Initrd found: %s\n", filepath.Base(initrds[0]))
-		fmt.Println()
-		fmt.Println("✓ Installation verified - system should boot successfully")
-		fmt.Println()
+	fmt.Printf("✓ Kernel found: %s\n", filepath.Base(kernels[0]))
+	fmt.Printf("✓ Initrd found: %s\n", filepath.Base(initrds[0]))
+	fmt.Println()
+	fmt.Println("✓ Installation verified - system should boot successfully")
+	fmt.Println()
 	}
 	
 	return nil
@@ -3096,11 +3096,13 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 	return nil
 }
 
-// logDebug writes a debug log entry in NDJSON format to the debug log file
-// Uses /tmp/debug.log on the install machine (works on both local and remote)
+// logDebug writes a debug log entry in NDJSON format to the kernel tracking log file
+// Primarily tracks kernel/initrd file operations (copying, verification, recovery)
+// Also tracks related operations: system builds, daemon connection issues, symlink creation
+// Uses /tmp/kernel_tracking.log on the install machine (works on both local and remote)
 func logDebug(location, message string, data map[string]interface{}) {
-	// Use /tmp/debug.log which exists on all Unix systems (including Guix ISO)
-	logPath := "/tmp/debug.log"
+	// Use /tmp/kernel_tracking.log which exists on all Unix systems (including Guix ISO)
+	logPath := "/tmp/kernel_tracking.log"
 	logEntry := map[string]interface{}{
 		"timestamp": time.Now().UnixMilli(),
 		"location":  location,

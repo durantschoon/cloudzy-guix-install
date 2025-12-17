@@ -56,7 +56,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
    - Run installer on fresh Cloudzy instance
    - Verify kernel files are copied correctly (should be 5-15 MB, not a few bytes)
    - Verify system boots successfully after installation
-   - Check `/tmp/debug.log` for kernel file journey traces
+   - Check `/tmp/kernel_tracking.log` for kernel file journey traces
 
 2. 🧪 **Test Go recovery tool**
    - Trigger recovery scenario (interrupt installer or simulate failure)
