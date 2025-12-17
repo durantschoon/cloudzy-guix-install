@@ -532,6 +532,88 @@ guix system init /mnt/etc/config.scm /mnt
 - **Don't over-apply workarounds**: The 3-step kernel/initrd workaround is ONLY for nonguix+time-machine (Framework 13). Free software installs (VPS, servers) work fine with standard `guix system init`
 - **Test each platform separately**: Different Guix channels create different `/gnu/store` structures. Don't assume workarounds apply universally
 
+### Daemon Connection Failures During guix system init
+
+**Problem**: Daemon verification passes (`isDaemonReady()` returns success), but `guix system init` immediately fails with "Connection refused" errors.
+
+**Symptoms:**
+- `isDaemonReady()` check passes (socket exists, `guix build --version` works)
+- `guix system init` immediately fails with: `failed to connect to '/var/guix/daemon-socket/socket': Connection refused`
+- Retries fail with the same error
+- More common on VPS systems but can occur on any platform
+
+**Root Cause**: Race condition where:
+- Daemon process is running and socket file exists
+- Socket becomes unavailable between verification and actual use
+- Daemon process is running but socket is not accessible to `guix system init`
+- Socket may have been closed or become stale between verification and command execution
+
+**Why This Happens:**
+- Socket file exists but connection is not stable
+- Daemon process running but socket not accepting connections
+- Timing issue between verification check and actual command execution
+- VPS systems have more latency/variability in socket initialization
+
+**✅ FIXED** (2025-01-XX):
+
+The installer now automatically restarts the daemon when connection failures occur:
+
+1. **After `guix system init` fails:**
+   - Checks if daemon is still responsive using `checkDaemonResponsive()`
+   - If daemon connection check fails, automatically restarts the daemon
+   - Retries the command after daemon restart
+
+2. **Applied to both code paths:**
+   - `RunGuixSystemInit()` (framework-dual, time-machine path)
+   - `RunGuixSystemInitFreeSoftware()` (cloudzy, free software path)
+
+3. **Prevents repeated failures:**
+   - Instead of retrying with a broken socket, daemon is restarted first
+   - Ensures fresh socket connection before retry
+
+**Implementation:**
+
+```go
+// After guix system init fails:
+if err := RunCommandWithSpinner(...); err != nil {
+    // Check if daemon is still responsive
+    if !checkDaemonResponsive() {
+        fmt.Println("[WARN] Daemon connection lost, restarting...")
+        EnsureGuixDaemonRunning()  // Restart daemon
+    }
+    // Retry command
+}
+```
+
+**Manual fix if needed:**
+
+```bash
+# Check daemon status
+herd status guix-daemon
+ps aux | grep guix-daemon
+ls -la /var/guix/daemon-socket/socket
+
+# Restart daemon
+herd stop guix-daemon
+sleep 5
+herd start guix-daemon
+
+# Wait for socket to be ready
+sleep 10
+
+# Test connectivity
+guix build --version
+
+# Retry system init
+guix system init /mnt/etc/config.scm /mnt
+```
+
+**Related Issues:**
+- This is different from initial daemon startup verification (documented above)
+- This occurs AFTER verification passes but BEFORE/DURING `guix system init`
+- More common on VPS systems due to socket stability issues
+- Can also occur on physical hardware under load
+
 ## 🐧 Kernel Configuration
 
 ### Always Specify the Kernel Explicitly
