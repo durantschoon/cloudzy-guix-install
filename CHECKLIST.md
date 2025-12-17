@@ -28,11 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Recovery script kernel/initrd verification improvements**: Added comprehensive verification for framework-dual recovery → Verifies kernel/initrd exist in system generation BEFORE copying, verifies files copied successfully, verifies before Step 3 bootloader install, better error messages for AMD GPU/nonguix issues
-2. ✅ **Recovery script platform auto-detection**: Added automatic platform detection (framework-dual vs cloudzy) if GUIX_PLATFORM not set → Uses same detection logic as verify script, ensures correct customize script downloaded
-3. ✅ **Auto-recovery from hung processes**: Added automatic process termination and recovery script suggestion after 10 consecutive "hung" warnings (10 minutes) in `RunCommandWithSpinner` → Prevents installer from hanging indefinitely on cloudzy VPS
-4. ✅ **Recovery script automatic kernel/initrd recovery**: Added automatic recovery logic for missing kernel/initrd files after `guix system init` reports success but files are missing → Attempts to copy from system generation, handles both time-machine and free software installs
-5. ✅ **Recovery script exit trap verification**: Added EXIT trap to recovery script that runs verification regardless of how script exits → Ensures critical files are checked even on early exit or errors
+1. ✅ **Recovery script rewritten in Go (2025-01-XX)**: Complete rewrite of recovery tool from bash to Go → Created `cmd/recovery/main.go` that shares code with main installer via `lib/common.go`, eliminates sync issues, consistent error handling and retry logic, falls back to bash script if Go build fails
+2. ✅ **Kernel symlink discovery and cp -L fix (2025-01-XX)**: Critical discovery that kernel/initrd in system generation are symlinks on Cloudzy → Updated all `cp` commands to use `-L` flag to dereference symlinks, documented in `INSTALLATION_KNOWLEDGE.md`, explains why kernel files appeared to copy but were actually tiny symlink files
+3. ✅ **Network/DNS troubleshooting documentation (2025-01-XX)**: Added comprehensive troubleshooting section to `INSTALLATION_KNOWLEDGE.md` → Documents `diagnose-guix-build.sh` usage, DNS resolution failures, network interface configuration, firewall issues, workarounds with fallback builds, references `fix-network.sh` script
+4. ✅ **Recovery script kernel/initrd verification improvements**: Added comprehensive verification for framework-dual recovery → Verifies kernel/initrd exist in system generation BEFORE copying, verifies files copied successfully, verifies before Step 3 bootloader install, better error messages for AMD GPU/nonguix issues
+5. ✅ **Recovery script platform auto-detection**: Added automatic platform detection (framework-dual vs cloudzy) if GUIX_PLATFORM not set → Uses same detection logic as verify script, ensures correct customize script downloaded
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -40,7 +40,36 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 
 ## 🔄 Currently Working On
 
-**Two Active Fronts:**
+**Primary Focus: Cloudzy Installation Testing**
+
+### Cloudzy Installation Testing (CURRENT PRIORITY)
+**Focus**: Verify kernel symlink fix and recovery tool work correctly
+
+**Recent Fixes:**
+- ✅ Kernel/initrd copying now uses `cp -L` to dereference symlinks
+- ✅ Recovery tool rewritten in Go to share code with installer
+- ✅ Network/DNS troubleshooting documented
+
+**Next Steps:**
+1. 🧪 **Test kernel symlink fix on Cloudzy VPS**
+   - Run installer on fresh Cloudzy instance
+   - Verify kernel files are copied correctly (should be 5-15 MB, not a few bytes)
+   - Verify system boots successfully after installation
+   - Check `/tmp/debug.log` for kernel file journey traces
+
+2. 🧪 **Test Go recovery tool**
+   - Trigger recovery scenario (interrupt installer or simulate failure)
+   - Verify recovery tool builds correctly during installation
+   - Test recovery tool functionality (mount verification, system init, password setting)
+   - Verify automatic retry logic works (up to 3 attempts)
+
+3. 🧪 **Test network configuration**
+   - Verify NetworkManager starts correctly after installation
+   - Test DNS resolution (`ping ci.guix.gnu.org`)
+   - Test `guix install` commands work after network is configured
+   - Run `diagnose-guix-build.sh` to verify all checks pass
+
+**Status**: Ready for testing - all fixes implemented and documented
 
 ### Front 1: Framework-dual (Testing & Development)
 **Focus**: Real-world installation testing, GNOME configuration, troubleshooting
@@ -49,6 +78,8 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 
 ### Front 2: Cloudzy (Guile Conversion & Testing)
 **Focus**: Complete conversion to `.scm` scripts and comprehensive testing
+
+**Note**: Guile conversion paused while focusing on kernel/network fixes
 
 **Guile Conversion Project (IN PROGRESS):**
 
@@ -248,18 +279,26 @@ cd ~/guix-customize
 
 **Testing cloudzy installer with latest improvements:**
 
-- 🧪 **Proactive fixes implemented (2025-01-XX)**: Implemented proactive approach to prevent kernel/initrd issues instead of iterating through recovery
+- ✅ **Kernel symlink fix implemented (2025-01-XX)**: Fixed critical issue where kernel/initrd copying failed because files are symlinks
+  - **Discovery**: Runtime investigation revealed kernel/initrd in system generation are symlinks pointing to other store paths
+  - **Fix**: Updated all `cp` commands to use `-L` flag (dereference symlinks) in both Go code and bash recovery script
+  - **Status**: Fix applied to `lib/common.go` and `lib/recovery-complete-install.sh`, documented in `INSTALLATION_KNOWLEDGE.md`
+  - **Next steps**: Test on cloudzy VPS to verify kernel files are now copied correctly (should be 5-15 MB, not a few bytes)
+- ✅ **Recovery tool rewritten in Go (2025-01-XX)**: Complete rewrite eliminates sync issues between recovery and installer
+  - **Implementation**: Created `cmd/recovery/main.go` that reuses functions from `lib/common.go`
+  - **Benefits**: Single source of truth, automatic sync, consistent behavior
+  - **Status**: Implemented and documented, falls back to bash script if Go build fails
+  - **Next steps**: Test recovery tool on actual installation failures to verify it works correctly
+- ✅ **Network/DNS troubleshooting documented (2025-01-XX)**: Comprehensive troubleshooting guide added
+  - **Documentation**: Added section to `INSTALLATION_KNOWLEDGE.md` covering DNS failures, network interface issues, firewall problems
+  - **Tools**: Documents `diagnose-guix-build.sh` and `fix-network.sh` scripts
+  - **Status**: Complete, ready for users encountering network issues
+- 🧪 **Proactive fixes implemented (2025-01-XX)**: Implemented proactive approach to prevent kernel/initrd issues
   - **Proactive symlink creation**: After `guix system init` completes, check if `/mnt/run/current-system` symlink exists. If missing, find latest system generation in `/gnu/store` and create symlink immediately
   - **Proactive kernel/initrd copying**: Right after ensuring symlink exists, immediately check if kernel/initrd exist in `/mnt/boot/`. If missing, copy them proactively from system generation (which we know exists)
   - **Benefits**: Avoids multiple recovery retry attempts, more efficient, cleaner approach
   - **Status**: Implemented in `lib/common.go:RunGuixSystemInitFreeSoftware()`, ready for testing
   - **Next steps**: Test on cloudzy VPS to verify proactive fixes prevent kernel/initrd issues
-- ⚠️ **Kernel/initrd installation issues (2025-01-XX)**: Both cloudzy and framework-dual experiencing kernel file installation failures
-  - **Framework-dual**: Uses 3-step approach (build → copy → bootloader), but kernel files may be missing from system generation if build fails silently (AMD GPU firmware issues)
-  - **Cloudzy**: Uses single-step `guix system init` (free software), but also reporting missing kernel files after successful init
-  - **Root cause**: `guix system init` can report success even when kernel/initrd files are not created/copied to `/boot/`, and `/mnt/run/current-system` symlink may not be created
-  - **Current status**: Proactive fixes implemented - symlink creation and kernel/initrd copying happen immediately after `guix system init`, avoiding recovery retries
-  - **Instrumentation**: Comprehensive debug logging added to trace kernel file journey and identify failure points
 - ✅ **Recovery script kernel/initrd verification improvements (2025-01-XX)**: Added comprehensive verification for framework-dual
   - **Issue**: Recovery script reported "bootloader installed successfully" even when kernel files were missing
   - **Fix**: Verify kernel/initrd exist in system generation BEFORE copying, verify files copied successfully, verify before Step 3 bootloader install
