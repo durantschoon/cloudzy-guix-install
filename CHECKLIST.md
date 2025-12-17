@@ -46,6 +46,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 **Focus**: Verify kernel symlink fix and recovery tool work correctly
 
 **Recent Fixes:**
+- ✅ **3-step kernel/initrd workaround implemented for Cloudzy (2025-01-XX)**: Debug logs confirmed that `guix system init` (free-software-only) does NOT create kernel/initrd files - system generation only contains `['gnu','gnu.go','guix']`. Re-introduced 3-step workaround (build → copy → init) for Cloudzy, same as framework-dual.
 - ✅ Kernel/initrd copying now uses `cp -L` to dereference symlinks
 - ✅ Recovery tool rewritten in Go to share code with installer
 - ✅ Network/DNS troubleshooting documented
@@ -69,7 +70,12 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
    - Test `guix install` commands work after network is configured
    - Run `diagnose-guix-build.sh` to verify all checks pass
 
-**Status**: Ready for testing - all fixes implemented and documented
+**Status**: Ready for testing - 3-step workaround implemented for Cloudzy, all fixes documented
+
+**Key Discovery (2025-01-XX):**
+- Debug logs showed `guix system init` succeeds but system generation only contains `['gnu','gnu.go','guix']` - no kernel/initrd files
+- This confirms the bug affects BOTH free-software-only (Cloudzy) and nonguix (Framework) installations
+- Solution: Use 3-step workaround for all platforms (build system → manually copy kernel/initrd → install bootloader)
 
 ### Front 1: Framework-dual (Testing & Development)
 **Focus**: Real-world installation testing, GNOME configuration, troubleshooting

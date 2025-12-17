@@ -24,11 +24,12 @@ This document captures critical lessons learned from real-world installations ac
 **Code:** Uses `RunGuixSystemInitFreeSoftware()` - standard `guix system init` without time-machine or nonguix channel
 
 **Installation approach:**
-- Single-step: `guix system init --fallback /mnt/etc/config.scm /mnt`
-- No kernel/initrd workaround needed
-- Uses Guix's built-in kernel copying logic
-- Simpler, more reliable for VPS/servers
-- **Key insight:** Free software installs don't need special handling
+- Three-step workaround needed (same as framework-dual, due to kernel/initrd bug):
+  1. Build: `guix system build /mnt/etc/config.scm`
+  2. Copy: Manually copy kernel/initrd from `/gnu/store/*-system/` to `/mnt/boot/` using `cp -L` (dereference symlinks)
+  3. Init: `guix system init /mnt/etc/config.scm /mnt` (installs bootloader only)
+- **CRITICAL:** Kernel/initrd in system generation are symlinks - must use `cp -L` to copy actual files
+- **Key insight:** Even free software installs need the 3-step workaround - `guix system init` doesn't copy kernel files to `/boot/`
 
 ### Framework 13 Installer - Requires Nonguix
 
@@ -671,15 +672,17 @@ guix system init /mnt/etc/config.scm /mnt
 - Prevents "Invalid keyword" errors when Guix passes kernel arguments
 - Ensures proper initrd generation for your specific filesystem setup
 
-### Critical Bug: Missing Kernel/Initrd Files (FIXED 2025-11-08)
+### Critical Bug: Missing Kernel/Initrd Files (FIXED 2025-11-08, UPDATED 2025-01-XX)
 
-**⚠️ IMPORTANT: This workaround is ONLY needed for Framework 13 (nonguix + time-machine) installations.**
+**⚠️ IMPORTANT: This workaround is needed for BOTH Framework 13 (nonguix + time-machine) AND Cloudzy VPS (free software only) installations.**
 
-**For Cloudzy VPS and other free software installations**: Use standard `guix system init` - this bug does not affect them. See [Platform-Specific Design Decisions](#-free-software-vs-nonguix-platform-specific-design-decisions) section above.
+**CRITICAL DISCOVERY (2025-01-XX):** Debug logs confirmed that `guix system init` (free-software-only mode) also does NOT create kernel/initrd files in the system generation. The system generation only contains `['gnu','gnu.go','guix']` - no kernel or initrd. This bug affects ALL platforms, not just nonguix installations.
 
 ---
 
-**Issue**: When using `time-machine` with nonguix channel, `guix system init` creates a system generation but fails to copy kernel and initrd files to `/boot/`, leaving the system unbootable.
+**Issue**: `guix system init` creates a system generation but fails to copy kernel and initrd files to `/boot/`, leaving the system unbootable. This occurs with both:
+- `guix time-machine` + nonguix channel (Framework 13)
+- Standard `guix system init` without time-machine (Cloudzy VPS)
 
 **Symptoms**:
 - Installation appears to succeed without errors
@@ -687,28 +690,37 @@ guix system init /mnt/etc/config.scm /mnt
 - `/mnt/boot/vmlinuz*` and `/mnt/boot/initrd*` are MISSING
 - `/mnt/run/current-system` is a broken symlink
 
-**Root cause**: When using `time-machine` + nonguix, the store structure is different and `guix system init` doesn't copy kernel/initrd to `/boot` as expected.
+**Root cause**: `guix system init` doesn't copy kernel/initrd to `/boot` as expected, regardless of whether time-machine or nonguix is used. This is a bug in `guix system init` itself.
 
-**✅ Solution (implemented in installer commit b956baf)**:
+**✅ Solution (implemented in installer commit b956baf, updated 2025-01-XX)**:
 
 The installer now uses a 3-step process instead of calling `system init` directly:
 
 1. **Build system first**:
    ```bash
-   guix time-machine -C /tmp/channels.scm -- system build /mnt/etc/config.scm
+   # For Framework (with time-machine):
+   guix time-machine -C ~/channels.scm -- system build /mnt/etc/config.scm
+   
+   # For Cloudzy (free software only):
+   guix system build /mnt/etc/config.scm
    ```
    This creates complete system in `/gnu/store/*-system/` with kernel and initrd.
 
 2. **Manually copy kernel files to /boot**:
    ```bash
-   cp /gnu/store/*-system/kernel /mnt/boot/vmlinuz
-   cp /gnu/store/*-system/initrd /mnt/boot/initrd
+   # CRITICAL: Use -L flag to dereference symlinks (Cloudzy kernel/initrd are symlinks!)
+   cp -L /gnu/store/*-system/kernel /mnt/boot/vmlinuz
+   cp -L /gnu/store/*-system/initrd /mnt/boot/initrd
    ln -s /gnu/store/*-system /mnt/run/current-system
    ```
 
 3. **Install bootloader**:
    ```bash
-   guix time-machine -C /tmp/channels.scm -- system init /mnt/etc/config.scm /mnt
+   # For Framework (with time-machine):
+   guix time-machine -C ~/channels.scm -- system init /mnt/etc/config.scm /mnt
+   
+   # For Cloudzy (free software only):
+   guix system init /mnt/etc/config.scm /mnt
    ```
    System already built, this just installs GRUB.
 
@@ -2318,10 +2330,11 @@ if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
 - **CRITICAL:** Kernel/initrd are symlinks in system generation - must use `cp -L` to dereference
 - Kernel copy IS needed - `guix system init` doesn't copy kernel files to `/boot/` even in free-software mode
 
-**Why the difference?**
-- Framework platforms use `guix time-machine` with nonguix channels, which creates different store structure
-- Cloudzy uses standard `guix system init` but still has the kernel-copy bug
-- Both platforms require manual kernel/initrd copying, but Cloudzy's kernel files are symlinks requiring `-L` flag
+**Why both need the workaround?**
+- Both Framework (time-machine + nonguix) and Cloudzy (free software only) experience the same bug
+- `guix system init` fails to copy kernel/initrd files to `/boot/` regardless of installation method
+- The only difference: Cloudzy's kernel files are symlinks requiring `cp -L` flag, while Framework's may be direct files
+- Both platforms require manual kernel/initrd copying before bootloader installation
 
 **Cloudzy-Specific Issue:**
 On Cloudzy, the system generation's `kernel` entry is a symlink to `/gnu/store/xxxxx-profile/`, not a direct kernel binary. When copying, you must use `cp -L` to dereference the symlink and copy the actual kernel file. Without `-L`, you'll copy a tiny symlink file instead of the 5-15 MB kernel binary, causing boot failures.
