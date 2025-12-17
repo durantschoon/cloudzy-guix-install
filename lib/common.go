@@ -1674,12 +1674,12 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 					"error":        err.Error(),
 				})
 				// #endregion
-				if attempt < maxAttempts {
-					fmt.Println()
-					fmt.Println("Waiting 10 seconds before retry...")
-					time.Sleep(10 * time.Second)
-					continue
-				}
+			if attempt < maxAttempts {
+				fmt.Println()
+				fmt.Println("Waiting 10 seconds before retry...")
+				time.Sleep(10 * time.Second)
+				continue
+			}
 				return fmt.Errorf("broken system generation symlink: %w", err)
 			}
 			fmt.Printf("[INFO] Found system generation: %s\n", systemPath)
@@ -2113,31 +2113,140 @@ func RunGuixSystemInitFreeSoftware() error {
 	}
 	
 	if systemPath != "" {
-		// Check if kernel/initrd exist in /mnt/boot/
-		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
-		initrds, _ := filepath.Glob("/mnt/boot/initrd*")
+		// #region agent log
+		// List contents of system generation to see what files exist
+		entries, _ := os.ReadDir(systemPath)
+		entryNames := []string{}
+		for _, entry := range entries {
+			entryNames = append(entryNames, entry.Name())
+		}
+		logDebug("lib/common.go:2116", "System generation contents", map[string]interface{}{
+			"hypothesisId": "F",
+			"step":         "list_system_contents",
+			"systemPath":   systemPath,
+			"entries":      entryNames,
+			"entryCount":   len(entryNames),
+		})
+		// #endregion
 		
-		// Copy kernel if missing
-		if len(kernels) == 0 {
-			kernelSrc := filepath.Join(systemPath, "kernel")
+		// Check alternative locations for kernel/initrd
+		// Hypothesis F: Kernel/initrd might be in boot/ subdirectory or have different names
+		kernelLocations := []string{
+			filepath.Join(systemPath, "kernel"),
+			filepath.Join(systemPath, "boot", "kernel"),
+			filepath.Join(systemPath, "boot", "vmlinuz"),
+			filepath.Join(systemPath, "boot", "vmlinuz-linux"),
+		}
+		initrdLocations := []string{
+			filepath.Join(systemPath, "initrd"),
+			filepath.Join(systemPath, "boot", "initrd"),
+			filepath.Join(systemPath, "boot", "initrd.gz"),
+		}
+		
+		// #region agent log
+		logDebug("lib/common.go:2135", "Checking alternative kernel/initrd locations", map[string]interface{}{
+			"hypothesisId":    "F",
+			"step":            "check_alternative_locations",
+			"kernelLocations": kernelLocations,
+			"initrdLocations": initrdLocations,
+		})
+		// #endregion
+		
+		// Find kernel in alternative locations
+		var kernelSrc string
+		for _, loc := range kernelLocations {
+			if info, err := os.Stat(loc); err == nil {
+				kernelSrc = loc
+				// #region agent log
+				logDebug("lib/common.go:2145", "Found kernel in alternative location", map[string]interface{}{
+					"hypothesisId": "F",
+					"step":         "kernel_found_alternative",
+					"kernelSrc":    kernelSrc,
+					"size":         info.Size(),
+				})
+				// #endregion
+				break
+			}
+		}
+		
+		// Find initrd in alternative locations
+		var initrdSrc string
+		for _, loc := range initrdLocations {
+			if info, err := os.Stat(loc); err == nil {
+				initrdSrc = loc
+				// #region agent log
+				logDebug("lib/common.go:2158", "Found initrd in alternative location", map[string]interface{}{
+					"hypothesisId": "F",
+					"step":         "initrd_found_alternative",
+					"initrdSrc":    initrdSrc,
+					"size":         info.Size(),
+				})
+				// #endregion
+				break
+			}
+		}
+		
+		// Check if kernel/initrd exist in /mnt/boot/
+	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
+	initrds, _ := filepath.Glob("/mnt/boot/initrd*")
+	
+		// Copy kernel if missing and we found it
+		if len(kernels) == 0 && kernelSrc != "" {
+			kernelDest := "/mnt/boot/vmlinuz"
 			if info, err := os.Stat(kernelSrc); err == nil {
-				kernelDest := "/mnt/boot/vmlinuz"
 				if err := exec.Command("cp", "-f", kernelSrc, kernelDest).Run(); err == nil {
 					fmt.Printf("[OK] Proactively copied kernel: %s (%.1f MB)\n", kernelDest, float64(info.Size())/1024/1024)
+					// #region agent log
+					logDebug("lib/common.go:2175", "Proactively copied kernel", map[string]interface{}{
+						"hypothesisId": "F",
+						"step":         "kernel_copied",
+						"src":          kernelSrc,
+						"dest":         kernelDest,
+						"size":         info.Size(),
+					})
+					// #endregion
 				}
 			}
 		}
 		
-		// Copy initrd if missing
-		if len(initrds) == 0 {
-			initrdSrc := filepath.Join(systemPath, "initrd")
+		// Copy initrd if missing and we found it
+		if len(initrds) == 0 && initrdSrc != "" {
+			initrdDest := "/mnt/boot/initrd"
 			if info, err := os.Stat(initrdSrc); err == nil {
-				initrdDest := "/mnt/boot/initrd"
 				if err := exec.Command("cp", "-f", initrdSrc, initrdDest).Run(); err == nil {
 					fmt.Printf("[OK] Proactively copied initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
+					// #region agent log
+					logDebug("lib/common.go:2190", "Proactively copied initrd", map[string]interface{}{
+						"hypothesisId": "F",
+						"step":         "initrd_copied",
+						"src":          initrdSrc,
+						"dest":         initrdDest,
+						"size":         info.Size(),
+					})
+					// #endregion
 				}
 			}
 		}
+		
+		// #region agent log
+		// Log if kernel/initrd still not found after checking alternatives
+		if kernelSrc == "" {
+			logDebug("lib/common.go:2200", "Kernel not found in any location", map[string]interface{}{
+				"hypothesisId":    "F",
+				"step":            "kernel_not_found_anywhere",
+				"systemPath":      systemPath,
+				"checkedLocations": kernelLocations,
+			})
+		}
+		if initrdSrc == "" {
+			logDebug("lib/common.go:2208", "Initrd not found in any location", map[string]interface{}{
+				"hypothesisId":    "F",
+				"step":            "initrd_not_found_anywhere",
+				"systemPath":      systemPath,
+				"checkedLocations": initrdLocations,
+			})
+		}
+		// #endregion
 	}
 	fmt.Println()
 
