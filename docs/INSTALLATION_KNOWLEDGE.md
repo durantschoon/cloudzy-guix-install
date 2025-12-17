@@ -676,7 +676,7 @@ guix system init /mnt/etc/config.scm /mnt
 
 **⚠️ IMPORTANT: This workaround is needed for BOTH Framework 13 (nonguix + time-machine) AND Cloudzy VPS (free software only) installations.**
 
-**CRITICAL DISCOVERY (2025-01-XX):** Debug logs confirmed that `guix system init` (free-software-only mode) also does NOT create kernel/initrd files in the system generation. The system generation only contains `['gnu','gnu.go','guix']` - no kernel or initrd. This bug affects ALL platforms, not just nonguix installations.
+**CRITICAL DISCOVERY (2025-01-XX):** Kernel tracking logs confirmed that `guix system init` (free-software-only mode) also does NOT create kernel/initrd files in the system generation. The system generation only contains `['gnu','gnu.go','guix']` - no kernel or initrd. This bug affects ALL platforms, not just nonguix installations.
 
 ---
 
