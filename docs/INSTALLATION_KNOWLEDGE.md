@@ -1972,6 +1972,30 @@ When debugging why kernel files aren't appearing in `/boot/`, it's critical to u
 
 **After `guix system init` completes:**
 
+**Proactive Approach (Current Implementation):**
+
+Instead of waiting for verification to discover missing files, we proactively fix issues immediately:
+
+1. **Ensure symlink exists:**
+   - Check if `/mnt/run/current-system` exists
+   - If missing, find latest system generation and create symlink immediately
+   - This ensures we have a valid path to the system generation
+
+2. **Proactively copy kernel/initrd if missing:**
+   - Right after ensuring symlink exists, check if kernel/initrd exist in `/mnt/boot/`
+   - If missing, copy them immediately from system generation (which we know exists)
+   - This avoids waiting for verification to discover they're missing
+
+3. **Verification step (fallback):**
+   - Check if files still exist (should already be present from proactive copy)
+   - Validate file sizes are reasonable
+   - Check GRUB config references correct paths
+   - List all files in `/mnt/boot/` to see what's actually there
+
+**Recovery Approach (Fallback):**
+
+If proactive fixes didn't work:
+
 1. **Check if files still exist:**
    ```bash
    ls /mnt/boot/vmlinuz*  # Should show vmlinuz
@@ -2028,9 +2052,101 @@ When debugging kernel file issues, check each step:
 
 **This step-by-step breakdown allows us to pinpoint exactly where kernel files are getting lost.**
 
-### Automatic Recovery with Retry
+### Debugging Instrumentation
 
-**New in this version:** `VerifyAndRecoverKernelFiles(3)` runs after `system init`:
+**Current Status (2025-01-XX):** Comprehensive instrumentation has been added to trace the kernel file journey:
+
+**Instrumentation Points:**
+
+1. **Before `guix system init`**: Logs that init is about to start
+2. **After `guix system init` succeeds**: Logs kernel/initrd existence, sizes, boot files present, symlink status
+3. **Symlink creation**: Logs when symlink is created and what it points to
+4. **Proactive copy**: Logs when kernel/initrd are copied proactively
+5. **Recovery attempts**: Logs each recovery attempt, what was found, what was copied
+
+**Log Location:**
+
+- Debug logs written to `/tmp/debug.log` on the install machine
+- NDJSON format (one JSON object per line)
+- Includes hypothesis IDs, step names, file paths, sizes, errors
+
+**Using Debug Logs:**
+
+After running the installer, retrieve `/tmp/debug.log` and analyze:
+- Which steps completed successfully
+- Where kernel files were found (or not found)
+- What recovery attempts were made
+- Final state of kernel/initrd files
+
+**Keeping Instrumentation Active:**
+
+- Instrumentation logs remain active during fixes
+- Only remove after successful post-fix verification and explicit user confirmation
+- This ensures we can trace issues across multiple runs
+
+### Proactive Fixes: Creating Symlinks and Copying Files Immediately
+
+**Key Insight (2025-01-XX):** Instead of iterating through multiple recovery attempts, we now proactively fix issues immediately after `guix system init` completes.
+
+**Proactive Symlink Creation:**
+
+After `guix system init` completes, we immediately check if `/mnt/run/current-system` symlink exists. If missing:
+1. Find the latest system generation in `/gnu/store` using `ls -td /gnu/store/*-system 2>/dev/null | head -1`
+2. Ensure `/mnt/run` directory exists
+3. Create the symlink: `os.Symlink(systemGenPath, "/mnt/run/current-system")`
+
+This ensures the symlink exists before any recovery logic needs it.
+
+**Proactive Kernel/Initrd Copying:**
+
+Right after ensuring the symlink exists (or verifying it exists), we immediately:
+1. Get the system generation path from the symlink (or find it if symlink was just created)
+2. Check if kernel/initrd exist in `/mnt/boot/`
+3. If missing, copy them immediately from the system generation:
+   ```go
+   cp $systemPath/kernel /mnt/boot/vmlinuz
+   cp $systemPath/initrd /mnt/boot/initrd
+   ```
+
+**Why This Approach is Better:**
+
+- **Fewer iterations**: Files are copied proactively instead of waiting for verification to discover they're missing
+- **More efficient**: Uses the system generation path we already have
+- **Consistent pattern**: Follows the same proactive approach as creating the symlink
+- **Avoids recovery retries**: By the time verification runs, files should already be present
+
+**Implementation:**
+
+```go
+// In RunGuixSystemInitFreeSoftware() after guix system init succeeds:
+
+// 1. Ensure symlink exists (create if missing)
+currentSystemLink := "/mnt/run/current-system"
+if _, err := os.Lstat(currentSystemLink); err != nil {
+    // Find latest system generation and create symlink
+    systemGenPath := findLatestSystemGeneration()
+    os.Symlink(systemGenPath, currentSystemLink)
+}
+
+// 2. Proactively copy kernel/initrd if missing
+systemPath := resolveSystemPath(currentSystemLink)
+kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
+initrds, _ := filepath.Glob("/mnt/boot/initrd*")
+
+if len(kernels) == 0 {
+    cp systemPath/kernel /mnt/boot/vmlinuz
+}
+if len(initrds) == 0 {
+    cp systemPath/initrd /mnt/boot/initrd
+}
+
+// 3. Verification step (should find files already present)
+VerifyAndRecoverKernelFiles(3)  // Fallback if proactive copy failed
+```
+
+### Automatic Recovery with Retry (Fallback)
+
+**Fallback mechanism:** `VerifyAndRecoverKernelFiles(3)` still runs after proactive fixes as a safety net:
 
 ```go
 // Automatically detects and fixes missing/corrupt kernel files
@@ -2047,6 +2163,8 @@ if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
    - Copies kernel/initrd from the generation
    - Retries up to 3 times with 10-second delays
 4. Reports success or provides recovery guidance
+
+**Note:** With proactive fixes in place, this recovery function should rarely need to retry - files should already be present from the proactive copy step.
 
 ### Platform Differences
 

@@ -248,12 +248,18 @@ cd ~/guix-customize
 
 **Testing cloudzy installer with latest improvements:**
 
+- 🧪 **Proactive fixes implemented (2025-01-XX)**: Implemented proactive approach to prevent kernel/initrd issues instead of iterating through recovery
+  - **Proactive symlink creation**: After `guix system init` completes, check if `/mnt/run/current-system` symlink exists. If missing, find latest system generation in `/gnu/store` and create symlink immediately
+  - **Proactive kernel/initrd copying**: Right after ensuring symlink exists, immediately check if kernel/initrd exist in `/mnt/boot/`. If missing, copy them proactively from system generation (which we know exists)
+  - **Benefits**: Avoids multiple recovery retry attempts, more efficient, cleaner approach
+  - **Status**: Implemented in `lib/common.go:RunGuixSystemInitFreeSoftware()`, ready for testing
+  - **Next steps**: Test on cloudzy VPS to verify proactive fixes prevent kernel/initrd issues
 - ⚠️ **Kernel/initrd installation issues (2025-01-XX)**: Both cloudzy and framework-dual experiencing kernel file installation failures
   - **Framework-dual**: Uses 3-step approach (build → copy → bootloader), but kernel files may be missing from system generation if build fails silently (AMD GPU firmware issues)
   - **Cloudzy**: Uses single-step `guix system init` (free software), but also reporting missing kernel files after successful init
-  - **Root cause**: `guix system init` can report success even when kernel/initrd files are not created/copied to `/boot/`
-  - **Current status**: Recovery script has improved verification, but underlying issue persists - both platforms need kernel/initrd recovery logic
-  - **Next steps**: Investigate why `guix system init` succeeds but doesn't create kernel files on cloudzy (should work correctly per docs)
+  - **Root cause**: `guix system init` can report success even when kernel/initrd files are not created/copied to `/boot/`, and `/mnt/run/current-system` symlink may not be created
+  - **Current status**: Proactive fixes implemented - symlink creation and kernel/initrd copying happen immediately after `guix system init`, avoiding recovery retries
+  - **Instrumentation**: Comprehensive debug logging added to trace kernel file journey and identify failure points
 - ✅ **Recovery script kernel/initrd verification improvements (2025-01-XX)**: Added comprehensive verification for framework-dual
   - **Issue**: Recovery script reported "bootloader installed successfully" even when kernel files were missing
   - **Fix**: Verify kernel/initrd exist in system generation BEFORE copying, verify files copied successfully, verify before Step 3 bootloader install
