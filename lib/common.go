@@ -1775,21 +1775,18 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println()
 	}
 
-	// WORKAROUND: guix system init has a bug where it doesn't copy kernel/initrd to /boot
-	// This affects BOTH time-machine (framework-dual) AND free software (cloudzy) installs
-	// Solution: Build the system first, manually copy kernel files, then run init
-	// Based on working commit b956baf which successfully installed kernel files
+	// CRITICAL: For free-software-only installs, guix system build does NOT produce kernel/initrd files.
+	// We must use guix system init directly, which builds everything AND installs it.
+	// This is different from time-machine installs (framework-dual) which DO produce kernel files.
 
-	PrintSectionHeader("Building Guix System")
-	fmt.Println("Step 1/3: Building system closure (includes kernel)")
+	PrintSectionHeader("Installing Guix System (Free Software)")
+	fmt.Println("Running guix system init (builds and installs everything)")
 	fmt.Println("This will take 5-30 minutes depending on substitutes availability...")
 	fmt.Println()
-	fmt.Println("You should see:")
-	fmt.Println("  1. Downloading/building packages (including kernel)")
-	fmt.Println("  2. Final output: /gnu/store/...-system")
-	fmt.Println()
-	fmt.Println("Progress output below:")
-	fmt.Println("---")
+	fmt.Println("guix system init will:")
+	fmt.Println("  1. Build all packages (including kernel)")
+	fmt.Println("  2. Build initrd")
+	fmt.Println("  3. Install bootloader")
 	fmt.Println()
 	
 	// Check disk space before starting
@@ -1800,270 +1797,7 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println()
 	}
 
-	// CRITICAL: Verify daemon is actually running RIGHT BEFORE we need it
-	fmt.Println("Verifying guix-daemon is running and responsive before system build...")
-	if err := isDaemonReady(); err != nil {
-		fmt.Printf("[WARN] Daemon not ready: %v\n", err)
-		fmt.Println("Restarting daemon to ensure it's available...")
-		if err := EnsureGuixDaemonRunning(); err != nil {
-			return fmt.Errorf("failed to ensure guix-daemon is running before system build: %w", err)
-		}
-	} else {
-		fmt.Println("[OK] guix-daemon is running and responsive")
-	}
-	fmt.Println()
-
-	// Step 1: Build the system (creates complete system in /gnu/store)
-	buildCmd := exec.Command("guix", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
-	buildCmd.Stdout = os.Stdout
-	buildCmd.Stderr = os.Stderr
-	if err := buildCmd.Run(); err != nil {
-		return fmt.Errorf("guix system build failed: %w", err)
-	}
-
-	// #region agent log
-	logDebug("lib/common.go:1821", "After guix system build", map[string]interface{}{
-		"hypothesisId": "A",
-		"step": "after_build",
-		"checking": "system_generation_exists",
-	})
-	// #endregion
-
-	PrintSectionHeader("Copying Kernel Files")
-	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
-	fmt.Println("(Workaround for guix system init bug)")
-	fmt.Println()
-
-	// Step 2: Find the built system and copy kernel/initrd to /boot
-	fmt.Println("Searching for built system in /gnu/store...")
-	findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
-	output, err := findCmd.Output()
-	if err != nil {
-		fmt.Printf("[ERROR] Failed to find built system: %v\n", err)
-		fmt.Println("Listing all *-system directories:")
-		exec.Command("bash", "-c", "ls -ld /gnu/store/*-system 2>/dev/null | head -10").Run()
-		// #region agent log
-		logDebug("lib/common.go:1843", "Failed to find system after build", map[string]interface{}{
-			"hypothesisId": "B",
-			"step":         "find_system_failed",
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("failed to find built system: %w", err)
-	}
-	systemPath := strings.TrimSpace(string(output))
-	if systemPath == "" {
-		fmt.Println("[ERROR] No system found in /gnu/store")
-		fmt.Println("Listing /gnu/store contents:")
-		exec.Command("bash", "-c", "ls /gnu/store/ | grep system | head -20").Run()
-		// #region agent log
-		logDebug("lib/common.go:1853", "System path empty after find", map[string]interface{}{
-			"hypothesisId": "B",
-			"step":         "system_path_empty",
-		})
-		// #endregion
-		return fmt.Errorf("no system found in /gnu/store")
-	}
-
-	fmt.Printf("[INFO] Found built system: %s\n", systemPath)
-	// #region agent log
-	logDebug("lib/common.go:1859", "System path found", map[string]interface{}{
-		"hypothesisId": "B",
-		"step":         "system_path_found",
-		"systemPath":   systemPath,
-	})
-	// #endregion
-
-	// List contents of system directory to verify kernel/initrd are there
-	fmt.Println("[INFO] Contents of system directory:")
-	listCmd := exec.Command("ls", "-lh", systemPath)
-	listCmd.Stdout = os.Stdout
-	listCmd.Stderr = os.Stderr
-	listCmd.Run()
-
-	// Copy kernel
-	fmt.Println()
-	kernelSrc := filepath.Join(systemPath, "kernel")
-	fmt.Printf("[INFO] Checking for kernel at: %s\n", kernelSrc)
-	// #region agent log
-	logDebug("lib/common.go:1887", "Before kernel copy check (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-		"hypothesisId": "C",
-		"step":         "before_kernel_check",
-		"kernelSrc":    kernelSrc,
-		"systemPath":   systemPath,
-	})
-	// #endregion
-	if info, err := os.Stat(kernelSrc); err != nil {
-		fmt.Printf("[ERROR] Kernel not found: %v\n", err)
-		// #region agent log
-		logDebug("lib/common.go:1893", "Kernel not found in system (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "kernel_not_found",
-			"kernelSrc":    kernelSrc,
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("kernel not found in built system: %w", err)
-	} else {
-		fmt.Printf("[OK] Kernel found (%.1f MB)\n", float64(info.Size())/1024/1024)
-		// #region agent log
-		logDebug("lib/common.go:1901", "Kernel found in system (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "kernel_found",
-			"kernelSrc":    kernelSrc,
-			"kernelSize":   info.Size(),
-		})
-		// #endregion
-	}
-
-	kernelDest := "/mnt/boot/vmlinuz"
-	fmt.Printf("[INFO] Copying kernel to: %s\n", kernelDest)
-	// #region agent log
-	logDebug("lib/common.go:1910", "Before kernel copy (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-		"hypothesisId": "C",
-		"step":         "before_kernel_copy",
-		"kernelSrc":    kernelSrc,
-		"kernelDest":   kernelDest,
-	})
-	// #endregion
-	if err := exec.Command("cp", "-v", kernelSrc, kernelDest).Run(); err != nil {
-		fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
-		// #region agent log
-		logDebug("lib/common.go:1917", "Kernel copy failed (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "kernel_copy_failed",
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("failed to copy kernel: %w", err)
-	}
-
-	// Verify the copy
-	if info, err := os.Stat(kernelDest); err != nil {
-		fmt.Printf("[ERROR] Kernel not found at destination after copy: %v\n", err)
-		// #region agent log
-		logDebug("lib/common.go:1927", "Kernel copy verification failed (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "kernel_copy_verify_failed",
-			"kernelDest":   kernelDest,
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("kernel copy verification failed: %w", err)
-	} else {
-		fmt.Printf("[OK] Kernel copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
-		// #region agent log
-		logDebug("lib/common.go:1936", "Kernel copy succeeded (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "kernel_copy_succeeded",
-			"kernelDest":   kernelDest,
-			"kernelSize":   info.Size(),
-		})
-		// #endregion
-	}
-
-	// Copy initrd
-	fmt.Println()
-	initrdSrc := filepath.Join(systemPath, "initrd")
-	fmt.Printf("[INFO] Checking for initrd at: %s\n", initrdSrc)
-	// #region agent log
-	logDebug("lib/common.go:1948", "Before initrd copy check (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-		"hypothesisId": "C",
-		"step":         "before_initrd_check",
-		"initrdSrc":    initrdSrc,
-	})
-	// #endregion
-	if info, err := os.Stat(initrdSrc); err != nil {
-		fmt.Printf("[ERROR] Initrd not found: %v\n", err)
-		// #region agent log
-		logDebug("lib/common.go:1955", "Initrd not found in system (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "initrd_not_found",
-			"initrdSrc":    initrdSrc,
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("initrd not found in built system: %w", err)
-	} else {
-		fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(info.Size())/1024/1024)
-		// #region agent log
-		logDebug("lib/common.go:1963", "Initrd found in system (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "initrd_found",
-			"initrdSrc":    initrdSrc,
-			"initrdSize":   info.Size(),
-		})
-		// #endregion
-	}
-
-	initrdDest := "/mnt/boot/initrd"
-	fmt.Printf("[INFO] Copying initrd to: %s\n", initrdDest)
-	// #region agent log
-	logDebug("lib/common.go:1972", "Before initrd copy (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-		"hypothesisId": "C",
-		"step":         "before_initrd_copy",
-		"initrdSrc":    initrdSrc,
-		"initrdDest":   initrdDest,
-	})
-	// #endregion
-	if err := exec.Command("cp", "-v", initrdSrc, initrdDest).Run(); err != nil {
-		fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
-		// #region agent log
-		logDebug("lib/common.go:1979", "Initrd copy failed (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "initrd_copy_failed",
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("failed to copy initrd: %w", err)
-	}
-
-	// Verify the copy
-	if info, err := os.Stat(initrdDest); err != nil {
-		fmt.Printf("[ERROR] Initrd not found at destination after copy: %v\n", err)
-		// #region agent log
-		logDebug("lib/common.go:1989", "Initrd copy verification failed (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "initrd_copy_verify_failed",
-			"initrdDest":   initrdDest,
-			"error":        err.Error(),
-		})
-		// #endregion
-		return fmt.Errorf("initrd copy verification failed: %w", err)
-	} else {
-		fmt.Printf("[OK] Initrd copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
-		// #region agent log
-		logDebug("lib/common.go:1998", "Initrd copy succeeded (RunGuixSystemInitFreeSoftware)", map[string]interface{}{
-			"hypothesisId": "C",
-			"step":         "initrd_copy_succeeded",
-			"initrdDest":   initrdDest,
-			"initrdSize":   info.Size(),
-		})
-		// #endregion
-	}
-
-	fmt.Println()
-	fmt.Println("[SUCCESS] Kernel and initrd files copied to /mnt/boot/")
-
-	// Create the current-system symlink
-	if err := os.Remove("/mnt/run/current-system"); err != nil && !os.IsNotExist(err) {
-		fmt.Printf("Warning: failed to remove old current-system symlink: %v\n", err)
-	}
-	if err := os.MkdirAll("/mnt/run", 0755); err != nil {
-		return fmt.Errorf("failed to create /mnt/run: %w", err)
-	}
-	if err := os.Symlink(systemPath, "/mnt/run/current-system"); err != nil {
-		return fmt.Errorf("failed to create current-system symlink: %w", err)
-	}
-	fmt.Printf("✓ Created symlink: /mnt/run/current-system -> %s\n", systemPath)
-	fmt.Println()
-
-	PrintSectionHeader("Installing Bootloader")
-	fmt.Println("Step 3/3: Running guix system init to install bootloader")
-	fmt.Println("(System already built, this should be quick)")
-	fmt.Println()
-
-	// CRITICAL: Prepare directories RIGHT BEFORE system init (not before build)
+	// CRITICAL: Prepare directories RIGHT BEFORE system init
 	// This ensures /var/lock is a directory (not symlink) when guix system init chroots
 	// CleanupISOArtifacts() in Step 02 creates /var/lock as symlink, but guix system init
 	// needs it as a directory because /run is not mounted during chroot
@@ -2084,29 +1818,14 @@ func RunGuixSystemInitFreeSoftware() error {
 	}
 	fmt.Println()
 
-	// Step 3: Run system init (should now just install bootloader since system is already built)
+	// Run guix system init (builds everything and installs bootloader)
 	maxRetries := 3
 	var lastErr error
 	// #region agent log
-	logDebug("lib/common.go:1960", "Before guix system init", map[string]interface{}{
+	logDebug("lib/common.go:1805", "Before guix system init (free software)", map[string]interface{}{
 		"hypothesisId": "D",
 		"step":         "before_guix_system_init",
 		"maxRetries":   maxRetries,
-	})
-	// Check kernel/initrd exist before init
-	kernelBeforeInit, _ := os.Stat("/mnt/boot/vmlinuz")
-	initrdBeforeInit, _ := os.Stat("/mnt/boot/initrd")
-	bootFilesBeforeInit, _ := filepath.Glob("/mnt/boot/*")
-	bootFileListBeforeInit := []string{}
-	for _, f := range bootFilesBeforeInit {
-		bootFileListBeforeInit = append(bootFileListBeforeInit, filepath.Base(f))
-	}
-	logDebug("lib/common.go:1972", "Boot files state before guix system init", map[string]interface{}{
-		"hypothesisId":    "D",
-		"step":            "boot_files_before_init",
-		"kernelExists":    kernelBeforeInit != nil,
-		"initrdExists":    initrdBeforeInit != nil,
-		"bootFiles":       bootFileListBeforeInit,
 	})
 	// #endregion
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -2144,11 +1863,11 @@ func RunGuixSystemInitFreeSoftware() error {
 
 	if lastErr != nil {
 	fmt.Println()
-		fmt.Println("Bootloader installation failed. You can:")
+		fmt.Println("System installation failed. You can:")
 		fmt.Println("  1. Try manually: guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  2. Or reboot anyway - the kernel is already in place")
+		fmt.Println("  2. Or run the recovery script: /root/recovery-complete-install.sh")
 		// #region agent log
-		logDebug("lib/common.go:1999", "guix system init failed", map[string]interface{}{
+		logDebug("lib/common.go:1840", "guix system init failed", map[string]interface{}{
 			"hypothesisId": "D",
 			"step":         "guix_system_init_failed",
 			"error":        lastErr.Error(),
@@ -2174,7 +1893,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	if initrdAfterInit != nil {
 		initrdAfterSize = initrdAfterInit.Size()
 	}
-	logDebug("lib/common.go:2002", "After guix system init succeeds", map[string]interface{}{
+	logDebug("lib/common.go:1845", "After guix system init succeeds", map[string]interface{}{
 		"hypothesisId": "D",
 		"step":         "after_guix_system_init",
 		"kernelExists": kernelAfterInit != nil,
@@ -2185,17 +1904,17 @@ func RunGuixSystemInitFreeSoftware() error {
 	})
 	// #endregion
 
-	// Verify kernel/initrd still exist after Step 3 (guix system init can remove them)
+	// Verify kernel/initrd exist after guix system init
 	fmt.Println()
-	PrintSectionHeader("Verifying Kernel/Initrd After Bootloader Install")
+	PrintSectionHeader("Verifying Kernel/Initrd Files")
 	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
 	initrds, _ := filepath.Glob("/mnt/boot/initrd*")
 	
 	if len(kernels) == 0 || len(initrds) == 0 {
-		// Try to recover from system generation
-		fmt.Println("[WARN] Kernel/initrd missing after bootloader install - attempting recovery...")
+		// Try to recover from system generation (guix system init creates it)
+		fmt.Println("[WARN] Kernel/initrd missing after system init - attempting recovery...")
 		// #region agent log
-		logDebug("lib/common.go:2037", "Kernel/initrd missing, starting recovery", map[string]interface{}{
+		logDebug("lib/common.go:1865", "Kernel/initrd missing, starting recovery", map[string]interface{}{
 			"hypothesisId": "D",
 			"step":         "before_recovery",
 			"kernelCount":  len(kernels),
@@ -2230,7 +1949,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	if initrdFinal != nil {
 		initrdFinalSize = initrdFinal.Size()
 	}
-	logDebug("lib/common.go:2052", "After VerifyAndRecoverKernelFiles", map[string]interface{}{
+	logDebug("lib/common.go:1885", "After VerifyAndRecoverKernelFiles", map[string]interface{}{
 		"hypothesisId": "D",
 		"step":         "after_verify_recover",
 		"kernelExists": kernelFinal != nil,
