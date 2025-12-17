@@ -1651,9 +1651,24 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 
 		// Check if system generation exists
 		systemLink := "/mnt/run/current-system"
+		// #region agent log
+		logDebug("lib/common.go:1654", "Checking for system generation symlink", map[string]interface{}{
+			"hypothesisId": "E",
+			"step":         "check_system_link",
+			"systemLink":   systemLink,
+			"attempt":     attempt,
+		})
+		// #endregion
 		if _, err := os.Lstat(systemLink); err != nil {
 			fmt.Printf("[ERROR] System generation symlink missing: %s\n", systemLink)
 			fmt.Println("        Cannot recover - system was not built successfully")
+			// #region agent log
+			logDebug("lib/common.go:1662", "System generation symlink missing", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "system_link_missing",
+				"error":        err.Error(),
+			})
+			// #endregion
 			if attempt < maxAttempts {
 				fmt.Println()
 				fmt.Println("Waiting 10 seconds before retry...")
@@ -1667,6 +1682,13 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 		systemPath, err := filepath.EvalSymlinks(systemLink)
 		if err != nil {
 			fmt.Printf("[ERROR] System generation symlink is broken: %v\n", err)
+			// #region agent log
+			logDebug("lib/common.go:1676", "System generation symlink broken", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "system_link_broken",
+				"error":        err.Error(),
+			})
+			// #endregion
 			if attempt < maxAttempts {
 				fmt.Println()
 				fmt.Println("Waiting 10 seconds before retry...")
@@ -1677,6 +1699,13 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 		}
 
 		fmt.Printf("[INFO] Found system generation: %s\n", systemPath)
+		// #region agent log
+		logDebug("lib/common.go:1680", "System generation found", map[string]interface{}{
+			"hypothesisId": "E",
+			"step":         "system_path_found",
+			"systemPath":   systemPath,
+		})
+		// #endregion
 
 		// Try to copy kernel and initrd from system generation
 		fmt.Println()
@@ -1690,17 +1719,56 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 			return info.Size() < 5*1024*1024
 		}()) {
 			kernelSrc := filepath.Join(systemPath, "kernel")
-			if _, err := os.Stat(kernelSrc); err != nil {
+			// #region agent log
+			logDebug("lib/common.go:1692", "Checking kernel in system generation", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "check_kernel_src",
+				"kernelSrc":    kernelSrc,
+			})
+			// #endregion
+			if info, err := os.Stat(kernelSrc); err != nil {
 				fmt.Printf("[ERROR] Kernel not found in system generation: %s\n", kernelSrc)
+				// #region agent log
+				logDebug("lib/common.go:1697", "Kernel not found in system generation", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "kernel_not_in_system",
+					"kernelSrc":    kernelSrc,
+					"error":        err.Error(),
+				})
+				// #endregion
 				recovered = false
 			} else {
 				kernelDest := "/mnt/boot/vmlinuz"
+				// #region agent log
+				logDebug("lib/common.go:1705", "Copying kernel from system generation", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "copy_kernel",
+					"kernelSrc":    kernelSrc,
+					"kernelDest":   kernelDest,
+					"kernelSize":   info.Size(),
+				})
+				// #endregion
 				if err := exec.Command("cp", "-f", kernelSrc, kernelDest).Run(); err != nil {
 					fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
+					// #region agent log
+					logDebug("lib/common.go:1712", "Kernel copy failed", map[string]interface{}{
+						"hypothesisId": "E",
+						"step":         "kernel_copy_failed",
+						"error":        err.Error(),
+					})
+					// #endregion
 					recovered = false
 				} else {
 					if info, err := os.Stat(kernelDest); err == nil {
 						fmt.Printf("[OK] Recovered kernel: %s (%.1f MB)\n", kernelDest, float64(info.Size())/1024/1024)
+						// #region agent log
+						logDebug("lib/common.go:1719", "Kernel copy succeeded", map[string]interface{}{
+							"hypothesisId": "E",
+							"step":         "kernel_copy_succeeded",
+							"kernelDest":   kernelDest,
+							"kernelSize":   info.Size(),
+						})
+						// #endregion
 					}
 				}
 			}
@@ -1712,17 +1780,56 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 			return info.Size() < 10*1024*1024
 		}()) {
 			initrdSrc := filepath.Join(systemPath, "initrd")
-			if _, err := os.Stat(initrdSrc); err != nil {
+			// #region agent log
+			logDebug("lib/common.go:1730", "Checking initrd in system generation", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "check_initrd_src",
+				"initrdSrc":    initrdSrc,
+			})
+			// #endregion
+			if info, err := os.Stat(initrdSrc); err != nil {
 				fmt.Printf("[ERROR] Initrd not found in system generation: %s\n", initrdSrc)
+				// #region agent log
+				logDebug("lib/common.go:1735", "Initrd not found in system generation", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "initrd_not_in_system",
+					"initrdSrc":    initrdSrc,
+					"error":        err.Error(),
+				})
+				// #endregion
 				recovered = false
 			} else {
 				initrdDest := "/mnt/boot/initrd"
+				// #region agent log
+				logDebug("lib/common.go:1743", "Copying initrd from system generation", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "copy_initrd",
+					"initrdSrc":    initrdSrc,
+					"initrdDest":   initrdDest,
+					"initrdSize":   info.Size(),
+				})
+				// #endregion
 				if err := exec.Command("cp", "-f", initrdSrc, initrdDest).Run(); err != nil {
 					fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
+					// #region agent log
+					logDebug("lib/common.go:1750", "Initrd copy failed", map[string]interface{}{
+						"hypothesisId": "E",
+						"step":         "initrd_copy_failed",
+						"error":        err.Error(),
+					})
+					// #endregion
 					recovered = false
 				} else {
 					if info, err := os.Stat(initrdDest); err == nil {
 						fmt.Printf("[OK] Recovered initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
+						// #region agent log
+						logDebug("lib/common.go:1757", "Initrd copy succeeded", map[string]interface{}{
+							"hypothesisId": "E",
+							"step":         "initrd_copy_succeeded",
+							"initrdDest":   initrdDest,
+							"initrdSize":   info.Size(),
+						})
+						// #endregion
 					}
 				}
 			}
@@ -1732,16 +1839,37 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 			fmt.Println()
 			fmt.Println("[OK] Successfully recovered kernel/initrd files")
 			fmt.Println()
+			// #region agent log
+			logDebug("lib/common.go:1768", "Recovery succeeded", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "recovery_succeeded",
+			})
+			// #endregion
 			return nil
 		}
 
 		if attempt < maxAttempts {
 			fmt.Println()
 			fmt.Println("Recovery attempt failed. Waiting 10 seconds before retry...")
+			// #region agent log
+			logDebug("lib/common.go:1778", "Recovery attempt failed, will retry", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "recovery_failed_retry",
+				"attempt":      attempt,
+				"maxAttempts":  maxAttempts,
+			})
+			// #endregion
 			time.Sleep(10 * time.Second)
 		}
 	}
 
+	// #region agent log
+	logDebug("lib/common.go:1786", "Recovery failed after all attempts", map[string]interface{}{
+		"hypothesisId": "E",
+		"step":         "recovery_failed_final",
+		"maxAttempts":  maxAttempts,
+	})
+	// #endregion
 	return fmt.Errorf("failed to recover kernel/initrd files after %d attempts", maxAttempts)
 }
 
