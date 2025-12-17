@@ -2768,4 +2768,244 @@ Use `lib/enforce-guix-filesystem-invariants.sh` script for automated recovery (s
 
 ---
 
+## 🌐 Network and DNS Troubleshooting for Guix Build Failures
+
+**Common Issue:** After installation, `guix install` or `guix build` commands fail with "Name or service not known" or "Network is unreachable" errors, even though the system appears to be running normally.
+
+### Symptoms
+
+When network/DNS issues occur, you'll see errors like:
+
+```bash
+$ guix install curl
+# Error: Name or service not known
+# Error: Network is unreachable
+
+$ ping ci.guix.gnu.org
+# ping: unknown host
+
+$ guix weather curl
+# warning: ci.guix.gnu.org: host not found: Name or service not known
+# 0.0% substitutes available (0 out of 2)
+```
+
+### Diagnostic Script
+
+**Use the diagnostic script** (`diagnose-guix-build.sh`) to identify the root cause:
+
+```bash
+# Download and run the diagnostic script
+wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/diagnose-guix-build.sh
+chmod +x diagnose-guix-build.sh
+./diagnose-guix-build.sh
+```
+
+**What the diagnostic script checks:**
+
+1. **guix-daemon status** - Verifies the daemon is running
+2. **Disk space** - Confirms sufficient space for builds
+3. **Network connectivity** - Tests `ping` to `ci.guix.gnu.org`
+4. **Substitute servers** - Checks if Guix can reach substitute servers
+5. **Build logs** - Examines failed build logs for errors
+6. **Build users** - Checks guix-daemon build user configuration
+7. **Substitute fetching** - Tests `guix build --dry-run` to see substitute availability
+8. **Fallback builds** - Suggests using `--fallback` flag
+
+### Common Root Causes
+
+**1. DNS Resolution Failure (Most Common)**
+
+**Symptoms:**
+- `ping ci.guix.gnu.org` reports "unknown host"
+- `guix weather` shows "host not found: Name or service not known"
+- `guix build` cannot fetch substitutes
+
+**Diagnosis:**
+```bash
+# Check DNS configuration
+cat /etc/resolv.conf
+# Should show nameserver entries
+
+# Test DNS resolution
+nslookup ci.guix.gnu.org
+# If this fails, DNS is not configured
+
+# Test network connectivity (bypass DNS)
+ping -c 2 8.8.8.8
+# If this works but DNS doesn't, it's a DNS issue
+```
+
+**Solution:**
+```bash
+# Option 1: Configure DNS manually
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf
+
+# Option 2: Start NetworkManager (if installed)
+sudo herd start network-manager
+# NetworkManager will configure DNS automatically
+
+# Option 3: Use DHCP to get DNS
+sudo dhclient eth0  # Replace eth0 with your interface name
+```
+
+**2. Network Interface Not Configured**
+
+**Symptoms:**
+- `ping 8.8.8.8` fails with "Network is unreachable"
+- `ip link show` shows interface is DOWN
+- No network connectivity at all
+
+**Diagnosis:**
+```bash
+# Check network interfaces
+ip link show
+# Look for interfaces marked as "DOWN"
+
+# Check if NetworkManager is running
+herd status network-manager
+```
+
+**Solution:**
+```bash
+# Option 1: Start NetworkManager
+sudo herd start network-manager
+sleep 3
+herd status network-manager
+
+# Option 2: Manual DHCP (if NetworkManager not available)
+# Find your interface name
+ip link show
+
+# Bring up interface and get DHCP
+sudo ip link set eth0 up  # Replace eth0 with your interface
+sudo dhclient eth0
+```
+
+**3. Firewall Blocking Outbound Connections**
+
+**Symptoms:**
+- DNS works (`nslookup` succeeds)
+- Ping to IPs works
+- But `guix build` cannot fetch substitutes
+
+**Diagnosis:**
+```bash
+# Test HTTPS connectivity to Guix servers
+curl -I https://ci.guix.gnu.org
+# Should return HTTP headers, not connection refused
+
+# Check firewall rules
+sudo iptables -L -n
+```
+
+**Solution:**
+- Check firewall rules and allow outbound HTTPS (port 443)
+- If using a VPS, check provider's firewall settings
+- Temporarily disable firewall to test: `sudo iptables -F`
+
+### Using the Fix-Network Script
+
+**For automated diagnosis and fixes:**
+
+```bash
+# Download and run the network fix script
+wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/fix-network.sh
+chmod +x fix-network.sh
+./fix-network.sh
+```
+
+The script will:
+1. Check network interfaces
+2. Check network services (NetworkManager, DHCP)
+3. Attempt to start NetworkManager
+4. Provide manual DHCP instructions if needed
+
+### Workarounds When Network is Unavailable
+
+**If you cannot fix network immediately:**
+
+**1. Use fallback builds (builds from source):**
+```bash
+# Install packages without substitutes (builds from source)
+guix install --fallback --no-substitutes curl
+
+# This will take much longer but doesn't require network
+```
+
+**2. Check build logs for specific errors:**
+```bash
+# Find build logs
+find /var/log/guix -name "*curl*" -type f
+
+# View build log
+zcat /var/log/guix/drvs/39/0463zvbdvlzwr14v44jwr7y1243f55-curl-7.84.0.tar.xz.drv.gz | tail -50
+```
+
+**3. Verify daemon is running:**
+```bash
+# Check daemon status
+herd status guix-daemon
+
+# Restart if needed
+sudo herd restart guix-daemon
+
+# Verify daemon is responsive
+guix build --version
+```
+
+### Diagnostic Output Interpretation
+
+**From `diagnose-guix-build.sh` output:**
+
+**✅ Good signs:**
+- `guix-daemon` status shows "started" and "enabled"
+- Disk space shows > 10GB available
+- Build logs exist (indicates daemon is working)
+
+**❌ Problem indicators:**
+- `ping ci.guix.gnu.org` shows "unknown host" → **DNS issue**
+- `guix weather` shows "0.0% substitutes available" → **Network/DNS issue**
+- `guix build --dry-run` shows no substitute downloads → **Network issue**
+- Build users config not found → **Secondary issue** (may affect builds but not substitute fetching)
+
+**Action items based on diagnostic output:**
+
+1. **If DNS fails:** Configure `/etc/resolv.conf` or start NetworkManager
+2. **If network unreachable:** Start NetworkManager or configure interface manually
+3. **If substitutes unavailable but network works:** Check firewall, try fallback builds
+4. **If daemon not running:** Restart with `herd restart guix-daemon`
+
+### Prevention: Network Configuration During Installation
+
+**The installer should configure network, but if it doesn't:**
+
+1. **Check if NetworkManager is in config.scm:**
+   ```bash
+   grep -i network /mnt/etc/config.scm
+   ```
+
+2. **If missing, add it:**
+   ```scheme
+   (use-modules (gnu services networking))
+   
+   (services
+    (cons* (service network-manager-service-type)
+           %base-services))
+   ```
+
+3. **Reconfigure:**
+   ```bash
+   sudo guix system reconfigure /etc/config.scm
+   sudo herd start network-manager
+   ```
+
+### Related Tools
+
+- **`diagnose-guix-build.sh`** - Comprehensive diagnostic for build failures
+- **`fix-network.sh`** - Automated network configuration and troubleshooting
+- **`investigate-kernel-location.sh`** - Kernel file location investigation (different issue)
+
+---
+
 **Remember:** The Guix installation is more forgiving than it seems. Most failures can be recovered by re-running the same command without rebooting.
