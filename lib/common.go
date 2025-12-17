@@ -223,7 +223,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
                             fmt.Println("========================================")
                             fmt.Println()
                             fmt.Printf("No output and log not growing for %d consecutive checks (%d minutes).\n", consecutiveHungWarnings, consecutiveHungWarnings)
-                            fmt.Println("The process will be stopped and recovery script will be suggested.")
+                            fmt.Println("The process will be stopped and recovery tool will be suggested.")
                             fmt.Println()
                             
                             // Kill the hung process
@@ -239,7 +239,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
                             fmt.Println("To recover and complete installation, run:")
                             fmt.Println("  /root/recovery-complete-install.sh")
                             fmt.Println()
-                            fmt.Println("The recovery script will:")
+                            fmt.Println("The recovery tool will:")
                             fmt.Println("  1. Check installation state")
                             fmt.Println("  2. Re-run guix system init if needed")
                             fmt.Println("  3. Complete any remaining steps")
@@ -1429,12 +1429,12 @@ func InstallVerificationScript() error {
 	fmt.Printf("[OK] Verification script installed to: %s\n", targetPath)
 	fmt.Println("     Run anytime with: sudo verify-guix-install")
 
-	// Also copy to /root/ (for use by recovery script on ISO)
+	// Also copy to /root/ (for use by recovery tool on ISO)
 	rootPath := "/root/verify-guix-install.sh"
 	if err := os.WriteFile(rootPath, scriptContent, 0755); err != nil {
 		return fmt.Errorf("failed to write %s: %w", rootPath, err)
 	}
-	fmt.Printf("[OK] Also copied to: %s (for recovery script)\n", rootPath)
+	fmt.Printf("[OK] Also copied to: %s (for recovery tool)\n", rootPath)
 	fmt.Println()
 
 	return nil
