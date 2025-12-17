@@ -3000,37 +3000,73 @@ func WriteTimeMachineHelperScript(scriptPath string) error {
 	return nil
 }
 
-// WriteRecoveryScript writes a comprehensive recovery script for completing installation
-// after guix time-machine succeeds but post-install steps may have failed
-// Reads the actual recovery script from lib/recovery-complete-install.sh (not hardcoded)
+// WriteRecoveryScript builds and installs the Go recovery binary
+// This ensures the recovery tool shares code with the main installer and stays in sync
 func WriteRecoveryScript(scriptPath, platform string) error {
-	PrintSectionHeader("Installing Recovery Script")
+	PrintSectionHeader("Installing Recovery Tool")
 
-	// Try multiple locations for the recovery script (same pattern as InstallVerificationScript)
-	var scriptContent []byte
-	var err error
+	// Build the recovery binary
+	fmt.Println("Building recovery tool...")
+	buildCmd := exec.Command("go", "build", "-o", scriptPath, "./cmd/recovery")
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stderr = os.Stderr
 	
-	// Try lib directory first (when running from repo root - most common case)
-	scriptContent, err = os.ReadFile("lib/recovery-complete-install.sh")
-	if err != nil {
-		// Try current directory (when running from lib/ directory)
-		scriptContent, err = os.ReadFile("recovery-complete-install.sh")
-	}
-	if err != nil {
-		// Try absolute path (when script was already copied to /root/)
-		scriptContent, err = os.ReadFile("/root/recovery-complete-install.sh")
-	}
-	if err != nil {
-		return fmt.Errorf("failed to find recovery-complete-install.sh in lib/, current dir, or /root/: %w", err)
+	// Set working directory to repo root (if available)
+	if _, err := os.Stat("go.mod"); err == nil {
+		buildCmd.Dir = "."
+	} else if _, err := os.Stat("../go.mod"); err == nil {
+		buildCmd.Dir = ".."
+	} else {
+		// Try to find go.mod by checking common locations
+		wd, _ := os.Getwd()
+		if strings.Contains(wd, "cloudzy-guix-install") {
+			// Try to navigate to repo root
+			parts := strings.Split(wd, "cloudzy-guix-install")
+			if len(parts) > 0 {
+				repoRoot := parts[0] + "cloudzy-guix-install"
+				if _, err := os.Stat(filepath.Join(repoRoot, "go.mod")); err == nil {
+					buildCmd.Dir = repoRoot
+				}
+			}
+		}
 	}
 
-	// Write the script to the target path
-	if err := os.WriteFile(scriptPath, scriptContent, 0755); err != nil {
-		return fmt.Errorf("failed to write recovery script to %s: %w", scriptPath, err)
+	if err := buildCmd.Run(); err != nil {
+		// Fallback: try to use pre-built binary or bash script
+		fmt.Printf("[WARN] Failed to build recovery binary: %v\n", err)
+		fmt.Println("Falling back to bash recovery script...")
+		
+		// Try to find and copy bash script as fallback
+		var scriptContent []byte
+		var readErr error
+		
+		scriptContent, readErr = os.ReadFile("lib/recovery-complete-install.sh")
+		if readErr != nil {
+			scriptContent, readErr = os.ReadFile("recovery-complete-install.sh")
+		}
+		if readErr != nil {
+			scriptContent, readErr = os.ReadFile("/root/recovery-complete-install.sh")
+		}
+		if readErr != nil {
+			return fmt.Errorf("failed to build recovery binary and could not find bash script: %w (build error: %v)", readErr, err)
+		}
+
+		if err := os.WriteFile(scriptPath, scriptContent, 0755); err != nil {
+			return fmt.Errorf("failed to write recovery script: %w", err)
+		}
+		fmt.Printf("[OK] Recovery script (bash) installed to: %s\n", scriptPath)
+		fmt.Println("     Note: Go recovery binary build failed, using bash script fallback")
+		fmt.Println()
+		return nil
 	}
 
-	fmt.Printf("[OK] Recovery script installed to: %s\n", scriptPath)
-	fmt.Println("     This script will be available if installation needs to be completed manually")
+	// Make binary executable
+	if err := os.Chmod(scriptPath, 0755); err != nil {
+		return fmt.Errorf("failed to make recovery binary executable: %w", err)
+	}
+
+	fmt.Printf("[OK] Recovery tool (Go binary) installed to: %s\n", scriptPath)
+	fmt.Println("     This tool will be available if installation needs to be completed manually")
 	fmt.Println()
 
 	return nil

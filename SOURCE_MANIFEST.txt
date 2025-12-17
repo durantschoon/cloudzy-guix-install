@@ -14,6 +14,7 @@ da5b1c8b20258188fc3bc6187530154a766a43da5dbdd9661c547c50cb4aa4ad  ./cloudzy/inst
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
 2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
 b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-words/main.go
+f6ec3a6dc3a08b08037257e0bd5769b540b8408f676556ec3e224f81cb82828a  ./cmd/recovery/main.go
 e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 992a35541e314aa7007e7ea6e39c14f8593803edb7191a63c1901a1f682dfba3  ./framework-dual/install/01-partition-check.go
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
@@ -30,7 +31,7 @@ c738a8f938c80044a651a891d4ce0e4e3c51197c70caa6a1894a2e57c35e4841  ./framework/in
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-56c58bbdce97ec98773038e33cf508a1b43df4f0c4c1977ce3099f4e45e86bef  ./lib/common.go
+87c2b7d831592fef040d579274c295472527a76ba1a60a0bd7435de21ebd9f07  ./lib/common.go
 1ed9ff3c7a62edb3b62fdd9afe94b805fd5489d5baa9868b2cbaa3119826bbc3  ./run-remote-steps.go
 
 ## Critical Shell Scripts
