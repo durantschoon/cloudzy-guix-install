@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/run/current-system/profile/bin/bash
 # Diagnostic script to investigate Guix build failures
 # Run this on the installed Guix system
 

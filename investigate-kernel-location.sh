@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/run/current-system/profile/bin/bash
 # Diagnostic script to investigate where kernel/initrd files are located
 # Run this on the installed Guix system to understand what worked
 

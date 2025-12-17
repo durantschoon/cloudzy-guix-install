@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/run/current-system/profile/bin/bash
 # Script to fix network configuration on fresh Guix install
 # Run this on the installed Guix system
 
