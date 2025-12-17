@@ -2094,6 +2094,53 @@ func RunGuixSystemInitFreeSoftware() error {
 		fmt.Println()
 	}
 
+	// PROACTIVE FIX: Copy kernel/initrd immediately after ensuring symlink exists
+	// We know the system generation exists (we just created/verified the symlink),
+	// so copy files proactively instead of waiting for verification to discover they're missing
+	fmt.Println()
+	fmt.Println("Proactively ensuring kernel/initrd files are present...")
+	
+	// Get system generation path from symlink
+	systemPath := ""
+	if resolved, err := filepath.EvalSymlinks(currentSystemLink); err == nil {
+		systemPath = resolved
+	} else {
+		// Fallback: find latest system generation
+		findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
+		if output, err := findCmd.Output(); err == nil && len(strings.TrimSpace(string(output))) > 0 {
+			systemPath = strings.TrimSpace(string(output))
+		}
+	}
+	
+	if systemPath != "" {
+		// Check if kernel/initrd exist in /mnt/boot/
+		kernels, _ := filepath.Glob("/mnt/boot/vmlinuz*")
+		initrds, _ := filepath.Glob("/mnt/boot/initrd*")
+		
+		// Copy kernel if missing
+		if len(kernels) == 0 {
+			kernelSrc := filepath.Join(systemPath, "kernel")
+			if info, err := os.Stat(kernelSrc); err == nil {
+				kernelDest := "/mnt/boot/vmlinuz"
+				if err := exec.Command("cp", "-f", kernelSrc, kernelDest).Run(); err == nil {
+					fmt.Printf("[OK] Proactively copied kernel: %s (%.1f MB)\n", kernelDest, float64(info.Size())/1024/1024)
+				}
+			}
+		}
+		
+		// Copy initrd if missing
+		if len(initrds) == 0 {
+			initrdSrc := filepath.Join(systemPath, "initrd")
+			if info, err := os.Stat(initrdSrc); err == nil {
+				initrdDest := "/mnt/boot/initrd"
+				if err := exec.Command("cp", "-f", initrdSrc, initrdDest).Run(); err == nil {
+					fmt.Printf("[OK] Proactively copied initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
+				}
+			}
+		}
+	}
+	fmt.Println()
+
 	// Verify kernel/initrd exist after guix system init
 	fmt.Println()
 	PrintSectionHeader("Verifying Kernel/Initrd Files")
