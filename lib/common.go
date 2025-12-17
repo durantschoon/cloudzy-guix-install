@@ -1363,6 +1363,24 @@ func RunGuixSystemInit() error {
 		if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
+			
+			// CRITICAL: Check if this is a connection error
+			// Even if isDaemonReady() passed, guix system init might fail to connect
+			// This can happen if the socket becomes unavailable between verification and use
+			fmt.Println("Checking if this is a daemon connection issue...")
+			if err := checkDaemonResponsive(); err != nil {
+				fmt.Printf("[WARN] Daemon connection check failed: %v\n", err)
+				fmt.Println("Restarting daemon due to connection failure...")
+				if restartErr := EnsureGuixDaemonRunning(); restartErr != nil {
+					fmt.Printf("[ERROR] Failed to restart daemon: %v\n", restartErr)
+				} else {
+					fmt.Println("[OK] Daemon restarted successfully")
+				}
+			} else {
+				fmt.Println("[INFO] Daemon is still responsive - error may be unrelated to connection")
+			}
+			fmt.Println()
+			
 			if attempt < maxRetries {
 				fmt.Println("The command will automatically retry...")
 			}
@@ -1980,6 +1998,24 @@ func RunGuixSystemInitFreeSoftware() error {
 	if err := RunCommandWithSpinner("guix", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
+			
+			// CRITICAL: Check if this is a connection error
+			// Even if isDaemonReady() passed, guix system init might fail to connect
+			// This can happen if the socket becomes unavailable between verification and use
+			fmt.Println("Checking if this is a daemon connection issue...")
+			if err := checkDaemonResponsive(); err != nil {
+				fmt.Printf("[WARN] Daemon connection check failed: %v\n", err)
+				fmt.Println("Restarting daemon due to connection failure...")
+				if restartErr := EnsureGuixDaemonRunning(); restartErr != nil {
+					fmt.Printf("[ERROR] Failed to restart daemon: %v\n", restartErr)
+				} else {
+					fmt.Println("[OK] Daemon restarted successfully")
+				}
+			} else {
+				fmt.Println("[INFO] Daemon is still responsive - error may be unrelated to connection")
+			}
+			fmt.Println()
+			
 			if attempt < maxRetries {
 				fmt.Println("The command will automatically retry...")
 			}
