@@ -31,8 +31,8 @@ c738a8f938c80044a651a891d4ce0e4e3c51197c70caa6a1894a2e57c35e4841  ./framework/in
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-87c2b7d831592fef040d579274c295472527a76ba1a60a0bd7435de21ebd9f07  ./lib/common.go
-1ed9ff3c7a62edb3b62fdd9afe94b805fd5489d5baa9868b2cbaa3119826bbc3  ./run-remote-steps.go
+4567a4d3354e906e31cd0ff905b513ab66df15ba87181f753a344859b6cc1efa  ./lib/common.go
+ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
@@ -48,6 +48,13 @@ dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/li
 
 18c4ae8032f77aee3390bf72ffc4da973ab11838d2f1dde3c55eda1b4c43d390  lib/guile-config-helper.scm
 0367e553cd90c69b2c8e73556fb04141bec356dc94df60b1782f35936a88b99b  lib/bootstrap-postinstall.scm
+
+## Diagnostic Scripts
+
+00662861cacca3caf410497b8e941b2228f7753bca234b93b17456f223b26b15  test-symlink-fix.sh
+61c42f1a2ea25fcaebc46f8b66b28c4c44178f9b3917dce6a21141616460bfa2  diagnose-guix-build.sh
+8c8c15f7288518b757988b6795917030d00e3a774a4ae37fc51603546de46c59  fix-network.sh
+f6c1207f91bce6538f2de25252655713b0fc78758998717f205038fe14d8fd2e  investigate-kernel-location.sh
 
 ## Post-Install Customization Scripts
 

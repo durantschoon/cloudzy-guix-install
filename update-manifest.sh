@@ -90,6 +90,34 @@ if [ -f lib/bootstrap-postinstall.scm ]; then
 fi
 
 echo "" >> "$MANIFEST_FILE"
+echo "## Diagnostic Scripts" >> "$MANIFEST_FILE"
+echo "" >> "$MANIFEST_FILE"
+
+# Test symlink fix script
+if [ -f test-symlink-fix.sh ]; then
+    hash=$(shasum -a 256 test-symlink-fix.sh | awk '{print $1}')
+    echo "$hash  test-symlink-fix.sh" >> "$MANIFEST_FILE"
+fi
+
+# Diagnose guix build script
+if [ -f diagnose-guix-build.sh ]; then
+    hash=$(shasum -a 256 diagnose-guix-build.sh | awk '{print $1}')
+    echo "$hash  diagnose-guix-build.sh" >> "$MANIFEST_FILE"
+fi
+
+# Fix network script
+if [ -f fix-network.sh ]; then
+    hash=$(shasum -a 256 fix-network.sh | awk '{print $1}')
+    echo "$hash  fix-network.sh" >> "$MANIFEST_FILE"
+fi
+
+# Investigate kernel location script
+if [ -f investigate-kernel-location.sh ]; then
+    hash=$(shasum -a 256 investigate-kernel-location.sh | awk '{print $1}')
+    echo "$hash  investigate-kernel-location.sh" >> "$MANIFEST_FILE"
+fi
+
+echo "" >> "$MANIFEST_FILE"
 echo "## Post-Install Customization Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
 
