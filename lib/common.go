@@ -2013,16 +2013,85 @@ func RunGuixSystemInitFreeSoftware() error {
 	})
 	// #endregion
 
+	// List system generation contents to understand what's actually there
+	entries, err := os.ReadDir(systemPath)
+	entryNames := []string{}
+	if err == nil {
+		for _, entry := range entries {
+			entryNames = append(entryNames, entry.Name())
+		}
+	}
+	// #region agent log
+	logDebug("lib/common.go:1850", "System generation contents after build", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "list_system_contents",
+		"systemPath":   systemPath,
+		"entries":      entryNames,
+		"entryCount":   len(entryNames),
+	})
+	// #endregion
+
+	// Check for kernel in alternative locations
+	alternativeKernelPaths := []string{
+		filepath.Join(systemPath, "kernel"),
+		filepath.Join(systemPath, "boot", "kernel"),
+		filepath.Join(systemPath, "boot", "vmlinuz"),
+		filepath.Join(systemPath, "boot", "vmlinuz-linux"),
+	}
+	kernelFound := false
+	var kernelSrc string
+	for _, altPath := range alternativeKernelPaths {
+		if info, err := os.Stat(altPath); err == nil {
+			// Check if it's a symlink
+			isSymlink := false
+			if linkInfo, err := os.Lstat(altPath); err == nil {
+				isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+			}
+			// #region agent log
+			logDebug("lib/common.go:1870", "Kernel found in alternative location", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "kernel_found_alternative",
+				"kernelPath":   altPath,
+				"isSymlink":    isSymlink,
+				"size":         info.Size(),
+			})
+			// #endregion
+			kernelSrc = altPath
+			kernelFound = true
+			break
+		}
+	}
+	// #region agent log
+	logDebug("lib/common.go:1880", "Kernel search complete", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "kernel_search_complete",
+		"kernelFound":  kernelFound,
+		"kernelSrc":    kernelSrc,
+		"checkedPaths": alternativeKernelPaths,
+	})
+	// #endregion
+
 	// Ensure /mnt/boot exists
 	if err := os.MkdirAll("/mnt/boot", 0755); err != nil {
 		return fmt.Errorf("failed to create /mnt/boot directory: %w", err)
 	}
 
 	// Copy kernel
-	kernelSrc := filepath.Join(systemPath, "kernel")
 	kernelDest := "/mnt/boot/vmlinuz"
+	if !kernelFound {
+		// #region agent log
+		logDebug("lib/common.go:1895", "Kernel not found in any location", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "kernel_not_found_anywhere",
+			"systemPath":   systemPath,
+			"checkedPaths": alternativeKernelPaths,
+		})
+		// #endregion
+		return fmt.Errorf("kernel not found in system generation at %s (checked: %v). This indicates guix system build (free software mode) does not create kernel files", systemPath, alternativeKernelPaths)
+	}
+
 	// #region agent log
-	logDebug("lib/common.go:1857", "Before kernel copy", map[string]interface{}{
+	logDebug("lib/common.go:1905", "Before kernel copy", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "before_kernel_copy",
 		"kernelSrc":    kernelSrc,
@@ -2031,7 +2100,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	// #endregion
 	if info, err := os.Stat(kernelSrc); err != nil {
 		// #region agent log
-		logDebug("lib/common.go:1865", "Kernel not found in system generation for copy", map[string]interface{}{
+		logDebug("lib/common.go:1913", "Kernel not found in system generation for copy", map[string]interface{}{
 			"hypothesisId": "G",
 			"step":         "kernel_src_missing",
 			"kernelSrc":    kernelSrc,
