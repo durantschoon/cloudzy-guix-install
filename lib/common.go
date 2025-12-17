@@ -1649,7 +1649,7 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 			fmt.Println("[ERROR] Initrd file missing from /mnt/boot/")
 		}
 
-		// Check if system generation exists - try symlink first, then search /gnu/store
+		// Check if system generation symlink exists (should exist after guix system init)
 		systemLink := "/mnt/run/current-system"
 		var systemPath string
 		
@@ -1674,60 +1674,39 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 					"error":        err.Error(),
 				})
 				// #endregion
-				// Fall through to search /gnu/store
-				systemPath = ""
-			} else {
-				fmt.Printf("[INFO] Found system generation via symlink: %s\n", systemPath)
-				// #region agent log
-				logDebug("lib/common.go:1675", "System generation found via symlink", map[string]interface{}{
-					"hypothesisId": "E",
-					"step":         "system_path_found_symlink",
-					"systemPath":   systemPath,
-				})
-				// #endregion
-			}
-		} else {
-			fmt.Printf("[WARN] System generation symlink missing: %s\n", systemLink)
-			fmt.Println("        Searching /gnu/store for system generation...")
-			// #region agent log
-			logDebug("lib/common.go:1683", "System generation symlink missing, searching /gnu/store", map[string]interface{}{
-				"hypothesisId": "E",
-				"step":         "system_link_missing_search",
-				"error":        err.Error(),
-			})
-			// #endregion
-		}
-		
-		// If symlink doesn't exist or is broken, search /gnu/store for latest system generation
-		if systemPath == "" {
-			findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
-			output, err := findCmd.Output()
-			if err != nil || len(strings.TrimSpace(string(output))) == 0 {
-				fmt.Printf("[ERROR] No system generation found in /gnu/store\n")
-				// #region agent log
-				logDebug("lib/common.go:1695", "No system generation found in /gnu/store", map[string]interface{}{
-					"hypothesisId": "E",
-					"step":         "no_system_in_store",
-					"error":        err.Error(),
-				})
-				// #endregion
 				if attempt < maxAttempts {
 					fmt.Println()
 					fmt.Println("Waiting 10 seconds before retry...")
 					time.Sleep(10 * time.Second)
 					continue
 				}
-				return fmt.Errorf("system generation not found - installation incomplete")
+				return fmt.Errorf("broken system generation symlink: %w", err)
 			}
-			systemPath = strings.TrimSpace(string(output))
-			fmt.Printf("[INFO] Found system generation in /gnu/store: %s\n", systemPath)
+			fmt.Printf("[INFO] Found system generation: %s\n", systemPath)
 			// #region agent log
-			logDebug("lib/common.go:1707", "System generation found in /gnu/store", map[string]interface{}{
+			logDebug("lib/common.go:1675", "System generation found", map[string]interface{}{
 				"hypothesisId": "E",
-				"step":         "system_path_found_store",
+				"step":         "system_path_found",
 				"systemPath":   systemPath,
 			})
 			// #endregion
+		} else {
+			fmt.Printf("[ERROR] System generation symlink missing: %s\n", systemLink)
+			fmt.Println("        This should have been created by guix system init or our fix")
+			// #region agent log
+			logDebug("lib/common.go:1683", "System generation symlink missing", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "system_link_missing",
+				"error":        err.Error(),
+			})
+			// #endregion
+			if attempt < maxAttempts {
+				fmt.Println()
+				fmt.Println("Waiting 10 seconds before retry...")
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			return fmt.Errorf("system generation symlink not found - installation incomplete")
 		}
 
 		// Try to copy kernel and initrd from system generation
@@ -2073,6 +2052,47 @@ func RunGuixSystemInitFreeSoftware() error {
 		"systemGenerations":   systemGenList,
 	})
 	// #endregion
+	
+	// CRITICAL: Ensure /mnt/run/current-system symlink exists
+	// guix system init should create it, but sometimes doesn't (especially on VPS)
+	// If missing, find the latest system generation and create the symlink ourselves
+	currentSystemLink := "/mnt/run/current-system"
+	if _, err := os.Lstat(currentSystemLink); err != nil {
+		fmt.Println()
+		fmt.Println("[WARN] /mnt/run/current-system symlink missing after guix system init")
+		fmt.Println("       Creating it manually from system generation...")
+		
+		// Find latest system generation in /gnu/store
+		findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
+		output, err := findCmd.Output()
+		if err != nil || len(strings.TrimSpace(string(output))) == 0 {
+			fmt.Printf("[ERROR] No system generation found in /gnu/store\n")
+			fmt.Println("        Recovery may fail - system generation not found")
+		} else {
+			systemGenPath := strings.TrimSpace(string(output))
+			
+			// Ensure /mnt/run directory exists
+			if err := os.MkdirAll("/mnt/run", 0755); err != nil {
+				fmt.Printf("[ERROR] Failed to create /mnt/run directory: %v\n", err)
+			} else {
+				// Create the symlink
+				if err := os.Symlink(systemGenPath, currentSystemLink); err != nil {
+					fmt.Printf("[ERROR] Failed to create symlink: %v\n", err)
+				} else {
+					fmt.Printf("[OK] Created symlink: %s -> %s\n", currentSystemLink, systemGenPath)
+					// #region agent log
+					logDebug("lib/common.go:2077", "Created missing current-system symlink", map[string]interface{}{
+						"hypothesisId": "D",
+						"step":         "created_symlink",
+						"symlink":      currentSystemLink,
+						"target":       systemGenPath,
+					})
+					// #endregion
+				}
+			}
+		}
+		fmt.Println()
+	}
 
 	// Verify kernel/initrd exist after guix system init
 	fmt.Println()
