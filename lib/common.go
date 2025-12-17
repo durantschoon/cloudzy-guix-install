@@ -1999,14 +1999,55 @@ func RunGuixSystemInitFreeSoftware() error {
 			lastErr = err
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			
+			// #region agent log
+			logDebug("lib/common.go:1998", "guix system init failed (attempt)", map[string]interface{}{
+				"hypothesisId": "D",
+				"step":         "guix_system_init_failed_attempt",
+				"attempt":      attempt,
+				"maxRetries":   maxRetries,
+				"error":        err.Error(),
+			})
+			// #endregion
+			
 			// CRITICAL: Check if this is a connection error
 			// Even if isDaemonReady() passed, guix system init might fail to connect
 			// This can happen if the socket becomes unavailable between verification and use
 			fmt.Println("Checking if this is a daemon connection issue...")
-			if err := checkDaemonResponsive(); err != nil {
-				fmt.Printf("[WARN] Daemon connection check failed: %v\n", err)
+			daemonCheckErr := checkDaemonResponsive()
+			// #region agent log
+			logDebug("lib/common.go:2010", "Daemon connection check after failure", map[string]interface{}{
+				"hypothesisId": "D",
+				"step":         "daemon_check_after_failure",
+				"attempt":      attempt,
+				"daemonCheckErr": func() string {
+					if daemonCheckErr != nil {
+						return daemonCheckErr.Error()
+					}
+					return ""
+				}(),
+				"daemonResponsive": daemonCheckErr == nil,
+			})
+			// #endregion
+			
+			if daemonCheckErr != nil {
+				fmt.Printf("[WARN] Daemon connection check failed: %v\n", daemonCheckErr)
 				fmt.Println("Restarting daemon due to connection failure...")
-				if restartErr := EnsureGuixDaemonRunning(); restartErr != nil {
+				restartErr := EnsureGuixDaemonRunning()
+				// #region agent log
+				logDebug("lib/common.go:2023", "Daemon restart attempted", map[string]interface{}{
+					"hypothesisId": "D",
+					"step":         "daemon_restart_attempted",
+					"attempt":      attempt,
+					"restartErr": func() string {
+						if restartErr != nil {
+							return restartErr.Error()
+						}
+						return ""
+					}(),
+					"restartSuccess": restartErr == nil,
+				})
+				// #endregion
+				if restartErr != nil {
 					fmt.Printf("[ERROR] Failed to restart daemon: %v\n", restartErr)
 				} else {
 					fmt.Println("[OK] Daemon restarted successfully")
