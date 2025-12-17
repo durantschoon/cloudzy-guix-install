@@ -245,7 +245,7 @@ func RunCommandWithSpinner(name string, args ...string) error {
                             fmt.Println("  3. Complete any remaining steps")
                             fmt.Println()
                             
-                            return fmt.Errorf("process hung - stopped after %d consecutive warnings. Run recovery script to continue", consecutiveHungWarnings)
+		return fmt.Errorf("process hung - stopped after %d consecutive warnings. Run recovery tool to continue", consecutiveHungWarnings)
                         } else {
                             fmt.Printf("         (%d/%d consecutive warnings - will auto-recover after %d)\n", consecutiveHungWarnings, maxHungWarnings, maxHungWarnings)
                         }
@@ -1563,10 +1563,10 @@ func RunComprehensiveVerification(recoveryScriptPath string) error {
 		fmt.Println("The installation verification found critical issues.")
 		fmt.Println("DO NOT REBOOT until these are resolved!")
 		fmt.Println()
-		fmt.Println("To fix the issues, run the recovery script:")
+		fmt.Println("To fix the issues, run the recovery tool:")
 		fmt.Printf("  %s\n", recoveryScriptPath)
 		fmt.Println()
-		fmt.Println("The recovery script will:")
+		fmt.Println("The recovery tool will:")
 		fmt.Println("  1. Check and mount EFI partition if needed")
 		fmt.Println("  2. Re-run guix system init if kernel/initrd are missing")
 		fmt.Println("  3. Set your user password")
@@ -1579,7 +1579,7 @@ func RunComprehensiveVerification(recoveryScriptPath string) error {
 		fmt.Println("  3. Set password: chroot /mnt /run/current-system/profile/bin/passwd USERNAME")
 		fmt.Println("  4. Verify again: /root/verify-guix-install.sh")
 		fmt.Println()
-		return fmt.Errorf("comprehensive verification failed - run recovery script before rebooting")
+		return fmt.Errorf("comprehensive verification failed - run recovery tool before rebooting")
 	}
 
 	// Verification passed
@@ -1995,7 +1995,7 @@ func RunGuixSystemInitFreeSoftware() error {
 	fmt.Println()
 		fmt.Println("System installation failed. You can:")
 		fmt.Println("  1. Try manually: guix system init /mnt/etc/config.scm /mnt")
-		fmt.Println("  2. Or run the recovery script: /root/recovery-complete-install.sh")
+		fmt.Println("  2. Or run the recovery tool: /root/recovery-complete-install.sh")
 		// #region agent log
 		logDebug("lib/common.go:1840", "guix system init failed", map[string]interface{}{
 			"hypothesisId": "D",

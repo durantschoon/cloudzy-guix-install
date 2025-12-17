@@ -145,21 +145,26 @@ export EFI=/dev/nvme0n1p1
 
 ## Recovery and Repair Procedures
 
-### Using the Recovery Script
+### Using the Recovery Tool
 
-The installer automatically creates `/root/recovery-complete-install.sh`:
+The installer automatically builds and installs `/root/recovery-complete-install.sh` (a Go binary):
 
 ```bash
 # On Guix ISO, if system init succeeded but post-install failed:
 /root/recovery-complete-install.sh
 ```
 
-This script:
-1. Re-mounts partitions
-2. Reruns verification
-3. Sets user password
-4. Downloads customization tools
-5. Creates installation receipt
+**Note:** The recovery tool is now a Go binary (not a bash script) that shares code with the main installer. It's built during installation and can be run the same way as before.
+
+The recovery tool:
+1. Verifies mounts and configuration
+2. Checks installation state (kernel/initrd/GRUB)
+3. Re-runs system init if needed
+4. Sets user password
+5. Downloads customization tools
+6. Configures dual-boot GRUB (for framework-dual)
+7. Creates installation receipt
+8. Runs final verification with automatic retry
 
 ### Manual Recovery Steps
 
