@@ -1649,63 +1649,86 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 			fmt.Println("[ERROR] Initrd file missing from /mnt/boot/")
 		}
 
-		// Check if system generation exists
+		// Check if system generation exists - try symlink first, then search /gnu/store
 		systemLink := "/mnt/run/current-system"
+		var systemPath string
+		
 		// #region agent log
 		logDebug("lib/common.go:1654", "Checking for system generation symlink", map[string]interface{}{
 			"hypothesisId": "E",
 			"step":         "check_system_link",
 			"systemLink":   systemLink,
-			"attempt":     attempt,
+			"attempt":      attempt,
 		})
 		// #endregion
-		if _, err := os.Lstat(systemLink); err != nil {
-			fmt.Printf("[ERROR] System generation symlink missing: %s\n", systemLink)
-			fmt.Println("        Cannot recover - system was not built successfully")
+		
+		if _, err := os.Lstat(systemLink); err == nil {
+			// Symlink exists - follow it
+			systemPath, err = filepath.EvalSymlinks(systemLink)
+			if err != nil {
+				fmt.Printf("[ERROR] System generation symlink is broken: %v\n", err)
+				// #region agent log
+				logDebug("lib/common.go:1668", "System generation symlink broken", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "system_link_broken",
+					"error":        err.Error(),
+				})
+				// #endregion
+				// Fall through to search /gnu/store
+				systemPath = ""
+			} else {
+				fmt.Printf("[INFO] Found system generation via symlink: %s\n", systemPath)
+				// #region agent log
+				logDebug("lib/common.go:1675", "System generation found via symlink", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "system_path_found_symlink",
+					"systemPath":   systemPath,
+				})
+				// #endregion
+			}
+		} else {
+			fmt.Printf("[WARN] System generation symlink missing: %s\n", systemLink)
+			fmt.Println("        Searching /gnu/store for system generation...")
 			// #region agent log
-			logDebug("lib/common.go:1662", "System generation symlink missing", map[string]interface{}{
+			logDebug("lib/common.go:1683", "System generation symlink missing, searching /gnu/store", map[string]interface{}{
 				"hypothesisId": "E",
-				"step":         "system_link_missing",
+				"step":         "system_link_missing_search",
 				"error":        err.Error(),
 			})
 			// #endregion
-			if attempt < maxAttempts {
-				fmt.Println()
-				fmt.Println("Waiting 10 seconds before retry...")
-				time.Sleep(10 * time.Second)
-				continue
-			}
-			return fmt.Errorf("system generation not found - installation incomplete")
 		}
-
-		// Follow the symlink to find the system generation
-		systemPath, err := filepath.EvalSymlinks(systemLink)
-		if err != nil {
-			fmt.Printf("[ERROR] System generation symlink is broken: %v\n", err)
+		
+		// If symlink doesn't exist or is broken, search /gnu/store for latest system generation
+		if systemPath == "" {
+			findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
+			output, err := findCmd.Output()
+			if err != nil || len(strings.TrimSpace(string(output))) == 0 {
+				fmt.Printf("[ERROR] No system generation found in /gnu/store\n")
+				// #region agent log
+				logDebug("lib/common.go:1695", "No system generation found in /gnu/store", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "no_system_in_store",
+					"error":        err.Error(),
+				})
+				// #endregion
+				if attempt < maxAttempts {
+					fmt.Println()
+					fmt.Println("Waiting 10 seconds before retry...")
+					time.Sleep(10 * time.Second)
+					continue
+				}
+				return fmt.Errorf("system generation not found - installation incomplete")
+			}
+			systemPath = strings.TrimSpace(string(output))
+			fmt.Printf("[INFO] Found system generation in /gnu/store: %s\n", systemPath)
 			// #region agent log
-			logDebug("lib/common.go:1676", "System generation symlink broken", map[string]interface{}{
+			logDebug("lib/common.go:1707", "System generation found in /gnu/store", map[string]interface{}{
 				"hypothesisId": "E",
-				"step":         "system_link_broken",
-				"error":        err.Error(),
+				"step":         "system_path_found_store",
+				"systemPath":   systemPath,
 			})
 			// #endregion
-			if attempt < maxAttempts {
-				fmt.Println()
-				fmt.Println("Waiting 10 seconds before retry...")
-				time.Sleep(10 * time.Second)
-				continue
-			}
-			return fmt.Errorf("broken system generation symlink: %w", err)
 		}
-
-		fmt.Printf("[INFO] Found system generation: %s\n", systemPath)
-		// #region agent log
-		logDebug("lib/common.go:1680", "System generation found", map[string]interface{}{
-			"hypothesisId": "E",
-			"step":         "system_path_found",
-			"systemPath":   systemPath,
-		})
-		// #endregion
 
 		// Try to copy kernel and initrd from system generation
 		fmt.Println()
@@ -2021,14 +2044,33 @@ func RunGuixSystemInitFreeSoftware() error {
 	if initrdAfterInit != nil {
 		initrdAfterSize = initrdAfterInit.Size()
 	}
+	
+	// Check if current-system symlink exists (guix system init should create it)
+	currentSystemExists := false
+	currentSystemPath := ""
+	if _, err := os.Lstat("/mnt/run/current-system"); err == nil {
+		currentSystemExists = true
+		if resolved, err := filepath.EvalSymlinks("/mnt/run/current-system"); err == nil {
+			currentSystemPath = resolved
+		}
+	}
+	
+	// Also check what system generations exist in /gnu/store
+	findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -3")
+	systemGenOutput, _ := findCmd.Output()
+	systemGenList := strings.Split(strings.TrimSpace(string(systemGenOutput)), "\n")
+	
 	logDebug("lib/common.go:1845", "After guix system init succeeds", map[string]interface{}{
-		"hypothesisId": "D",
-		"step":         "after_guix_system_init",
-		"kernelExists": kernelAfterInit != nil,
-		"initrdExists": initrdAfterInit != nil,
-		"kernelSize":   kernelAfterSize,
-		"initrdSize":   initrdAfterSize,
-		"bootFiles":    bootFileList,
+		"hypothesisId":        "D",
+		"step":                "after_guix_system_init",
+		"kernelExists":        kernelAfterInit != nil,
+		"initrdExists":        initrdAfterInit != nil,
+		"kernelSize":          kernelAfterSize,
+		"initrdSize":          initrdAfterSize,
+		"bootFiles":           bootFileList,
+		"currentSystemExists": currentSystemExists,
+		"currentSystemPath":   currentSystemPath,
+		"systemGenerations":   systemGenList,
 	})
 	// #endregion
 
