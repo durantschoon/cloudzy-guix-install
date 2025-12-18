@@ -93,10 +93,10 @@ echo "" >> "$MANIFEST_FILE"
 echo "## Diagnostic Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
 
-# Test symlink fix script
-if [ -f test-symlink-fix.sh ]; then
-    hash=$(shasum -a 256 test-symlink-fix.sh | awk '{print $1}')
-    echo "$hash  test-symlink-fix.sh" >> "$MANIFEST_FILE"
+# Pre-deployment validation script
+if [ -f lib/validate-before-deploy.sh ]; then
+    hash=$(shasum -a 256 lib/validate-before-deploy.sh | awk '{print $1}')
+    echo "$hash  lib/validate-before-deploy.sh" >> "$MANIFEST_FILE"
 fi
 
 # Diagnose guix build script

@@ -151,7 +151,7 @@ Use the same path for consistency and reliability.
 
 ## Common Pitfalls
 
-1. **Don't skip pre-deployment validation** - Always run `./validate-before-deploy.sh --verbose` before committing
+1. **Don't skip pre-deployment validation** - Always run `lib/validate-before-deploy.sh --verbose` before committing
 2. **Don't use Unicode in ISO scripts** - See above
 3. **Don't read from os.Stdin directly** - Use /dev/tty
 4. **Don't use `done < file.txt`** - Use process substitution
@@ -170,7 +170,7 @@ Use the same path for consistency and reliability.
 **CRITICAL:** Before committing changes that will be deployed to remote machines, you **MUST** run the validation script:
 
 ```bash
-./validate-before-deploy.sh --verbose
+lib/validate-before-deploy.sh --verbose
 ```
 
 **Why this is required:**
@@ -210,7 +210,7 @@ Remote Guix installations are expensive in time and money. A single syntax error
 vim lib/common.go
 
 # 2. Run validation (catches issues early)
-./validate-before-deploy.sh --verbose
+lib/validate-before-deploy.sh --verbose
 
 # 3. If validation fails, fix issues and re-validate
 # DO NOT proceed until validation passes
@@ -273,7 +273,7 @@ If you modified any scripts that run on the Guix ISO, you **MUST** follow this w
 
 ```bash
 # 1. Run pre-deployment validation (REQUIRED for all changes)
-./validate-before-deploy.sh --verbose
+lib/validate-before-deploy.sh --verbose
 
 # 2. If validation passes, run tests
 ./run-tests.sh

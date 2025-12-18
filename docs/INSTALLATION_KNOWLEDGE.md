@@ -2328,6 +2328,8 @@ if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
 - Use `RunGuixSystemInit()` with 3-step workaround
 - Needs nonguix for hardware drivers
 - Kernel/initrd copy is essential
+- **CRITICAL DISCOVERY (2025-01-XX):** System generation may only contain `["gnu","gnu.go","guix"]` - same kernel bug as cloudzy
+- Fallback strategies (K, N, H) implemented to handle missing kernel in system generation
 
 **VPS platforms (Cloudzy):**
 - Use `RunGuixSystemInitFreeSoftware()` with 3-step workaround (re-introduced after discovery)

@@ -31,7 +31,7 @@ b8001632726a5e35358d9d12159bcd4a4b472cb8e13e41a07345b468e34b3ef1  ./framework/in
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-9781fa52a9370e84ed8a12578bf79a2cd77849e80b57af19e974818c93d07806  ./lib/common.go
+821900fd4d8da38b66e89e82d1d3ec6835d94966c30dd2cd74457c57de6ac0c5  ./lib/common.go
 ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
 
 ## Critical Shell Scripts
@@ -51,7 +51,7 @@ dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/li
 
 ## Diagnostic Scripts
 
-00662861cacca3caf410497b8e941b2228f7753bca234b93b17456f223b26b15  test-symlink-fix.sh
+badf8e3777a8a08f6e5468ed1558b0ab6122d4d1f0b84cc64ffbecccd7a4ddcd  lib/validate-before-deploy.sh
 61c42f1a2ea25fcaebc46f8b66b28c4c44178f9b3917dce6a21141616460bfa2  diagnose-guix-build.sh
 8c8c15f7288518b757988b6795917030d00e3a774a4ae37fc51603546de46c59  fix-network.sh
 f6c1207f91bce6538f2de25252655713b0fc78758998717f205038fe14d8fd2e  investigate-kernel-location.sh

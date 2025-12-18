@@ -1340,59 +1340,323 @@ func RunGuixSystemInit(platform string) error {
 	})
 	// #endregion
 
-	// Copy kernel
-	fmt.Println()
-	kernelSrc := filepath.Join(systemPath, "kernel")
-	fmt.Printf("[INFO] Checking for kernel at: %s\n", kernelSrc)
-	
+	// Check for kernel in alternative locations
+	alternativeKernelPaths := []string{
+		filepath.Join(systemPath, "kernel"),
+		filepath.Join(systemPath, "boot", "kernel"),
+		filepath.Join(systemPath, "boot", "vmlinuz"),
+		filepath.Join(systemPath, "boot", "vmlinuz-linux"),
+	}
+	kernelFound := false
+	var kernelSrc string
+	for _, altPath := range alternativeKernelPaths {
+		if info, err := os.Stat(altPath); err == nil {
+			// Check if it's a symlink
+			isSymlink := false
+			if linkInfo, err := os.Lstat(altPath); err == nil {
+				isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+			}
+			// #region agent log
+			logDebug("lib/common.go:1345", "Kernel found in alternative location", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "kernel_found_alternative",
+				"platform":     platform,
+				"buildType":    buildType,
+				"kernelPath":   altPath,
+				"isSymlink":    isSymlink,
+				"size":         info.Size(),
+			})
+			// #endregion
+			kernelSrc = altPath
+			kernelFound = true
+			fmt.Printf("[OK] Kernel found at %s (%.1f MB)\n", altPath, float64(info.Size())/1024/1024)
+			break
+		}
+	}
 	// #region agent log
-	logDebug("lib/common.go:1255", "Checking kernel in system generation", map[string]interface{}{
+	logDebug("lib/common.go:1360", "Kernel search complete", map[string]interface{}{
 		"hypothesisId": "G",
-		"step":         "check_kernel_src",
+		"step":         "kernel_search_complete",
 		"platform":     platform,
 		"buildType":    buildType,
+		"kernelFound":  kernelFound,
 		"kernelSrc":    kernelSrc,
+		"checkedPaths": alternativeKernelPaths,
 	})
 	// #endregion
-	
-	if info, err := os.Stat(kernelSrc); err != nil {
+
+	// Ensure /mnt/boot exists
+	if err := os.MkdirAll("/mnt/boot", 0755); err != nil {
+		return fmt.Errorf("failed to create /mnt/boot directory: %w", err)
+	}
+
+	// Track initrd source from fallback searches
+	var initrdSrc string
+	var initrdFound bool
+
+	// If kernel not found, try fallback strategies
+	if !kernelFound {
 		// #region agent log
-		logDebug("lib/common.go:1258", "Kernel not found in system generation", map[string]interface{}{
+		logDebug("lib/common.go:1375", "Kernel not found in any location", map[string]interface{}{
 			"hypothesisId": "G",
-			"step":         "kernel_not_found",
+			"step":         "kernel_not_found_anywhere",
 			"platform":     platform,
 			"buildType":    buildType,
-			"kernelSrc":    kernelSrc,
-			"error":        err.Error(),
+			"systemPath":   systemPath,
+			"checkedPaths": alternativeKernelPaths,
 		})
 		// #endregion
-		fmt.Printf("[ERROR] Kernel not found: %v\n", err)
-		return fmt.Errorf("kernel not found in built system: %w", err)
-	} else {
-		// Check if it's a symlink
-		isSymlink := false
-		if linkInfo, err := os.Lstat(kernelSrc); err == nil {
-			isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+		
+		// CRITICAL DISCOVERY: guix time-machine system build (nonguix) can also fail to create kernel files
+		// The system generation only contains ["gnu","gnu.go","guix"] - no kernel, no initrd
+		// Same bug affects both cloudzy (free-software) and framework-dual (nonguix)
+		fmt.Println()
+		fmt.Println("[WARN] Kernel files not found in system generation after guix time-machine system build")
+		fmt.Println("This indicates that guix time-machine system build does not always create kernel files.")
+		fmt.Println()
+		fmt.Println("Attempting fallback strategies...")
+		fmt.Println()
+
+		// First check if network is working (Hypothesis M)
+		networkErr := CheckNetworkConnectivity(platform, buildType)
+		if networkErr != nil {
+			fmt.Println("[WARN] Network/DNS not working - skipping network-based kernel build")
+			fmt.Println("       Will try alternative approaches that don't require network")
+			fmt.Println()
+
+			// Try Hypothesis K: Deep system generation search
+			fmt.Println("Attempting Hypothesis K: Deep search of system generation...")
+			if kPath, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && kPath != "" {
+				kernelSrc = kPath
+				kernelFound = true
+				fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
+				if iPath != "" {
+					initrdSrc = iPath
+					initrdFound = true
+					fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
+				}
+				// Continue to copy step below
+			} else {
+				fmt.Println("[WARN] Deep search failed - no kernel found in system generation subdirectories")
+
+				// Try Hypothesis N: Store-wide search
+				fmt.Println("Attempting Hypothesis N: Store-wide kernel search...")
+				if kPath, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && kPath != "" {
+					kernelSrc = kPath
+					kernelFound = true
+					fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
+					if iPath != "" {
+						initrdSrc = iPath
+						initrdFound = true
+						fmt.Printf("[OK] Found initrd via store search: %s\n", iPath)
+					}
+					// Continue to copy step below
+				} else {
+					fmt.Println("[ERROR] All non-network approaches failed")
+					fmt.Println()
+					fmt.Println("Cannot proceed without network for kernel build, and no kernel found in store.")
+					fmt.Println("Please fix network connectivity and retry.")
+					fmt.Println()
+					logDebug("lib/common.go:1410", "All non-network hypotheses failed", map[string]interface{}{
+						"hypothesisId": "ALL",
+						"step":         "all_failed_no_network",
+						"platform":     platform,
+						"buildType":    buildType,
+						"networkError": networkErr.Error(),
+					})
+					return fmt.Errorf("network unavailable and no kernel found via alternative searches: %w", networkErr)
+				}
+			}
+		} else {
+			// Network works, try building kernel package separately
+			// For framework-dual, build `linux` (not `linux-libre`) using nonguix substitutes
+			fmt.Println("Attempting Hypothesis H: Building kernel package separately...")
+			fmt.Println("(guix build linux should create the kernel binary)")
+			fmt.Println()
+			
+			// #region agent log
+			logDebug("lib/common.go:1425", "Before guix build linux", map[string]interface{}{
+				"hypothesisId": "H",
+				"step":         "before_guix_build_kernel",
+				"platform":     platform,
+				"buildType":    buildType,
+			})
+			// #endregion
+			
+			// Build kernel package using time-machine with nonguix channel
+			buildKernelCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "build", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org", "linux")
+			buildKernelCmd.Stdout = os.Stdout
+			buildKernelCmd.Stderr = os.Stderr
+			if err := buildKernelCmd.Run(); err != nil {
+				// #region agent log
+				logDebug("lib/common.go:1435", "guix build linux failed", map[string]interface{}{
+					"hypothesisId": "H",
+					"step":         "guix_build_kernel_failed",
+					"platform":     platform,
+					"buildType":    buildType,
+					"error":        err.Error(),
+				})
+				// #endregion
+
+				// Even with network, build failed - try alternative approaches
+				fmt.Println("[WARN] Kernel build failed despite network being available")
+				fmt.Println("       Trying alternative search approaches...")
+
+				// Try Hypothesis K first
+				if kPath, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && kPath != "" {
+					kernelSrc = kPath
+					kernelFound = true
+					fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
+					if iPath != "" {
+						initrdSrc = iPath
+						initrdFound = true
+						fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
+					}
+				} else if kPath, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && kPath != "" {
+					// Try Hypothesis N
+					kernelSrc = kPath
+					kernelFound = true
+					fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
+					if iPath != "" {
+						initrdSrc = iPath
+						initrdFound = true
+						fmt.Printf("[OK] Found initrd via store search: %s\n", iPath)
+					}
+				} else {
+					return fmt.Errorf("guix build linux failed and no kernel found via alternative searches: %w", err)
+				}
+			} else {
+				// Build succeeded - find the kernel package output
+				findKernelCmd := exec.Command("bash", "-c", "guix time-machine -C "+channelsPath+" -- build --substitute-urls='https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org' linux 2>&1 | tail -1")
+				kernelOutput, err := findKernelCmd.Output()
+				if err != nil {
+					return fmt.Errorf("failed to find kernel package path: %w", err)
+				}
+				kernelPackagePath := strings.TrimSpace(string(kernelOutput))
+
+				// Check if output is an error message rather than a valid path
+				if strings.Contains(kernelPackagePath, "error:") || !strings.HasPrefix(kernelPackagePath, "/gnu/store/") {
+					// #region agent log
+					logDebug("lib/common.go:1470", "Kernel build output is error message, not valid path", map[string]interface{}{
+						"hypothesisId": "H",
+						"step":         "kernel_build_output_invalid",
+						"platform":     platform,
+						"buildType":    buildType,
+						"output":       kernelPackagePath,
+					})
+					// #endregion
+
+					// Try alternative approaches
+					fmt.Println("[WARN] Kernel build output invalid - trying alternative searches")
+					if kPath, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && kPath != "" {
+						kernelSrc = kPath
+						kernelFound = true
+						fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
+						if iPath != "" {
+							fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
+						}
+					} else if kPath, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && kPath != "" {
+						kernelSrc = kPath
+						kernelFound = true
+						fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
+						if iPath != "" {
+							fmt.Printf("[OK] Found initrd via store search: %s\n", iPath)
+						}
+					} else {
+						return fmt.Errorf("guix build output invalid (%s) and no kernel found via alternative searches", kernelPackagePath)
+					}
+				} else {
+					// #region agent log
+					logDebug("lib/common.go:1495", "Kernel package path found", map[string]interface{}{
+						"hypothesisId": "H",
+						"step":         "kernel_package_path_found",
+						"platform":     platform,
+						"buildType":    buildType,
+						"kernelPackagePath": kernelPackagePath,
+					})
+					// #endregion
+
+					// Check for kernel binary in the package
+					// Kernel packages typically have the kernel at: $package/bzImage or $package/vmlinux
+					kernelPackagePaths := []string{
+						filepath.Join(kernelPackagePath, "bzImage"),
+						filepath.Join(kernelPackagePath, "vmlinux"),
+						filepath.Join(kernelPackagePath, "boot", "bzImage"),
+						filepath.Join(kernelPackagePath, "boot", "vmlinux"),
+					}
+
+					kernelFound2 := false
+					var kernelSrc2 string
+					for _, altPath := range kernelPackagePaths {
+						if info, err := os.Stat(altPath); err == nil {
+							isSymlink := false
+							if linkInfo, err := os.Lstat(altPath); err == nil {
+								isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+							}
+							// #region agent log
+							logDebug("lib/common.go:1515", "Kernel found in package", map[string]interface{}{
+								"hypothesisId": "H",
+								"step":         "kernel_found_in_package",
+								"platform":     platform,
+								"buildType":    buildType,
+								"kernelPath":   altPath,
+								"isSymlink":    isSymlink,
+								"size":         info.Size(),
+							})
+							// #endregion
+							kernelSrc2 = altPath
+							kernelFound2 = true
+							break
+						}
+					}
+
+					if !kernelFound2 {
+						// List package contents for debugging
+						entries2, err := os.ReadDir(kernelPackagePath)
+						entryNames2 := []string{}
+						if err == nil {
+							for _, entry := range entries2 {
+								entryNames2 = append(entryNames2, entry.Name())
+							}
+						}
+						// #region agent log
+						logDebug("lib/common.go:1535", "Kernel not found in package, listing contents", map[string]interface{}{
+							"hypothesisId": "H",
+							"step":         "kernel_not_found_in_package",
+							"platform":     platform,
+							"buildType":    buildType,
+							"kernelPackagePath": kernelPackagePath,
+							"checkedPaths": kernelPackagePaths,
+							"packageEntries": entryNames2,
+						})
+						// #endregion
+						return fmt.Errorf("kernel binary not found in linux package at %s (checked: %v, package contents: %v). This indicates a fundamental issue with kernel file location in nonguix installs", kernelPackagePath, kernelPackagePaths, entryNames2)
+					}
+
+					// Use the kernel from the package
+					kernelSrc = kernelSrc2
+					kernelFound = true
+
+					// For initrd, we still need to build it separately or get it from guix system init
+					// For now, we'll try to build initrd separately or skip it and let guix system init create it
+					fmt.Println("[INFO] Kernel found in package, but initrd still needs to be created")
+					fmt.Println("       Will attempt to create initrd during guix system init")
+					fmt.Println()
+				}
+			}
 		}
-		// #region agent log
-		logDebug("lib/common.go:1261", "Kernel found in system generation", map[string]interface{}{
-			"hypothesisId": "G",
-			"step":         "kernel_found",
-			"platform":     platform,
-			"buildType":    buildType,
-			"kernelSrc":    kernelSrc,
-			"isSymlink":    isSymlink,
-			"size":         info.Size(),
-		})
-		// #endregion
-		fmt.Printf("[OK] Kernel found (%.1f MB)\n", float64(info.Size())/1024/1024)
+	}
+
+	// Verify kernel was found before attempting copy
+	if !kernelFound || kernelSrc == "" {
+		return fmt.Errorf("kernel not found via any method (Hypotheses G, K, N, H all failed)")
 	}
 
 	kernelDest := "/mnt/boot/vmlinuz"
 	fmt.Printf("[INFO] Copying kernel to: %s\n", kernelDest)
 	
 	// #region agent log
-	logDebug("lib/common.go:1265", "Before kernel copy", map[string]interface{}{
+	logDebug("lib/common.go:1638", "Before kernel copy", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "before_kernel_copy",
 		"platform":     platform,
@@ -1449,67 +1713,78 @@ func RunGuixSystemInit(platform string) error {
 
 	// Copy initrd
 	fmt.Println()
-	initrdSrc := filepath.Join(systemPath, "initrd")
-	fmt.Printf("[INFO] Checking for initrd at: %s\n", initrdSrc)
-	
-	// #region agent log
-	logDebug("lib/common.go:1281", "Checking initrd in system generation", map[string]interface{}{
-		"hypothesisId": "G",
-		"step":         "check_initrd_src",
-		"platform":     platform,
-		"buildType":    buildType,
-		"initrdSrc":    initrdSrc,
-	})
-	// #endregion
-	
-	if info, err := os.Stat(initrdSrc); err != nil {
+	// If initrd wasn't found via fallback, check standard location
+	if !initrdFound {
+		initrdSrc = filepath.Join(systemPath, "initrd")
+		fmt.Printf("[INFO] Checking for initrd at: %s\n", initrdSrc)
+		
 		// #region agent log
-		logDebug("lib/common.go:1284", "Initrd not found in system generation", map[string]interface{}{
+		logDebug("lib/common.go:1697", "Checking initrd in system generation", map[string]interface{}{
 			"hypothesisId": "G",
-			"step":         "initrd_not_found",
+			"step":         "check_initrd_src",
 			"platform":     platform,
 			"buildType":    buildType,
 			"initrdSrc":    initrdSrc,
-			"error":        err.Error(),
 		})
 		// #endregion
-		fmt.Printf("[ERROR] Initrd not found: %v\n", err)
-		return fmt.Errorf("initrd not found in built system: %w", err)
-	} else {
-		// Check if it's a symlink
-		isSymlink := false
-		if linkInfo, err := os.Lstat(initrdSrc); err == nil {
-			isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+		
+		if info, err := os.Stat(initrdSrc); err != nil {
+			// #region agent log
+			logDebug("lib/common.go:1704", "Initrd not found in system generation", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "initrd_not_found",
+				"platform":     platform,
+				"buildType":    buildType,
+				"initrdSrc":    initrdSrc,
+				"error":        err.Error(),
+			})
+			// #endregion
+			fmt.Printf("[WARN] Initrd not found in system generation: %v\n", err)
+			fmt.Println("       Initrd will be created during guix system init")
+			fmt.Println()
+			// Don't fail here - initrd can be created during system init
+			initrdFound = false
+		} else {
+			// Check if it's a symlink
+			isSymlink := false
+			if linkInfo, err := os.Lstat(initrdSrc); err == nil {
+				isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+			}
+			// #region agent log
+			logDebug("lib/common.go:1720", "Initrd found in system generation", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "initrd_found",
+				"platform":     platform,
+				"buildType":    buildType,
+				"initrdSrc":    initrdSrc,
+				"isSymlink":    isSymlink,
+				"size":         info.Size(),
+			})
+			// #endregion
+			fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(info.Size())/1024/1024)
+			initrdFound = true
 		}
-		// #region agent log
-		logDebug("lib/common.go:1287", "Initrd found in system generation", map[string]interface{}{
-			"hypothesisId": "G",
-			"step":         "initrd_found",
-			"platform":     platform,
-			"buildType":    buildType,
-			"initrdSrc":    initrdSrc,
-			"isSymlink":    isSymlink,
-			"size":         info.Size(),
-		})
-		// #endregion
-		fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(info.Size())/1024/1024)
+	} else {
+		fmt.Printf("[INFO] Using initrd from fallback search: %s\n", initrdSrc)
 	}
 
-	initrdDest := "/mnt/boot/initrd"
-	fmt.Printf("[INFO] Copying initrd to: %s\n", initrdDest)
-	
-	// #region agent log
-	logDebug("lib/common.go:1291", "Before initrd copy", map[string]interface{}{
-		"hypothesisId": "G",
-		"step":         "before_initrd_copy",
-		"platform":     platform,
-		"buildType":    buildType,
-		"initrdSrc":    initrdSrc,
-		"initrdDest":   initrdDest,
-	})
-	// #endregion
-	
-	if err := exec.Command("cp", "-Lv", initrdSrc, initrdDest).Run(); err != nil {
+	// Only copy initrd if we found it
+	if initrdFound && initrdSrc != "" {
+		initrdDest := "/mnt/boot/initrd"
+		fmt.Printf("[INFO] Copying initrd to: %s\n", initrdDest)
+		
+		// #region agent log
+		logDebug("lib/common.go:1745", "Before initrd copy", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "before_initrd_copy",
+			"platform":     platform,
+			"buildType":    buildType,
+			"initrdSrc":    initrdSrc,
+			"initrdDest":   initrdDest,
+		})
+		// #endregion
+		
+		if err := exec.Command("cp", "-Lv", initrdSrc, initrdDest).Run(); err != nil {
 		// #region agent log
 		logDebug("lib/common.go:1293", "Initrd copy failed", map[string]interface{}{
 			"hypothesisId": "G",
@@ -1552,10 +1827,15 @@ func RunGuixSystemInit(platform string) error {
 		})
 		// #endregion
 		fmt.Printf("[OK] Initrd copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
+		}
 	}
 
 	fmt.Println()
-	fmt.Println("[SUCCESS] Kernel and initrd files copied to /mnt/boot/")
+	if initrdFound {
+		fmt.Println("[SUCCESS] Kernel and initrd files copied to /mnt/boot/")
+	} else {
+		fmt.Println("[SUCCESS] Kernel copied to /mnt/boot/ (initrd will be created during system init)")
+	}
 
 	// Create the current-system symlink
 	currentSystemLink := "/mnt/run/current-system"

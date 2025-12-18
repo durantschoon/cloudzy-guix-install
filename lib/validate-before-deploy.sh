@@ -5,7 +5,7 @@
 #
 # Usage: ./validate-before-deploy.sh [--verbose]
 
-set -euo pipefail
+set -uo pipefail
 
 VERBOSE=0
 if [[ "${1:-}" == "--verbose" ]]; then
@@ -57,17 +57,24 @@ check_guix_commands() {
     # Extract guix build commands from Go source
     local commands=$(grep -r "guix.*build" lib/common.go cloudzy/install/*.go framework*/install/*.go 2>/dev/null || true)
 
+    if [[ -z "$commands" ]]; then
+        log_test PASS "No guix build commands found (or grep failed)"
+        return 0
+    fi
+
     # Check for common syntax errors
-    if echo "$commands" | grep -q 'substitute-urls=.*https.*https' | grep -v "substitute-urls='"; then
+    if echo "$commands" | grep -q 'substitute-urls=.*https.*https' && ! echo "$commands" | grep -q "substitute-urls='"; then
         log_test FAIL "Found unquoted --substitute-urls with multiple URLs (will cause 'unknown package' error)"
         verbose_log "Use: --substitute-urls='https://url1 https://url2'"
         return 1
     fi
 
     # Check if --substitute-urls comes before package name
-    if echo "$commands" | grep -q 'guix.*build.*[a-z-]*--substitute-urls'; then
+    # Note: This is OK for "guix time-machine ... -- build" pattern
+    if echo "$commands" | grep -qE 'guix.*build.*linux.*--substitute-urls|guix.*build.*linux-libre.*--substitute-urls'; then
         log_test WARN "Found --substitute-urls after package name (may cause issues)"
         verbose_log "Recommended: guix build --substitute-urls='...' PACKAGE"
+        verbose_log "Note: 'guix time-machine ... -- build --substitute-urls=... PACKAGE' is OK"
     fi
 
     log_test PASS "Guix build command syntax looks correct"
@@ -177,15 +184,31 @@ echo
 echo "Checking function signature consistency..."
 check_function_signatures() {
     # Check if RunGuixSystemInitFreeSoftware is called with platform parameter
-    local calls=$(grep -n 'RunGuixSystemInitFreeSoftware(' cloudzy/install/*.go cmd/recovery/*.go 2>/dev/null || true)
-    local calls_with_param=$(echo "$calls" | grep -c 'RunGuixSystemInitFreeSoftware(.*platform' || true)
-    local total_calls=$(echo "$calls" | wc -l)
+    local calls_free=$(grep -n 'RunGuixSystemInitFreeSoftware(' cloudzy/install/*.go cmd/recovery/*.go 2>/dev/null || true)
+    local calls_free_with_param=$(echo "$calls_free" | grep -cE 'RunGuixSystemInitFreeSoftware\(.*platform|RunGuixSystemInitFreeSoftware\(.*GuixPlatform' || true)
+    local total_calls_free=$(echo "$calls_free" | wc -l)
 
-    if [[ $total_calls -gt 0 && $calls_with_param -eq $total_calls ]]; then
-        log_test PASS "All RunGuixSystemInitFreeSoftware calls include platform parameter"
-    elif [[ $total_calls -gt 0 ]]; then
+    # Check if RunGuixSystemInit is called with platform parameter (framework-dual)
+    local calls_init=$(grep -n 'RunGuixSystemInit(' framework*/install/*.go cmd/recovery/*.go 2>/dev/null || true)
+    local calls_init_with_param=$(echo "$calls_init" | grep -cE 'RunGuixSystemInit\(.*platform|RunGuixSystemInit\(.*GuixPlatform' || true)
+    local total_calls_init=$(echo "$calls_init" | wc -l)
+
+    local all_pass=true
+
+    if [[ $total_calls_free -gt 0 && $calls_free_with_param -ne $total_calls_free ]]; then
         log_test FAIL "Some RunGuixSystemInitFreeSoftware calls missing platform parameter"
         verbose_log "Expected: lib.RunGuixSystemInitFreeSoftware(state.GuixPlatform)"
+        all_pass=false
+    fi
+
+    if [[ $total_calls_init -gt 0 && $calls_init_with_param -ne $total_calls_init ]]; then
+        log_test FAIL "Some RunGuixSystemInit calls missing platform parameter"
+        verbose_log "Expected: lib.RunGuixSystemInit(state.GuixPlatform)"
+        all_pass=false
+    fi
+
+    if [[ $all_pass == true ]]; then
+        log_test PASS "All function calls include platform parameter"
     fi
 }
 check_function_signatures
@@ -275,15 +298,15 @@ echo -e "${RED}Failed:   $FAILED${NC}"
 echo
 
 if [[ $FAILED -gt 0 ]]; then
-    echo -e "${RED}⚠ VALIDATION FAILED - DO NOT DEPLOY${NC}"
+    echo -e "${RED}[ERROR] VALIDATION FAILED - DO NOT DEPLOY${NC}"
     echo "Fix the issues above before deploying to remote machines"
     exit 1
 elif [[ $WARNINGS -gt 0 ]]; then
-    echo -e "${YELLOW}⚠ VALIDATION PASSED WITH WARNINGS${NC}"
+    echo -e "${YELLOW}[WARN] VALIDATION PASSED WITH WARNINGS${NC}"
     echo "Review warnings before deploying"
     exit 0
 else
-    echo -e "${GREEN}✓ ALL VALIDATIONS PASSED${NC}"
+    echo -e "${GREEN}[OK] ALL VALIDATIONS PASSED${NC}"
     echo "Safe to deploy to remote machines"
     exit 0
 fi

@@ -39,8 +39,10 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 
 **Common Outcomes:**
 - **Success:** System generation contains kernel → proceed to copy
-- **Partial Success:** System generation created but no kernel → try Hypothesis H (cloudzy only)
+- **Partial Success:** System generation created but no kernel → try fallback strategies (K, N, H)
 - **Failure:** Build fails → error and retry
+
+**Note:** Both cloudzy and framework-dual can experience the kernel bug where system generation only contains `["gnu","gnu.go","guix"]` with no kernel/initrd files.
 
 ### Hypothesis M: Network Diagnostics
 
@@ -158,13 +160,15 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 
 **Build Type:** `non-libre`
 
-**Hypotheses Used:** G, E
+**Hypotheses Used:** G, K, N, H, E
 
 **Key Characteristics:**
 - Uses `guix time-machine` with nonguix channel
-- Kernel typically found in system generation (time-machine includes it)
+- **CRITICAL DISCOVERY (2025-01-XX):** System generation may only contain `["gnu","gnu.go","guix"]` - no kernel/initrd files
+- Same kernel bug affects framework-dual as cloudzy - kernel not always in system generation
+- Fallback chain: G → K → N → H (if network available)
 - If kernel missing after init, Hypothesis E (recovery) handles it
-- Less fallback logic needed (time-machine is more reliable)
+- Hypothesis H builds `linux` package (not `linux-libre`) using nonguix substitutes
 
 ## Using Kernel Tracking Logs
 
@@ -227,6 +231,7 @@ grep '"buildType":"non-libre"' /tmp/kernel_tracking.log | jq .
 - ✅ All major operations now logged with Hypothesis G
 - ✅ Recovery tracking via Hypothesis E already existed
 - ✅ All call sites updated to pass platform parameter
+- ✅ Fallback strategies (K, N, H) added (2025-01-XX) - same bug affects framework-dual
 
 ## Code Locations
 
