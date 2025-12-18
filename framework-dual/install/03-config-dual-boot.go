@@ -241,7 +241,8 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
              (gnu packages linux)
              (gnu system nss)
              (nongnu packages linux)
-             (nongnu system linux-initrd))
+             (nongnu system linux-initrd)
+             (srfi srfi-1))
 
 (operating-system
  (host-name "%s")

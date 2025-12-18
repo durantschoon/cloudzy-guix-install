@@ -212,7 +212,8 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
              (gnu packages linux)
              (gnu system nss)
              (nongnu packages linux)
-             (nongnu system linux-initrd))
+             (nongnu system linux-initrd)
+             (srfi srfi-1))
 
 (operating-system
  (host-name "%s")
