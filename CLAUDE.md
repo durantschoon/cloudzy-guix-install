@@ -221,6 +221,17 @@ Use the same path for consistency and reliability.
 
 **See also:** Full documentation in `docs/KERNEL_TRACKING.md` and `docs/TROUBLESHOOTING.md`
 
+### Channel Pinning Policy
+
+**CRITICAL:** Framework-dual installations MUST use wingolog-era pinned channels (Feb 2024 commits) to ensure initrd generation works correctly.
+
+**DO NOT:**
+- Change framework-dual to use unpinned channels
+- Remove the platform check in `SetupNonguixChannel()`
+- Update commits without testing initrd generation
+
+**See:** `docs/CHANNEL_PINNING_POLICY.md` for complete policy and `docs/WINGOLOG_CHANNEL_ANALYSIS.md` for technical analysis.
+
 ## Development Workflow
 
 ### Pre-Deployment Validation

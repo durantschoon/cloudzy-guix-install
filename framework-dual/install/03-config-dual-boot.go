@@ -156,7 +156,7 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
     fmt.Println("Setting up nonguix channel for proprietary firmware...")
   }
 
-  if err := lib.SetupNonguixChannel(); err != nil {
+  if err := lib.SetupNonguixChannel(state.GuixPlatform); err != nil {
     return fmt.Errorf("failed to setup nonguix channel: %w", err)
   }
   fmt.Println()

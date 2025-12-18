@@ -813,7 +813,10 @@ func GetChannelsPath() string {
 }
 
 // SetupNonguixChannel sets up the nonguix channel for proprietary firmware and kernel
-func SetupNonguixChannel() error {
+// For framework-dual platform, uses wingolog-era pinned channels (Feb 2024 commits)
+// to ensure compatible guix+nonguix versions that properly generate initrd files.
+// CRITICAL: Do not change framework-dual to use unpinned channels - this breaks initrd generation.
+func SetupNonguixChannel(platform string) error {
 	fmt.Println("The Nonguix channel provides:")
 	fmt.Println("  - Proprietary firmware (WiFi, Bluetooth, GPU drivers)")
 	fmt.Println("  - Non-free Linux kernel (better hardware support)")
@@ -848,8 +851,41 @@ func SetupNonguixChannel() error {
 	fmt.Println("[OK] User consented to trust Nonguix")
 	fmt.Println()
 
-	// Create channels.scm file with introduction for authenticity
-	channelsContent := `(cons* (channel
+	// CRITICAL: For framework-dual, use wingolog-era pinned channels
+	// This ensures compatible guix+nonguix versions that properly generate initrd files.
+	// See docs/WINGOLOG_CHANNEL_ANALYSIS.md for why this is necessary.
+	var channelsContent string
+	if platform == "framework-dual" {
+		fmt.Println("[INFO] Using wingolog-era pinned channels for framework-dual")
+		fmt.Println("       This ensures compatible guix+nonguix versions for initrd generation")
+		fmt.Println()
+		// Wingolog-era channels: both guix and nonguix pinned to Feb 2024 commits
+		channelsContent = `(list
+  (channel
+    (name 'guix)
+    (url "https://git.savannah.gnu.org/git/guix.git")
+    (branch "master")
+    ;; Commit from 2024-02-16 23:19:48 +0100 (wingolog era)
+    (commit "91d80460296e2d5a01704d0f34fb966a45a165ae")
+    (introduction
+     (make-channel-introduction
+      "9edb3f66fd807b096b48283debdcddccfea34bad"
+      (openpgp-fingerprint
+       "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+  (channel
+    (name 'nonguix)
+    (url "https://gitlab.com/nonguix/nonguix")
+    (branch "master")
+    ;; Commit from 2024-02-14 16:36:06 -0500 (wingolog era)
+    (commit "10318ef7dd53c946bae9ed63f7e0e8bb8941b6b1")
+    (introduction
+     (make-channel-introduction
+      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+      (openpgp-fingerprint
+       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))`
+	} else {
+		// For other platforms, use current master (unpinned)
+		channelsContent = `(cons* (channel
         (name 'nonguix)
         (url "https://gitlab.com/nonguix/nonguix")
         (introduction
@@ -858,6 +894,7 @@ func SetupNonguixChannel() error {
           (openpgp-fingerprint
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
        %default-channels)`
+	}
 
 	// Use home directory for persistence (survives /tmp cleanup)
 	homeDir := os.Getenv("HOME")
@@ -903,6 +940,10 @@ func SetupNonguixChannel() error {
 	fmt.Println()
 	fmt.Println("[OK] Nonguix channel setup complete")
 	fmt.Printf("    Channel file created: %s\n", channelsPath)
+	if platform == "framework-dual" {
+		fmt.Println("    Using wingolog-era pinned channels (Feb 2024 commits)")
+		fmt.Println("    This ensures compatible guix+nonguix versions for initrd generation")
+	}
 	fmt.Println("    Will be used by 'guix time-machine' during system init")
 	fmt.Println()
 
@@ -1730,7 +1771,7 @@ func RunGuixSystemInit(platform string) error {
 		// #endregion
 		
 		// Check if initrd exists (file, symlink, or broken symlink)
-		initrdInfo, initrdStatErr := os.Stat(initrdSrc)
+		initrdStatErr := error(nil)
 		initrdLstatInfo, initrdLstatErr := os.Lstat(initrdSrc)
 		isSymlink := false
 		symlinkTarget := ""
@@ -1775,7 +1816,14 @@ func RunGuixSystemInit(platform string) error {
 						// #endregion
 					}
 				}
+			} else {
+				// Not a symlink, check if it's a regular file
+				if _, err := os.Stat(initrdSrc); err != nil {
+					initrdStatErr = err
+				}
 			}
+		} else {
+			initrdStatErr = initrdLstatErr
 		}
 		
 		if initrdStatErr != nil && !initrdFound {
@@ -1854,18 +1902,21 @@ func RunGuixSystemInit(platform string) error {
 			if linkInfo, err := os.Lstat(initrdSrc); err == nil {
 				isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
 			}
-			// #region agent log
-			logDebug("lib/common.go:1720", "Initrd found in system generation", map[string]interface{}{
-				"hypothesisId": "G",
-				"step":         "initrd_found",
-				"platform":     platform,
-				"buildType":    buildType,
-				"initrdSrc":    initrdSrc,
-				"isSymlink":    isSymlink,
-				"size":         info.Size(),
-			})
-			// #endregion
-			fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(info.Size())/1024/1024)
+			initrdInfo, initrdInfoErr := os.Stat(initrdSrc)
+			if initrdInfoErr == nil {
+				// #region agent log
+				logDebug("lib/common.go:1720", "Initrd found in system generation", map[string]interface{}{
+					"hypothesisId": "G",
+					"step":         "initrd_found",
+					"platform":     platform,
+					"buildType":    buildType,
+					"initrdSrc":    initrdSrc,
+					"isSymlink":    isSymlink,
+					"size":         initrdInfo.Size(),
+				})
+				// #endregion
+				fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(initrdInfo.Size())/1024/1024)
+			}
 			initrdFound = true
 		}
 	} else {
