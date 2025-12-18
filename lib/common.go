@@ -1287,9 +1287,10 @@ func RunGuixSystemInit(platform string) error {
 	
 	buildCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
 	
-	// Capture stderr to log actual error details
+	// Capture both stdout and stderr to analyze initrd generation
+	var buildStdout bytes.Buffer
 	var buildStderr bytes.Buffer
-	buildCmd.Stdout = os.Stdout
+	buildCmd.Stdout = io.MultiWriter(os.Stdout, &buildStdout)
 	buildCmd.Stderr = io.MultiWriter(os.Stderr, &buildStderr)
 	
 	if err := buildCmd.Run(); err != nil {
@@ -1300,7 +1301,10 @@ func RunGuixSystemInit(platform string) error {
 			"platform":     platform,
 			"buildType":    buildType,
 			"error":        err.Error(),
+			"stdout":       buildStdout.String(),
 			"stderr":       buildStderr.String(),
+			"stdoutLen":    buildStdout.Len(),
+			"stderrLen":    buildStderr.Len(),
 		})
 		// #endregion
 		fmt.Printf("\n[ERROR] guix time-machine system build failed: %v\n", err)
@@ -1311,6 +1315,24 @@ func RunGuixSystemInit(platform string) error {
 		return fmt.Errorf("guix system build failed: %w", err)
 	}
 	
+	// Analyze build output for initrd-related messages
+	stdoutStr := buildStdout.String()
+	stderrStr := buildStderr.String()
+	initrdMentions := []string{}
+	initrdErrors := []string{}
+	
+	// Search for initrd-related messages in output
+	lines := strings.Split(stdoutStr+"\n"+stderrStr, "\n")
+	for _, line := range lines {
+		lowerLine := strings.ToLower(line)
+		if strings.Contains(lowerLine, "initrd") {
+			initrdMentions = append(initrdMentions, line)
+			if strings.Contains(lowerLine, "error") || strings.Contains(lowerLine, "fail") || strings.Contains(lowerLine, "warn") {
+				initrdErrors = append(initrdErrors, line)
+			}
+		}
+	}
+	
 	// #region agent log
 	logDebug("lib/common.go:1220", "After guix time-machine system build", map[string]interface{}{
 		"hypothesisId": "G",
@@ -1318,8 +1340,23 @@ func RunGuixSystemInit(platform string) error {
 		"platform":     platform,
 		"buildType":    buildType,
 		"checking":     "system_generation_exists",
+		"stdoutLen":    buildStdout.Len(),
+		"stderrLen":    buildStderr.Len(),
+		"initrdMentions": initrdMentions,
+		"initrdErrors": initrdErrors,
+		"hasInitrdMentions": len(initrdMentions) > 0,
+		"hasInitrdErrors": len(initrdErrors) > 0,
 	})
 	// #endregion
+	
+	// Warn if initrd errors found
+	if len(initrdErrors) > 0 {
+		fmt.Println("\n[WARN] Initrd-related errors/warnings found in build output:")
+		for _, errLine := range initrdErrors {
+			fmt.Printf("  %s\n", errLine)
+		}
+		fmt.Println()
+	}
 
 	PrintSectionHeader("Copying Kernel Files")
 	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
@@ -1381,14 +1418,64 @@ func RunGuixSystemInit(platform string) error {
 	listCmd.Stderr = os.Stderr
 	listCmd.Run()
 
-	// Log system generation contents
+	// Log system generation contents and check for initrd
 	entries, err := os.ReadDir(systemPath)
 	entryNames := []string{}
+	hasKernel := false
+	hasInitrd := false
+	kernelInfo := map[string]interface{}{}
+	initrdInfo := map[string]interface{}{}
+	
 	if err == nil {
 		for _, entry := range entries {
 			entryNames = append(entryNames, entry.Name())
+			
+			// Check for kernel
+			if entry.Name() == "kernel" || strings.HasPrefix(entry.Name(), "kernel") {
+				hasKernel = true
+				info, _ := entry.Info()
+				if info != nil {
+					kernelInfo["name"] = entry.Name()
+					kernelInfo["size"] = info.Size()
+					kernelInfo["isSymlink"] = info.Mode()&os.ModeSymlink != 0
+					if info.Mode()&os.ModeSymlink != 0 {
+						if target, err := os.Readlink(filepath.Join(systemPath, entry.Name())); err == nil {
+							kernelInfo["symlinkTarget"] = target
+						}
+					}
+				}
+			}
+			
+			// Check for initrd
+			if entry.Name() == "initrd" || strings.HasPrefix(entry.Name(), "initrd") {
+				hasInitrd = true
+				info, _ := entry.Info()
+				if info != nil {
+					initrdInfo["name"] = entry.Name()
+					initrdInfo["size"] = info.Size()
+					initrdInfo["isSymlink"] = info.Mode()&os.ModeSymlink != 0
+					if info.Mode()&os.ModeSymlink != 0 {
+						if target, err := os.Readlink(filepath.Join(systemPath, entry.Name())); err == nil {
+							initrdInfo["symlinkTarget"] = target
+							// Check if symlink target exists
+							resolvedPath := target
+							if !filepath.IsAbs(resolvedPath) {
+								resolvedPath = filepath.Join(systemPath, resolvedPath)
+							}
+							if targetInfo, targetErr := os.Stat(resolvedPath); targetErr == nil {
+								initrdInfo["targetExists"] = true
+								initrdInfo["targetSize"] = targetInfo.Size()
+							} else {
+								initrdInfo["targetExists"] = false
+								initrdInfo["targetError"] = targetErr.Error()
+							}
+						}
+					}
+				}
+			}
 		}
 	}
+	
 	// #region agent log
 	logDebug("lib/common.go:1251", "System generation contents after build", map[string]interface{}{
 		"hypothesisId": "G",
@@ -1398,8 +1485,20 @@ func RunGuixSystemInit(platform string) error {
 		"systemPath":   systemPath,
 		"entries":      entryNames,
 		"entryCount":   len(entryNames),
+		"hasKernel":    hasKernel,
+		"hasInitrd":    hasInitrd,
+		"kernelInfo":   kernelInfo,
+		"initrdInfo":   initrdInfo,
 	})
 	// #endregion
+	
+	// Warn if initrd is missing
+	if !hasInitrd {
+		fmt.Println("\n[WARN] Initrd not found in system generation after build!")
+		fmt.Println("       This indicates initrd generation may have failed silently")
+		fmt.Println("       Checking for initrd-related errors in build output...")
+		fmt.Println()
+	}
 
 	// Check for kernel in alternative locations
 	alternativeKernelPaths := []string{
