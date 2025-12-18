@@ -1,6 +1,9 @@
 package install
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 // State holds all installation variables shared between steps
 type State struct {
@@ -24,6 +27,14 @@ type State struct {
 
 // NewState creates a new State from environment variables
 func NewState() *State {
+	platform := getEnv("GUIX_PLATFORM", "framework")
+	
+	// Validate platform matches this installer
+	if platform != "framework" && platform != "" {
+		fmt.Printf("[WARN] GUIX_PLATFORM=%s but running framework installer. Using 'framework' instead.\n", platform)
+		platform = "framework"
+	}
+	
 	return &State{
 		Device:         os.Getenv("DEVICE"),
 		EFI:            os.Getenv("EFI"),
@@ -35,7 +46,7 @@ func NewState() *State {
 		BootMode:       os.Getenv("BOOT_MODE"),
 		SwapSize:       os.Getenv("SWAP_SIZE"),
 		KeyboardLayout: os.Getenv("KEYBOARD_LAYOUT"),
-		GuixPlatform:   getEnv("GUIX_PLATFORM", "framework"),
+		GuixPlatform:   platform,
 	}
 }
 
