@@ -89,6 +89,12 @@ if [ -f lib/bootstrap-postinstall.scm ]; then
     echo "$hash  lib/bootstrap-postinstall.scm" >> "$MANIFEST_FILE"
 fi
 
+# Network fix script (Guile)
+if [ -f lib/fix-network.scm ]; then
+    hash=$(shasum -a 256 lib/fix-network.scm | awk '{print $1}')
+    echo "$hash  lib/fix-network.scm" >> "$MANIFEST_FILE"
+fi
+
 echo "" >> "$MANIFEST_FILE"
 echo "## Diagnostic Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
@@ -103,12 +109,6 @@ fi
 if [ -f diagnose-guix-build.sh ]; then
     hash=$(shasum -a 256 diagnose-guix-build.sh | awk '{print $1}')
     echo "$hash  diagnose-guix-build.sh" >> "$MANIFEST_FILE"
-fi
-
-# Fix network script
-if [ -f fix-network.sh ]; then
-    hash=$(shasum -a 256 fix-network.sh | awk '{print $1}')
-    echo "$hash  fix-network.sh" >> "$MANIFEST_FILE"
 fi
 
 # Investigate kernel location script

@@ -30,7 +30,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 **Most Recent:**
 1. ✅ **Recovery script rewritten in Go (2025-01-XX)**: Complete rewrite of recovery tool from bash to Go → Created `cmd/recovery/main.go` that shares code with main installer via `lib/common.go`, eliminates sync issues, consistent error handling and retry logic, falls back to bash script if Go build fails
 2. ✅ **Kernel symlink discovery and cp -L fix (2025-01-XX)**: Critical discovery that kernel/initrd in system generation are symlinks on Cloudzy → Updated all `cp` commands to use `-L` flag to dereference symlinks, documented in `INSTALLATION_KNOWLEDGE.md`, explains why kernel files appeared to copy but were actually tiny symlink files
-3. ✅ **Network/DNS troubleshooting documentation (2025-01-XX)**: Added comprehensive troubleshooting section to `INSTALLATION_KNOWLEDGE.md` → Documents `diagnose-guix-build.sh` usage, DNS resolution failures, network interface configuration, firewall issues, workarounds with fallback builds, references `fix-network.sh` script
+3. ✅ **Network/DNS troubleshooting documentation (2025-01-XX)**: Added comprehensive troubleshooting section to `INSTALLATION_KNOWLEDGE.md` → Documents `diagnose-guix-build.sh` usage, DNS resolution failures, network interface configuration, firewall issues, workarounds with fallback builds, references `lib/fix-network.scm` script (Guile)
 4. ✅ **Recovery script kernel/initrd verification improvements**: Added comprehensive verification for framework-dual recovery → Verifies kernel/initrd exist in system generation BEFORE copying, verifies files copied successfully, verifies before Step 3 bootloader install, better error messages for AMD GPU/nonguix issues
 5. ✅ **Recovery script platform auto-detection**: Added automatic platform detection (framework-dual vs cloudzy) if GUIX_PLATFORM not set → Uses same detection logic as verify script, ensures correct customize script downloaded
 
@@ -298,7 +298,7 @@ cd ~/guix-customize
   - **Next steps**: Test recovery tool on actual installation failures to verify it works correctly
 - ✅ **Network/DNS troubleshooting documented (2025-01-XX)**: Comprehensive troubleshooting guide added
   - **Documentation**: Added section to `INSTALLATION_KNOWLEDGE.md` covering DNS failures, network interface issues, firewall problems
-  - **Tools**: Documents `diagnose-guix-build.sh` and `fix-network.sh` scripts
+  - **Tools**: Documents `diagnose-guix-build.sh` and `lib/fix-network.scm` scripts (Guile)
   - **Status**: Complete, ready for users encountering network issues
 - 🧪 **Proactive fixes implemented (2025-01-XX)**: Implemented proactive approach to prevent kernel/initrd issues
   - **Proactive symlink creation**: After `guix system init` completes, check if `/mnt/run/current-system` symlink exists. If missing, find latest system generation in `/gnu/store` and create symlink immediately

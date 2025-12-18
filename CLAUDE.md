@@ -85,6 +85,42 @@ while IFS= read -r line; do
 done < SOURCE_MANIFEST.txt
 ```
 
+### Language Choice for New Scripts
+
+**CRITICAL: Always prefer Guile for scripts that run on the Guix system (ISO or fresh install).**
+
+When creating new diagnostic, utility, or post-install scripts:
+
+**Use Guile (`.scm`) by default for:**
+- Scripts run on Guix ISO
+- Scripts run on freshly installed Guix system
+- Post-install customization scripts
+- System configuration helpers
+- Network diagnostics and fixes
+- Any script that interacts with Guix-specific tools
+
+**Use Bash (`.sh`) only for:**
+- Bootstrap scripts that run before Guix is available
+- Scripts that must run on non-Guix systems
+- When explicitly required for compatibility
+
+**Use Go (`.go`) for:**
+- Installation steps that need compiled binaries
+- Complex state management across steps
+- When type safety and error handling are critical
+
+**Rationale:**
+- Guix is a Scheme-based system with excellent Guile integration
+- Guile scripts can directly use Guix APIs and modules
+- Guile is the native language of Guix System configuration
+- Better integration with system services and package management
+- More maintainable and idiomatic for Guix workflows
+
+**Example:**
+- `lib/fix-network.scm` - Network diagnostics (Guile, runs on Guix system)
+- `lib/bootstrap-installer.sh` - Bootstrap (Bash, runs before Guix available)
+- `lib/common.go` - Installation logic (Go, needs compilation and state management)
+
 ## Architecture
 
 ### Installation Flow

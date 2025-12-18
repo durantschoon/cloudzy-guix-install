@@ -3012,9 +3012,9 @@ sudo iptables -L -n
 
 ```bash
 # Download and run the network fix script
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/fix-network.sh
-chmod +x fix-network.sh
-./fix-network.sh
+wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/fix-network.scm
+chmod +x fix-network.scm
+guile --no-auto-compile fix-network.scm
 ```
 
 The script will:
@@ -3105,7 +3105,7 @@ guix build --version
 ### Related Tools
 
 - **`diagnose-guix-build.sh`** - Comprehensive diagnostic for build failures
-- **`fix-network.sh`** - Automated network configuration and troubleshooting
+- **`lib/fix-network.scm`** - Automated network configuration and troubleshooting (Guile script)
 - **`investigate-kernel-location.sh`** - Kernel file location investigation (different issue)
 
 ---
