@@ -327,6 +327,5 @@
 ;;; Entry point
 
 ;; Run if called directly
-(when (and (not (batch-mode?))
-           (defined? 'command-line))
+(when (batch-mode?)
   (add-vanilla-emacs))

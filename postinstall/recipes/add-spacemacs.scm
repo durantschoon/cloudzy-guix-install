@@ -348,5 +348,5 @@
 ;;; Script Entry Point
 
 ;; Run if called directly
-(when (string=? (car (command-line)) (car (program-arguments)))
+(when (batch-mode?)
   (add-spacemacs))

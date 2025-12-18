@@ -388,5 +388,6 @@
 
 ;;; Script entry point
 
-(when (string=? (car (command-line)) (basename (car (command-line))))
+;; Run if called directly
+(when (batch-mode?)
   (add-doom-emacs))

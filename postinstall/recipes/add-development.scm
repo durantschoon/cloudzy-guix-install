@@ -186,11 +186,6 @@
 
 ;;; Entry point
 
-(define (main args)
+;; Run if called directly
+(when (batch-mode?)
   (add-development))
-
-;; Run if executed as script
-(when (equal? (car (command-line)) 
-              (string-append (dirname (dirname (getcwd))) 
-                           "/postinstall/recipes/add-development.scm"))
-  (main (command-line)))
