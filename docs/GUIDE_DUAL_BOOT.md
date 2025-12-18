@@ -457,12 +457,13 @@ See [GNOME_LOGIN_TROUBLESHOOTING.md](GNOME_LOGIN_TROUBLESHOOTING.md) for desktop
 ```scheme
 (initrd-modules
  (append '("amdgpu"      ; AMD GPU driver (critical for display)
-           "nvme"        ; NVMe SSD driver
            "xhci_pci"    ; USB 3.0 host controller
            "usbhid"      ; USB keyboard/mouse
            "i2c_piix4")  ; SMBus/I2C for sensors
          %base-initrd-modules))
 ```
+
+**Note:** `nvme` is **not** included because it's built-in to kernel 6.6.16 (wingolog-era). Including it causes "kernel module not found" errors during system build.
 
 **These are automatically included** by the installer.
 
@@ -520,4 +521,3 @@ See [framework-dual/README.md](../framework-dual/README.md) for complete details
 ---
 
 **Next Steps:** After installation, see [QUICKSTART.md](../QUICKSTART.md) Phase 3 for customization, or [postinstall/CUSTOMIZATION.md](../postinstall/CUSTOMIZATION.md) for detailed recipes.
-

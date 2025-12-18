@@ -254,9 +254,10 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  (firmware (list linux-firmware))
 
  ;; Framework 13 AMD specific initrd modules
+ ;; Note: "nvme" is built-in to kernel 6.6.16, not a loadable module
+ ;; Including it in initrd-modules causes "kernel module not found" errors
  (initrd-modules
   (append '("amdgpu"      ; AMD GPU driver (critical for display)
-            "nvme"        ; NVMe SSD driver
             "xhci_pci"    ; USB 3.0 host controller
             "usbhid"      ; USB keyboard/mouse
             "i2c_piix4")  ; SMBus/I2C for sensors

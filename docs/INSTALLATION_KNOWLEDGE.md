@@ -1044,12 +1044,13 @@ If you encounter boot hangs:
 ```scheme
 (initrd-modules
  (append '("amdgpu"      ; AMD GPU driver (critical for display)
-           "nvme"        ; NVMe SSD driver
            "xhci_pci"    ; USB 3.0 host controller
            "usbhid"      ; USB keyboard/mouse
            "i2c_piix4")  ; SMBus/I2C for sensors
          %base-initrd-modules))
 ```
+
+**Note:** `nvme` is **not** included because it's built-in to kernel 6.6.16 (wingolog-era). Including it causes "kernel module not found" errors during system build.
 
 ## 🧰 Dual-Boot with Pop!_OS
 
