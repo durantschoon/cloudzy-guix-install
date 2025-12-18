@@ -20,13 +20,13 @@ e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-du
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
 5cf15120906a8878178330a9647087c7c5e5dcac4ded4c1237c6a0b5a8d7fd18  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
-18a836bbbe77ed815dc5adf2c4c8e56b3c2ed271efaa8c6f0796560124031216  ./framework-dual/install/03-config-dual-boot.go
+528b0caf541cc30b9b03db776b404d13abbc13dff1f109a85770711bbe58facb  ./framework-dual/install/03-config-dual-boot.go
 88ec2e3db371a7b10dfd919a2cba0646956ec84d257080f85a8e02cb73e9ebb2  ./framework-dual/install/04-system-init.go
 8fb7f99a29777c429c071e0eeb2e09055fe3b63e4eef37b03373f73daa501441  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
 365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
-890378b18c0547b5041fc5d1e059c8ff1c78d5da5a861f8bd14d5594c9bc7604  ./framework/install/03-config.go
+fb886c82d4ea9ff3e3b9cb20d2a8b6f01753f3421235aace92861ddaa79a4265  ./framework/install/03-config.go
 17b2a8adaeb45d3df913ea44ecf19b1dc24a29749dfa699ae08c9a3c8f73df17  ./framework/install/04-system-init.go
 abc5adff7532385203b236564f6aa59b1755f1f3e091cb5f3b66ae1e9cffc39f  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
