@@ -34,18 +34,39 @@ We removed `guix pull` to avoid glibc version mismatches. Similarly, we need to 
 
 ## Solution
 
-### Filter `nvme` from `%base-initrd-modules`
+### Filter Built-In Modules from `%base-initrd-modules`
 
-We filter out `nvme` from the base initrd modules list using Guile's `remove` function:
+We filter out built-in modules from the base initrd modules list using Guile's `remove` function:
 
 ```scheme
 (initrd-modules
- (append '("amdgpu"      ; AMD GPU driver (critical for display)
-           "xhci_pci"    ; USB 3.0 host controller
-           "usbhid"      ; USB keyboard/mouse
-           "i2c_piix4")  ; SMBus/I2C for sensors
-         (remove (lambda (module) (string=? module "nvme")) %base-initrd-modules)))
+ (append '("amdgpu"      ; AMD GPU driver (critical for display) - loadable module
+           "usbhid"      ; USB keyboard/mouse - loadable module
+           "i2c_piix4")  ; SMBus/I2C for sensors - loadable module
+         (remove (lambda (module) 
+                   (or (string=? module "nvme")
+                       (string=? module "xhci_pci"))) %base-initrd-modules)))
 ```
+
+**Known Built-In Modules in Kernel 6.6.16:**
+- `nvme` - NVMe SSD support (built-in for performance)
+- `xhci_pci` - USB 3.0 host controller (built-in for USB support)
+
+**How to Determine Built-In Modules:**
+
+1. **Build the kernel package:**
+   ```bash
+   guix time-machine -C ~/channels.scm -- build linux
+   ```
+
+2. **Check module directory:**
+   ```bash
+   ls -R /gnu/store/*-linux-6.6.16/lib/modules/*/kernel/
+   ```
+
+3. **If a module doesn't exist as `.ko` or `.ko.gz` file**, it's built-in
+
+4. **Add to filter list** in `framework-dual/install/03-config-dual-boot.go` and `framework/install/03-config.go`
 
 This ensures that:
 1. `nvme` is never included in the initrd-modules list, even if it appears in `%base-initrd-modules`
@@ -74,8 +95,80 @@ If `nvme` is added to `%base-initrd-modules` in future Guix versions, our filter
 The fix is implemented in:
 - `framework-dual/install/03-config-dual-boot.go` - Dual-boot configuration generator
 - `framework/install/03-config.go` - Single-boot configuration generator
+- `lib/check-kernel-modules.go` - Helper function `GetBuiltInModulesForKernel66()` that maintains the list
 
-Both use the same filter pattern to ensure consistency.
+Both config generators use the same filter pattern to ensure consistency, and the filter list is maintained centrally in `lib/check-kernel-modules.go`.
+
+## Proactively Checking Kernel Modules
+
+To avoid discovering built-in modules during installation failures, you can proactively check which modules are available in a kernel package:
+
+### Method 1: Using the Check Script
+
+```bash
+# Build the kernel package first
+guix time-machine -C ~/channels.scm -- build linux
+
+# Run the check script (it will auto-detect kernel 6.6.16)
+./tools/check-kernel-modules.sh
+
+# Or specify a kernel package path
+./tools/check-kernel-modules.sh /gnu/store/xxxxx-linux-6.6.16
+```
+
+The script will:
+- List which modules are available as loadable modules
+- List which modules are built-in (not available as `.ko` files)
+- Provide code snippets to update `GetBuiltInModulesForKernel66()`
+
+### Method 2: Manual Inspection
+
+```bash
+# Build the kernel package
+guix time-machine -C ~/channels.scm -- build linux
+
+# Find the kernel package
+KERNEL_PKG=$(find /gnu/store -maxdepth 1 -type d -name "*-linux-6.6.16" | head -1)
+
+# Check for a specific module
+find "$KERNEL_PKG/lib/modules" -name "nvme.ko*" -o -name "xhci-pci.ko*"
+
+# If no results, the module is built-in
+# If results found, the module is available as a loadable module
+```
+
+### Method 3: Check Kernel Config
+
+If the kernel package includes a `.config` file:
+
+```bash
+KERNEL_PKG=$(find /gnu/store -maxdepth 1 -type d -name "*-linux-6.6.16" | head -1)
+grep -E "^CONFIG_NVME=|^CONFIG_XHCI_PCI=" "$KERNEL_PKG/.config" || true
+
+# If the value is "=y", it's built-in
+# If the value is "=m", it's a loadable module
+```
+
+### Updating the Filter List
+
+When you discover a new built-in module:
+
+1. Add it to `lib/check-kernel-modules.go` in `GetBuiltInModulesForKernel66()`:
+   ```go
+   func GetBuiltInModulesForKernel66() []string {
+       return []string{
+           "nvme",
+           "xhci_pci",
+           "new_module",  // Add here
+       }
+   }
+   ```
+
+2. The config generators (`03-config-dual-boot.go` and `03-config.go`) will automatically use the updated list
+
+3. Update this documentation with the new module and why it's built-in
+
+4. Test the installation to ensure the filter works correctly
 
 ## For Existing Installations
 

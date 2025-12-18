@@ -173,6 +173,9 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
   // Generate and write config if it doesn't exist
   if !configExists {
     // Generate config
+    // Note: Module filtering happens in generateMinimalConfig using known built-in modules
+    // If kernel package is available, we could check it, but for now we use a static list
+    // based on kernel 6.6.16 configuration
     config := s.generateMinimalConfig(state, bootloader, targets)
 
     // Write to file
@@ -231,6 +234,23 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
 `, layout)
     }
   }
+  
+  // Get list of built-in modules to filter (for kernel 6.6.16)
+  builtInModules := lib.GetBuiltInModulesForKernel66()
+  
+  // Generate filter predicate for Guile Scheme
+  // Creates: (lambda (module) (or (string=? module "nvme") (string=? module "xhci_pci") ...))
+  filterPredicate := ""
+  if len(builtInModules) > 0 {
+    conditions := []string{}
+    for _, mod := range builtInModules {
+      conditions = append(conditions, fmt.Sprintf(`(string=? module "%s")`, mod))
+    }
+    filterPredicate = fmt.Sprintf(`(lambda (module) (or %s))`, strings.Join(conditions, " "))
+  } else {
+    // Fallback: always false (no filtering)
+    filterPredicate = `(lambda (module) #f)`
+  }
 
   config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
 ;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
@@ -255,15 +275,18 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  (firmware (list linux-firmware))
 
  ;; Framework 13 AMD specific initrd modules
- ;; Note: "nvme" and "xhci_pci" are built-in to kernel 6.6.16, not loadable modules
+ ;; Note: Some modules are built-in to kernel 6.6.16, not loadable modules
  ;; Including them in initrd-modules causes "kernel module not found" errors
- ;; We filter them out from base-initrd-modules as a safeguard
+ ;; We filter known built-in modules from base-initrd-modules as a safeguard
+ ;; Known built-in modules in kernel 6.6.16 (wingolog-era):
+ ;;   - nvme: NVMe SSD support (built-in for performance)
+ ;;   - xhci_pci: USB 3.0 host controller (built-in for USB support)
+ ;; These are filtered out even if they appear in %%base-initrd-modules
  (initrd-modules
-  (append '("amdgpu"      ; AMD GPU driver (critical for display)
-            "usbhid"      ; USB keyboard/mouse
-            "i2c_piix4")  ; SMBus/I2C for sensors
-          (remove (lambda (module) (or (string=? module "nvme")
-                                       (string=? module "xhci_pci"))) %%base-initrd-modules)))
+  (append '("amdgpu"      ; AMD GPU driver (critical for display) - loadable module
+            "usbhid"      ; USB keyboard/mouse - loadable module
+            "i2c_piix4")  ; SMBus/I2C for sensors - loadable module
+          (remove %s %%base-initrd-modules)))
 
  ;; Kernel arguments - minimal for compatibility
  (kernel-arguments '("quiet"))
@@ -301,6 +324,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
     state.HostName,          // host-name
     state.Timezone,          // timezone
     keyboardLayoutConfig,    // keyboard-layout (conditional)
+    filterPredicate,         // filter predicate for built-in modules
     bootloader,              // bootloader
     targets,                 // targets
     dataFS,                  // data filesystem conditional
