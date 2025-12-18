@@ -2168,7 +2168,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 			}
 		} else {
 			// Network works, try building kernel package
-			buildKernelCmd := exec.Command("guix", "build", "linux-libre", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+			// NOTE: --substitute-urls must come before the package name, and URLs must be quoted as a single argument
+			buildKernelCmd := exec.Command("guix", "build", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org", "linux-libre")
 			buildKernelCmd.Stdout = os.Stdout
 			buildKernelCmd.Stderr = os.Stderr
 			if err := buildKernelCmd.Run(); err != nil {
@@ -2176,6 +2177,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 				logDebug("lib/common.go:1915", "guix build linux-libre failed", map[string]interface{}{
 					"hypothesisId": "H",
 					"step":         "guix_build_kernel_failed",
+					"platform":     platform,
+					"buildType":    buildType,
 					"error":        err.Error(),
 				})
 				// #endregion
@@ -2205,20 +2208,54 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 				}
 			} else {
 				// Build succeeded - find the kernel package output
-				findKernelCmd := exec.Command("bash", "-c", "guix build linux-libre --substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org 2>&1 | tail -1")
+				findKernelCmd := exec.Command("bash", "-c", "guix build --substitute-urls='https://ci.guix.gnu.org https://bordeaux.guix.gnu.org' linux-libre 2>&1 | tail -1")
 				kernelOutput, err := findKernelCmd.Output()
 				if err != nil {
 					return fmt.Errorf("failed to find kernel package path: %w", err)
 				}
 				kernelPackagePath := strings.TrimSpace(string(kernelOutput))
 
-				// #region agent log
-				logDebug("lib/common.go:1930", "Kernel package path found", map[string]interface{}{
-					"hypothesisId": "H",
-					"step":         "kernel_package_path_found",
-					"kernelPackagePath": kernelPackagePath,
-				})
-				// #endregion
+				// Check if output is an error message rather than a valid path
+				if strings.Contains(kernelPackagePath, "error:") || !strings.HasPrefix(kernelPackagePath, "/gnu/store/") {
+					// #region agent log
+					logDebug("lib/common.go:1930", "Kernel build output is error message, not valid path", map[string]interface{}{
+						"hypothesisId": "H",
+						"step":         "kernel_build_output_invalid",
+						"platform":     platform,
+						"buildType":    buildType,
+						"output":       kernelPackagePath,
+					})
+					// #endregion
+
+					// Try alternative approaches
+					fmt.Println("[WARN] Kernel build output invalid - trying alternative searches")
+					if kPath, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && kPath != "" {
+						kernelSrc = kPath
+						kernelFound = true
+						fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
+						if iPath != "" {
+							fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
+						}
+					} else if kPath, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && kPath != "" {
+						kernelSrc = kPath
+						kernelFound = true
+						fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
+						if iPath != "" {
+							fmt.Printf("[OK] Found initrd via store search: %s\n", iPath)
+						}
+					} else {
+						return fmt.Errorf("guix build output invalid (%s) and no kernel found via alternative searches", kernelPackagePath)
+					}
+				} else {
+					// #region agent log
+					logDebug("lib/common.go:1930", "Kernel package path found", map[string]interface{}{
+						"hypothesisId": "H",
+						"step":         "kernel_package_path_found",
+						"platform":     platform,
+						"buildType":    buildType,
+						"kernelPackagePath": kernelPackagePath,
+					})
+					// #endregion
 
 				// Check for kernel binary in the package
 				// Kernel packages typically have the kernel at: $package/bzImage or $package/vmlinux
@@ -2241,6 +2278,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 						logDebug("lib/common.go:1950", "Kernel found in package", map[string]interface{}{
 							"hypothesisId": "H",
 							"step":         "kernel_found_in_package",
+							"platform":     platform,
+							"buildType":    buildType,
 							"kernelPath":   altPath,
 							"isSymlink":    isSymlink,
 							"size":         info.Size(),
@@ -2265,6 +2304,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 					logDebug("lib/common.go:1970", "Kernel not found in package, listing contents", map[string]interface{}{
 						"hypothesisId": "H",
 						"step":         "kernel_not_found_in_package",
+						"platform":     platform,
+						"buildType":    buildType,
 						"kernelPackagePath": kernelPackagePath,
 						"checkedPaths": kernelPackagePaths,
 						"packageEntries": entryNames2,
@@ -2282,6 +2323,7 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 				fmt.Println("[INFO] Kernel found in package, but initrd still needs to be created")
 				fmt.Println("       Will attempt to create initrd during guix system init")
 				fmt.Println()
+				}
 			}
 		}
 	}
