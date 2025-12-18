@@ -155,12 +155,48 @@ Each converted script must have:
 | Script | Lines | Status | Tests | Notes |
 |--------|-------|--------|-------|-------|
 | guile-config-helper.scm | 169 | ✅ Done | ✅ Passing | S-expression manipulation |
+| postinstall/recipes/*.scm | Various | 🔄 In Progress | ⏸️ Pending | Recipe scripts - fixing entry points and imports |
 | postinstall.sh | 31 | 🔄 Next | ⏸️ Pending | Channel utilities |
 | clean-install.sh | 134 | ⏸️ Planned | ⏸️ Pending | Installation wrapper |
 | verify-guix-install.sh | 305 | ⏸️ Planned | ⏸️ Pending | Verification checks |
 | bootstrap-installer.sh | 267 | ⏸️ Planned | ⏸️ Pending | Bootstrap logic |
 | recovery-complete-install.sh | 458 | ⏸️ Planned | ⏸️ Pending | Recovery flows |
 | channel-utils.sh | 235 | ⏸️ Planned | ⏸️ Pending | Channel/mirror selection |
+
+## Current Work (Resume Here)
+
+**Active Work**: Postinstall recipe scripts (`.scm` files)
+- Fixing entry point logic: Using `batch-mode?` instead of `command-line` checks
+- Module imports: Fixing missing imports (ice-9 match, ice-9 pretty-print)
+- Code cleanup: Refactoring helper functions and improving structure
+
+**Files being worked on**:
+- `postinstall/recipes/add-development.scm` - Entry point fixes
+- `postinstall/recipes/add-doom-emacs.scm` - Entry point fixes
+- `postinstall/recipes/add-fonts.scm` - Module imports and code cleanup
+- `postinstall/recipes/add-spacemacs.scm` - Entry point fixes
+- `postinstall/recipes/add-vanilla-emacs.scm` - Entry point fixes
+
+**Analysis Documents Created**:
+- `docs/CONVERTED_SCRIPTS_ANALYSIS.md` - Analysis of all converted scripts, risk levels, approaches
+- `docs/SCRIPT_REVIEW_add-fonts.md` - Detailed review of add-fonts.scm conversion
+- `docs/TESTING_RESULTS.md` - Test results and issues found
+
+**Test Infrastructure**:
+- `test/test-recipe-script.sh` - Automated test runner for recipe scripts
+- `test/fixtures/postinstall-recipes/` - Test fixtures (minimal-config.scm, existing-packages-config.scm, has-fonts-config.scm)
+
+**Known Issues**:
+- Entry point logic was broken (using fragile command-line path checks)
+- Missing module imports in some scripts
+- Need to verify scripts execute correctly after fixes
+
+**Next steps when resuming**:
+1. Review entry point changes (batch-mode? vs command-line checks) - IN PROGRESS
+2. Verify module imports are correct - IN PROGRESS
+3. Test scripts execute correctly using test infrastructure
+4. Continue with remaining recipe scripts
+5. Review analysis documents for any other issues found
 
 ## Migration Path
 
