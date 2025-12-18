@@ -151,18 +151,87 @@ Use the same path for consistency and reliability.
 
 ## Common Pitfalls
 
-1. **Don't use Unicode in ISO scripts** - See above
-2. **Don't read from os.Stdin directly** - Use /dev/tty
-3. **Don't use `done < file.txt`** - Use process substitution
-4. **Don't add timestamps to manifest** - Makes hash unstable
-5. **Don't use `exec` in bootstrap** - Breaks stdin for Go installer
-6. **Don't commit without running tests** - Always run `./run-tests.sh` first
-7. **Don't commit without updating manifest** - See below
-8. **Don't add new code without tests** - All new functions need corresponding tests
-9. **Don't refactor without integration tests** - Verify functionality after moving code
-10. **Don't use wrong bash shebang** - See "Bash Shebang Paths" above
+1. **Don't skip pre-deployment validation** - Always run `./validate-before-deploy.sh --verbose` before committing
+2. **Don't use Unicode in ISO scripts** - See above
+3. **Don't read from os.Stdin directly** - Use /dev/tty
+4. **Don't use `done < file.txt`** - Use process substitution
+5. **Don't add timestamps to manifest** - Makes hash unstable
+6. **Don't use `exec` in bootstrap** - Breaks stdin for Go installer
+7. **Don't commit without running tests** - Always run `./run-tests.sh` first
+8. **Don't commit without updating manifest** - See below
+9. **Don't add new code without tests** - All new functions need corresponding tests
+10. **Don't refactor without integration tests** - Verify functionality after moving code
+11. **Don't use wrong bash shebang** - See "Bash Shebang Paths" above
 
 ## Development Workflow
+
+### Pre-Deployment Validation
+
+**CRITICAL:** Before committing changes that will be deployed to remote machines, you **MUST** run the validation script:
+
+```bash
+./validate-before-deploy.sh --verbose
+```
+
+**Why this is required:**
+
+Remote Guix installations are expensive in time and money. A single syntax error or missing parameter can waste 30+ minutes of remote debugging. The validation script catches common issues locally:
+
+**What it checks:**
+
+1. **Guix command syntax** - Detects unquoted URLs, wrong argument order
+2. **Store path validation** - Ensures paths are validated before use
+3. **Error handling** - Checks exec.Command calls have error handling
+4. **Hypothesis logging** - Verifies platform/buildType fields are present
+5. **Unicode in ISO scripts** - Catches characters that break on Guix terminal
+6. **Function signatures** - Validates callers match function definitions
+7. **Compilation** - Ensures code compiles successfully
+8. **Unit tests** - Runs all tests to verify functionality
+9. **Manifest consistency** - Checks if manifest needs updating
+10. **Anti-patterns** - Detects os.Stdin usage, stdin consumption issues
+
+**When to run:**
+
+- After modifying `lib/common.go` or any install steps
+- Before committing changes to guix build commands
+- After adding new functions with parameters
+- When adding or changing kernel tracking logs
+- Before pushing commits that will be deployed
+
+**Exit codes:**
+
+- `0` = All validations passed (safe to deploy)
+- `1` = Validation failed (DO NOT DEPLOY - fix issues first)
+
+**Example workflow:**
+
+```bash
+# 1. Make code changes
+vim lib/common.go
+
+# 2. Run validation (catches issues early)
+./validate-before-deploy.sh --verbose
+
+# 3. If validation fails, fix issues and re-validate
+# DO NOT proceed until validation passes
+
+# 4. Once validation passes, run tests
+./run-tests.sh
+
+# 5. Update manifest and commit
+./update-manifest.sh
+git add -A
+git commit -m "..."
+```
+
+**Cost savings:**
+
+Running validation locally saves 2-3 hours per deployment cycle by catching:
+- Command syntax errors (~30 min per iteration on remote)
+- Missing parameters (~20 min debugging)
+- Unicode issues (~45 min, hard to debug remotely)
+- Compilation errors (~10 min)
+- Test failures (~20 min remote testing)
 
 ### Testing After Code Changes
 
@@ -200,19 +269,24 @@ Use the same path for consistency and reliability.
 
 ### Before Committing Changes
 
-If you modified any scripts that run on the Guix ISO, you **MUST** update the manifest before committing:
+If you modified any scripts that run on the Guix ISO, you **MUST** follow this workflow:
 
 ```bash
-# 1. Run tests first (see above)
+# 1. Run pre-deployment validation (REQUIRED for all changes)
+./validate-before-deploy.sh --verbose
+
+# 2. If validation passes, run tests
 ./run-tests.sh
 
-# 2. Update manifest with new file checksums
+# 3. Update manifest with new file checksums
 ./update-manifest.sh
 
-# 3. Commit all changes including tests and manifest
+# 4. Commit all changes including tests and manifest
 git add .
 git commit -m "Your commit message"
 ```
+
+**IMPORTANT:** Do NOT skip step 1. Validation catches expensive issues before they reach remote machines.
 
 **Files that require manifest update:**
 
