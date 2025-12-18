@@ -4430,32 +4430,20 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 			"scriptPath": scriptPath,
 		})
 		// #endregion
-		// Fallback: try to use pre-built binary or bash script
-		fmt.Printf("[WARN] Failed to build recovery binary: %v\n", err)
-		fmt.Println("Falling back to bash recovery script...")
-		
-		// Try to find and copy bash script as fallback
-		var scriptContent []byte
-		var readErr error
-		
-		scriptContent, readErr = os.ReadFile("lib/recovery-complete-install.sh")
-		if readErr != nil {
-			scriptContent, readErr = os.ReadFile("recovery-complete-install.sh")
-		}
-		if readErr != nil {
-			scriptContent, readErr = os.ReadFile("/root/recovery-complete-install.sh")
-		}
-		if readErr != nil {
-			return fmt.Errorf("failed to build recovery binary and could not find bash script: %w (build error: %v)", readErr, err)
-		}
-
-		if err := os.WriteFile(scriptPath, scriptContent, 0755); err != nil {
-			return fmt.Errorf("failed to write recovery script: %w", err)
-		}
-		fmt.Printf("[OK] Recovery script (bash) installed to: %s\n", scriptPath)
-		fmt.Println("     Note: Go recovery binary build failed, using bash script fallback")
+		// CRITICAL: No fallback - Go build must succeed
+		// This forces us to fix the Go recovery binary rather than falling back to shell script
+		fmt.Printf("[ERROR] Failed to build recovery binary: %v\n", err)
 		fmt.Println()
-		return nil
+		fmt.Println("Build output:")
+		fmt.Println(buildOutput.String())
+		fmt.Println()
+		fmt.Println("Troubleshooting:")
+		fmt.Println("  1. Ensure Go is available: which go")
+		fmt.Println("  2. Check go.mod exists in repo root")
+		fmt.Println("  3. Verify cmd/recovery/main.go exists")
+		fmt.Println("  4. Check build directory detection logic")
+		fmt.Println()
+		return fmt.Errorf("recovery binary build failed (no fallback - Go build must succeed): %w", err)
 	}
 
 	// Make binary executable

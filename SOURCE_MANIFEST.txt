@@ -31,7 +31,7 @@ d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/in
 abc5adff7532385203b236564f6aa59b1755f1f3e091cb5f3b66ae1e9cffc39f  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-edb117014bd146201385f196a01c7d0a821adc7e326a165bd6259600c8cfa3f7  ./lib/common.go
+7fabbb3a4e1ca4ea0f2ab6598077520c12ab52a891f3acb61d4e90a73ade5fdc  ./lib/common.go
 ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
 
 ## Critical Shell Scripts
@@ -48,17 +48,3 @@ f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstal
 
 18c4ae8032f77aee3390bf72ffc4da973ab11838d2f1dde3c55eda1b4c43d390  lib/guile-config-helper.scm
 0367e553cd90c69b2c8e73556fb04141bec356dc94df60b1782f35936a88b99b  lib/bootstrap-postinstall.scm
-5b8b7a45831e204ecc74fee477e3bcb1ce2c2a130706d2aa6a26eb40fe0daaca  lib/fix-network.scm
-
-## Diagnostic Scripts
-
-badf8e3777a8a08f6e5468ed1558b0ab6122d4d1f0b84cc64ffbecccd7a4ddcd  lib/validate-before-deploy.sh
-61c42f1a2ea25fcaebc46f8b66b28c4c44178f9b3917dce6a21141616460bfa2  diagnose-guix-build.sh
-f6c1207f91bce6538f2de25252655713b0fc78758998717f205038fe14d8fd2e  investigate-kernel-location.sh
-
-## Post-Install Customization Scripts
-
-484b91b3ab247573b58a32d6ce314390d1494c389cf61e18d6ea82adc70037ee  cloudzy/postinstall/customize
-204609abbf678b35b36eefbe8082fcd0bda3ef68d7a57f2c5a50c74aa88bfb40  framework-dual/postinstall/customize
-5954e6350f562826b52249d41fee153b3621047ffa7ad0ca6553c0fe87c8477a  framework/postinstall/customize
-59818d2f9db089e2803417be1cd73def4bff1529c3497049e2c6949520228d87  raspberry-pi/postinstall/customize
