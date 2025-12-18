@@ -125,7 +125,7 @@ func (s *Step04SystemInit) RunClean(state *State) error {
     }
 
 	// Run guix system init with retry logic (includes daemon startup)
-	if err := lib.RunGuixSystemInit(); err != nil {
+	if err := lib.RunGuixSystemInit(state.GuixPlatform); err != nil {
 		fmt.Println()
 		fmt.Println("========================================")
 		fmt.Println("  SYSTEM INIT FAILED")

@@ -47,6 +47,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 
 **Recent Fixes:**
 - ✅ **3-step kernel/initrd workaround implemented for Cloudzy (2025-01-XX)**: Kernel tracking logs confirmed that `guix system init` (free-software-only) does NOT create kernel/initrd files - system generation only contains `['gnu','gnu.go','guix']`. Re-introduced 3-step workaround (build → copy → init) for Cloudzy, same as framework-dual.
+- ✅ **Kernel tracking parity implemented (2025-01-XX)**: Framework-dual now has comprehensive kernel tracking instrumentation matching cloudzy. See [docs/KERNEL_TRACKING.md](docs/KERNEL_TRACKING.md) for details.
 - ✅ Kernel/initrd copying now uses `cp -L` to dereference symlinks
 - ✅ Recovery tool rewritten in Go to share code with installer
 - ✅ Network/DNS troubleshooting documented
@@ -56,7 +57,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
    - Run installer on fresh Cloudzy instance
    - Verify kernel files are copied correctly (should be 5-15 MB, not a few bytes)
    - Verify system boots successfully after installation
-   - Check `/tmp/kernel_tracking.log` for kernel file journey traces
+   - Check `/tmp/kernel_tracking.log` for kernel file journey traces (see [docs/KERNEL_TRACKING.md](docs/KERNEL_TRACKING.md) for how to analyze logs)
 
 2. 🧪 **Test Go recovery tool**
    - Trigger recovery scenario (interrupt installer or simulate failure)

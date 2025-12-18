@@ -2,6 +2,8 @@
 
 ## Kernel Build and Discovery System
 
+> **See also:** [KERNEL_TRACKING.md](./KERNEL_TRACKING.md) for comprehensive documentation on the kernel tracking system, including platform-specific implementations and log analysis.
+
 ### Overview
 
 The installer uses a sophisticated hypothesis-driven system to find and install Linux kernels across different environments. Each hypothesis represents a different strategy for locating kernel files, with automatic fallbacks when one approach fails.

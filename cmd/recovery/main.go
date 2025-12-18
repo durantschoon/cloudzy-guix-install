@@ -284,12 +284,11 @@ func runSystemInit(platform string) error {
 	channelsPath := lib.GetChannelsPath()
 	useTimeMachine := channelsPath != ""
 
-	// Detect platform for tracking purposes
-	platform := detectPlatform()
+	// Platform is already provided as parameter for tracking purposes
 
 	if useTimeMachine {
 		// Use time-machine path (framework-dual)
-		if err := lib.RunGuixSystemInit(); err != nil {
+		if err := lib.RunGuixSystemInit(platform); err != nil {
 			return fmt.Errorf("guix time-machine system init failed: %w", err)
 		}
 	} else {

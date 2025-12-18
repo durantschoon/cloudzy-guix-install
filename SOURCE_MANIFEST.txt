@@ -14,51 +14,18 @@ af1874cedf600e6971e127c99e12aff946c074cda6c4024b3618d108dd594e29  ./cloudzy/inst
 916a5c1568e590e9b000772ec632ce5b514ef9081d60ae26e247f7bbbd1e17b5  ./cloudzy/install/state.go
 2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
 b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-words/main.go
-def00a08c54f1861a28ae5f7c470eeafd09a7eaeed2dac5a30871102f8c400f4  ./cmd/recovery/main.go
+71dcb2d9bb78c5f757ceeef5dcb3b5d454e319909c4001307d2652936d8c7955  ./cmd/recovery/main.go
 e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 992a35541e314aa7007e7ea6e39c14f8593803edb7191a63c1901a1f682dfba3  ./framework-dual/install/01-partition-check.go
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
 5cf15120906a8878178330a9647087c7c5e5dcac4ded4c1237c6a0b5a8d7fd18  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
 b5e4312b242bbeafd39afcf05717926099a6521866b5e41b98f4bc282fa8cb40  ./framework-dual/install/03-config-dual-boot.go
-e1c53f348d54dee76643c457fe982ce336eba226586644b337bb680ebf78ded1  ./framework-dual/install/04-system-init.go
+1e390ddcc15e44cb76a32a72098ff3bd875d04b623b2aa5fbc6de0c1a2af6c31  ./framework-dual/install/04-system-init.go
 b691772fd78460d59da49812277b6bc438b5412ebaafeb3fce3a5e8dd69e9ee9  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
 365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
 ae85de411b5ac7f22cbfb5b04020d412526e1c7984f78cc54b24dfd2fc450146  ./framework/install/03-config.go
-c738a8f938c80044a651a891d4ce0e4e3c51197c70caa6a1894a2e57c35e4841  ./framework/install/04-system-init.go
+b8001632726a5e35358d9d12159bcd4a4b472cb8e13e41a07345b468e34b3ef1  ./framework/install/04-system-init.go
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
-499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
-f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-c66b89029530fbefc04c9600cec2a5cbea1fd75ffba41a0bd3f5e29c0fd9213e  ./lib/common.go
-ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
-
-## Critical Shell Scripts
-
-55236cd870ccc1c3d0b6bb428a974d7b46c10f84f3ccb26bd346d2784b772616  lib/bootstrap-installer.sh
-488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
-e59161142768e53e575d1e8a200d7ea325049e7f42ae2e9d9a47e4237b6a4e91  lib/verify-guix-install.sh
-435ec5af38b3976ceba9afedf92d120599639c0744461b7cd6c17961b095186d  lib/recovery-complete-install.sh
-7ba7183ec8de691428cf30aed2c550e085b79869644e4a64fd44a68c0769597f  lib/fix-iso-artifacts.sh
-f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
-dd0b43b1eabc6ffd20170925e3bfdab478c666dd0f36761a9db870eea4245a00  postinstall/lib.sh
-
-## Guile Library Scripts
-
-18c4ae8032f77aee3390bf72ffc4da973ab11838d2f1dde3c55eda1b4c43d390  lib/guile-config-helper.scm
-0367e553cd90c69b2c8e73556fb04141bec356dc94df60b1782f35936a88b99b  lib/bootstrap-postinstall.scm
-
-## Diagnostic Scripts
-
-00662861cacca3caf410497b8e941b2228f7753bca234b93b17456f223b26b15  test-symlink-fix.sh
-61c42f1a2ea25fcaebc46f8b66b28c4c44178f9b3917dce6a21141616460bfa2  diagnose-guix-build.sh
-8c8c15f7288518b757988b6795917030d00e3a774a4ae37fc51603546de46c59  fix-network.sh
-f6c1207f91bce6538f2de25252655713b0fc78758998717f205038fe14d8fd2e  investigate-kernel-location.sh
-
-## Post-Install Customization Scripts
-
-484b91b3ab247573b58a32d6ce314390d1494c389cf61e18d6ea82adc70037ee  cloudzy/postinstall/customize
-65a34a9aecbdcd3d41bd1b8b454ff89df15085fc71735110da23d5ad1a0d4a4a  framework-dual/postinstall/customize
-5954e6350f562826b52249d41fee153b3621047ffa7ad0ca6553c0fe87c8477a  framework/postinstall/customize
-59818d2f9db089e2803417be1cd73def4bff1529c3497049e2c6949520228d87  raspberry-pi/postinstall/customize

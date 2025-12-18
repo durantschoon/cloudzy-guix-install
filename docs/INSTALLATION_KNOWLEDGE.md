@@ -678,6 +678,8 @@ guix system init /mnt/etc/config.scm /mnt
 
 **CRITICAL DISCOVERY (2025-01-XX):** Kernel tracking logs confirmed that `guix system init` (free-software-only mode) also does NOT create kernel/initrd files in the system generation. The system generation only contains `['gnu','gnu.go','guix']` - no kernel or initrd. This bug affects ALL platforms, not just nonguix installations.
 
+> **See also:** [KERNEL_TRACKING.md](./KERNEL_TRACKING.md) for details on how kernel tracking logs helped discover this issue and how to use the tracking system for debugging.
+
 ---
 
 **Issue**: `guix system init` creates a system generation but fails to copy kernel and initrd files to `/boot/`, leaving the system unbootable. This occurs with both:
@@ -2229,6 +2231,8 @@ After running the installer, retrieve `/tmp/kernel_tracking.log` and analyze:
 - Where kernel files were found (or not found)
 - What recovery attempts were made
 - Final state of kernel/initrd files
+
+> **See also:** [KERNEL_TRACKING.md](./KERNEL_TRACKING.md) for comprehensive documentation on the kernel tracking system, including detailed log analysis commands and platform-specific implementation details.
 
 **Keeping Instrumentation Active:**
 

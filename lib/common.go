@@ -1164,7 +1164,22 @@ func PrepareSystemInitDirectories() error {
 }
 
 // RunGuixSystemInit runs guix system init with retry logic
-func RunGuixSystemInit() error {
+// platform: the installation platform (framework, framework-dual, etc.) for tracking purposes
+func RunGuixSystemInit(platform string) error {
+	// Default platform if not provided
+	if platform == "" {
+		platform = "unknown"
+	}
+
+	buildType := "non-libre" // This function uses nonguix channel
+
+	// Log build context at start
+	logDebug("lib/common.go:1167", "Starting system init (framework-dual)", map[string]interface{}{
+		"platform":  platform,
+		"buildType": buildType,
+		"step":      "init_start",
+	})
+
 	// Ensure daemon is running before validation (validation needs daemon)
 	if err := EnsureGuixDaemonRunning(); err != nil {
 		return fmt.Errorf("failed to ensure guix-daemon is running: %w", err)
@@ -1209,13 +1224,41 @@ func RunGuixSystemInit() error {
 	}
 
 	// Step 1: Build the system (creates complete system in /gnu/store)
-	// Capture the output to get the system path
+	// #region agent log
+	logDebug("lib/common.go:1211", "Before guix time-machine system build", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "before_guix_system_build",
+		"platform":     platform,
+		"buildType":    buildType,
+		"channelsPath": channelsPath,
+	})
+	// #endregion
+	
 	buildCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
 	buildCmd.Stdout = os.Stdout
 	buildCmd.Stderr = os.Stderr
 	if err := buildCmd.Run(); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1217", "guix time-machine system build failed", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "guix_system_build_failed",
+			"platform":     platform,
+			"buildType":    buildType,
+			"error":        err.Error(),
+		})
+		// #endregion
 		return fmt.Errorf("guix system build failed: %w", err)
 	}
+	
+	// #region agent log
+	logDebug("lib/common.go:1220", "After guix time-machine system build", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "after_guix_system_build",
+		"platform":     platform,
+		"buildType":    buildType,
+		"checking":     "system_generation_exists",
+	})
+	// #endregion
 
 	PrintSectionHeader("Copying Kernel Files")
 	fmt.Println("Step 2/3: Manually copying kernel and initrd to /boot")
@@ -1228,6 +1271,15 @@ func RunGuixSystemInit() error {
 	cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
 	output, err := cmd.Output()
 	if err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1234", "Failed to find system generation after build", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "system_path_not_found",
+			"platform":     platform,
+			"buildType":    buildType,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Failed to find built system: %v\n", err)
 		fmt.Println("Listing all *-system directories:")
 		exec.Command("bash", "-c", "ls -ld /gnu/store/*-system 2>/dev/null | head -10").Run()
@@ -1235,11 +1287,29 @@ func RunGuixSystemInit() error {
 	}
 	systemPath := strings.TrimSpace(string(output))
 	if systemPath == "" {
+		// #region agent log
+		logDebug("lib/common.go:1241", "No system generation found in store", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "system_path_empty",
+			"platform":     platform,
+			"buildType":    buildType,
+		})
+		// #endregion
 		fmt.Println("[ERROR] No system found in /gnu/store")
 		fmt.Println("Listing /gnu/store contents:")
 		exec.Command("bash", "-c", "ls /gnu/store/ | grep system | head -20").Run()
 		return fmt.Errorf("no system found in /gnu/store")
 	}
+
+	// #region agent log
+	logDebug("lib/common.go:1244", "System path found after build", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "system_path_found",
+		"platform":     platform,
+		"buildType":    buildType,
+		"systemPath":   systemPath,
+	})
+	// #endregion
 
 	fmt.Printf("[INFO] Found built system: %s\n", systemPath)
 
@@ -1250,29 +1320,130 @@ func RunGuixSystemInit() error {
 	listCmd.Stderr = os.Stderr
 	listCmd.Run()
 
+	// Log system generation contents
+	entries, err := os.ReadDir(systemPath)
+	entryNames := []string{}
+	if err == nil {
+		for _, entry := range entries {
+			entryNames = append(entryNames, entry.Name())
+		}
+	}
+	// #region agent log
+	logDebug("lib/common.go:1251", "System generation contents after build", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "list_system_contents",
+		"platform":     platform,
+		"buildType":    buildType,
+		"systemPath":   systemPath,
+		"entries":      entryNames,
+		"entryCount":   len(entryNames),
+	})
+	// #endregion
+
 	// Copy kernel
 	fmt.Println()
 	kernelSrc := filepath.Join(systemPath, "kernel")
 	fmt.Printf("[INFO] Checking for kernel at: %s\n", kernelSrc)
+	
+	// #region agent log
+	logDebug("lib/common.go:1255", "Checking kernel in system generation", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "check_kernel_src",
+		"platform":     platform,
+		"buildType":    buildType,
+		"kernelSrc":    kernelSrc,
+	})
+	// #endregion
+	
 	if info, err := os.Stat(kernelSrc); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1258", "Kernel not found in system generation", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "kernel_not_found",
+			"platform":     platform,
+			"buildType":    buildType,
+			"kernelSrc":    kernelSrc,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Kernel not found: %v\n", err)
 		return fmt.Errorf("kernel not found in built system: %w", err)
 	} else {
+		// Check if it's a symlink
+		isSymlink := false
+		if linkInfo, err := os.Lstat(kernelSrc); err == nil {
+			isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+		}
+		// #region agent log
+		logDebug("lib/common.go:1261", "Kernel found in system generation", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "kernel_found",
+			"platform":     platform,
+			"buildType":    buildType,
+			"kernelSrc":    kernelSrc,
+			"isSymlink":    isSymlink,
+			"size":         info.Size(),
+		})
+		// #endregion
 		fmt.Printf("[OK] Kernel found (%.1f MB)\n", float64(info.Size())/1024/1024)
 	}
 
 	kernelDest := "/mnt/boot/vmlinuz"
 	fmt.Printf("[INFO] Copying kernel to: %s\n", kernelDest)
+	
+	// #region agent log
+	logDebug("lib/common.go:1265", "Before kernel copy", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "before_kernel_copy",
+		"platform":     platform,
+		"buildType":    buildType,
+		"kernelSrc":    kernelSrc,
+		"kernelDest":   kernelDest,
+	})
+	// #endregion
+	
 	if err := exec.Command("cp", "-Lv", kernelSrc, kernelDest).Run(); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1267", "Kernel copy failed", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "kernel_copy_failed",
+			"platform":     platform,
+			"buildType":    buildType,
+			"kernelSrc":    kernelSrc,
+			"kernelDest":   kernelDest,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
 		return fmt.Errorf("failed to copy kernel: %w", err)
 	}
 
 	// Verify the copy
 	if info, err := os.Stat(kernelDest); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1273", "Kernel copy verification failed", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "kernel_copy_verify_failed",
+			"platform":     platform,
+			"buildType":    buildType,
+			"kernelDest":   kernelDest,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Kernel not found at destination after copy: %v\n", err)
 		return fmt.Errorf("kernel copy verification failed: %w", err)
 	} else {
+		// #region agent log
+		logDebug("lib/common.go:1276", "Kernel copy succeeded", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "kernel_copy_succeeded",
+			"platform":     platform,
+			"buildType":    buildType,
+			"kernelSrc":    kernelSrc,
+			"kernelDest":   kernelDest,
+			"kernelSize":   info.Size(),
+		})
+		// #endregion
 		fmt.Printf("[OK] Kernel copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
 	}
 
@@ -1280,25 +1451,106 @@ func RunGuixSystemInit() error {
 	fmt.Println()
 	initrdSrc := filepath.Join(systemPath, "initrd")
 	fmt.Printf("[INFO] Checking for initrd at: %s\n", initrdSrc)
+	
+	// #region agent log
+	logDebug("lib/common.go:1281", "Checking initrd in system generation", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "check_initrd_src",
+		"platform":     platform,
+		"buildType":    buildType,
+		"initrdSrc":    initrdSrc,
+	})
+	// #endregion
+	
 	if info, err := os.Stat(initrdSrc); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1284", "Initrd not found in system generation", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "initrd_not_found",
+			"platform":     platform,
+			"buildType":    buildType,
+			"initrdSrc":    initrdSrc,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Initrd not found: %v\n", err)
 		return fmt.Errorf("initrd not found in built system: %w", err)
 	} else {
+		// Check if it's a symlink
+		isSymlink := false
+		if linkInfo, err := os.Lstat(initrdSrc); err == nil {
+			isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+		}
+		// #region agent log
+		logDebug("lib/common.go:1287", "Initrd found in system generation", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "initrd_found",
+			"platform":     platform,
+			"buildType":    buildType,
+			"initrdSrc":    initrdSrc,
+			"isSymlink":    isSymlink,
+			"size":         info.Size(),
+		})
+		// #endregion
 		fmt.Printf("[OK] Initrd found (%.1f MB)\n", float64(info.Size())/1024/1024)
 	}
 
 	initrdDest := "/mnt/boot/initrd"
 	fmt.Printf("[INFO] Copying initrd to: %s\n", initrdDest)
+	
+	// #region agent log
+	logDebug("lib/common.go:1291", "Before initrd copy", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "before_initrd_copy",
+		"platform":     platform,
+		"buildType":    buildType,
+		"initrdSrc":    initrdSrc,
+		"initrdDest":   initrdDest,
+	})
+	// #endregion
+	
 	if err := exec.Command("cp", "-Lv", initrdSrc, initrdDest).Run(); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1293", "Initrd copy failed", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "initrd_copy_failed",
+			"platform":     platform,
+			"buildType":    buildType,
+			"initrdSrc":    initrdSrc,
+			"initrdDest":   initrdDest,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
 		return fmt.Errorf("failed to copy initrd: %w", err)
 	}
 
 	// Verify the copy
 	if info, err := os.Stat(initrdDest); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:1299", "Initrd copy verification failed", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "initrd_copy_verify_failed",
+			"platform":     platform,
+			"buildType":    buildType,
+			"initrdDest":   initrdDest,
+			"error":        err.Error(),
+		})
+		// #endregion
 		fmt.Printf("[ERROR] Initrd not found at destination after copy: %v\n", err)
 		return fmt.Errorf("initrd copy verification failed: %w", err)
 	} else {
+		// #region agent log
+		logDebug("lib/common.go:1302", "Initrd copy succeeded", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "initrd_copy_succeeded",
+			"platform":     platform,
+			"buildType":    buildType,
+			"initrdSrc":    initrdSrc,
+			"initrdDest":   initrdDest,
+			"initrdSize":   info.Size(),
+		})
+		// #endregion
 		fmt.Printf("[OK] Initrd copied successfully (%.1f MB)\n", float64(info.Size())/1024/1024)
 	}
 
@@ -1306,16 +1558,27 @@ func RunGuixSystemInit() error {
 	fmt.Println("[SUCCESS] Kernel and initrd files copied to /mnt/boot/")
 
 	// Create the current-system symlink
-	if err := os.Remove("/mnt/run/current-system"); err != nil && !os.IsNotExist(err) {
+	currentSystemLink := "/mnt/run/current-system"
+	if err := os.Remove(currentSystemLink); err != nil && !os.IsNotExist(err) {
 		fmt.Printf("Warning: failed to remove old current-system symlink: %v\n", err)
 	}
 	if err := os.MkdirAll("/mnt/run", 0755); err != nil {
 		return fmt.Errorf("failed to create /mnt/run: %w", err)
 	}
-	if err := os.Symlink(systemPath, "/mnt/run/current-system"); err != nil {
+	if err := os.Symlink(systemPath, currentSystemLink); err != nil {
 		return fmt.Errorf("failed to create current-system symlink: %w", err)
 	}
 	fmt.Printf("✓ Created symlink: /mnt/run/current-system -> %s\n", systemPath)
+	// #region agent log
+	logDebug("lib/common.go:1318", "Created current-system symlink", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "created_symlink",
+		"platform":     platform,
+		"buildType":    buildType,
+		"symlink":      currentSystemLink,
+		"target":       systemPath,
+	})
+	// #endregion
 	fmt.Println()
 
 	PrintSectionHeader("Installing Bootloader")
@@ -1339,6 +1602,16 @@ func RunGuixSystemInit() error {
 	fmt.Println()
 
 	// Step 3: Run system init (should now just install bootloader since system is already built)
+	// #region agent log
+	logDebug("lib/common.go:1341", "Before guix time-machine system init", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "before_guix_system_init",
+		"platform":     platform,
+		"buildType":    buildType,
+		"channelsPath": channelsPath,
+	})
+	// #endregion
+	
 	maxRetries := 3
 	var lastErr error
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -1362,6 +1635,17 @@ func RunGuixSystemInit() error {
 
 		if err := RunCommandWithSpinner("guix", "time-machine", "-C", channelsPath, "--", "system", "init", "--fallback", "-v6", "/mnt/etc/config.scm", "/mnt", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"); err != nil {
 			lastErr = err
+			// #region agent log
+			logDebug("lib/common.go:1364", "guix time-machine system init failed", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "guix_system_init_failed",
+				"platform":     platform,
+				"buildType":    buildType,
+				"attempt":      attempt,
+				"maxRetries":   maxRetries,
+				"error":        err.Error(),
+			})
+			// #endregion
 			fmt.Printf("\n[WARN] Attempt %d failed: %v\n", attempt, err)
 			
 			// CRITICAL: Check if this is a connection error
@@ -1389,10 +1673,29 @@ func RunGuixSystemInit() error {
 
 		// Success
 		lastErr = nil
+		// #region agent log
+		logDebug("lib/common.go:1391", "guix time-machine system init succeeded", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "guix_system_init_succeeded",
+			"platform":     platform,
+			"buildType":    buildType,
+			"attempt":      attempt,
+		})
+		// #endregion
 		break
 	}
 
 	if lastErr != nil {
+		// #region agent log
+		logDebug("lib/common.go:1395", "guix system init failed after all retries", map[string]interface{}{
+			"hypothesisId": "G",
+			"step":         "guix_system_init_failed_final",
+			"platform":     platform,
+			"buildType":    buildType,
+			"maxRetries":   maxRetries,
+			"error":        lastErr.Error(),
+		})
+		// #endregion
 		fmt.Println()
 		fmt.Println("Bootloader installation failed. You can:")
 		fmt.Printf("  1. Try manually: guix time-machine -C %s -- system init /mnt/etc/config.scm /mnt\n", channelsPath)
