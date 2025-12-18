@@ -4406,15 +4406,79 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 	// Search for initrd packages (exclude raw-initrd and other placeholders)
 	findInitrdCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-initrd* 2>/dev/null | grep -v 'raw-initrd' | head -5")
 	initrdOutput, err := findInitrdCmd.Output()
+	// #region agent log
+	logDebug("lib/common.go:4408", "Initrd search command output", map[string]interface{}{
+		"hypothesisId": "N",
+		"step":         "initrd_search_raw_output",
+		"platform":     platform,
+		"buildType":    buildType,
+		"output":       string(initrdOutput),
+		"outputLen":    len(initrdOutput),
+		"error":        func() string { if err != nil { return err.Error() }; return "" }(),
+	})
+	// #endregion
 	if err == nil && len(initrdOutput) > 0 {
 		initrdCandidates := strings.Split(strings.TrimSpace(string(initrdOutput)), "\n")
+		// #region agent log
+		logDebug("lib/common.go:4410", "Initrd candidates after grep filter", map[string]interface{}{
+			"hypothesisId": "N",
+			"step":         "initrd_candidates_filtered",
+			"platform":     platform,
+			"buildType":    buildType,
+			"candidates":   initrdCandidates,
+			"count":        len(initrdCandidates),
+		})
+		// #endregion
 		for _, candidate := range initrdCandidates {
 			candidate = strings.TrimSpace(candidate)
 			if candidate == "" {
 				continue
 			}
+			// Additional safety check: explicitly reject raw-initrd even if grep missed it
+			if strings.Contains(candidate, "raw-initrd") {
+				// #region agent log
+				logDebug("lib/common.go:4415", "Rejecting raw-initrd candidate", map[string]interface{}{
+					"hypothesisId": "N",
+					"step":         "reject_raw_initrd",
+					"platform":     platform,
+					"buildType":    buildType,
+					"candidate":    candidate,
+				})
+				// #endregion
+				continue
+			}
 			// Check if it's a real file (not symlink) and has reasonable size (> 10MB)
 			if info, err := os.Stat(candidate); err == nil {
+				// Reject directories (raw-initrd might be a directory)
+				if info.IsDir() {
+					// #region agent log
+					logDebug("lib/common.go:4451", "Rejecting directory candidate", map[string]interface{}{
+						"hypothesisId": "N",
+						"step":         "reject_directory",
+						"platform":     platform,
+						"buildType":    buildType,
+						"candidate":    candidate,
+					})
+					// #endregion
+					continue
+				}
+				// #region agent log
+				logDebug("lib/common.go:4417", "Checking initrd candidate", map[string]interface{}{
+					"hypothesisId": "N",
+					"step":         "check_initrd_candidate",
+					"platform":     platform,
+					"buildType":    buildType,
+					"candidate":    candidate,
+					"size":         info.Size(),
+					"isDir":        info.IsDir(),
+					"isSymlink":    func() bool {
+						if linkInfo, err := os.Lstat(candidate); err == nil {
+							return linkInfo.Mode()&os.ModeSymlink != 0
+						}
+						return false
+					}(),
+				})
+				// #endregion
 				// Check if it's a symlink
 				if linkInfo, err := os.Lstat(candidate); err == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
 					// Follow symlink to check actual file
@@ -4431,6 +4495,19 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 								"size":         resolvedInfo.Size(),
 							})
 							break
+						} else {
+							// #region agent log
+							logDebug("lib/common.go:4422", "Initrd symlink target too small", map[string]interface{}{
+								"hypothesisId": "N",
+								"step":         "initrd_symlink_too_small",
+								"platform":     platform,
+								"buildType":    buildType,
+								"candidate":    candidate,
+								"resolved":     resolved,
+								"size":         func() int64 { if resolvedInfo != nil { return resolvedInfo.Size() }; return 0 }(),
+								"minSize":      10 * 1024 * 1024,
+							})
+							// #endregion
 						}
 					}
 				} else if info.Size() > 10*1024*1024 {
@@ -4445,7 +4522,30 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 						"size":         info.Size(),
 					})
 					break
+				} else {
+					// #region agent log
+					logDebug("lib/common.go:4436", "Initrd candidate too small", map[string]interface{}{
+						"hypothesisId": "N",
+						"step":         "initrd_too_small",
+						"platform":     platform,
+						"buildType":    buildType,
+						"candidate":    candidate,
+						"size":         info.Size(),
+						"minSize":      10 * 1024 * 1024,
+					})
+					// #endregion
 				}
+			} else {
+				// #region agent log
+				logDebug("lib/common.go:4417", "Initrd candidate stat failed", map[string]interface{}{
+					"hypothesisId": "N",
+					"step":         "initrd_stat_failed",
+					"platform":     platform,
+					"buildType":    buildType,
+					"candidate":    candidate,
+					"error":        err.Error(),
+				})
+				// #endregion
 			}
 		}
 	}
@@ -4467,6 +4567,15 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 		"buildType":    buildType,
 		"kernelPath":   kernelPath,
 		"initrdPath":   initrdPath,
+		"initrdSize": func() int64 {
+			if initrdPath != "" {
+				if info, err := os.Stat(initrdPath); err == nil {
+					return info.Size()
+				}
+			}
+			return 0
+		}(),
+		"initrdContainsRaw": strings.Contains(initrdPath, "raw-initrd"),
 	})
 	return kernelPath, initrdPath, nil
 }
