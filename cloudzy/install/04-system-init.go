@@ -123,7 +123,7 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	}
 
 	// Run guix system init with retry logic (free software only, no nonguix)
-	if err := lib.RunGuixSystemInitFreeSoftware(); err != nil {
+	if err := lib.RunGuixSystemInitFreeSoftware(state.GuixPlatform); err != nil {
 		return err
 	}
 

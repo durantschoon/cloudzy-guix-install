@@ -1900,7 +1900,22 @@ func isMountPoint(path string) bool {
 }
 
 // RunGuixSystemInitFreeSoftware runs guix system init with only free software (no nonguix)
-func RunGuixSystemInitFreeSoftware() error {
+// platform: the installation platform (cloudzy, framework, etc.) for tracking purposes
+func RunGuixSystemInitFreeSoftware(platform string) error {
+	// Default platform if not provided
+	if platform == "" {
+		platform = "unknown"
+	}
+
+	buildType := "libre" // This function only handles free-software builds
+
+	// Log build context at start
+	logDebug("lib/common.go:1910", "Starting free-software system init", map[string]interface{}{
+		"platform":  platform,
+		"buildType": buildType,
+		"step":      "init_start",
+	})
+
 	// Ensure daemon is running before validation (validation needs daemon)
 	if err := EnsureGuixDaemonRunning(); err != nil {
 		return fmt.Errorf("failed to ensure guix-daemon is running: %w", err)
@@ -2108,7 +2123,7 @@ func RunGuixSystemInitFreeSoftware() error {
 		// #endregion
 		
 		// First check if network is working (Hypothesis M)
-		networkErr := CheckNetworkConnectivity()
+		networkErr := CheckNetworkConnectivity(platform, buildType)
 		if networkErr != nil {
 			fmt.Println("[WARN] Network/DNS not working - skipping network-based kernel build")
 			fmt.Println("       Will try alternative approaches that don't require network")
@@ -2116,7 +2131,7 @@ func RunGuixSystemInitFreeSoftware() error {
 
 			// Try Hypothesis K: Deep system generation search
 			fmt.Println("Attempting Hypothesis K: Deep search of system generation...")
-			if kPath, iPath, err := SearchSystemGenerationDeep(systemPath); err == nil && kPath != "" {
+			if kPath, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && kPath != "" {
 				kernelSrc = kPath
 				kernelFound = true
 				fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
@@ -2129,7 +2144,7 @@ func RunGuixSystemInitFreeSoftware() error {
 
 				// Try Hypothesis N: Store-wide search
 				fmt.Println("Attempting Hypothesis N: Store-wide kernel search...")
-				if kPath, iPath, err := SearchStoreForKernel(); err == nil && kPath != "" {
+				if kPath, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && kPath != "" {
 					kernelSrc = kPath
 					kernelFound = true
 					fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
@@ -2170,14 +2185,14 @@ func RunGuixSystemInitFreeSoftware() error {
 				fmt.Println("       Trying alternative search approaches...")
 
 				// Try Hypothesis K first
-				if kPath, iPath, err := SearchSystemGenerationDeep(systemPath); err == nil && kPath != "" {
+				if kPath, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && kPath != "" {
 					kernelSrc = kPath
 					kernelFound = true
 					fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
 					if iPath != "" {
 						fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
 					}
-				} else if kPath, iPath, err := SearchStoreForKernel(); err == nil && kPath != "" {
+				} else if kPath, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && kPath != "" {
 					// Try Hypothesis N
 					kernelSrc = kPath
 					kernelFound = true
@@ -3379,10 +3394,12 @@ func logDebug(location, message string, data map[string]interface{}) {
 
 // Hypothesis M: Network Diagnostics
 // CheckNetworkConnectivity tests if network and DNS are working before attempting builds
-func CheckNetworkConnectivity() error {
+func CheckNetworkConnectivity(platform, buildType string) error {
 	logDebug("lib/common.go:3315", "Checking network connectivity", map[string]interface{}{
 		"hypothesisId": "M",
 		"step":         "check_network_start",
+		"platform":     platform,
+		"buildType":    buildType,
 	})
 
 	// Test DNS resolution
@@ -3392,6 +3409,8 @@ func CheckNetworkConnectivity() error {
 		logDebug("lib/common.go:3323", "DNS resolution failed", map[string]interface{}{
 			"hypothesisId": "M",
 			"step":         "dns_failed",
+			"platform":     platform,
+			"buildType":    buildType,
 			"error":        err.Error(),
 		})
 		return fmt.Errorf("DNS resolution failed (cannot resolve ci.guix.gnu.org): %w", err)
@@ -3400,6 +3419,8 @@ func CheckNetworkConnectivity() error {
 	logDebug("lib/common.go:3332", "Network connectivity OK", map[string]interface{}{
 		"hypothesisId": "M",
 		"step":         "network_ok",
+		"platform":     platform,
+		"buildType":    buildType,
 	})
 	fmt.Println("[OK] Network and DNS working")
 	return nil
@@ -3407,11 +3428,13 @@ func CheckNetworkConnectivity() error {
 
 // Hypothesis K: Deep System Generation Search
 // SearchSystemGenerationDeep explores subdirectories and config files to find kernel paths
-func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath string, err error) {
+func SearchSystemGenerationDeep(systemPath, platform, buildType string) (kernelPath, initrdPath string, err error) {
 	logDebug("lib/common.go:3343", "Starting deep system generation search", map[string]interface{}{
 		"hypothesisId": "K",
 		"step":         "deep_search_start",
 		"systemPath":   systemPath,
+		"platform":     platform,
+		"buildType":    buildType,
 	})
 
 	// Strategy 1: Check parameters file for kernel/initrd paths
@@ -3421,6 +3444,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 		logDebug("lib/common.go:3353", "Found parameters file", map[string]interface{}{
 			"hypothesisId": "K",
 			"step":         "parameters_found",
+			"platform":     platform,
+			"buildType":    buildType,
 			"contentSize":  len(content),
 		})
 
@@ -3444,6 +3469,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 						logDebug("lib/common.go:3378", "Kernel found via parameters file", map[string]interface{}{
 							"hypothesisId": "K",
 							"step":         "kernel_from_parameters",
+							"platform":     platform,
+							"buildType":    buildType,
 							"kernelPath":   kernelPath,
 						})
 						break
@@ -3461,6 +3488,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 				logDebug("lib/common.go:3395", "Initrd found via parameters file", map[string]interface{}{
 					"hypothesisId": "K",
 					"step":         "initrd_from_parameters",
+					"platform":     platform,
+					"buildType":    buildType,
 					"initrdPath":   initrdPath,
 				})
 			}
@@ -3475,6 +3504,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 			logDebug("lib/common.go:3410", "Exploring subdirectory", map[string]interface{}{
 				"hypothesisId": "K",
 				"step":         "explore_subdir",
+				"platform":     platform,
+				"buildType":    buildType,
 				"subdirPath":   subdirPath,
 				"entryCount":   len(entries),
 			})
@@ -3498,6 +3529,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 								logDebug("lib/common.go:3434", "Kernel found via symlink in subdir", map[string]interface{}{
 									"hypothesisId": "K",
 									"step":         "kernel_from_subdir_symlink",
+									"platform":     platform,
+									"buildType":    buildType,
 									"kernelPath":   kernelPath,
 									"symlinkFrom":  entryPath,
 								})
@@ -3509,6 +3542,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 								logDebug("lib/common.go:3446", "Initrd found via symlink in subdir", map[string]interface{}{
 									"hypothesisId": "K",
 									"step":         "initrd_from_subdir_symlink",
+									"platform":     platform,
+									"buildType":    buildType,
 									"initrdPath":   initrdPath,
 									"symlinkFrom":  entryPath,
 								})
@@ -3524,6 +3559,8 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 		logDebug("lib/common.go:3462", "Deep search found files", map[string]interface{}{
 			"hypothesisId": "K",
 			"step":         "deep_search_success",
+			"platform":     platform,
+			"buildType":    buildType,
 			"kernelPath":   kernelPath,
 			"initrdPath":   initrdPath,
 		})
@@ -3533,16 +3570,20 @@ func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath strin
 	logDebug("lib/common.go:3471", "Deep search found nothing", map[string]interface{}{
 		"hypothesisId": "K",
 		"step":         "deep_search_empty",
+		"platform":     platform,
+		"buildType":    buildType,
 	})
 	return "", "", fmt.Errorf("deep search found no kernel or initrd files")
 }
 
 // Hypothesis N: Store-Wide Kernel Search
 // SearchStoreForKernel searches entire /gnu/store for linux-libre packages as last resort
-func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
+func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath string, err error) {
 	logDebug("lib/common.go:3482", "Starting store-wide kernel search", map[string]interface{}{
 		"hypothesisId": "N",
 		"step":         "store_search_start",
+		"platform":     platform,
+		"buildType":    buildType,
 	})
 
 	// Find all linux-libre packages in store
@@ -3552,6 +3593,8 @@ func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
 		logDebug("lib/common.go:3491", "No linux-libre packages found in store", map[string]interface{}{
 			"hypothesisId": "N",
 			"step":         "no_packages_found",
+			"platform":     platform,
+			"buildType":    buildType,
 			"error":        err.Error(),
 		})
 		return "", "", fmt.Errorf("no linux-libre packages found in store")
@@ -3561,6 +3604,8 @@ func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
 	logDebug("lib/common.go:3501", "Found linux-libre packages", map[string]interface{}{
 		"hypothesisId": "N",
 		"step":         "packages_found",
+		"platform":     platform,
+		"buildType":    buildType,
 		"packageCount": len(packages),
 		"packages":     packages,
 	})
@@ -3580,6 +3625,8 @@ func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
 				logDebug("lib/common.go:3521", "Kernel found in store package", map[string]interface{}{
 					"hypothesisId": "N",
 					"step":         "kernel_from_store",
+					"platform":     platform,
+					"buildType":    buildType,
 					"kernelPath":   kernelPath,
 					"packagePath":  pkg,
 					"size":         info.Size(),
@@ -3603,6 +3650,8 @@ func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
 			logDebug("lib/common.go:3546", "Initrd found in store", map[string]interface{}{
 				"hypothesisId": "N",
 				"step":         "initrd_from_store",
+				"platform":     platform,
+				"buildType":    buildType,
 				"initrdPath":   initrdPath,
 			})
 		}
@@ -3612,6 +3661,8 @@ func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
 		logDebug("lib/common.go:3555", "Store search failed to find kernel", map[string]interface{}{
 			"hypothesisId": "N",
 			"step":         "store_search_failed",
+			"platform":     platform,
+			"buildType":    buildType,
 		})
 		return "", "", fmt.Errorf("no kernel found in any store packages")
 	}
@@ -3619,6 +3670,8 @@ func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
 	logDebug("lib/common.go:3562", "Store search successful", map[string]interface{}{
 		"hypothesisId": "N",
 		"step":         "store_search_success",
+		"platform":     platform,
+		"buildType":    buildType,
 		"kernelPath":   kernelPath,
 		"initrdPath":   initrdPath,
 	})
