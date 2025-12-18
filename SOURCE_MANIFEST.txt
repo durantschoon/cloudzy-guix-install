@@ -21,17 +21,17 @@ e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-du
 5cf15120906a8878178330a9647087c7c5e5dcac4ded4c1237c6a0b5a8d7fd18  ./framework-dual/install/02-mount-existing.go
 39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
 b5e4312b242bbeafd39afcf05717926099a6521866b5e41b98f4bc282fa8cb40  ./framework-dual/install/03-config-dual-boot.go
-1e390ddcc15e44cb76a32a72098ff3bd875d04b623b2aa5fbc6de0c1a2af6c31  ./framework-dual/install/04-system-init.go
+88ec2e3db371a7b10dfd919a2cba0646956ec84d257080f85a8e02cb73e9ebb2  ./framework-dual/install/04-system-init.go
 b691772fd78460d59da49812277b6bc438b5412ebaafeb3fce3a5e8dd69e9ee9  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
 365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
 ae85de411b5ac7f22cbfb5b04020d412526e1c7984f78cc54b24dfd2fc450146  ./framework/install/03-config.go
-b8001632726a5e35358d9d12159bcd4a4b472cb8e13e41a07345b468e34b3ef1  ./framework/install/04-system-init.go
+17b2a8adaeb45d3df913ea44ecf19b1dc24a29749dfa699ae08c9a3c8f73df17  ./framework/install/04-system-init.go
 2a69b9d4a6c078e401559c5e5556a01aafef2ed4234fb166ab3d1c07ddd50e42  ./framework/install/state.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-821900fd4d8da38b66e89e82d1d3ec6835d94966c30dd2cd74457c57de6ac0c5  ./lib/common.go
+7ba268551a33d1229c8fbcb1618587a1794215819811b6b133f374af6021e877  ./lib/common.go
 ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
 
 ## Critical Shell Scripts

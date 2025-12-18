@@ -139,7 +139,7 @@ func (s *Step04SystemInit) RunClean(state *State) error {
 	}
 
 	// Verify and recover kernel/initrd files with auto-retry
-	if err := lib.VerifyAndRecoverKernelFiles(3); err != nil {
+	if err := lib.VerifyAndRecoverKernelFiles(3, state.GuixPlatform, "non-libre"); err != nil {
 		fmt.Println()
 		fmt.Println("========================================")
 		fmt.Println("  KERNEL/INITRD VERIFICATION FAILED")

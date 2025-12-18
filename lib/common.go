@@ -1987,7 +1987,7 @@ func RunGuixSystemInit(platform string) error {
 	// This matches the verification done in framework-dual/install/04-system-init.go
 	fmt.Println()
 	PrintSectionHeader("Verifying Kernel/Initrd After Bootloader Install")
-	if err := VerifyAndRecoverKernelFiles(3); err != nil {
+	if err := VerifyAndRecoverKernelFiles(3, platform, buildType); err != nil {
 		return fmt.Errorf("kernel/initrd verification failed after bootloader install: %w", err)
 	}
 
@@ -2198,7 +2198,7 @@ func RunComprehensiveVerification(recoveryScriptPath string) error {
 
 // VerifyAndRecoverKernelFiles checks if kernel/initrd exist and attempts recovery if missing
 // This handles the case where guix system init succeeds but doesn't copy kernel files
-func VerifyAndRecoverKernelFiles(maxAttempts int) error {
+func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) error {
 	fmt.Println()
 	PrintSectionHeader("Verifying Kernel and Initrd Files")
 
@@ -2383,6 +2383,7 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 			return info.Size() < 10*1024*1024
 		}()) {
 			initrdSrc := filepath.Join(systemPath, "initrd")
+			var initrdFound bool
 			// #region agent log
 			logDebug("lib/common.go:1730", "Checking initrd in system generation", map[string]interface{}{
 				"hypothesisId": "E",
@@ -2390,26 +2391,71 @@ func VerifyAndRecoverKernelFiles(maxAttempts int) error {
 				"initrdSrc":    initrdSrc,
 			})
 			// #endregion
-			if info, err := os.Stat(initrdSrc); err != nil {
-				fmt.Printf("[ERROR] Initrd not found in system generation: %s\n", initrdSrc)
-				// #region agent log
-				logDebug("lib/common.go:1735", "Initrd not found in system generation", map[string]interface{}{
-					"hypothesisId": "E",
-					"step":         "initrd_not_in_system",
-					"initrdSrc":    initrdSrc,
-					"error":        err.Error(),
-				})
-				// #endregion
-				recovered = false
+			if _, err := os.Stat(initrdSrc); err != nil {
+				fmt.Printf("[WARN] Initrd not found in standard location: %s\n", initrdSrc)
+				fmt.Println("       Attempting fallback strategies...")
+				
+				// Try Hypothesis K: Deep search in system generation
+				if _, iPath, err := SearchSystemGenerationDeep(systemPath, platform, buildType); err == nil && iPath != "" {
+					initrdSrc = iPath
+					initrdFound = true
+					// #region agent log
+					logDebug("lib/common.go:2400", "Initrd found via deep search (Hypothesis K)", map[string]interface{}{
+						"hypothesisId": "E",
+						"step":         "initrd_found_deep_search",
+						"initrdSrc":    initrdSrc,
+					})
+					// #endregion
+					fmt.Printf("[OK] Found initrd via deep search: %s\n", initrdSrc)
+				} else {
+					// Try Hypothesis N: Store-wide search
+					if _, iPath, err := SearchStoreForKernel(platform, buildType); err == nil && iPath != "" {
+						initrdSrc = iPath
+						initrdFound = true
+						// #region agent log
+						logDebug("lib/common.go:2412", "Initrd found via store search (Hypothesis N)", map[string]interface{}{
+							"hypothesisId": "E",
+							"step":         "initrd_found_store_search",
+							"initrdSrc":    initrdSrc,
+						})
+						// #endregion
+						fmt.Printf("[OK] Found initrd via store search: %s\n", initrdSrc)
+					} else {
+						// #region agent log
+						logDebug("lib/common.go:1735", "Initrd not found in system generation", map[string]interface{}{
+							"hypothesisId": "E",
+							"step":         "initrd_not_in_system",
+							"initrdSrc":    initrdSrc,
+							"error":        err.Error(),
+						})
+						// #endregion
+						fmt.Printf("[ERROR] Initrd not found via any method (Hypotheses E, K, N all failed)\n")
+						fmt.Println("       Initrd should have been created by guix system init")
+						recovered = false
+					}
+				}
 			} else {
+				initrdFound = true
+			}
+			
+			if initrdFound {
+				// Get file info for logging
+				var initrdInfo os.FileInfo
+				if info, err := os.Stat(initrdSrc); err == nil {
+					initrdInfo = info
+				}
 				initrdDest := "/mnt/boot/initrd"
 				// #region agent log
+				var initrdSize int64
+				if initrdInfo != nil {
+					initrdSize = initrdInfo.Size()
+				}
 				logDebug("lib/common.go:1743", "Copying initrd from system generation", map[string]interface{}{
 					"hypothesisId": "E",
 					"step":         "copy_initrd",
 					"initrdSrc":    initrdSrc,
 					"initrdDest":   initrdDest,
-					"initrdSize":   info.Size(),
+					"initrdSize":   initrdSize,
 				})
 				// #endregion
 				if err := exec.Command("cp", "-Lf", initrdSrc, initrdDest).Run(); err != nil {
@@ -3209,7 +3255,7 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 			"initrdCount":  len(initrds),
 		})
 		// #endregion
-		if err := VerifyAndRecoverKernelFiles(3); err != nil {
+		if err := VerifyAndRecoverKernelFiles(3, platform, "libre"); err != nil {
 			return fmt.Errorf("failed to recover kernel/initrd files after bootloader install: %w", err)
 		}
 	} else {
