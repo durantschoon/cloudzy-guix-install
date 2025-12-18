@@ -1494,39 +1494,57 @@ func RunGuixSystemInit(platform string) error {
 	fmt.Println()
 
 	// Step 2: Find the built system and copy kernel/initrd to /boot
-	// The system build creates /gnu/store/*-system with kernel and initrd
-	fmt.Println("Searching for built system in /gnu/store...")
-	cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
-	output, err := cmd.Output()
-	if err != nil {
-		// #region agent log
-		logDebug("lib/common.go:1234", "Failed to find system generation after build", map[string]interface{}{
-			"hypothesisId": "G",
-			"step":         "system_path_not_found",
-			"platform":     platform,
-			"buildType":    buildType,
-			"error":        err.Error(),
-		})
-		// #endregion
-		fmt.Printf("[ERROR] Failed to find built system: %v\n", err)
-		fmt.Println("Listing all *-system directories:")
-		exec.Command("bash", "-c", "ls -ld /gnu/store/*-system 2>/dev/null | head -10").Run()
-		return fmt.Errorf("failed to find built system: %w", err)
+	// CRITICAL: Use the system path from build output if available (it's the correct one!)
+	// Only fall back to searching if build output didn't contain a path
+	systemPath := ""
+	if systemPathFromOutput != "" {
+		// Verify the path exists
+		if _, err := os.Stat(systemPathFromOutput); err == nil {
+			systemPath = systemPathFromOutput
+			fmt.Printf("Using system generation from build output: %s\n", systemPath)
+		} else {
+			fmt.Printf("[WARN] System path from build output doesn't exist: %s\n", systemPathFromOutput)
+			fmt.Println("Falling back to searching for newest system generation...")
+		}
 	}
-	systemPath := strings.TrimSpace(string(output))
+	
+	// Fallback: Search for newest system generation if we don't have one from build output
 	if systemPath == "" {
-		// #region agent log
-		logDebug("lib/common.go:1241", "No system generation found in store", map[string]interface{}{
-			"hypothesisId": "G",
-			"step":         "system_path_empty",
-			"platform":     platform,
-			"buildType":    buildType,
-		})
-		// #endregion
-		fmt.Println("[ERROR] No system found in /gnu/store")
-		fmt.Println("Listing /gnu/store contents:")
-		exec.Command("bash", "-c", "ls /gnu/store/ | grep system | head -20").Run()
-		return fmt.Errorf("no system found in /gnu/store")
+		fmt.Println("Searching for built system in /gnu/store...")
+		cmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -1")
+		output, err := cmd.Output()
+		if err != nil {
+			// #region agent log
+			logDebug("lib/common.go:1234", "Failed to find system generation after build", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "system_path_not_found",
+				"platform":     platform,
+				"buildType":    buildType,
+				"error":        err.Error(),
+				"systemPathFromOutput": systemPathFromOutput,
+			})
+			// #endregion
+			fmt.Printf("[ERROR] Failed to find built system: %v\n", err)
+			fmt.Println("Listing all *-system directories:")
+			exec.Command("bash", "-c", "ls -ld /gnu/store/*-system 2>/dev/null | head -10").Run()
+			return fmt.Errorf("failed to find built system: %w", err)
+		}
+		systemPath = strings.TrimSpace(string(output))
+		if systemPath == "" {
+			// #region agent log
+			logDebug("lib/common.go:1241", "No system generation found in store", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "system_path_empty",
+				"platform":     platform,
+				"buildType":    buildType,
+				"systemPathFromOutput": systemPathFromOutput,
+			})
+			// #endregion
+			fmt.Println("[ERROR] No system found in /gnu/store")
+			fmt.Println("Listing /gnu/store contents:")
+			exec.Command("bash", "-c", "ls /gnu/store/ | grep system | head -20").Run()
+			return fmt.Errorf("no system found in /gnu/store")
+		}
 	}
 
 	// #region agent log
@@ -1536,8 +1554,19 @@ func RunGuixSystemInit(platform string) error {
 		"platform":     platform,
 		"buildType":    buildType,
 		"systemPath":   systemPath,
+		"systemPathFromOutput": systemPathFromOutput,
+		"usingPathFromOutput": systemPath == systemPathFromOutput,
 	})
 	// #endregion
+	
+	// Warn if we're not using the path from build output
+	if systemPathFromOutput != "" && systemPath != systemPathFromOutput {
+		fmt.Printf("\n[WARN] Using different system path than build output!\n")
+		fmt.Printf("       Build output: %s\n", systemPathFromOutput)
+		fmt.Printf("       Using instead: %s\n", systemPath)
+		fmt.Println("       This may cause missing kernel/initrd files")
+		fmt.Println()
+	}
 
 	fmt.Printf("[INFO] Found built system: %s\n", systemPath)
 
