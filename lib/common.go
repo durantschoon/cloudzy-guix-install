@@ -2107,97 +2107,168 @@ func RunGuixSystemInitFreeSoftware() error {
 		})
 		// #endregion
 		
-		buildKernelCmd := exec.Command("guix", "build", "linux-libre", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
-		buildKernelCmd.Stdout = os.Stdout
-		buildKernelCmd.Stderr = os.Stderr
-		if err := buildKernelCmd.Run(); err != nil {
-			// #region agent log
-			logDebug("lib/common.go:1915", "guix build linux-libre failed", map[string]interface{}{
-				"hypothesisId": "H",
-				"step":         "guix_build_kernel_failed",
-				"error":        err.Error(),
-			})
-			// #endregion
-			return fmt.Errorf("guix build linux-libre failed: %w", err)
-		}
-		
-		// Find the kernel package output
-		findKernelCmd := exec.Command("bash", "-c", "guix build linux-libre --substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org 2>&1 | tail -1")
-		kernelOutput, err := findKernelCmd.Output()
-		if err != nil {
-			return fmt.Errorf("failed to find kernel package path: %w", err)
-		}
-		kernelPackagePath := strings.TrimSpace(string(kernelOutput))
-		
-		// #region agent log
-		logDebug("lib/common.go:1930", "Kernel package path found", map[string]interface{}{
-			"hypothesisId": "H",
-			"step":         "kernel_package_path_found",
-			"kernelPackagePath": kernelPackagePath,
-		})
-		// #endregion
-		
-		// Check for kernel binary in the package
-		// Kernel packages typically have the kernel at: $package/bzImage or $package/vmlinux
-		kernelPackagePaths := []string{
-			filepath.Join(kernelPackagePath, "bzImage"),
-			filepath.Join(kernelPackagePath, "vmlinux"),
-			filepath.Join(kernelPackagePath, "boot", "bzImage"),
-			filepath.Join(kernelPackagePath, "boot", "vmlinux"),
-		}
-		
-		kernelFound2 := false
-		var kernelSrc2 string
-		for _, altPath := range kernelPackagePaths {
-			if info, err := os.Stat(altPath); err == nil {
-				isSymlink := false
-				if linkInfo, err := os.Lstat(altPath); err == nil {
-					isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+		// First check if network is working (Hypothesis M)
+		networkErr := CheckNetworkConnectivity()
+		if networkErr != nil {
+			fmt.Println("[WARN] Network/DNS not working - skipping network-based kernel build")
+			fmt.Println("       Will try alternative approaches that don't require network")
+			fmt.Println()
+
+			// Try Hypothesis K: Deep system generation search
+			fmt.Println("Attempting Hypothesis K: Deep search of system generation...")
+			if kPath, iPath, err := SearchSystemGenerationDeep(systemPath); err == nil && kPath != "" {
+				kernelSrc = kPath
+				kernelFound = true
+				fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
+				if iPath != "" {
+					fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
 				}
+				// Continue to copy step below
+			} else {
+				fmt.Println("[WARN] Deep search failed - no kernel found in system generation subdirectories")
+
+				// Try Hypothesis N: Store-wide search
+				fmt.Println("Attempting Hypothesis N: Store-wide kernel search...")
+				if kPath, iPath, err := SearchStoreForKernel(); err == nil && kPath != "" {
+					kernelSrc = kPath
+					kernelFound = true
+					fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
+					if iPath != "" {
+						fmt.Printf("[OK] Found initrd via store search: %s\n", iPath)
+					}
+					// Continue to copy step below
+				} else {
+					fmt.Println("[ERROR] All non-network approaches failed")
+					fmt.Println()
+					fmt.Println("Cannot proceed without network for kernel build, and no kernel found in store.")
+					fmt.Println("Please fix network connectivity and retry, or use guix system init directly.")
+					fmt.Println()
+					logDebug("lib/common.go:2135", "All non-network hypotheses failed", map[string]interface{}{
+						"hypothesisId": "ALL",
+						"step":         "all_failed_no_network",
+						"networkError": networkErr.Error(),
+					})
+					return fmt.Errorf("network unavailable and no kernel found via alternative searches: %w", networkErr)
+				}
+			}
+		} else {
+			// Network works, try building kernel package
+			buildKernelCmd := exec.Command("guix", "build", "linux-libre", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+			buildKernelCmd.Stdout = os.Stdout
+			buildKernelCmd.Stderr = os.Stderr
+			if err := buildKernelCmd.Run(); err != nil {
 				// #region agent log
-				logDebug("lib/common.go:1950", "Kernel found in package", map[string]interface{}{
+				logDebug("lib/common.go:1915", "guix build linux-libre failed", map[string]interface{}{
 					"hypothesisId": "H",
-					"step":         "kernel_found_in_package",
-					"kernelPath":   altPath,
-					"isSymlink":    isSymlink,
-					"size":         info.Size(),
+					"step":         "guix_build_kernel_failed",
+					"error":        err.Error(),
 				})
 				// #endregion
-				kernelSrc2 = altPath
-				kernelFound2 = true
-				break
-			}
-		}
-		
-		if !kernelFound2 {
-			// List package contents for debugging
-			entries2, err := os.ReadDir(kernelPackagePath)
-			entryNames2 := []string{}
-			if err == nil {
-				for _, entry := range entries2 {
-					entryNames2 = append(entryNames2, entry.Name())
+
+				// Even with network, build failed - try alternative approaches
+				fmt.Println("[WARN] Kernel build failed despite network being available")
+				fmt.Println("       Trying alternative search approaches...")
+
+				// Try Hypothesis K first
+				if kPath, iPath, err := SearchSystemGenerationDeep(systemPath); err == nil && kPath != "" {
+					kernelSrc = kPath
+					kernelFound = true
+					fmt.Printf("[OK] Found kernel via deep search: %s\n", kPath)
+					if iPath != "" {
+						fmt.Printf("[OK] Found initrd via deep search: %s\n", iPath)
+					}
+				} else if kPath, iPath, err := SearchStoreForKernel(); err == nil && kPath != "" {
+					// Try Hypothesis N
+					kernelSrc = kPath
+					kernelFound = true
+					fmt.Printf("[OK] Found kernel via store search: %s\n", kPath)
+					if iPath != "" {
+						fmt.Printf("[OK] Found initrd via store search: %s\n", iPath)
+					}
+				} else {
+					return fmt.Errorf("guix build linux-libre failed and no kernel found via alternative searches: %w", err)
 				}
+			} else {
+				// Build succeeded - find the kernel package output
+				findKernelCmd := exec.Command("bash", "-c", "guix build linux-libre --substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org 2>&1 | tail -1")
+				kernelOutput, err := findKernelCmd.Output()
+				if err != nil {
+					return fmt.Errorf("failed to find kernel package path: %w", err)
+				}
+				kernelPackagePath := strings.TrimSpace(string(kernelOutput))
+
+				// #region agent log
+				logDebug("lib/common.go:1930", "Kernel package path found", map[string]interface{}{
+					"hypothesisId": "H",
+					"step":         "kernel_package_path_found",
+					"kernelPackagePath": kernelPackagePath,
+				})
+				// #endregion
+
+				// Check for kernel binary in the package
+				// Kernel packages typically have the kernel at: $package/bzImage or $package/vmlinux
+				kernelPackagePaths := []string{
+					filepath.Join(kernelPackagePath, "bzImage"),
+					filepath.Join(kernelPackagePath, "vmlinux"),
+					filepath.Join(kernelPackagePath, "boot", "bzImage"),
+					filepath.Join(kernelPackagePath, "boot", "vmlinux"),
+				}
+
+				kernelFound2 := false
+				var kernelSrc2 string
+				for _, altPath := range kernelPackagePaths {
+					if info, err := os.Stat(altPath); err == nil {
+						isSymlink := false
+						if linkInfo, err := os.Lstat(altPath); err == nil {
+							isSymlink = linkInfo.Mode()&os.ModeSymlink != 0
+						}
+						// #region agent log
+						logDebug("lib/common.go:1950", "Kernel found in package", map[string]interface{}{
+							"hypothesisId": "H",
+							"step":         "kernel_found_in_package",
+							"kernelPath":   altPath,
+							"isSymlink":    isSymlink,
+							"size":         info.Size(),
+						})
+						// #endregion
+						kernelSrc2 = altPath
+						kernelFound2 = true
+						break
+					}
+				}
+
+				if !kernelFound2 {
+					// List package contents for debugging
+					entries2, err := os.ReadDir(kernelPackagePath)
+					entryNames2 := []string{}
+					if err == nil {
+						for _, entry := range entries2 {
+							entryNames2 = append(entryNames2, entry.Name())
+						}
+					}
+					// #region agent log
+					logDebug("lib/common.go:1970", "Kernel not found in package, listing contents", map[string]interface{}{
+						"hypothesisId": "H",
+						"step":         "kernel_not_found_in_package",
+						"kernelPackagePath": kernelPackagePath,
+						"checkedPaths": kernelPackagePaths,
+						"packageEntries": entryNames2,
+					})
+					// #endregion
+					return fmt.Errorf("kernel binary not found in linux-libre package at %s (checked: %v, package contents: %v). This indicates a fundamental issue with kernel file location in free-software-only installs", kernelPackagePath, kernelPackagePaths, entryNames2)
+				}
+
+				// Use the kernel from the package
+				kernelSrc = kernelSrc2
+				kernelFound = true
+
+				// For initrd, we still need to build it separately or get it from guix system init
+				// For now, we'll try to build initrd separately or skip it and let guix system init create it
+				fmt.Println("[INFO] Kernel found in package, but initrd still needs to be created")
+				fmt.Println("       Will attempt to create initrd during guix system init")
+				fmt.Println()
 			}
-			// #region agent log
-			logDebug("lib/common.go:1970", "Kernel not found in package, listing contents", map[string]interface{}{
-				"hypothesisId": "H",
-				"step":         "kernel_not_found_in_package",
-				"kernelPackagePath": kernelPackagePath,
-				"checkedPaths": kernelPackagePaths,
-				"packageEntries": entryNames2,
-			})
-			// #endregion
-			return fmt.Errorf("kernel binary not found in linux-libre package at %s (checked: %v, package contents: %v). This indicates a fundamental issue with kernel file location in free-software-only installs", kernelPackagePath, kernelPackagePaths, entryNames2)
 		}
-		
-		// Use the kernel from the package
-		kernelSrc = kernelSrc2
-		
-		// For initrd, we still need to build it separately or get it from guix system init
-		// For now, we'll try to build initrd separately or skip it and let guix system init create it
-		fmt.Println("[INFO] Kernel found in package, but initrd still needs to be created")
-		fmt.Println("       Will attempt to create initrd during guix system init")
-		fmt.Println()
 	}
 
 	// #region agent log
@@ -3304,6 +3375,254 @@ func logDebug(location, message string, data map[string]interface{}) {
 	defer f.Close()
 	f.Write(jsonData)
 	f.WriteString("\n")
+}
+
+// Hypothesis M: Network Diagnostics
+// CheckNetworkConnectivity tests if network and DNS are working before attempting builds
+func CheckNetworkConnectivity() error {
+	logDebug("lib/common.go:3315", "Checking network connectivity", map[string]interface{}{
+		"hypothesisId": "M",
+		"step":         "check_network_start",
+	})
+
+	// Test DNS resolution
+	fmt.Println("[INFO] Testing DNS resolution...")
+	lookupCmd := exec.Command("getent", "hosts", "ci.guix.gnu.org")
+	if err := lookupCmd.Run(); err != nil {
+		logDebug("lib/common.go:3323", "DNS resolution failed", map[string]interface{}{
+			"hypothesisId": "M",
+			"step":         "dns_failed",
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("DNS resolution failed (cannot resolve ci.guix.gnu.org): %w", err)
+	}
+
+	logDebug("lib/common.go:3332", "Network connectivity OK", map[string]interface{}{
+		"hypothesisId": "M",
+		"step":         "network_ok",
+	})
+	fmt.Println("[OK] Network and DNS working")
+	return nil
+}
+
+// Hypothesis K: Deep System Generation Search
+// SearchSystemGenerationDeep explores subdirectories and config files to find kernel paths
+func SearchSystemGenerationDeep(systemPath string) (kernelPath, initrdPath string, err error) {
+	logDebug("lib/common.go:3343", "Starting deep system generation search", map[string]interface{}{
+		"hypothesisId": "K",
+		"step":         "deep_search_start",
+		"systemPath":   systemPath,
+	})
+
+	// Strategy 1: Check parameters file for kernel/initrd paths
+	parametersPath := filepath.Join(systemPath, "parameters")
+	if data, err := os.ReadFile(parametersPath); err == nil {
+		content := string(data)
+		logDebug("lib/common.go:3353", "Found parameters file", map[string]interface{}{
+			"hypothesisId": "K",
+			"step":         "parameters_found",
+			"contentSize":  len(content),
+		})
+
+		// Parse parameters file for kernel/initrd store paths
+		// Parameters file contains S-expressions with store paths
+		kernelMatches := regexp.MustCompile(`/gnu/store/[a-z0-9]+-linux[^"'\s]*`).FindAllString(content, -1)
+		initrdMatches := regexp.MustCompile(`/gnu/store/[a-z0-9]+-initrd[^"'\s]*`).FindAllString(content, -1)
+
+		if len(kernelMatches) > 0 {
+			// Try each match to find actual kernel file
+			for _, match := range kernelMatches {
+				possibleKernelPaths := []string{
+					filepath.Join(match, "bzImage"),
+					filepath.Join(match, "vmlinuz"),
+					filepath.Join(match, "Image"),
+					match, // Try the path itself
+				}
+				for _, kPath := range possibleKernelPaths {
+					if _, err := os.Stat(kPath); err == nil {
+						kernelPath = kPath
+						logDebug("lib/common.go:3378", "Kernel found via parameters file", map[string]interface{}{
+							"hypothesisId": "K",
+							"step":         "kernel_from_parameters",
+							"kernelPath":   kernelPath,
+						})
+						break
+					}
+				}
+				if kernelPath != "" {
+					break
+				}
+			}
+		}
+
+		if len(initrdMatches) > 0 && initrdMatches[0] != "" {
+			if _, err := os.Stat(initrdMatches[0]); err == nil {
+				initrdPath = initrdMatches[0]
+				logDebug("lib/common.go:3395", "Initrd found via parameters file", map[string]interface{}{
+					"hypothesisId": "K",
+					"step":         "initrd_from_parameters",
+					"initrdPath":   initrdPath,
+				})
+			}
+		}
+	}
+
+	// Strategy 2: Explore subdirectories (gnu/, guix/)
+	subdirs := []string{"gnu", "guix", "bin", "boot"}
+	for _, subdir := range subdirs {
+		subdirPath := filepath.Join(systemPath, subdir)
+		if entries, err := os.ReadDir(subdirPath); err == nil {
+			logDebug("lib/common.go:3410", "Exploring subdirectory", map[string]interface{}{
+				"hypothesisId": "K",
+				"step":         "explore_subdir",
+				"subdirPath":   subdirPath,
+				"entryCount":   len(entries),
+			})
+
+			// Look for symlinks or files that might be kernel/initrd
+			for _, entry := range entries {
+				entryPath := filepath.Join(subdirPath, entry.Name())
+
+				// Follow symlinks
+				if entry.Type()&os.ModeSymlink != 0 {
+					if target, err := os.Readlink(entryPath); err == nil {
+						// Resolve relative symlinks
+						if !filepath.IsAbs(target) {
+							target = filepath.Join(subdirPath, target)
+						}
+
+						// Check if this looks like a kernel or initrd
+						if strings.Contains(target, "linux") || strings.Contains(target, "kernel") {
+							if _, err := os.Stat(target); err == nil && kernelPath == "" {
+								kernelPath = target
+								logDebug("lib/common.go:3434", "Kernel found via symlink in subdir", map[string]interface{}{
+									"hypothesisId": "K",
+									"step":         "kernel_from_subdir_symlink",
+									"kernelPath":   kernelPath,
+									"symlinkFrom":  entryPath,
+								})
+							}
+						}
+						if strings.Contains(target, "initrd") {
+							if _, err := os.Stat(target); err == nil && initrdPath == "" {
+								initrdPath = target
+								logDebug("lib/common.go:3446", "Initrd found via symlink in subdir", map[string]interface{}{
+									"hypothesisId": "K",
+									"step":         "initrd_from_subdir_symlink",
+									"initrdPath":   initrdPath,
+									"symlinkFrom":  entryPath,
+								})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if kernelPath != "" || initrdPath != "" {
+		logDebug("lib/common.go:3462", "Deep search found files", map[string]interface{}{
+			"hypothesisId": "K",
+			"step":         "deep_search_success",
+			"kernelPath":   kernelPath,
+			"initrdPath":   initrdPath,
+		})
+		return kernelPath, initrdPath, nil
+	}
+
+	logDebug("lib/common.go:3471", "Deep search found nothing", map[string]interface{}{
+		"hypothesisId": "K",
+		"step":         "deep_search_empty",
+	})
+	return "", "", fmt.Errorf("deep search found no kernel or initrd files")
+}
+
+// Hypothesis N: Store-Wide Kernel Search
+// SearchStoreForKernel searches entire /gnu/store for linux-libre packages as last resort
+func SearchStoreForKernel() (kernelPath, initrdPath string, err error) {
+	logDebug("lib/common.go:3482", "Starting store-wide kernel search", map[string]interface{}{
+		"hypothesisId": "N",
+		"step":         "store_search_start",
+	})
+
+	// Find all linux-libre packages in store
+	findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-libre-* 2>/dev/null | head -5")
+	output, err := findCmd.Output()
+	if err != nil {
+		logDebug("lib/common.go:3491", "No linux-libre packages found in store", map[string]interface{}{
+			"hypothesisId": "N",
+			"step":         "no_packages_found",
+			"error":        err.Error(),
+		})
+		return "", "", fmt.Errorf("no linux-libre packages found in store")
+	}
+
+	packages := strings.Split(strings.TrimSpace(string(output)), "\n")
+	logDebug("lib/common.go:3501", "Found linux-libre packages", map[string]interface{}{
+		"hypothesisId": "N",
+		"step":         "packages_found",
+		"packageCount": len(packages),
+		"packages":     packages,
+	})
+
+	// Search each package for kernel files
+	kernelNames := []string{"bzImage", "vmlinuz", "Image", "vmlinux"}
+	for _, pkg := range packages {
+		if pkg == "" {
+			continue
+		}
+
+		for _, kname := range kernelNames {
+			kpath := filepath.Join(pkg, kname)
+			if info, err := os.Stat(kpath); err == nil && info.Size() > 1024*1024 {
+				// Found a file > 1MB (reasonable kernel size)
+				kernelPath = kpath
+				logDebug("lib/common.go:3521", "Kernel found in store package", map[string]interface{}{
+					"hypothesisId": "N",
+					"step":         "kernel_from_store",
+					"kernelPath":   kernelPath,
+					"packagePath":  pkg,
+					"size":         info.Size(),
+				})
+				break
+			}
+		}
+
+		if kernelPath != "" {
+			break
+		}
+	}
+
+	// Search for initrd packages
+	findInitrdCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-initrd* 2>/dev/null | head -1")
+	initrdOutput, err := findInitrdCmd.Output()
+	if err == nil && len(initrdOutput) > 0 {
+		possibleInitrd := strings.TrimSpace(string(initrdOutput))
+		if _, err := os.Stat(possibleInitrd); err == nil {
+			initrdPath = possibleInitrd
+			logDebug("lib/common.go:3546", "Initrd found in store", map[string]interface{}{
+				"hypothesisId": "N",
+				"step":         "initrd_from_store",
+				"initrdPath":   initrdPath,
+			})
+		}
+	}
+
+	if kernelPath == "" {
+		logDebug("lib/common.go:3555", "Store search failed to find kernel", map[string]interface{}{
+			"hypothesisId": "N",
+			"step":         "store_search_failed",
+		})
+		return "", "", fmt.Errorf("no kernel found in any store packages")
+	}
+
+	logDebug("lib/common.go:3562", "Store search successful", map[string]interface{}{
+		"hypothesisId": "N",
+		"step":         "store_search_success",
+		"kernelPath":   kernelPath,
+		"initrdPath":   initrdPath,
+	})
+	return kernelPath, initrdPath, nil
 }
 
 // Device detection and validation functions
