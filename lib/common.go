@@ -2357,7 +2357,27 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 	fmt.Println()
 	PrintSectionHeader("Verifying Kernel and Initrd Files")
 
+	// Retry statistics tracking
+	retryStats := map[string]interface{}{
+		"maxAttempts": maxAttempts,
+		"platform":    platform,
+		"buildType":   buildType,
+		"attempts":    []map[string]interface{}{},
+		"success":     false,
+		"successAttempt": 0,
+		"failureReason": "",
+	}
+	startTime := time.Now()
+
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		attemptStartTime := time.Now()
+		attemptStats := map[string]interface{}{
+			"attempt":     attempt,
+			"startTime":   attemptStartTime.Unix(),
+			"kernelFound": false,
+			"initrdFound": false,
+			"failureReason": "",
+		}
 		if attempt > 1 {
 			fmt.Printf("\n[RETRY %d/%d] Attempting to recover kernel/initrd files...\n", attempt, maxAttempts)
 			fmt.Println()
@@ -2387,6 +2407,27 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 				fmt.Printf("[OK] Kernel found: %s (%.1f MB)\n", filepath.Base(kernels[0]), float64(kernelSize)/1024/1024)
 				fmt.Printf("[OK] Initrd found: %s (%.1f MB)\n", filepath.Base(initrds[0]), float64(initrdSize)/1024/1024)
 				fmt.Println()
+				
+				// Log retry statistics for success
+				attemptStats["kernelFound"] = true
+				attemptStats["initrdFound"] = true
+				attemptStats["kernelSize"] = kernelSize
+				attemptStats["initrdSize"] = initrdSize
+				attemptStats["duration"] = time.Since(attemptStartTime).Seconds()
+				retryStats["success"] = true
+				retryStats["successAttempt"] = attempt
+				retryStats["attempts"] = append(retryStats["attempts"].([]map[string]interface{}), attemptStats)
+				
+				// #region agent log
+				logDebug("lib/common.go:2390", "Retry statistics - success", map[string]interface{}{
+					"hypothesisId": "E",
+					"step":         "retry_stats_success",
+					"platform":     platform,
+					"buildType":    buildType,
+					"retryStats":   retryStats,
+				})
+				// #endregion
+				
 				return nil
 			}
 
@@ -2400,9 +2441,15 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 		fmt.Println()
 		if kernelMissing {
 			fmt.Println("[ERROR] Kernel file missing from /mnt/boot/")
+			attemptStats["failureReason"] = "kernel_missing"
 		}
 		if initrdMissing {
 			fmt.Println("[ERROR] Initrd file missing from /mnt/boot/")
+			if attemptStats["failureReason"] != "" {
+				attemptStats["failureReason"] = attemptStats["failureReason"].(string) + ", initrd_missing"
+			} else {
+				attemptStats["failureReason"] = "initrd_missing"
+			}
 		}
 
 		// Check if system generation symlink exists (should exist after guix system init)
@@ -2430,13 +2477,31 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 					"error":        err.Error(),
 				})
 				// #endregion
+			attemptStats["failureReason"] = "system_link_broken"
+			attemptStats["duration"] = time.Since(attemptStartTime).Seconds()
+			retryStats["attempts"] = append(retryStats["attempts"].([]map[string]interface{}), attemptStats)
+			
 			if attempt < maxAttempts {
 				fmt.Println()
 				fmt.Println("Waiting 10 seconds before retry...")
 				time.Sleep(10 * time.Second)
 				continue
 			}
-				return fmt.Errorf("broken system generation symlink: %w", err)
+			
+			// Final failure - log statistics
+			retryStats["failureReason"] = "system_link_broken"
+			retryStats["totalDuration"] = time.Since(startTime).Seconds()
+			// #region agent log
+			logDebug("lib/common.go:2439", "Retry statistics - final failure", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "retry_stats_final_failure",
+				"platform":     platform,
+				"buildType":    buildType,
+				"retryStats":   retryStats,
+			})
+			// #endregion
+			
+			return fmt.Errorf("broken system generation symlink: %w", err)
 			}
 			fmt.Printf("[INFO] Found system generation: %s\n", systemPath)
 			// #region agent log
@@ -2456,12 +2521,30 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 				"error":        err.Error(),
 			})
 			// #endregion
+			attemptStats["failureReason"] = "system_link_missing"
+			attemptStats["duration"] = time.Since(attemptStartTime).Seconds()
+			retryStats["attempts"] = append(retryStats["attempts"].([]map[string]interface{}), attemptStats)
+			
 			if attempt < maxAttempts {
 				fmt.Println()
 				fmt.Println("Waiting 10 seconds before retry...")
 				time.Sleep(10 * time.Second)
 				continue
 			}
+			
+			// Final failure - log statistics
+			retryStats["failureReason"] = "system_link_missing"
+			retryStats["totalDuration"] = time.Since(startTime).Seconds()
+			// #region agent log
+			logDebug("lib/common.go:2465", "Retry statistics - final failure", map[string]interface{}{
+				"hypothesisId": "E",
+				"step":         "retry_stats_final_failure",
+				"platform":     platform,
+				"buildType":    buildType,
+				"retryStats":   retryStats,
+			})
+			// #endregion
+			
 			return fmt.Errorf("system generation symlink not found - installation incomplete")
 		}
 
@@ -2677,35 +2760,65 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 			fmt.Println()
 			fmt.Println("[OK] Successfully recovered kernel/initrd files")
 			fmt.Println()
+			
+			// Log retry statistics for recovery success
+			attemptStats["kernelFound"] = !kernelMissing
+			attemptStats["initrdFound"] = !initrdMissing
+			attemptStats["recovered"] = true
+			attemptStats["duration"] = time.Since(attemptStartTime).Seconds()
+			retryStats["success"] = true
+			retryStats["successAttempt"] = attempt
+			retryStats["attempts"] = append(retryStats["attempts"].([]map[string]interface{}), attemptStats)
+			retryStats["totalDuration"] = time.Since(startTime).Seconds()
+			
 			// #region agent log
-			logDebug("lib/common.go:1768", "Recovery succeeded", map[string]interface{}{
+			logDebug("lib/common.go:2686", "Recovery succeeded with retry statistics", map[string]interface{}{
 				"hypothesisId": "E",
 				"step":         "recovery_succeeded",
+				"platform":     platform,
+				"buildType":    buildType,
+				"retryStats":   retryStats,
 			})
 			// #endregion
 			return nil
 		}
 
+		// Recovery failed - update attempt stats
+		attemptStats["recovered"] = false
+		if attemptStats["failureReason"] == "" {
+			attemptStats["failureReason"] = "recovery_strategies_failed"
+		}
+		attemptStats["duration"] = time.Since(attemptStartTime).Seconds()
+		retryStats["attempts"] = append(retryStats["attempts"].([]map[string]interface{}), attemptStats)
+
 		if attempt < maxAttempts {
 			fmt.Println()
 			fmt.Println("Recovery attempt failed. Waiting 10 seconds before retry...")
 			// #region agent log
-			logDebug("lib/common.go:1778", "Recovery attempt failed, will retry", map[string]interface{}{
+			logDebug("lib/common.go:2693", "Recovery attempt failed, will retry", map[string]interface{}{
 				"hypothesisId": "E",
 				"step":         "recovery_failed_retry",
 				"attempt":      attempt,
 				"maxAttempts":  maxAttempts,
+				"failureReason": attemptStats["failureReason"],
 			})
 			// #endregion
 			time.Sleep(10 * time.Second)
 		}
 	}
 
+	// Final failure - log complete statistics
+	retryStats["failureReason"] = "all_recovery_attempts_failed"
+	retryStats["totalDuration"] = time.Since(startTime).Seconds()
+	
 	// #region agent log
-	logDebug("lib/common.go:1786", "Recovery failed after all attempts", map[string]interface{}{
+	logDebug("lib/common.go:2705", "Recovery failed after all attempts - retry statistics", map[string]interface{}{
 		"hypothesisId": "E",
 		"step":         "recovery_failed_final",
+		"platform":     platform,
+		"buildType":    buildType,
 		"maxAttempts":  maxAttempts,
+		"retryStats":   retryStats,
 	})
 	// #endregion
 	return fmt.Errorf("failed to recover kernel/initrd files after %d attempts", maxAttempts)
