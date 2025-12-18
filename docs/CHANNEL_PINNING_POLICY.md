@@ -33,6 +33,12 @@ The channel setup is in `lib/common.go:SetupNonguixChannel(platform string)`:
 - **For framework-dual**: Creates `(list ...)` with both guix and nonguix explicitly pinned
 - **For other platforms**: Uses `(cons* ... %default-channels)` with unpinned nonguix
 
+## Related Issue: NVMe Module Filtering
+
+When using wingolog-era pinned channels with kernel 6.6.16, NVMe support is **built into the kernel** (not a loadable module). We must filter `nvme` from `initrd-modules` to prevent "kernel module not found" errors.
+
+See [NVME_MODULE_FIX.md](./NVME_MODULE_FIX.md) for complete details on why this is necessary and how it relates to ISO Guix version compatibility.
+
 ## Preventing Future Regressions
 
 ### DO NOT:
@@ -40,6 +46,8 @@ The channel setup is in `lib/common.go:SetupNonguixChannel(platform string)`:
 - ❌ Remove the platform check in `SetupNonguixChannel()`
 - ❌ "Update" the commits to newer versions without testing initrd generation
 - ❌ Use `%default-channels` for framework-dual (it doesn't pin guix)
+- ❌ Add `nvme` back to `initrd-modules` - it's built-in to kernel 6.6.16
+- ❌ Remove the `nvme` filter from `%base-initrd-modules` - this prevents compatibility issues
 
 ### DO:
 - ✅ Keep the wingolog-era commits for framework-dual

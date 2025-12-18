@@ -232,6 +232,28 @@ Use the same path for consistency and reliability.
 
 **See:** `docs/CHANNEL_PINNING_POLICY.md` for complete policy and `docs/WINGOLOG_CHANNEL_ANALYSIS.md` for technical analysis.
 
+### NVMe Module Filtering Policy
+
+**CRITICAL:** Framework-dual and framework installations MUST filter `nvme` from `initrd-modules` because:
+
+1. **NVMe is built-in to kernel 6.6.16**: In wingolog-era pinned channels (Feb 2024), kernel 6.6.16 has NVMe support compiled directly into the kernel, not as a loadable module
+2. **ISO Guix version compatibility**: The ISO's Guix version may be newer than wingolog-era, causing module expectation mismatches (similar to the glibc issue in commit `36e1674`)
+3. **Prevents build failures**: Including `nvme` in `initrd-modules` causes "kernel module not found" errors during `guix time-machine system build`
+
+**Implementation:**
+- Both `framework-dual/install/03-config-dual-boot.go` and `framework/install/03-config.go` use:
+  ```scheme
+  (remove (lambda (module) (string=? module "nvme")) %base-initrd-modules)
+  ```
+- This filters `nvme` even if it appears in `%base-initrd-modules`
+
+**DO NOT:**
+- ❌ Add `nvme` back to `initrd-modules` - it's built-in, not a loadable module
+- ❌ Remove the filter - this prevents compatibility issues across ISO versions
+- ❌ Assume `nvme` will work as a module - verify kernel configuration first
+
+**See:** `docs/NVME_MODULE_FIX.md` for complete technical documentation and `docs/CHANNEL_PINNING_POLICY.md` for related channel pinning requirements.
+
 ## Development Workflow
 
 ### Pre-Deployment Validation
