@@ -77,6 +77,7 @@ Clean separation between installation (ISO phase) and customization (post-boot p
 │   ├── postinstall.sh         # Post-boot helper functions
 │   ├── recovery-complete-install.sh # Recovery script for incomplete installations
 │   ├── verify-guix-install.sh # Installation verification script
+│   ├── validate-before-deploy.sh # Pre-deployment validation script (checks syntax, tests, etc.)
 │   ├── mirrors.md             # Mirror configuration documentation
 │   └── channel-templates/     # Pre-configured channel templates
 │       ├── custom.scm

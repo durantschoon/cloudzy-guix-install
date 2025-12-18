@@ -319,6 +319,9 @@ cd cloudzy-guix-install
 # Run tests
 ./run-tests.sh
 
+# Run pre-deployment validation (recommended before committing)
+lib/validate-before-deploy.sh --verbose
+
 # Test specific platform (if applicable)
 # Boot Guix ISO and test installation
 ```
