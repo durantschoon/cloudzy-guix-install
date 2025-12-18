@@ -1545,7 +1545,9 @@ func RunGuixSystemInit(platform string) error {
 			// #endregion
 			
 			// Build kernel package using time-machine with nonguix channel
-			buildKernelCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "build", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org", "linux")
+			// CRITICAL: Use --no-substitutes to ensure we get kernel version from pinned channels
+			// Substitutes might be from newer Guix versions with different kernel versions
+			buildKernelCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "build", "--no-substitutes", "linux")
 			buildKernelCmd.Stdout = os.Stdout
 			buildKernelCmd.Stderr = os.Stderr
 			if err := buildKernelCmd.Run(); err != nil {
@@ -4878,18 +4880,47 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 			}
 			// Check if it's a real file (not symlink) and has reasonable size (> 10MB)
 			if info, err := os.Stat(candidate); err == nil {
-				// Reject directories (raw-initrd might be a directory)
+				// Initrd packages are directories - look inside for the actual initrd file
 				if info.IsDir() {
-					// #region agent log
-					logDebug("lib/common.go:4451", "Rejecting directory candidate", map[string]interface{}{
-						"hypothesisId": "N",
-						"step":         "reject_directory",
-						"platform":     platform,
-						"buildType":    buildType,
-						"candidate":    candidate,
-					})
-					// #endregion
-					continue
+					// Look for initrd files inside the package directory
+					initrdFiles := []string{
+						filepath.Join(candidate, "initrd.cpio.gz"),
+						filepath.Join(candidate, "initrd"),
+						filepath.Join(candidate, "initrd.gz"),
+					}
+					found := false
+					for _, initrdFile := range initrdFiles {
+						if fileInfo, fileErr := os.Stat(initrdFile); fileErr == nil && !fileInfo.IsDir() && fileInfo.Size() > 10*1024*1024 {
+							// Found initrd file inside package directory
+							candidate = initrdFile
+							info = fileInfo
+							found = true
+							// #region agent log
+							logDebug("lib/common.go:4451", "Found initrd file inside package directory", map[string]interface{}{
+								"hypothesisId": "N",
+								"step":         "initrd_found_in_package",
+								"platform":     platform,
+								"buildType":    buildType,
+								"packageDir":   candidate,
+								"initrdFile":   initrdFile,
+								"size":         fileInfo.Size(),
+							})
+							// #endregion
+							break
+						}
+					}
+					if !found {
+						// #region agent log
+						logDebug("lib/common.go:4451", "Rejecting directory candidate (no initrd file inside)", map[string]interface{}{
+							"hypothesisId": "N",
+							"step":         "reject_directory",
+							"platform":     platform,
+							"buildType":    buildType,
+							"candidate":    candidate,
+						})
+						// #endregion
+						continue
+					}
 				}
 				// #region agent log
 				logDebug("lib/common.go:4417", "Checking initrd candidate", map[string]interface{}{
