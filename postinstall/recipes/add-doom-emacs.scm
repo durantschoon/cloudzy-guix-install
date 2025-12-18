@@ -8,7 +8,8 @@
 (use-modules (ice-9 popen)
              (ice-9 rdelim)
              (ice-9 format)
-             (ice-9 ftw)
+             (ice-9 match)
+             (ice-9 pretty-print)
              (srfi srfi-1)
              (srfi srfi-19))
 
@@ -33,10 +34,14 @@
 ;;; File and command utilities
 
 (define (file-contains? filepath pattern)
-  "Check if file contains a pattern using grep."
-  (let* ((cmd (format #f "grep -q ~s ~s" pattern filepath))
-         (status (system cmd)))
-    (zero? status)))
+  "Check if file contains a pattern (string)."
+  (call-with-input-file filepath
+    (lambda (port)
+      (let loop ((line (read-line port)))
+        (cond
+         ((eof-object? line) #f)
+         ((string-contains line pattern) #t)
+         (else (loop (read-line port))))))))
 
 (define (run-command cmd)
   "Execute a shell command and return exit status."
@@ -66,27 +71,110 @@
   "Get timestamp string for backups."
   (date->string (current-date) "~Y~m~d-~H~M~S"))
 
-;;; Config file modification
+;;; Config.scm manipulation helpers - S-expression approach
 
-(define (add-emacs-modules-to-config!)
-  "Add Emacs-related modules to config.scm if not present."
-  (unless (file-contains? config-file "gnu packages emacs")
-    (info "Adding Emacs package modules to config.scm...")
-    (let ((cmd (format #f "sed -i '/(use-modules/a\\             (gnu packages emacs)\\n             (gnu packages version-control)\\n             (gnu packages rust-apps))' ~s"
-                       config-file)))
-      (run-command cmd))))
+(define emacs-packages '("emacs" "git" "ripgrep" "fd"))
 
-(define (add-emacs-packages-to-config!)
-  "Add emacs and dependencies to packages list in config.scm."
-  (if (file-contains? config-file "(packages %base-packages)")
-      ;; Minimal config - expand to use append
-      (let ((cmd (format #f "sed -i 's|(packages %base-packages)|(packages\\n  (append\\n   (list emacs\\n         git\\n         ripgrep\\n         fd)\\n   %base-packages))|' ~s"
-                         config-file)))
-        (run-command cmd))
-      ;; Already has packages list, add to it
-      (let ((cmd (format #f "sed -i '/(packages/,/))/ { /list/ { s/list/list emacs\\n         git\\n         ripgrep\\n         fd/ } }' ~s"
-                         config-file)))
-        (run-command cmd))))
+(define (read-all-exprs filepath)
+  "Read all S-expressions from a file and return them as a list."
+  (call-with-input-file filepath
+    (lambda (port)
+      (let loop ((exprs '()))
+        (let ((expr (read port)))
+          (if (eof-object? expr)
+              (reverse exprs)
+              (loop (cons expr exprs))))))))
+
+(define (write-all-exprs filepath exprs)
+  "Write all S-expressions to a file with pretty-printing."
+  (call-with-output-file filepath
+    (lambda (port)
+      (for-each (lambda (expr)
+                  (pretty-print expr port)
+                  (newline port))
+                exprs))))
+
+(define (has-minimal-packages? exprs)
+  "Check if config uses minimal packages (just %base-packages)."
+  (any (lambda (expr)
+         (match expr
+           (('operating-system fields ...)
+            (any (lambda (field)
+                   (match field
+                     (('packages '%base-packages) #t)
+                     (_ #f)))
+                 fields))
+           (_ #f)))
+       exprs))
+
+(define (create-package-list packages)
+  "Create a list S-expression of package symbols (not specification->package)."
+  (cons 'list (map string->symbol packages)))
+
+(define (add-packages-to-minimal exprs packages)
+  "Transform minimal config with %base-packages to include new packages."
+  (map (lambda (expr)
+         (match expr
+           (('operating-system fields ...)
+            (cons 'operating-system
+                  (map (lambda (field)
+                         (match field
+                           (('packages '%base-packages)
+                            (list 'packages
+                                  (list 'append
+                                        (create-package-list packages)
+                                        '%base-packages)))
+                           (_ field)))
+                       fields)))
+           (_ expr)))
+       exprs))
+
+(define (add-packages-to-existing exprs packages)
+  "Add packages to existing packages list in config."
+  (define (transform-expr expr)
+    (match expr
+      ;; Find packages form with append and list
+      (('packages ('append ('list existing-pkgs ...) rest ...))
+       (let* ((existing-pkg-names
+               (filter-map (lambda (pkg)
+                             (cond
+                              ((symbol? pkg) (symbol->string pkg))
+                              ((and (list? pkg) (eq? (car pkg) 'specification->package))
+                               (cadr pkg))
+                              (else #f)))
+                           existing-pkgs))
+              (new-pkgs (filter (lambda (pkg)
+                                  (not (member pkg existing-pkg-names)))
+                                packages))
+              (new-pkg-syms (map string->symbol new-pkgs))
+              (all-pkgs (append existing-pkgs new-pkg-syms)))
+         (list 'packages
+               (cons 'append
+                     (cons (cons 'list all-pkgs)
+                           rest)))))
+
+      ;; Recursively process nested lists
+      ((? list? lst)
+       (map transform-expr lst))
+
+      ;; Leave atoms unchanged
+      (_ expr)))
+
+  (map transform-expr exprs))
+
+(define (add-emacs-to-packages)
+  "Add Emacs and dependencies to the packages list in config.scm using S-expression manipulation."
+  (let ((exprs (read-all-exprs config-file)))
+    (let ((new-exprs
+           (if (has-minimal-packages? exprs)
+               (begin
+                 (info "Detected minimal configuration, creating packages list...")
+                 (add-packages-to-minimal exprs emacs-packages))
+               (begin
+                 (info "Adding to existing packages...")
+                 (add-packages-to-existing exprs emacs-packages)))))
+      (write-all-exprs config-file new-exprs)
+      (info "Emacs and dependencies added to configuration"))))
 
 ;;; Directory management
 
@@ -110,7 +198,10 @@
     (if (git-clone repo-url tmp-dir)
         (begin
           ;; Move contents from tmp to dest
-          (let ((cmd (format #f "mv ~a/* ~a/" tmp-dir dest-dir)))
+          (let ((cmd (format #f "mv ~a/* ~a/ 2>/dev/null || true" tmp-dir dest-dir)))
+            (run-command cmd))
+          ;; Move dotfiles
+          (let ((cmd (format #f "mv ~a/.[!.]* ~a/ 2>/dev/null || true" tmp-dir dest-dir)))
             (run-command cmd))
           ;; Remove tmp directory
           (let ((cmd (format #f "rm -rf ~a" tmp-dir)))
@@ -300,11 +391,11 @@
   "Set up Doom config directory, either importing from repo or creating defaults."
   (let ((doom-config-dir (string-append (getenv "HOME") "/.config/doom"))
         (doom-emacs-bin (string-append (getenv "HOME") "/.config/emacs/bin/doom")))
-    
+
     ;; Create doom config directory
     (unless (file-exists? doom-config-dir)
       (mkdir doom-config-dir))
-    
+
     ;; Import config or create defaults
     (cond
      ;; User wants to import from repo
@@ -318,7 +409,7 @@
           (begin
             (warn "Failed to clone repository, creating default config instead")
             (setup-default-doom-config doom-config-dir))))
-     
+
      ;; No import, create defaults if files don't exist
      ((not (file-exists? (string-append doom-config-dir "/init.el")))
       (setup-default-doom-config doom-config-dir)))))
@@ -364,19 +455,18 @@
   (newline)
   (display "=== Installing Doom Emacs ===\n")
   (newline)
-  
+
   ;; Check if Emacs is already in config
   (if (not (file-contains? config-file "emacs"))
       (begin
         (info "Adding Emacs package to config.scm...")
-        (add-emacs-modules-to-config!)
-        (add-emacs-packages-to-config!)
+        (add-emacs-to-packages)
         (info "Emacs and dependencies added to configuration"))
       (info "Emacs already in configuration"))
-  
+
   ;; Get import choice
   (let ((import-repo-url (get-import-config-choice)))
-    
+
     ;; Handle existing configs
     (when (handle-existing-emacs-config)
       ;; Install Doom Emacs

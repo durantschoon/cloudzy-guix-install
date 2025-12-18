@@ -7,7 +7,8 @@
 (use-modules (ice-9 popen)
              (ice-9 rdelim)
              (ice-9 format)
-             (ice-9 regex)
+             (ice-9 match)
+             (ice-9 pretty-print)
              (srfi srfi-1))
 
 ;;; Configuration
@@ -28,23 +29,20 @@
   (newline))
 
 (define (success . args)
-  (display "\n\033[1;32m[✓]\033[0m ")
+  (display "\n\033[1;32m[OK]\033[0m ")
   (for-each display args)
   (newline))
 
 ;;; Helper Functions - File Operations
 
 (define (file-contains? filepath pattern)
-  "Check if file contains a pattern (string or regex)."
+  "Check if file contains a pattern (string)."
   (call-with-input-file filepath
     (lambda (port)
       (let loop ((line (read-line port)))
         (cond
          ((eof-object? line) #f)
-         ((if (string? pattern)
-              (string-contains line pattern)
-              (regexp-exec pattern line))
-          #t)
+         ((string-contains line pattern) #t)
          (else (loop (read-line port))))))))
 
 (define (backup-file filepath)
@@ -53,50 +51,128 @@
                             filepath
                             (strftime "%Y%m%d-%H%M%S" (localtime (current-time))))))
     (system* "mv" filepath backup-name)
+    (info "Backed up to " backup-name)
     backup-name))
 
 ;;; Helper Functions - User Input
 
 (define (read-user-input prompt)
-  "Read user input from /dev/tty."
+  "Read user input from stdin."
   (display prompt)
-  (flush-all-ports)
-  (call-with-input-file "/dev/tty"
-    (lambda (port)
-      (read-line port))))
+  (force-output)
+  (read-line (current-input-port)))
 
 (define (yes-or-no? prompt)
   "Ask user a yes/no question. Returns #t for yes, #f for no."
   (let ((response (read-user-input prompt)))
-    (and (string? response)
+    (and (not (eof-object? response))
          (or (string-ci=? response "y")
              (string-ci=? response "yes")))))
 
-;;; Helper Functions - Config Manipulation
+;;; Config.scm manipulation helpers - S-expression approach
 
-(define (add-packages-to-config! config-path packages)
-  "Add packages to config.scm file using sed commands."
-  ;; First, ensure we have the package modules
-  (unless (file-contains? config-path "gnu packages emacs")
-    (system* "sed" "-i"
-             "/(use-modules/a\\             (gnu packages emacs)\\n             (gnu packages version-control))"
-             config-path))
-  
-  ;; Add packages to the packages list
-  (cond
-   ;; Case 1: Minimal config with just %base-packages
-   ((file-contains? config-path "(packages %base-packages)")
-    (let ((replacement (format #f "(packages\\n  (append\\n   (list ~a)\\n   %base-packages))"
-                              (string-join packages "\n         "))))
-      (system* "sed" "-i"
-               (format #f "s|(packages %base-packages)|~a|" replacement)
-               config-path)))
-   ;; Case 2: Already has packages list, add to existing list
-   (else
-    (system* "sed" "-i"
-             (format #f "/(packages/,/))/ { /list/ { s/list/list ~a/ } }"
-                    (string-join packages "\n         "))
-             config-path))))
+(define emacs-packages '("emacs" "git"))
+
+(define (read-all-exprs filepath)
+  "Read all S-expressions from a file and return them as a list."
+  (call-with-input-file filepath
+    (lambda (port)
+      (let loop ((exprs '()))
+        (let ((expr (read port)))
+          (if (eof-object? expr)
+              (reverse exprs)
+              (loop (cons expr exprs))))))))
+
+(define (write-all-exprs filepath exprs)
+  "Write all S-expressions to a file with pretty-printing."
+  (call-with-output-file filepath
+    (lambda (port)
+      (for-each (lambda (expr)
+                  (pretty-print expr port)
+                  (newline port))
+                exprs))))
+
+(define (has-minimal-packages? exprs)
+  "Check if config uses minimal packages (just %base-packages)."
+  (any (lambda (expr)
+         (match expr
+           (('operating-system fields ...)
+            (any (lambda (field)
+                   (match field
+                     (('packages '%base-packages) #t)
+                     (_ #f)))
+                 fields))
+           (_ #f)))
+       exprs))
+
+(define (create-package-list packages)
+  "Create a list S-expression of package symbols (not specification->package)."
+  (cons 'list (map string->symbol packages)))
+
+(define (add-packages-to-minimal exprs packages)
+  "Transform minimal config with %base-packages to include new packages."
+  (map (lambda (expr)
+         (match expr
+           (('operating-system fields ...)
+            (cons 'operating-system
+                  (map (lambda (field)
+                         (match field
+                           (('packages '%base-packages)
+                            (list 'packages
+                                  (list 'append
+                                        (create-package-list packages)
+                                        '%base-packages)))
+                           (_ field)))
+                       fields)))
+           (_ expr)))
+       exprs))
+
+(define (add-packages-to-existing exprs packages)
+  "Add packages to existing packages list in config."
+  (define (transform-expr expr)
+    (match expr
+      ;; Find packages form with append and list
+      (('packages ('append ('list existing-pkgs ...) rest ...))
+       (let* ((existing-pkg-names
+               (filter-map (lambda (pkg)
+                             (cond
+                              ((symbol? pkg) (symbol->string pkg))
+                              ((and (list? pkg) (eq? (car pkg) 'specification->package))
+                               (cadr pkg))
+                              (else #f)))
+                           existing-pkgs))
+              (new-pkgs (filter (lambda (pkg)
+                                  (not (member pkg existing-pkg-names)))
+                                packages))
+              (new-pkg-syms (map string->symbol new-pkgs))
+              (all-pkgs (append existing-pkgs new-pkg-syms)))
+         (list 'packages
+               (cons 'append
+                     (cons (cons 'list all-pkgs)
+                           rest)))))
+
+      ;; Recursively process nested lists
+      ((? list? lst)
+       (map transform-expr lst))
+
+      ;; Leave atoms unchanged
+      (_ expr)))
+
+  (map transform-expr exprs))
+
+(define (add-emacs-to-packages)
+  "Add Emacs and Git to the packages list in config.scm using S-expression manipulation."
+  (let ((exprs (read-all-exprs config-file)))
+    (let ((new-exprs
+           (if (has-minimal-packages? exprs)
+               (begin
+                 (info "Detected minimal configuration, creating packages list...")
+                 (add-packages-to-minimal exprs emacs-packages))
+               (begin
+                 (info "Adding to existing packages...")
+                 (add-packages-to-existing exprs emacs-packages)))))
+      (write-all-exprs config-file new-exprs)
+      (info "Emacs and Git added to configuration"))))
 
 ;;; Helper Functions - Git Operations
 
@@ -297,14 +373,14 @@
         (info "Emacs already in configuration")
         (begin
           (info "Adding Emacs package to config.scm...")
-          (add-packages-to-config! config-file '("emacs" "git"))
+          (add-emacs-to-packages)
           (info "Emacs added to configuration")))
 
     ;; Ask about importing existing config
     (newline)
     (let ((import-config? (yes-or-no? "Do you have an existing Spacemacs config (.spacemacs) to import? [y/N] ")))
       (define imported? #f)
-      
+
       (when import-config?
         (newline)
         (info "Import options:")
@@ -316,13 +392,13 @@
            ((equal? choice "1")
             (let ((repo-url (read-user-input "Enter Git repository URL (e.g., https://github.com/user/dotfiles): "))
                   (spacemacs-path (read-user-input "Path to .spacemacs in repo (e.g., .spacemacs or emacs/.spacemacs): ")))
-              (if (and (string? repo-url) (not (string=? repo-url "")))
+              (if (and (not (eof-object? repo-url)) (not (string=? repo-url "")))
                   (begin
                     (info "Will import .spacemacs from: " repo-url)
                     (set! imported?
                           (import-spacemacs-config home-dir
                                                   repo-url
-                                                  (if (string=? spacemacs-path "")
+                                                  (if (or (eof-object? spacemacs-path) (string=? spacemacs-path ""))
                                                       ".spacemacs"
                                                       spacemacs-path))))
                   (warn "No URL provided, will create default config"))))

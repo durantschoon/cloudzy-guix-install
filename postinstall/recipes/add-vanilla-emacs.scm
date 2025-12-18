@@ -7,7 +7,8 @@
 (use-modules (ice-9 popen)
              (ice-9 rdelim)
              (ice-9 format)
-             (ice-9 regex)
+             (ice-9 match)
+             (ice-9 pretty-print)
              (srfi srfi-1))
 
 ;;; Configuration
@@ -78,55 +79,110 @@
     (lambda (port)
       (display content port))))
 
-;;; Config.scm manipulation helpers
+;;; Config.scm manipulation helpers - S-expression approach
 
-(define (add-use-modules-if-needed modules-to-add)
-  "Add use-modules declarations if not present in config.scm."
-  (let ((content (read-file-content config-file)))
-    (if (not (string-contains content "gnu packages emacs"))
-        (let* ((use-modules-pattern "(use-modules")
-               (use-modules-pos (string-contains content use-modules-pattern)))
-          (if use-modules-pos
-              (let* ((after-use-modules (+ use-modules-pos (string-length use-modules-pattern)))
-                     (before (substring content 0 after-use-modules))
-                     (after (substring content after-use-modules))
-                     (new-content (string-append before
-                                                 "\n             (gnu packages emacs)"
-                                                 "\n             (gnu packages version-control)"
-                                                 after)))
-                (write-file-content config-file new-content)
-                (info "Added package modules to config.scm"))
-              (warn "Could not find (use-modules in config.scm")))
-        (info "Package modules already present"))))
+(define emacs-packages '("emacs" "git"))
+
+(define (read-all-exprs filepath)
+  "Read all S-expressions from a file and return them as a list."
+  (call-with-input-file filepath
+    (lambda (port)
+      (let loop ((exprs '()))
+        (let ((expr (read port)))
+          (if (eof-object? expr)
+              (reverse exprs)
+              (loop (cons expr exprs))))))))
+
+(define (write-all-exprs filepath exprs)
+  "Write all S-expressions to a file with pretty-printing."
+  (call-with-output-file filepath
+    (lambda (port)
+      (for-each (lambda (expr)
+                  (pretty-print expr port)
+                  (newline port))
+                exprs))))
+
+(define (has-minimal-packages? exprs)
+  "Check if config uses minimal packages (just %base-packages)."
+  (any (lambda (expr)
+         (match expr
+           (('operating-system fields ...)
+            (any (lambda (field)
+                   (match field
+                     (('packages '%base-packages) #t)
+                     (_ #f)))
+                 fields))
+           (_ #f)))
+       exprs))
+
+(define (create-package-list packages)
+  "Create a list S-expression of package symbols (not specification->package)."
+  (cons 'list (map string->symbol packages)))
+
+(define (add-packages-to-minimal exprs packages)
+  "Transform minimal config with %base-packages to include new packages."
+  (map (lambda (expr)
+         (match expr
+           (('operating-system fields ...)
+            (cons 'operating-system
+                  (map (lambda (field)
+                         (match field
+                           (('packages '%base-packages)
+                            (list 'packages
+                                  (list 'append
+                                        (create-package-list packages)
+                                        '%base-packages)))
+                           (_ field)))
+                       fields)))
+           (_ expr)))
+       exprs))
+
+(define (add-packages-to-existing exprs packages)
+  "Add packages to existing packages list in config."
+  (define (transform-expr expr)
+    (match expr
+      ;; Find packages form with append and list
+      (('packages ('append ('list existing-pkgs ...) rest ...))
+       (let* ((existing-pkg-names
+               (filter-map (lambda (pkg)
+                             (cond
+                              ((symbol? pkg) (symbol->string pkg))
+                              ((and (list? pkg) (eq? (car pkg) 'specification->package))
+                               (cadr pkg))
+                              (else #f)))
+                           existing-pkgs))
+              (new-pkgs (filter (lambda (pkg)
+                                  (not (member pkg existing-pkg-names)))
+                                packages))
+              (new-pkg-syms (map string->symbol new-pkgs))
+              (all-pkgs (append existing-pkgs new-pkg-syms)))
+         (list 'packages
+               (cons 'append
+                     (cons (cons 'list all-pkgs)
+                           rest)))))
+
+      ;; Recursively process nested lists
+      ((? list? lst)
+       (map transform-expr lst))
+
+      ;; Leave atoms unchanged
+      (_ expr)))
+
+  (map transform-expr exprs))
 
 (define (add-emacs-to-packages)
-  "Add Emacs and Git to the packages list in config.scm."
-  (let ((content (read-file-content config-file)))
-    (cond
-     ;; Case 1: Minimal config with (packages %base-packages)
-     ((string-contains content "(packages %base-packages)")
-      (let* ((old-pattern "(packages %base-packages)")
-             (new-pattern "(packages\n  (append\n   (list emacs\n         git)\n   %base-packages))")
-             (new-content (regexp-substitute/global
-                          #f
-                          (regexp-quote old-pattern)
-                          content
-                          'pre new-pattern 'post)))
-        (write-file-content config-file new-content)
-        (info "Expanded packages with Emacs and Git")))
-     ;; Case 2: Already has packages list with (list ...)
-     ((and (string-contains content "(packages")
-           (string-contains content "(list"))
-      (let* ((list-pattern "\\(list ")
-             (new-content (regexp-substitute/global
-                          #f
-                          list-pattern
-                          content
-                          'pre "(list emacs\n         git\n         " 'post)))
-        (write-file-content config-file new-content)
-        (info "Added Emacs to existing package list")))
-     (else
-      (warn "Could not find packages declaration in config.scm")))))
+  "Add Emacs and Git to the packages list in config.scm using S-expression manipulation."
+  (let ((exprs (read-all-exprs config-file)))
+    (let ((new-exprs
+           (if (has-minimal-packages? exprs)
+               (begin
+                 (info "Detected minimal configuration, creating packages list...")
+                 (add-packages-to-minimal exprs emacs-packages))
+               (begin
+                 (info "Adding to existing packages...")
+                 (add-packages-to-existing exprs emacs-packages)))))
+      (write-all-exprs config-file new-exprs)
+      (info "Emacs and Git added to configuration"))))
 
 ;;; Emacs configuration creation
 
@@ -167,7 +223,7 @@
 (setq require-final-newline t)
 (setq visible-bell t)
 (setq ring-bell-function 'ignore)
-(setq backup-directory-alist '((\"\.\" . \"~/.emacs.d/backups\")))
+(setq backup-directory-alist '((\"\\\\.\" . \"~/.emacs.d/backups\")))
 (setq auto-save-file-name-transforms '((\".*\" \"~/.emacs.d/auto-save-list/\" t)))
 
 ;; Recent files
@@ -254,7 +310,6 @@
   (if (not (file-contains? config-file "emacs"))
       (begin
         (info "Adding Emacs package to config.scm...")
-        (add-use-modules-if-needed)
         (add-emacs-to-packages)
         (info "Emacs added to configuration"))
       (info "Emacs already in configuration"))

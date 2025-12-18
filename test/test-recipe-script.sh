@@ -115,9 +115,9 @@ if [ "$FIXTURE" = "all" ]; then
         fixture_name=$(basename "$fixture_file" -config.scm)
 
         if test_fixture "$fixture_name"; then
-            ((passed++))
+            ((passed++)) || true
         else
-            ((failed++))
+            ((failed++)) || true
         fi
     done
 
