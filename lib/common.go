@@ -2003,6 +2003,55 @@ func RunGuixSystemInit(platform string) error {
 	kernelDest := "/mnt/boot/vmlinuz"
 	fmt.Printf("[INFO] Copying kernel to: %s\n", kernelDest)
 	
+	// Check if kernelSrc is a symlink pointing to a directory (profile)
+	// If so, we need to find the actual kernel binary inside that directory
+	actualKernelSrc := kernelSrc
+	if linkInfo, err := os.Lstat(kernelSrc); err == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
+		// It's a symlink - resolve it
+		resolvedPath, err := os.Readlink(kernelSrc)
+		if err == nil {
+			// Check if resolved path is a directory (profile)
+			if info, err := os.Stat(resolvedPath); err == nil && info.IsDir() {
+				// Profile directory - look for kernel binary inside
+				kernelBinaryPaths := []string{
+					filepath.Join(resolvedPath, "bzImage"),
+					filepath.Join(resolvedPath, "vmlinuz"),
+					filepath.Join(resolvedPath, "Image"),
+					filepath.Join(resolvedPath, "boot", "bzImage"),
+					filepath.Join(resolvedPath, "boot", "vmlinuz"),
+				}
+				found := false
+				for _, kPath := range kernelBinaryPaths {
+					if info, err := os.Stat(kPath); err == nil && !info.IsDir() {
+						actualKernelSrc = kPath
+						found = true
+						fmt.Printf("[INFO] Found kernel binary in profile: %s\n", actualKernelSrc)
+						break
+					}
+				}
+				if !found {
+					// List profile contents for debugging
+					entries, _ := os.ReadDir(resolvedPath)
+					entryNames := []string{}
+					for _, entry := range entries {
+						entryNames = append(entryNames, entry.Name())
+					}
+					// #region agent log
+					logDebug("lib/common.go:1638", "Kernel symlink points to directory, but binary not found", map[string]interface{}{
+						"hypothesisId": "G",
+						"step":         "kernel_binary_not_found_in_profile",
+						"platform":     platform,
+						"buildType":    buildType,
+						"kernelSrc":    kernelSrc,
+						"resolvedPath": resolvedPath,
+						"profileEntries": entryNames,
+					})
+					// #endregion
+				}
+			}
+		}
+	}
+	
 	// #region agent log
 	logDebug("lib/common.go:1638", "Before kernel copy", map[string]interface{}{
 		"hypothesisId": "G",
@@ -2010,11 +2059,12 @@ func RunGuixSystemInit(platform string) error {
 		"platform":     platform,
 		"buildType":    buildType,
 		"kernelSrc":    kernelSrc,
+		"actualKernelSrc": actualKernelSrc,
 		"kernelDest":   kernelDest,
 	})
 	// #endregion
 	
-	if err := exec.Command("cp", "-Lv", kernelSrc, kernelDest).Run(); err != nil {
+	if err := exec.Command("cp", "-Lv", actualKernelSrc, kernelDest).Run(); err != nil {
 		// #region agent log
 		logDebug("lib/common.go:1267", "Kernel copy failed", map[string]interface{}{
 			"hypothesisId": "G",
@@ -2022,11 +2072,14 @@ func RunGuixSystemInit(platform string) error {
 			"platform":     platform,
 			"buildType":    buildType,
 			"kernelSrc":    kernelSrc,
+			"actualKernelSrc": actualKernelSrc,
 			"kernelDest":   kernelDest,
 			"error":        err.Error(),
 		})
 		// #endregion
 		fmt.Printf("[ERROR] Failed to copy kernel: %v\n", err)
+		fmt.Printf("       Source: %s\n", actualKernelSrc)
+		fmt.Printf("       Destination: %s\n", kernelDest)
 		return fmt.Errorf("failed to copy kernel: %w", err)
 	}
 
