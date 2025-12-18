@@ -727,6 +727,15 @@ func VerifyESP() error {
 func StartCowStore() error {
 	PrintSectionHeader("Starting cow-store")
 	fmt.Println("Redirecting store writes to /mnt to avoid filling ISO space...")
+	
+	// Check if cow-store is already running (idempotent)
+	checkCmd := exec.Command("herd", "status", "cow-store")
+	if err := checkCmd.Run(); err == nil {
+		fmt.Println("[OK] cow-store is already running - skipping")
+		fmt.Println()
+		return nil
+	}
+	
 	if err := RunCommand("herd", "start", "cow-store", "/mnt"); err != nil {
 		return fmt.Errorf("failed to start cow-store: %w", err)
 	}
@@ -4142,23 +4151,10 @@ func DownloadCustomizationTools(platform string, username string) error {
 	customizePath := filepath.Join(destDir, "customize")
 	customizeURL := fmt.Sprintf("%s/%s/postinstall/customize", rawBase, platform)
 	
-	// Check if customize script already exists
+	// Check if customize script already exists (idempotent - skip if exists)
 	if _, err := os.Stat(customizePath); err == nil {
-		fmt.Printf("Customize script already exists at %s\n", customizePath)
-		fmt.Print("Do you want to replace it with the latest version? [y/N] ")
-		
-		var response string
-		fmt.Scanln(&response)
-		if response != "y" && response != "Y" {
-			fmt.Println("Keeping existing customize script")
-		} else {
-			fmt.Printf("Downloading %s customize script...\n", platform)
-			if err := DownloadFile(customizeURL, customizePath); err != nil {
-				return fmt.Errorf("failed to download customize script: %w", err)
-			}
-			os.Chmod(customizePath, 0755)
-			fmt.Println("Customize script updated")
-		}
+		fmt.Printf("[OK] Customize script already exists at %s - skipping download\n", customizePath)
+		fmt.Println("      (idempotent - safe for reruns)")
 	} else {
 		fmt.Printf("Downloading %s customize script...\n", platform)
 		if err := DownloadFile(customizeURL, customizePath); err != nil {
@@ -4245,6 +4241,16 @@ func SetUserPassword(username string) error {
 	fmt.Printf("Setting password for user: %s\n", username)
 	fmt.Println("You will need this password to log in after first boot.")
 	fmt.Println()
+
+	// Check if password is already set (idempotent)
+	checkCmd := exec.Command("chroot", "/mnt", "/run/current-system/profile/bin/bash", "-c",
+		fmt.Sprintf("grep '^%s:' /etc/shadow | grep -v ':!:'", username))
+	if err := checkCmd.Run(); err == nil {
+		fmt.Printf("[OK] Password already set for %s - skipping\n", username)
+		fmt.Println("      (idempotent - safe for reruns)")
+		fmt.Println()
+		return nil
+	}
 
 	// Check if keyboard layout has swap options (like ctrl:swapcaps)
 	// If so, warn user to type password as if swap is NOT enabled (for GDM compatibility)
