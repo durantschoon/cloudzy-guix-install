@@ -1286,8 +1286,12 @@ func RunGuixSystemInit(platform string) error {
 	// #endregion
 	
 	buildCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+	
+	// Capture stderr to log actual error details
+	var buildStderr bytes.Buffer
 	buildCmd.Stdout = os.Stdout
-	buildCmd.Stderr = os.Stderr
+	buildCmd.Stderr = io.MultiWriter(os.Stderr, &buildStderr)
+	
 	if err := buildCmd.Run(); err != nil {
 		// #region agent log
 		logDebug("lib/common.go:1217", "guix time-machine system build failed", map[string]interface{}{
@@ -1296,8 +1300,14 @@ func RunGuixSystemInit(platform string) error {
 			"platform":     platform,
 			"buildType":    buildType,
 			"error":        err.Error(),
+			"stderr":       buildStderr.String(),
 		})
 		// #endregion
+		fmt.Printf("\n[ERROR] guix time-machine system build failed: %v\n", err)
+		if buildStderr.Len() > 0 {
+			fmt.Println("\nBuild error output:")
+			fmt.Println(buildStderr.String())
+		}
 		return fmt.Errorf("guix system build failed: %w", err)
 	}
 	
@@ -4406,6 +4416,14 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 	var buildOutput bytes.Buffer
 	buildCmd.Stdout = io.MultiWriter(os.Stdout, &buildOutput)
 	buildCmd.Stderr = io.MultiWriter(os.Stderr, &buildOutput)
+
+	// Remove existing file if it exists (idempotent - allows rebuilding)
+	if _, err := os.Stat(scriptPath); err == nil {
+		fmt.Printf("[INFO] Removing existing recovery binary: %s\n", scriptPath)
+		if err := os.Remove(scriptPath); err != nil {
+			return fmt.Errorf("failed to remove existing recovery binary: %w", err)
+		}
+	}
 
 	// #region agent log
 	logDebug("lib/common.go:4100", "Executing recovery build command", map[string]interface{}{
