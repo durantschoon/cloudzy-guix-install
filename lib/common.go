@@ -3,6 +3,7 @@ package lib
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -4035,14 +4036,41 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 
 	// Build the recovery binary
 	fmt.Println("Building recovery tool...")
+	
+	// #region agent log
+	wd, _ := os.Getwd()
+	logDebug("lib/common.go:4037", "Starting recovery build", map[string]interface{}{
+		"step":     "recovery_build_start",
+		"platform": platform,
+		"scriptPath": scriptPath,
+		"workingDir": wd,
+		"goAvailable": func() bool {
+			if _, err := exec.LookPath("go"); err == nil {
+				return true
+			}
+			return false
+		}(),
+	})
+	// #endregion
+	
 	buildCmd := exec.Command("go", "build", "-o", scriptPath, "./cmd/recovery")
 	buildCmd.Stdout = os.Stdout
 	buildCmd.Stderr = os.Stderr
 	
 	// Set working directory to repo root (if available)
+	var buildDir string
+	var goModFound bool
+	var goModPath string
+	
 	if _, err := os.Stat("go.mod"); err == nil {
+		buildDir = "."
+		goModFound = true
+		goModPath = "go.mod"
 		buildCmd.Dir = "."
 	} else if _, err := os.Stat("../go.mod"); err == nil {
+		buildDir = ".."
+		goModFound = true
+		goModPath = "../go.mod"
 		buildCmd.Dir = ".."
 	} else {
 		// Try to find go.mod by checking common locations
@@ -4053,13 +4081,82 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 			if len(parts) > 0 {
 				repoRoot := parts[0] + "cloudzy-guix-install"
 				if _, err := os.Stat(filepath.Join(repoRoot, "go.mod")); err == nil {
+					buildDir = repoRoot
+					goModFound = true
+					goModPath = filepath.Join(repoRoot, "go.mod")
 					buildCmd.Dir = repoRoot
 				}
 			}
 		}
 	}
+	
+	// #region agent log
+	logDebug("lib/common.go:4043", "Recovery build directory detection", map[string]interface{}{
+		"step":      "recovery_build_dir_detection",
+		"platform":  platform,
+		"buildDir":  buildDir,
+		"goModFound": goModFound,
+		"goModPath": goModPath,
+		"cmdRecoveryExists": func() bool {
+			if buildDir != "" {
+				if _, err := os.Stat(filepath.Join(buildDir, "cmd/recovery")); err == nil {
+					return true
+				}
+			}
+			return false
+		}(),
+		"cmdRecoveryMainExists": func() bool {
+			if buildDir != "" {
+				if _, err := os.Stat(filepath.Join(buildDir, "cmd/recovery/main.go")); err == nil {
+					return true
+				}
+			}
+			return false
+		}(),
+	})
+	// #endregion
+
+	// If buildDir wasn't found, try to use current working directory
+	if buildDir == "" {
+		buildDir = wd
+		buildCmd.Dir = wd
+		// #region agent log
+		logDebug("lib/common.go:4091", "Using current working directory for build", map[string]interface{}{
+			"step":      "recovery_build_dir_fallback",
+			"platform":  platform,
+			"buildDir":  buildDir,
+		})
+		// #endregion
+	}
+
+	// Capture build output for detailed error logging
+	var buildOutput bytes.Buffer
+	buildCmd.Stdout = io.MultiWriter(os.Stdout, &buildOutput)
+	buildCmd.Stderr = io.MultiWriter(os.Stderr, &buildOutput)
+
+	// #region agent log
+	logDebug("lib/common.go:4100", "Executing recovery build command", map[string]interface{}{
+		"step":      "recovery_build_execute",
+		"platform":  platform,
+		"buildDir":  buildCmd.Dir,
+		"command":   "go build -o " + scriptPath + " ./cmd/recovery",
+		"scriptPath": scriptPath,
+	})
+	// #endregion
 
 	if err := buildCmd.Run(); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:4062", "Recovery build failed", map[string]interface{}{
+			"step":      "recovery_build_failed",
+			"platform":  platform,
+			"buildDir":  buildDir,
+			"goModFound": goModFound,
+			"goModPath": goModPath,
+			"error":     err.Error(),
+			"output":    buildOutput.String(),
+			"scriptPath": scriptPath,
+		})
+		// #endregion
 		// Fallback: try to use pre-built binary or bash script
 		fmt.Printf("[WARN] Failed to build recovery binary: %v\n", err)
 		fmt.Println("Falling back to bash recovery script...")
