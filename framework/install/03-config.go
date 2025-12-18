@@ -226,15 +226,15 @@ func (s *Step03Config) generateMinimalConfig(state *State, bootloader, targets s
  (firmware (list linux-firmware))
 
  ;; Framework 13 AMD specific initrd modules
- ;; Note: "nvme" is built-in to kernel 6.6.16, not a loadable module
- ;; Including it in initrd-modules causes "kernel module not found" errors
- ;; We filter it out from base-initrd-modules as a safeguard
+ ;; Note: "nvme" and "xhci_pci" are built-in to kernel 6.6.16, not loadable modules
+ ;; Including them in initrd-modules causes "kernel module not found" errors
+ ;; We filter them out from base-initrd-modules as a safeguard
  (initrd-modules
   (append '("amdgpu"      ; AMD GPU driver (critical for display)
-            "xhci_pci"    ; USB 3.0 host controller
             "usbhid"      ; USB keyboard/mouse
             "i2c_piix4")  ; SMBus/I2C for sensors
-          (remove (lambda (module) (string=? module "nvme")) %%base-initrd-modules)))
+          (remove (lambda (module) (or (string=? module "nvme")
+                                       (string=? module "xhci_pci"))) %%base-initrd-modules)))
 
  ;; Kernel arguments - minimal for compatibility
  (kernel-arguments '("quiet"))
