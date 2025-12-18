@@ -1729,7 +1729,56 @@ func RunGuixSystemInit(platform string) error {
 		})
 		// #endregion
 		
-		if info, err := os.Stat(initrdSrc); err != nil {
+		// Check if initrd exists (file, symlink, or broken symlink)
+		initrdInfo, initrdStatErr := os.Stat(initrdSrc)
+		initrdLstatInfo, initrdLstatErr := os.Lstat(initrdSrc)
+		isSymlink := false
+		symlinkTarget := ""
+		if initrdLstatErr == nil {
+			isSymlink = initrdLstatInfo.Mode()&os.ModeSymlink != 0
+			if isSymlink {
+				if target, err := os.Readlink(initrdSrc); err == nil {
+					symlinkTarget = target
+					// Check if symlink target exists
+					resolvedPath := symlinkTarget
+					if !filepath.IsAbs(resolvedPath) {
+						resolvedPath = filepath.Join(filepath.Dir(initrdSrc), resolvedPath)
+					}
+					if targetInfo, targetErr := os.Stat(resolvedPath); targetErr == nil {
+						// #region agent log
+						logDebug("lib/common.go:1733", "Initrd symlink found, target exists", map[string]interface{}{
+							"hypothesisId": "G",
+							"step":         "initrd_symlink_valid",
+							"platform":     platform,
+							"buildType":    buildType,
+							"initrdSrc":    initrdSrc,
+							"symlinkTarget": symlinkTarget,
+							"resolvedPath": resolvedPath,
+							"targetSize":   targetInfo.Size(),
+						})
+						// #endregion
+						initrdSrc = resolvedPath
+						initrdFound = true
+						fmt.Printf("[OK] Initrd found via symlink: %s -> %s\n", initrdSrc, symlinkTarget)
+					} else {
+						// #region agent log
+						logDebug("lib/common.go:1750", "Initrd symlink broken (target missing)", map[string]interface{}{
+							"hypothesisId": "G",
+							"step":         "initrd_symlink_broken",
+							"platform":     platform,
+							"buildType":    buildType,
+							"initrdSrc":    initrdSrc,
+							"symlinkTarget": symlinkTarget,
+							"resolvedPath": resolvedPath,
+							"error":        targetErr.Error(),
+						})
+						// #endregion
+					}
+				}
+			}
+		}
+		
+		if initrdStatErr != nil && !initrdFound {
 			// #region agent log
 			logDebug("lib/common.go:1704", "Initrd not found in system generation", map[string]interface{}{
 				"hypothesisId": "G",
@@ -1737,14 +1786,68 @@ func RunGuixSystemInit(platform string) error {
 				"platform":     platform,
 				"buildType":    buildType,
 				"initrdSrc":    initrdSrc,
-				"error":        err.Error(),
+				"error":        initrdStatErr.Error(),
+				"isSymlink":    isSymlink,
+				"symlinkTarget": symlinkTarget,
 			})
 			// #endregion
-			fmt.Printf("[WARN] Initrd not found in system generation: %v\n", err)
-			fmt.Println("       Initrd will be created during guix system init")
-			fmt.Println()
-			// Don't fail here - initrd can be created during system init
-			initrdFound = false
+			
+			// Check alternative initrd locations in system generation
+			alternativeInitrdPaths := []string{
+				filepath.Join(systemPath, "boot", "initrd"),
+				filepath.Join(systemPath, "boot", "initrd-linux"),
+			}
+			// #region agent log
+			logDebug("lib/common.go:1748", "Checking alternative initrd locations", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "check_alternative_initrd",
+				"platform":     platform,
+				"buildType":    buildType,
+				"systemPath":   systemPath,
+				"alternatives": alternativeInitrdPaths,
+			})
+			// #endregion
+			for _, altPath := range alternativeInitrdPaths {
+				if altInfo, altErr := os.Stat(altPath); altErr == nil {
+					// #region agent log
+					logDebug("lib/common.go:1756", "Initrd found in alternative location", map[string]interface{}{
+						"hypothesisId": "G",
+						"step":         "initrd_found_alternative",
+						"platform":     platform,
+						"buildType":    buildType,
+						"initrdSrc":    altPath,
+						"size":         altInfo.Size(),
+					})
+					// #endregion
+					initrdSrc = altPath
+					initrdFound = true
+					fmt.Printf("[OK] Initrd found at alternative location: %s\n", altPath)
+					break
+				}
+			}
+			
+			// Check if initrd packages exist in store
+			findInitrdPkgCmd := exec.Command("bash", "-c", "for p in /gnu/store/*-initrd*; do [ -d \"$p\" ] && [[ \"$p\" != *raw-initrd* ]] && [[ \"$p\" != *.drv ]] && [[ \"$p\" != *.scm ]] && [[ \"$p\" != *.patch ]] && echo \"$p\"; done | xargs ls -td 2>/dev/null | head -3")
+			initrdPkgOutput, initrdPkgErr := findInitrdPkgCmd.Output()
+			// #region agent log
+			logDebug("lib/common.go:1772", "Checking for initrd packages in store", map[string]interface{}{
+				"hypothesisId": "G",
+				"step":         "check_initrd_packages",
+				"platform":     platform,
+				"buildType":    buildType,
+				"output":       string(initrdPkgOutput),
+				"outputLen":    len(initrdPkgOutput),
+				"error":        func() string { if initrdPkgErr != nil { return initrdPkgErr.Error() }; return "" }(),
+			})
+			// #endregion
+			
+			if !initrdFound {
+				fmt.Printf("[WARN] Initrd not found in system generation: %v\n", err)
+				fmt.Println("       Initrd will be created during guix system init")
+				fmt.Println()
+				// Don't fail here - initrd can be created during system init
+				initrdFound = false
+			}
 		} else {
 			// Check if it's a symlink
 			isSymlink := false
@@ -4430,21 +4533,48 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 	}
 
 	// Find kernel packages in store (try both linux and linux-libre for non-libre builds)
+	// CRITICAL FIX: Filter to directories only, exclude .drv, .scm, .patch files
+	// Use find -type d to ensure we only get directories, then sort by modification time
 	var findCmd *exec.Cmd
 	if buildType == "non-libre" {
 		// For non-libre, search for 'linux' first (nonguix), fallback to 'linux-libre' if needed
-		findCmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-* 2>/dev/null | grep -v 'linux-libre' | head -5")
+		// Filter: only directories, exclude derivations (.drv), source files (.scm), patches (.patch)
+		// Pattern: /gnu/store/<hash>-linux-<version> (directory, not file)
+		findCmd = exec.Command("bash", "-c", "for p in /gnu/store/*-linux-*; do [ -d \"$p\" ] && [[ \"$p\" != *linux-libre* ]] && [[ \"$p\" != *.drv ]] && [[ \"$p\" != *.scm ]] && [[ \"$p\" != *.patch ]] && [[ \"$p\" != *.tar.* ]] && echo \"$p\"; done | xargs ls -td 2>/dev/null | head -5")
 	} else {
 		// For libre builds, search for 'linux-libre' only
-		findCmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-libre-* 2>/dev/null | head -5")
+		// Filter: only directories, exclude derivations and source files
+		findCmd = exec.Command("bash", "-c", "for p in /gnu/store/*-linux-libre-*; do [ -d \"$p\" ] && [[ \"$p\" != *.drv ]] && [[ \"$p\" != *.scm ]] && [[ \"$p\" != *.patch ]] && [[ \"$p\" != *.tar.* ]] && echo \"$p\"; done | xargs ls -td 2>/dev/null | head -5")
 	}
 	
 	output, err := findCmd.Output()
+	// #region agent log
+	logDebug("lib/common.go:4436", "Hypothesis N kernel search command output", map[string]interface{}{
+		"hypothesisId": "N",
+		"step":         "kernel_search_raw_output",
+		"platform":     platform,
+		"buildType":    buildType,
+		"output":       string(output),
+		"outputLen":    len(output),
+		"error":        func() string { if err != nil { return err.Error() }; return "" }(),
+	})
+	// #endregion
 	if err != nil || len(output) == 0 {
 		// For non-libre builds, if 'linux' not found, try 'linux-libre' as fallback
 		if buildType == "non-libre" {
-			findCmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-libre-* 2>/dev/null | head -5")
+			findCmd = exec.Command("bash", "-c", "for p in /gnu/store/*-linux-libre-*; do [ -d \"$p\" ] && [[ \"$p\" != *.drv ]] && [[ \"$p\" != *.scm ]] && [[ \"$p\" != *.patch ]] && [[ \"$p\" != *.tar.* ]] && echo \"$p\"; done | xargs ls -td 2>/dev/null | head -5")
 			output, err = findCmd.Output()
+			// #region agent log
+			logDebug("lib/common.go:4448", "Hypothesis N fallback to linux-libre search", map[string]interface{}{
+				"hypothesisId": "N",
+				"step":         "kernel_search_fallback",
+				"platform":     platform,
+				"buildType":    buildType,
+				"output":       string(output),
+				"outputLen":    len(output),
+				"error":        func() string { if err != nil { return err.Error() }; return "" }(),
+			})
+			// #endregion
 		}
 		if err != nil || len(output) == 0 {
 			logDebug("lib/common.go:3491", "No kernel packages found in store", map[string]interface{}{
@@ -4460,6 +4590,31 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 	}
 
 	packages := strings.Split(strings.TrimSpace(string(output)), "\n")
+	// Filter out empty strings and verify each is actually a directory
+	filteredPackages := []string{}
+	for _, pkg := range packages {
+		pkg = strings.TrimSpace(pkg)
+		if pkg == "" {
+			continue
+		}
+		// Double-check it's a directory (not a file)
+		if info, err := os.Stat(pkg); err == nil && info.IsDir() {
+			filteredPackages = append(filteredPackages, pkg)
+		} else {
+			// #region agent log
+			logDebug("lib/common.go:4468", "Rejecting non-directory package candidate", map[string]interface{}{
+				"hypothesisId": "N",
+				"step":         "reject_non_directory",
+				"platform":     platform,
+				"buildType":    buildType,
+				"candidate":    pkg,
+				"isDir":        func() bool { if info != nil { return info.IsDir() }; return false }(),
+				"error":        func() string { if err != nil { return err.Error() }; return "" }(),
+			})
+			// #endregion
+		}
+	}
+	packages = filteredPackages
 	logDebug("lib/common.go:3501", "Found kernel packages", map[string]interface{}{
 		"hypothesisId": "N",
 		"step":         "packages_found",
@@ -4501,7 +4656,8 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 	}
 
 	// Search for initrd packages (exclude raw-initrd and other placeholders)
-	findInitrdCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-initrd* 2>/dev/null | grep -v 'raw-initrd' | head -5")
+	// CRITICAL FIX: Filter to directories only, exclude .drv, .scm, .patch files
+	findInitrdCmd := exec.Command("bash", "-c", "for p in /gnu/store/*-initrd*; do [ -d \"$p\" ] && [[ \"$p\" != *raw-initrd* ]] && [[ \"$p\" != *.drv ]] && [[ \"$p\" != *.scm ]] && [[ \"$p\" != *.patch ]] && echo \"$p\"; done | xargs ls -td 2>/dev/null | head -5")
 	initrdOutput, err := findInitrdCmd.Output()
 	// #region agent log
 	logDebug("lib/common.go:4408", "Initrd search command output", map[string]interface{}{
