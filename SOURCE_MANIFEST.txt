@@ -32,7 +32,7 @@ abc5adff7532385203b236564f6aa59b1755f1f3e091cb5f3b66ae1e9cffc39f  ./framework/in
 997206a1b9c0f7525a3c9e73bba1d719ba1363dcf4a46fbfd1126d159138cad5  ./lib/check-kernel-modules.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-774af9100272ce218020ae03c7b88b240a11472e23346f90000475eb9b426f9d  ./lib/common.go
+bbcd2295bbeec8fbfd3f2742465d24427190a15ba611fcef89451da05e0ac12e  ./lib/common.go
 ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
 
 ## Critical Shell Scripts

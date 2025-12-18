@@ -1275,6 +1275,19 @@ func RunGuixSystemInit(platform string) error {
 	}
 
 	// Step 1: Build the system (creates complete system in /gnu/store)
+	// Check existing system generations BEFORE build to detect cached incomplete ones
+	existingSystemPaths := []string{}
+	beforeBuildCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-system 2>/dev/null | head -5")
+	if output, err := beforeBuildCmd.Output(); err == nil {
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				existingSystemPaths = append(existingSystemPaths, line)
+			}
+		}
+	}
+	
 	// #region agent log
 	logDebug("lib/common.go:1211", "Before guix time-machine system build", map[string]interface{}{
 		"hypothesisId": "G",
@@ -1282,6 +1295,8 @@ func RunGuixSystemInit(platform string) error {
 		"platform":     platform,
 		"buildType":    buildType,
 		"channelsPath": channelsPath,
+		"existingSystemPaths": existingSystemPaths,
+		"existingSystemCount": len(existingSystemPaths),
 	})
 	// #endregion
 	
@@ -1385,6 +1400,90 @@ func RunGuixSystemInit(platform string) error {
 		fmt.Println("\n[WARN] Initrd-related errors/warnings found in build output:")
 		for _, errLine := range initrdErrors {
 			fmt.Printf("  %s\n", errLine)
+		}
+		fmt.Println()
+	}
+
+	// Extract system generation path from build output
+	// guix system build outputs: /gnu/store/xxxxx-system
+	systemPathFromOutput := ""
+	for _, line := range lines {
+		if strings.HasPrefix(line, "/gnu/store/") && strings.Contains(line, "-system") {
+			// Extract the path (may have trailing whitespace or other text)
+			parts := strings.Fields(line)
+			if len(parts) > 0 && strings.Contains(parts[0], "-system") {
+				systemPathFromOutput = parts[0]
+				break
+			}
+		}
+	}
+	
+	// Check if system generation path existed before build (cached vs. fresh)
+	systemPathWasCached := false
+	systemPathIsNew := false
+	if systemPathFromOutput != "" {
+		// Check if this path was in the existing paths list before build
+		wasInExistingList := false
+		for _, existingPath := range existingSystemPaths {
+			if existingPath == systemPathFromOutput {
+				wasInExistingList = true
+				break
+			}
+		}
+		
+		if wasInExistingList {
+			// Path existed before build - check modification time to see if it was updated
+			if info, err := os.Stat(systemPathFromOutput); err == nil {
+				age := time.Since(info.ModTime())
+				systemPathWasCached = age > 5*time.Second
+				systemPathIsNew = !systemPathWasCached
+			} else {
+				systemPathWasCached = true // Assume cached if we can't stat it
+			}
+		} else {
+			// Path not in existing list - it's new
+			systemPathIsNew = true
+		}
+	}
+	
+	// Check if initrd packages exist in store (even if system generation incomplete)
+	initrdPackagesInStore := []string{}
+	initrdCheckCmd := exec.Command("sh", "-c", "guix gc --list-dead 2>/dev/null | grep -i initrd || guix gc --list-live 2>/dev/null | grep -i initrd || find /gnu/store -maxdepth 1 -name '*-initrd*' -type d 2>/dev/null | head -5")
+	if output, err := initrdCheckCmd.Output(); err == nil {
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" && strings.Contains(line, "-initrd") {
+				initrdPackagesInStore = append(initrdPackagesInStore, line)
+			}
+		}
+	}
+	
+	// #region agent log
+	logDebug("lib/common.go:1392", "System generation analysis after build", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "system_generation_analysis",
+		"platform":     platform,
+		"buildType":    buildType,
+		"systemPathFromOutput": systemPathFromOutput,
+		"systemPathWasCached": systemPathWasCached,
+		"systemPathIsNew": systemPathIsNew,
+		"existingSystemPathsBeforeBuild": existingSystemPaths,
+		"initrdPackagesInStore": initrdPackagesInStore,
+		"initrdPackagesCount": len(initrdPackagesInStore),
+		"buildOutputShort": buildStdout.Len() < 100,
+	})
+	// #endregion
+	
+	// Warn if system generation appears cached but incomplete
+	// This indicates initrd packages may exist but symlinks weren't created
+	if systemPathWasCached && buildStdout.Len() < 100 {
+		fmt.Println("\n[WARN] System generation path existed before build (cached)")
+		fmt.Printf("       Path: %s\n", systemPathFromOutput)
+		fmt.Println("       Build output is very short - may have reused incomplete cached generation")
+		if len(initrdPackagesInStore) > 0 {
+			fmt.Printf("       Found %d initrd packages in store (packages exist, but symlinks may be missing)\n", len(initrdPackagesInStore))
+			fmt.Println("       This suggests initrd packages were built but system generation symlinks weren't created")
 		}
 		fmt.Println()
 	}
