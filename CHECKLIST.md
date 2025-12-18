@@ -236,7 +236,7 @@ cd ~/guix-customize
 **Status Summary:**
 
 | Component | Status | Details |
-|-----------|--------|---------|
+| --------- | ------ | ------- |
 | **Tools** | ✅ Complete | All batch conversion tools built and tested |
 | **Conversions** | ✅ Complete | All 20 scripts converted (7 lib scripts + 13 postinstall recipes) |
 | **Review** | ⏸️ Not Started | Converted scripts not yet reviewed or tested |
@@ -743,7 +743,7 @@ These principles guide all implementation work:
 ## 📊 Implementation Phases
 
 | Phase | Goal | Status |
-|-------|------|--------|
+| ----- | ---- | ------ |
 | **Phase 1: Core Installer** | Reliable single-boot installation | ✅ Complete |
 | **Phase 2: Dual-Boot Support** | Framework-dual installer working | ✅ Complete |
 | **Phase 3: Recovery & Safety** | Recovery script and verification | ✅ Complete |

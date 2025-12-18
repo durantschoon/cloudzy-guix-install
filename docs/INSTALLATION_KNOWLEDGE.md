@@ -1137,7 +1137,7 @@ Add to `bootloader-configuration` in `/etc/config.scm`:
 ### Installation Issues
 
 | Symptom | Diagnosis | Solution |
-|---------|-----------|----------|
+| -------- | --------- | -------- |
 | Empty `/boot/efi` before init | ✅ Normal pre-install state | Continue normally |
 | Empty `/boot/efi` after init | ❌ Installation failed | Re-run `guix system init` |
 | Missing `vmlinuz` or `initrd` | Kernel missing from config | Add `linux-libre` to packages or check kernel config |
@@ -1721,7 +1721,7 @@ sudo ./enforce-guix-filesystem-invariants.sh
 ### What Makes This Different from `fix-iso-artifacts.sh`
 
 | Feature | `fix-iso-artifacts.sh` | `enforce-guix-filesystem-invariants.sh` |
-|---------|------------------------|-------------------------------------|
+| ------- | ---------------------- | --------------------------------------- |
 | Fixes symlinks | ✅ Yes | ✅ Yes |
 | Empties `/run` directory | ❌ No | ✅ Yes |
 | Fixes `/var/lock` symlink | ❌ No | ✅ Yes |
@@ -2663,13 +2663,13 @@ If your system was installed but won't boot properly (PAM errors, dbus failures,
 
 #### Phase B – Fix the Filesystem Layout
 
-6. **Backup current `/var/run` directory:**
+1. **Backup current `/var/run` directory:**
    ```bash
    mv /mnt/var/run /mnt/var/run.before-rebuild 2>/dev/null || true
    mv /mnt/var/run.old /mnt/var/run.old.before-rebuild 2>/dev/null || true
    ```
 
-7. **Clear `/mnt/run` completely and recreate it empty:**
+2. **Clear `/mnt/run` completely and recreate it empty:**
    ```bash
    rm -rf /mnt/run
    mkdir /mnt/run
@@ -2680,49 +2680,49 @@ If your system was installed but won't boot properly (PAM errors, dbus failures,
    ls -A /mnt/run  # Should show nothing
    ```
 
-8. **Create the correct `/var/run → /run` symlink:**
+3. **Create the correct `/var/run → /run` symlink:**
    ```bash
    ln -s /run /mnt/var/run
    ls -ld /mnt/var/run  # Should show: ... /mnt/var/run -> /run
    ```
 
-9. **Fix `/var/lock` to be a symlink to `/run/lock`:**
+4. **Fix `/var/lock` to be a symlink to `/run/lock`:**
    ```bash
    rm -rf /mnt/var/lock
    ln -s /run/lock /mnt/var/lock
    ls -ld /mnt/var/lock  # Should show: ... /mnt/var/lock -> /run/lock
    ```
 
-10. **Make sure `/var/tmp` has correct sticky perms:**
+5. **Make sure `/var/tmp` has correct sticky perms:**
     ```bash
     chmod 1777 /mnt/var/tmp
     ```
 
 #### Phase C – Remove ISO-Specific Artifacts
 
-11. **Fix `/etc/mtab`:**
+1. **Fix `/etc/mtab`:**
     ```bash
     rm -f /mnt/etc/mtab
     ln -s /proc/self/mounts /mnt/etc/mtab
     ```
 
-12. **Remove `machine-id` so it'll be regenerated:**
+2. **Remove `machine-id` so it'll be regenerated:**
     ```bash
     rm -f /mnt/etc/machine-id
     ```
 
-13. **Remove stale `resolv.conf`:**
+3. **Remove stale `resolv.conf`:**
     ```bash
     rm -f /mnt/etc/resolv.conf
     ```
 
-14. **Clean ISO user artifacts:**
+4. **Clean ISO user artifacts:**
     ```bash
     rm -rf /mnt/var/guix/profiles/per-user/live-image-user
     rm -rf /mnt/home/live-image-user
     ```
 
-15. **Ensure correct ownership:**
+5. **Ensure correct ownership:**
     ```bash
     chown -R root:root /mnt/var/guix
     ```
@@ -2733,7 +2733,7 @@ At this point, your **on-disk layout** is clean and consistent.
 
 **Critical:** This step regenerates the system profile and activation scripts with the correct filesystem assumptions.
 
-16. **Bind-mount proc, sys, and dev into `/mnt`:**
+1. **Bind-mount proc, sys, and dev into `/mnt`:**
     ```bash
     mount -t proc none /mnt/proc
     mount --rbind /sys /mnt/sys
@@ -2742,7 +2742,7 @@ At this point, your **on-disk layout** is clean and consistent.
     mount --make-rslave /mnt/dev
     ```
 
-17. **Chroot into the real system:**
+2. **Chroot into the real system:**
     ```bash
     chroot /mnt /run/current-system/profile/bin/bash
     ```
@@ -2752,7 +2752,7 @@ At this point, your **on-disk layout** is clean and consistent.
     ```
     (On Guix ISO, bash is at `/run/current-system/profile/bin/bash`)
 
-18. **Inside the chroot, rebuild the system:**
+3. **Inside the chroot, rebuild the system:**
 
     **For first-time installs (system never booted successfully):**
     ```bash
@@ -2774,12 +2774,12 @@ At this point, your **on-disk layout** is clean and consistent.
     - Activation scripts (now with correct `/var/run` assumptions)
     - All system configuration
 
-19. **Exit the chroot:**
+4. **Exit the chroot:**
     ```bash
     exit
     ```
 
-20. **Unmount cleanly:**
+5. **Unmount cleanly:**
     ```bash
     umount -R /mnt/proc
     umount -R /mnt/sys
@@ -2790,12 +2790,12 @@ At this point, your **on-disk layout** is clean and consistent.
 
 #### Phase E – Reboot and Verify
 
-21. **Reboot without the ISO plugged in:**
+1. **Reboot without the ISO plugged in:**
     ```bash
     reboot
     ```
 
-22. **On the real Guix system, check the key invariants:**
+2. **On the real Guix system, check the key invariants:**
     ```bash
     ls -ld /run /var/run
     ls -ld /run/lock /var/lock
@@ -2806,13 +2806,13 @@ At this point, your **on-disk layout** is clean and consistent.
     - `/run/lock` → directory
     - `/var/lock -> /run/lock` (symlink)
 
-23. **Test sudo/PAM:**
+3. **Test sudo/PAM:**
     ```bash
     sudo -v && echo "sudo works"
     ```
     If there's no PAM/dbus error, that part is fixed.
 
-24. **(Optional) Clean up old backups once confident:**
+4. **(Optional) Clean up old backups once confident:**
     ```bash
     sudo rm -rf /var/run.before-rebuild /var/run.old.before-rebuild
     ```
@@ -2822,7 +2822,7 @@ At this point, your **on-disk layout** is clean and consistent.
 ### Implementation Status in Our Installer
 
 | Issue | Handled | Location | Notes |
-|-------|---------|----------|-------|
+| ----- | ------- | -------- | ----- |
 | `/var/run` symlink | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` creates correct structure |
 | `/var/lock` symlink | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` creates symlink to `/run/lock` |
 | `/run` cleanup | ✅ Yes | Step 02 mount | `CleanupISOArtifacts()` empties directory, removes ISO runtime junk |
