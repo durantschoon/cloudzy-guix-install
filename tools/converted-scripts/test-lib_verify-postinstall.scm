@@ -74,18 +74,18 @@ abc123def456  lib/guile-config-helper.scm
                                     "lib/guile-config-helper.scm"
                                     "Guile Library Scripts")))
     (if (string=? hash "abc123def456")
-        (format #t "  ✓ Extracted correct hash~%")
+        (format #t "  [OK] Extracted correct hash~%")
         (begin
-          (format #t "  ✗ Failed to extract hash: ~a~%" hash)
+          (format #t "  [FAIL] Failed to extract hash: ~a~%" hash)
           (exit 1))))
   
   (let ((hash (extract-expected-hash test-manifest
                                     "nonexistent.scm"
                                     "Guile Library Scripts")))
     (if (not hash)
-        (format #t "  ✓ Returns #f for nonexistent file~%")
+        (format #t "  [OK] Returns #f for nonexistent file~%")
         (begin
-          (format #t "  ✗ Should return #f for nonexistent: ~a~%" hash)
+          (format #t "  [FAIL] Should return #f for nonexistent: ~a~%" hash)
           (exit 1)))))
 
 (define (test-calculate-file-hash)
@@ -99,16 +99,16 @@ abc123def456  lib/guile-config-helper.scm
        
        (let ((hash (calculate-file-hash test-file)))
          (if (and hash (string? hash) (= (string-length hash) 64))
-             (format #t "  ✓ Calculated valid SHA256 hash~%")
+             (format #t "  [OK] Calculated valid SHA256 hash~%")
              (begin
-               (format #t "  ✗ Invalid hash: ~a~%" hash)
+               (format #t "  [FAIL] Invalid hash: ~a~%" hash)
                (exit 1))))
        
        (let ((hash (calculate-file-hash "/nonexistent/file.txt")))
          (if (not hash)
-             (format #t "  ✓ Returns #f for nonexistent file~%")
+             (format #t "  [OK] Returns #f for nonexistent file~%")
              (begin
-               (format #t "  ✗ Should return #f for nonexistent~%")
+               (format #t "  [FAIL] Should return #f for nonexistent~%")
                (exit 1))))))))
 
 (define (test-verify-file-not-found)
@@ -121,9 +121,9 @@ abc123def456  lib/guile-config-helper.scm
                                "Test Section"
                                test-manifest)))
        (if (eq? result 'not-found)
-           (format #t "  ✓ Returns 'not-found for missing file~%")
+           (format #t "  [OK] Returns 'not-found for missing file~%")
            (begin
-             (format #t "  ✗ Expected 'not-found, got: ~a~%" result)
+             (format #t "  [FAIL] Expected 'not-found, got: ~a~%" result)
              (exit 1)))))))
 
 (define (test-verify-file-not-in-manifest)
@@ -139,9 +139,9 @@ abc123def456  lib/guile-config-helper.scm
                                  "Test Section"
                                  test-manifest)))
          (if (eq? result 'not-in-manifest)
-             (format #t "  ✓ Returns 'not-in-manifest for unlisted file~%")
+             (format #t "  [OK] Returns 'not-in-manifest for unlisted file~%")
              (begin
-               (format #t "  ✗ Expected 'not-in-manifest, got: ~a~%" result)
+               (format #t "  [FAIL] Expected 'not-in-manifest, got: ~a~%" result)
                (exit 1))))))))
 
 ;;; Test runner

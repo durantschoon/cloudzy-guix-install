@@ -361,14 +361,14 @@ Returns #t if directory exists, #f otherwise."
   
   (cond
    ((and (zero? *errors*) (zero? *warnings*))
-    (format #t "~a✓ ALL CHECKS PASSED~a~%" color-green color-reset)
+    (format #t "~a[OK] ALL CHECKS PASSED~a~%" color-green color-reset)
     (display "\n")
     (display "Installation appears complete and healthy.\n")
     (display "System should be ready to boot.\n")
     0)
    
    ((zero? *errors*)
-    (format #t "~a⚠ PASSED WITH WARNINGS~a~%" color-yellow color-reset)
+    (format #t "~a[WARN] PASSED WITH WARNINGS~a~%" color-yellow color-reset)
     (display "\n")
     (format #t "Errors: ~a~%" *errors*)
     (format #t "Warnings: ~a~%" *warnings*)
@@ -377,7 +377,7 @@ Returns #t if directory exists, #f otherwise."
     0)
    
    (else
-    (format #t "~a✗ VERIFICATION FAILED~a~%" color-red color-reset)
+    (format #t "~a[FAIL] VERIFICATION FAILED~a~%" color-red color-reset)
     (display "\n")
     (format #t "Errors: ~a~%" *errors*)
     (format #t "Warnings: ~a~%" *warnings*)

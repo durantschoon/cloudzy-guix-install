@@ -21,7 +21,7 @@
   (format #t "  ~a~%" (string-join (map (lambda (x) (format #f "~a" x)) args) " ")))
 
 (define (success . args)
-  (format #t "~%\x1b[1;32m[✓]\x1b[0m ~a~%"
+  (format #t "~%\x1b[1;32m[[OK]]\x1b[0m ~a~%"
           (string-join (map (lambda (x) (format #f "~a" x)) args) " ")))
 
 (define (file-contains? filepath pattern)

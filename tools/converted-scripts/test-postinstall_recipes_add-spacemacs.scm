@@ -18,10 +18,10 @@
   (if condition
       (begin
         (set! test-pass (+ test-pass 1))
-        (format #t "✓ ~a~%" name))
+        (format #t "[OK] ~a~%" name))
       (begin
         (set! test-fail (+ test-fail 1))
-        (format #t "✗ ~a~%" name))))
+        (format #t "[FAIL] ~a~%" name))))
 
 (define (test-summary)
   "Print test summary."

@@ -28,7 +28,7 @@
   (newline))
 
 (define (success . args)
-  (display "\n\033[1;32m[✓]\033[0m ")
+  (display "\n\033[1;32m[[OK]]\033[0m ")
   (for-each display args)
   (newline))
 

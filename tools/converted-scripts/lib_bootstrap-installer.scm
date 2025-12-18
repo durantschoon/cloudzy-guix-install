@@ -112,20 +112,20 @@
            (font-found
             (let ((font-base (car (string-split font-found #\.))))
               (if (zero? (system (format #f "sudo setfont ~a 2>/dev/null" font-base)))
-                  (format #t "  ✓ Set font: ~a~%" (basename font-base))
-                  (format #t "  ⚠ Could not set font (may need sudo)~%"))))
+                  (format #t "  [OK] Set font: ~a~%" (basename font-base))
+                  (format #t "  [WARN] Could not set font (may need sudo)~%"))))
            
            ;; Try default solar24x32
            ((or (file-exists? (string-append font-dir "/solar24x32.psf"))
                 (file-exists? (string-append font-dir "/solar24x32.psfu")))
-            (format #t "  ⚠ Font '~a' not found, using default: solar24x32~%" font-name)
+            (format #t "  [WARN] Font '~a' not found, using default: solar24x32~%" font-name)
             (if (zero? (system "sudo setfont solar24x32 2>/dev/null"))
-                (format #t "  ✓ Set font: solar24x32~%")
-                (format #t "  ⚠ Could not set font (may need sudo)~%")))
+                (format #t "  [OK] Set font: solar24x32~%")
+                (format #t "  [WARN] Could not set font (may need sudo)~%")))
            
            ;; Font not found - ask user to choose
            (else
-            (format #t "~%  ⚠ Font '~a' not found in ~a~%" font-name font-dir)
+            (format #t "~%  [WARN] Font '~a' not found in ~a~%" font-name font-dir)
             (format #t "~%  Please choose a font from the list below, or keep the current font:~%~%")
             
             ;; Get all fonts and categorize them
@@ -213,12 +213,12 @@
                     (if font-found
                         (let ((font-base (car (string-split font-found #\.))))
                           (if (zero? (system (format #f "sudo setfont ~a 2>/dev/null" font-base)))
-                              (format #t "  ✓ Set font: ~a~%" (basename font-base))
-                              (format #t "  ⚠ Could not set font (may need sudo)~%")))
-                        (format #t "  ⚠ Could not set selected font~%"))))))))
+                              (format #t "  [OK] Set font: ~a~%" (basename font-base))
+                              (format #t "  [WARN] Could not set font (may need sudo)~%")))
+                        (format #t "  [WARN] Could not set selected font~%"))))))))
         
         (begin
-          (format #t "  ⚠ Font directory not found: ~a~%" font-dir)
+          (format #t "  [WARN] Font directory not found: ~a~%" font-dir)
           (format #t "  Font will be set after installation completes~%")))
     
     (newline)))

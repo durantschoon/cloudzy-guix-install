@@ -34,7 +34,7 @@
 
 (define (success text)
   "Display success message in green"
-  (format #t "\n\033[1;32m✓ ~a\033[0m\n" text))
+  (format #t "\n\033[1;32m[OK] ~a\033[0m\n" text))
 
 ;;; ============================================================================
 ;;; Interactive input helpers
@@ -194,7 +194,7 @@
                                  "(service openssh-service-type)"
                                  install-root)
               (begin
-                (info "✓ SSH service added")
+                (info "[OK] SSH service added")
                 (info "After reconfigure, SSH will be available on port 22")
                 #t)
               (begin
@@ -264,7 +264,7 @@
                                              (format #f "(service ~a)" service-type)
                                              install-root)
                           (begin
-                            (info (format #f "✓ ~a desktop added" desktop-name))
+                            (info (format #f "[OK] ~a desktop added" desktop-name))
                             #t)
                           (begin
                             (err "Failed to add desktop service")
@@ -294,7 +294,7 @@
           (safe-edit-config config-file
                             "s|(packages %base-packages)|(packages\\n  (append (list (specification->package \"emacs\")\\n                (specification->package \"git\")\\n                (specification->package \"vim\")\\n                (specification->package \"htop\")\\n                (specification->package \"curl\")\\n                (specification->package \"wget\")\\n                (specification->package \"go\"))\\n          %base-packages))|")
           
-          (info "✓ Added: emacs, git, vim, htop, curl, wget, go")
+          (info "[OK] Added: emacs, git, vim, htop, curl, wget, go")
           #t))))
 
 ;;; ============================================================================

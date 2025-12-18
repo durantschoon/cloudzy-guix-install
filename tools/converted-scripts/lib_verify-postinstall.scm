@@ -81,12 +81,12 @@
   (cond
    ;; File doesn't exist
    ((not (file-exists? filepath))
-    (format #t "  ⊘ ~a (not found, skipping)~%" filepath)
+    (format #t "  [SKIP] ~a (not found, skipping)~%" filepath)
     'not-found)
    
    ;; File not in manifest
    ((not (extract-expected-hash manifest filepath section))
-    (format #t "  ⊘ ~a (not in manifest, skipping)~%" filepath)
+    (format #t "  [SKIP] ~a (not in manifest, skipping)~%" filepath)
     'not-in-manifest)
    
    ;; Verify hash
@@ -95,10 +95,10 @@
           (actual-hash (calculate-file-hash filepath)))
       (if (and actual-hash (string=? actual-hash expected-hash))
           (begin
-            (format #t "  ✓ ~a~%" filepath)
+            (format #t "  [OK] ~a~%" filepath)
             'success)
           (begin
-            (format #t "  ✗ ~a (checksum mismatch!)~%" filepath)
+            (format #t "  [FAIL] ~a (checksum mismatch!)~%" filepath)
             (format #t "    Expected: ~a~%" expected-hash)
             (format #t "    Got:      ~a~%" (or actual-hash "ERROR"))
             'mismatch))))))
@@ -174,10 +174,10 @@
             ;; Check if any mismatches occurred
             (if (any (lambda (r) (eq? r 'mismatch)) results)
                 (begin
-                  (display "Some files show ✗ - re-download those files or check for updates.\n")
+                  (display "Some files show [FAIL] - re-download those files or check for updates.\n")
                   (exit 1))
                 (begin
-                  (display "All files show ✓ - your postinstall scripts are verified.\n")
+                  (display "All files show [OK] - your postinstall scripts are verified.\n")
                   (exit 0))))))))
 
 ;; Run main if executed as script

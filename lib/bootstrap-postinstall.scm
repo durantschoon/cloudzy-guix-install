@@ -121,10 +121,10 @@
                   (actual-hash (file-sha256 filepath)))
               (if (equal? expected-hash actual-hash)
                   (begin
-                    (info (format #f "  ✓ ~a" filepath))
-                    #t)
+                    (info (format #f "  [OK] ~a" filepath))
+                  #t)
                   (begin
-                    (err (format #f "  ✗ ~a (checksum mismatch!)" filepath))
+                    (err (format #f "  [FAIL] ~a (checksum mismatch!)" filepath))
                     (err (format #f "    Expected: ~a" expected-hash))
                     (err (format #f "    Got:      ~a" actual-hash))
                     #f)))

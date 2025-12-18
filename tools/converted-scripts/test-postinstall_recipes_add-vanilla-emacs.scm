@@ -18,10 +18,10 @@
   (if condition
       (begin
         (set! pass-count (+ pass-count 1))
-        (format #t "  ✓ ~a~%" test-name))
+        (format #t "  [OK] ~a~%" test-name))
       (begin
         (set! fail-count (+ fail-count 1))
-        (format #t "  ✗ ~a~%" test-name))))
+        (format #t "  [FAIL] ~a~%" test-name))))
 
 (define (assert-false condition test-name)
   "Assert that condition is false."
@@ -39,8 +39,8 @@
   (format #t "Passed: ~a~%" pass-count)
   (format #t "Failed: ~a~%" fail-count)
   (if (= fail-count 0)
-      (format #t "\n✓ All tests passed!~%")
-      (format #t "\n✗ Some tests failed~%")))
+      (format #t "\n[OK] All tests passed!~%")
+      (format #t "\n[FAIL] Some tests failed~%")))
 
 ;;; Test fixtures
 

@@ -22,7 +22,7 @@
   (format #t "~%\x1b[1;33m[warn]\x1b[0m ~a~%" msg))
 
 (define (success msg)
-  (format #t "~%\x1b[1;32m[✓]\x1b[0m ~a~%" msg))
+  (format #t "~%\x1b[1;32m[[OK]]\x1b[0m ~a~%" msg))
 
 ;;; Helper procedures
 (define (file-contains? filepath pattern)

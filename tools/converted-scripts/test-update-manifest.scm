@@ -19,10 +19,10 @@
   (if condition
       (begin
         (set! passed-count (+ passed-count 1))
-        (format #t "  ✓ ~a~%" description))
+        (format #t "  [OK] ~a~%" description))
       (begin
         (set! failed-count (+ failed-count 1))
-        (format #t "  ✗ ~a~%" description))))
+        (format #t "  [FAIL] ~a~%" description))))
 
 (define (assert-equal description expected actual)
   "Assert that expected equals actual."

@@ -23,7 +23,7 @@
   (format #t "  ~a~%" (string-join (map (lambda (x) (format #f "~a" x)) args) " ")))
 
 (define (success . args)
-  (format #t "\n\033[1;32m[✓]\033[0m ~a\n" 
+  (format #t "\n\033[1;32m[[OK]]\033[0m ~a\n" 
           (string-join (map (lambda (x) (format #f "~a" x)) args) " ")))
 
 ;;; Development packages list
