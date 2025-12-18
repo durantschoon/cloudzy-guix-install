@@ -1547,7 +1547,8 @@ func RunGuixSystemInit(platform string) error {
 			// Build kernel package using time-machine with nonguix channel
 			// CRITICAL: Use --no-substitutes to ensure we get kernel version from pinned channels
 			// Substitutes might be from newer Guix versions with different kernel versions
-			buildKernelCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "build", "--no-substitutes", "linux")
+			// Also use --no-grafts to avoid using cached grafts that might be from wrong version
+			buildKernelCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "build", "--no-substitutes", "--no-grafts", "linux")
 			buildKernelCmd.Stdout = os.Stdout
 			buildKernelCmd.Stderr = os.Stderr
 			if err := buildKernelCmd.Run(); err != nil {
@@ -1629,6 +1630,21 @@ func RunGuixSystemInit(platform string) error {
 						return fmt.Errorf("guix build output invalid (%s) and no kernel found via alternative searches", kernelPackagePath)
 					}
 				} else {
+					// Verify kernel version matches expected (6.6.16 for wingolog-era)
+					// Extract version from package path: /gnu/store/...-linux-6.6.16 or ...-linux-6.7.4
+					kernelVersion := ""
+					if strings.Contains(kernelPackagePath, "-linux-") {
+						parts := strings.Split(kernelPackagePath, "-linux-")
+						if len(parts) > 1 {
+							versionPart := parts[1]
+							// Extract version number (e.g., "6.6.16" or "6.7.4")
+							versionMatch := regexp.MustCompile(`(\d+\.\d+\.\d+)`).FindString(versionPart)
+							if versionMatch != "" {
+								kernelVersion = versionMatch
+							}
+						}
+					}
+					
 					// #region agent log
 					logDebug("lib/common.go:1495", "Kernel package path found", map[string]interface{}{
 						"hypothesisId": "H",
@@ -1636,8 +1652,19 @@ func RunGuixSystemInit(platform string) error {
 						"platform":     platform,
 						"buildType":    buildType,
 						"kernelPackagePath": kernelPackagePath,
+						"kernelVersion": kernelVersion,
+						"expectedVersion": "6.6.16",
+						"versionMatch": kernelVersion == "6.6.16",
 					})
 					// #endregion
+					
+					// Warn if kernel version doesn't match expected (but don't fail - might still work)
+					if kernelVersion != "" && kernelVersion != "6.6.16" && platform == "framework-dual" {
+						fmt.Printf("[WARN] Kernel version mismatch: found %s, expected 6.6.16\n", kernelVersion)
+						fmt.Println("       This kernel may have been cached from a previous build")
+						fmt.Println("       If initrd generation fails, try: guix gc -D /gnu/store/*-linux-*")
+						fmt.Println()
+					}
 
 					// Check for kernel binary in the package
 					// Kernel packages typically have the kernel at: $package/bzImage or $package/vmlinux
@@ -4883,10 +4910,12 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 				// Initrd packages are directories - look inside for the actual initrd file
 				if info.IsDir() {
 					// Look for initrd files inside the package directory
+					// Try common locations and also search recursively
 					initrdFiles := []string{
 						filepath.Join(candidate, "initrd.cpio.gz"),
 						filepath.Join(candidate, "initrd"),
 						filepath.Join(candidate, "initrd.gz"),
+						filepath.Join(candidate, "initrd.cpio"),
 					}
 					found := false
 					for _, initrdFile := range initrdFiles {
@@ -4909,7 +4938,37 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 							break
 						}
 					}
+					
+					// If not found in common locations, search recursively for any large .cpio.gz or initrd files
 					if !found {
+						findCmd := exec.Command("find", candidate, "-type", "f", "(", "-name", "*.cpio.gz", "-o", "-name", "initrd*", ")", "-size", "+10M")
+						findOutput, findErr := findCmd.Output()
+						if findErr == nil && len(findOutput) > 0 {
+							// Found initrd file via recursive search
+							initrdPath := strings.TrimSpace(strings.Split(string(findOutput), "\n")[0])
+							if fileInfo, fileErr := os.Stat(initrdPath); fileErr == nil && !fileInfo.IsDir() {
+								candidate = initrdPath
+								info = fileInfo
+								found = true
+								// #region agent log
+								logDebug("lib/common.go:4451", "Found initrd file via recursive search", map[string]interface{}{
+									"hypothesisId": "N",
+									"step":         "initrd_found_recursive",
+									"platform":     platform,
+									"buildType":    buildType,
+									"packageDir":   candidate,
+									"initrdFile":   initrdPath,
+									"size":         fileInfo.Size(),
+								})
+								// #endregion
+							}
+						}
+					}
+					
+					if !found {
+						// Log directory contents for debugging
+						lsCmd := exec.Command("ls", "-la", candidate)
+						lsOutput, _ := lsCmd.Output()
 						// #region agent log
 						logDebug("lib/common.go:4451", "Rejecting directory candidate (no initrd file inside)", map[string]interface{}{
 							"hypothesisId": "N",
@@ -4917,6 +4976,7 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 							"platform":     platform,
 							"buildType":    buildType,
 							"candidate":    candidate,
+							"dirContents": string(lsOutput),
 						})
 						// #endregion
 						continue
