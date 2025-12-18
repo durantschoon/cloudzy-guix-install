@@ -4,7 +4,7 @@
 
 The installer uses comprehensive kernel tracking instrumentation to log every step of the kernel discovery and installation process. This structured logging system helps debug kernel-related issues across different platforms and installation methods.
 
-**Status**: ✅ **Complete** - Kernel tracking is now implemented for both cloudzy and framework-dual platforms.
+**Status**: ✅ **Complete** - Kernel tracking is now fully implemented for both cloudzy and framework-dual platforms with complete logging parity. All `logDebug` calls include `platform` and `buildType` fields for complete traceability.
 
 ## Log Location
 
@@ -21,6 +21,24 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 - `timestamp`: When the operation occurred
 - Additional context-specific fields (paths, sizes, errors, etc.)
 
+### Hypothesis ID Policy
+
+**Consistency Rule:** Hypothesis IDs (letters) must be consistent across all platforms. The same letter always means the same hypothesis strategy, regardless of platform.
+
+**Current Hypothesis Assignments:**
+- **G**: Standard Build Path (both platforms)
+- **M**: Network Diagnostics (both platforms)
+- **H**: Build Kernel Package (both platforms)
+- **K**: Deep System Generation Search (both platforms)
+- **N**: Store-Wide Kernel Search (both platforms)
+- **E**: Error Recovery (both platforms)
+
+**When Adding New Hypotheses:**
+- Use the next available letter alphabetically
+- It's OK to skip letters if a hypothesis is platform-specific (e.g., if cloudzy needs something framework-dual doesn't)
+- Document any platform-specific hypotheses clearly
+- Ensure the same letter is never reused for different purposes across platforms
+
 ### Hypothesis G: Standard Build Path
 
 **Purpose:** Use `guix system build` to create system generation
@@ -35,7 +53,7 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 
 **Tracking Fields:**
 - `hypothesisId`: "G"
-- `step`: `before_guix_system_build`, `after_guix_system_build`, `system_path_found`, `list_system_contents`, `kernel_search_complete`, `kernel_copy_succeeded`, `initrd_copy_succeeded`, `created_symlink`, `before_guix_system_init`, `guix_system_init_succeeded`
+- `step`: `before_guix_system_build`, `after_guix_system_build`, `system_path_found`, `list_system_contents`, `kernel_search_complete`, `kernel_copy_succeeded`, `initrd_copy_succeeded`, `created_symlink`, `before_guix_system_init`, `guix_system_init_succeeded`, `guix_system_init_failed`, `guix_system_init_failed_attempt`, `daemon_check_after_failure`, `daemon_restart_attempted`
 
 **Common Outcomes:**
 - **Success:** System generation contains kernel → proceed to copy
@@ -130,13 +148,16 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 
 **Tracking Fields:**
 - `hypothesisId`: "E"
-- `step`: `check_system_link`, `system_path_found`, `check_kernel_src`, `copy_kernel`, `kernel_copy_succeeded`, `recovery_succeeded`
+- `step`: `check_system_link`, `system_path_found`, `check_kernel_src`, `copy_kernel`, `kernel_copy_succeeded`, `check_initrd_src`, `initrd_found_deep_search`, `initrd_found_store_search`, `initrd_size_invalid`, `initrd_copy_succeeded`, `recovery_succeeded`, `recovery_failed_retry`, `recovery_failed_final`
 
 **Common Outcomes:**
 - **Success:** Files recovered → continue installation
 - **Failure:** Recovery failed after retries → manual intervention needed
 
-**Note:** This is used by `VerifyAndRecoverKernelFiles()` which runs after system init completes.
+**Note:** This is used by `VerifyAndRecoverKernelFiles()` which runs after system init completes. Includes fallback strategies:
+- If initrd not found in system generation, tries Hypothesis K (deep search)
+- If Hypothesis K fails, tries Hypothesis N (store-wide search)
+- Validates initrd size (>10MB) and filters out invalid placeholders like `raw-initrd`
 
 ## Platform-Specific Implementation
 
@@ -153,6 +174,7 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 - Kernel files in system generation are **symlinks** (must use `cp -L`)
 - If kernel not found in system generation, tries Hypothesis H (build `linux-libre` package)
 - Comprehensive fallback chain: G → M → H → K → N
+- All logging includes `platform` and `buildType` fields for complete traceability
 
 ### Framework-Dual (Nonguix)
 
@@ -167,8 +189,11 @@ The installer uses a hypothesis-driven system where each hypothesis represents a
 - **CRITICAL DISCOVERY (2025-01-XX):** System generation may only contain `["gnu","gnu.go","guix"]` - no kernel/initrd files
 - Same kernel bug affects framework-dual as cloudzy - kernel not always in system generation
 - Fallback chain: G → K → N → H (if network available)
-- If kernel missing after init, Hypothesis E (recovery) handles it
+- If kernel missing after init, Hypothesis E (recovery) handles it with fallback strategies (K, N)
 - Hypothesis H builds `linux` package (not `linux-libre`) using nonguix substitutes
+- All logging includes `platform` and `buildType` fields for complete traceability
+- `SearchStoreForKernel()` is platform-aware: searches for `linux` (non-libre) or `linux-libre` (libre) based on buildType
+- Initrd recovery includes size validation (>10MB) and filters out invalid `raw-initrd` placeholders
 
 ## Using Kernel Tracking Logs
 
@@ -232,6 +257,10 @@ grep '"buildType":"non-libre"' /tmp/kernel_tracking.log | jq .
 - ✅ Recovery tracking via Hypothesis E already existed
 - ✅ All call sites updated to pass platform parameter
 - ✅ Fallback strategies (K, N, H) added (2025-01-XX) - same bug affects framework-dual
+- ✅ All `logDebug` calls in `RunGuixSystemInitFreeSoftware()` now include `platform` and `buildType` fields (2025-01-XX)
+- ✅ Complete logging parity achieved - both platforms log identical fields for all hypotheses
+- ✅ Hypothesis ID consistency policy established (2025-01-XX): Same letter = same hypothesis across platforms
+- ✅ Fixed inconsistency: Changed Hypothesis "D" (daemon retry) to "G" in cloudzy to match framework-dual (2025-01-XX)
 
 ## Code Locations
 

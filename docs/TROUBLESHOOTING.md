@@ -21,6 +21,24 @@ The hypothesis system provides **systematic debugging** and **automatic recovery
 
 ### Hypothesis System Architecture
 
+#### Hypothesis ID Policy
+
+**Consistency Rule:** Hypothesis IDs (letters) must be consistent across all platforms. The same letter always means the same hypothesis strategy, regardless of platform.
+
+**Current Hypothesis Assignments:**
+- **G**: Standard Build Path (both platforms)
+- **M**: Network Diagnostics (both platforms)
+- **H**: Build Kernel Package (both platforms)
+- **K**: Deep System Generation Search (both platforms)
+- **N**: Store-Wide Kernel Search (both platforms)
+- **E**: Error Recovery (both platforms)
+
+**When Adding New Hypotheses:**
+- Use the next available letter alphabetically
+- It's OK to skip letters if a hypothesis is platform-specific (e.g., if cloudzy needs something framework-dual doesn't)
+- Document any platform-specific hypotheses clearly
+- Ensure the same letter is never reused for different purposes across platforms
+
 #### Hypothesis G: Standard Build Path
 **Purpose:** Use `guix system build` to create system generation
 

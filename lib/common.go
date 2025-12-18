@@ -2439,46 +2439,80 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 			}
 			
 			if initrdFound {
-				// Get file info for logging
+				// Get file info and validate size before copying
 				var initrdInfo os.FileInfo
-				if info, err := os.Stat(initrdSrc); err == nil {
+				var actualInitrdPath string = initrdSrc
+				
+				// Check if it's a symlink and resolve it
+				if linkInfo, err := os.Lstat(initrdSrc); err == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
+					if resolved, err := filepath.EvalSymlinks(initrdSrc); err == nil {
+						actualInitrdPath = resolved
+						if info, err := os.Stat(actualInitrdPath); err == nil {
+							initrdInfo = info
+						}
+					}
+				} else if info, err := os.Stat(initrdSrc); err == nil {
 					initrdInfo = info
 				}
-				initrdDest := "/mnt/boot/initrd"
-				// #region agent log
-				var initrdSize int64
-				if initrdInfo != nil {
-					initrdSize = initrdInfo.Size()
-				}
-				logDebug("lib/common.go:1743", "Copying initrd from system generation", map[string]interface{}{
-					"hypothesisId": "E",
-					"step":         "copy_initrd",
-					"initrdSrc":    initrdSrc,
-					"initrdDest":   initrdDest,
-					"initrdSize":   initrdSize,
-				})
-				// #endregion
-				if err := exec.Command("cp", "-Lf", initrdSrc, initrdDest).Run(); err != nil {
-					fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
+				
+				// Validate initrd size (should be > 10MB)
+				if initrdInfo == nil || initrdInfo.Size() < 10*1024*1024 {
+					fmt.Printf("[WARN] Initrd found but size is suspicious: %s (%.1f MB)\n", actualInitrdPath, func() float64 {
+						if initrdInfo != nil {
+							return float64(initrdInfo.Size()) / 1024 / 1024
+						}
+						return 0
+					}())
+					fmt.Println("       Expected initrd size: > 10 MB")
+					fmt.Println("       This may be a symlink or placeholder - skipping copy")
 					// #region agent log
-					logDebug("lib/common.go:1750", "Initrd copy failed", map[string]interface{}{
+					logDebug("lib/common.go:1750", "Initrd size validation failed", map[string]interface{}{
 						"hypothesisId": "E",
-						"step":         "initrd_copy_failed",
-						"error":        err.Error(),
+						"step":         "initrd_size_invalid",
+						"initrdSrc":    initrdSrc,
+						"actualPath":   actualInitrdPath,
+						"size":         func() int64 { if initrdInfo != nil { return initrdInfo.Size() }; return 0 }(),
+						"minSize":      10 * 1024 * 1024,
 					})
 					// #endregion
 					recovered = false
 				} else {
-					if info, err := os.Stat(initrdDest); err == nil {
-						fmt.Printf("[OK] Recovered initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
+					initrdDest := "/mnt/boot/initrd"
+					// #region agent log
+					var initrdSize int64
+					if initrdInfo != nil {
+						initrdSize = initrdInfo.Size()
+					}
+					logDebug("lib/common.go:1743", "Copying initrd from system generation", map[string]interface{}{
+						"hypothesisId": "E",
+						"step":         "copy_initrd",
+						"initrdSrc":    actualInitrdPath,
+						"initrdDest":   initrdDest,
+						"initrdSize":   initrdSize,
+					})
+					// #endregion
+					if err := exec.Command("cp", "-Lf", actualInitrdPath, initrdDest).Run(); err != nil {
+						fmt.Printf("[ERROR] Failed to copy initrd: %v\n", err)
 						// #region agent log
-						logDebug("lib/common.go:1757", "Initrd copy succeeded", map[string]interface{}{
+						logDebug("lib/common.go:1750", "Initrd copy failed", map[string]interface{}{
 							"hypothesisId": "E",
-							"step":         "initrd_copy_succeeded",
-							"initrdDest":   initrdDest,
-							"initrdSize":   info.Size(),
+							"step":         "initrd_copy_failed",
+							"error":        err.Error(),
 						})
 						// #endregion
+						recovered = false
+					} else {
+						if info, err := os.Stat(initrdDest); err == nil {
+							fmt.Printf("[OK] Recovered initrd: %s (%.1f MB)\n", initrdDest, float64(info.Size())/1024/1024)
+							// #region agent log
+							logDebug("lib/common.go:1757", "Initrd copy succeeded", map[string]interface{}{
+								"hypothesisId": "E",
+								"step":         "initrd_copy_succeeded",
+								"initrdDest":   initrdDest,
+								"initrdSize":   info.Size(),
+							})
+							// #endregion
+						}
 					}
 				}
 			}
@@ -2605,17 +2639,21 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	logDebug("lib/common.go:1805", "Before guix system build (free software)", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "before_guix_system_build",
+		"platform":     platform,
+		"buildType":    buildType,
 	})
 	// #endregion
 	
 	buildCmd := exec.Command("guix", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
 	buildCmd.Stdout = os.Stdout
 	buildCmd.Stderr = os.Stderr
-	if err := buildCmd.Run(); err != nil {
+		if err := buildCmd.Run(); err != nil {
 		// #region agent log
 		logDebug("lib/common.go:1817", "guix system build failed", map[string]interface{}{
 			"hypothesisId": "G",
 			"step":         "guix_system_build_failed",
+			"platform":     platform,
+			"buildType":    buildType,
 			"error":        err.Error(),
 		})
 		// #endregion
@@ -2626,6 +2664,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	logDebug("lib/common.go:1821", "After guix system build", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "after_guix_system_build",
+		"platform":     platform,
+		"buildType":    buildType,
 		"checking":     "system_generation_exists",
 	})
 	// #endregion
@@ -2643,6 +2683,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 		logDebug("lib/common.go:1834", "Failed to find system generation after build", map[string]interface{}{
 			"hypothesisId": "G",
 			"step":         "system_path_not_found",
+			"platform":     platform,
+			"buildType":    buildType,
 			"error":        err.Error(),
 		})
 		// #endregion
@@ -2653,6 +2695,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	logDebug("lib/common.go:1843", "System path found after build", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "system_path_found",
+		"platform":     platform,
+		"buildType":    buildType,
 		"systemPath":   systemPath,
 	})
 	// #endregion
@@ -2669,6 +2713,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	logDebug("lib/common.go:1850", "System generation contents after build", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "list_system_contents",
+		"platform":     platform,
+		"buildType":    buildType,
 		"systemPath":   systemPath,
 		"entries":      entryNames,
 		"entryCount":   len(entryNames),
@@ -2695,6 +2741,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 			logDebug("lib/common.go:1870", "Kernel found in alternative location", map[string]interface{}{
 				"hypothesisId": "G",
 				"step":         "kernel_found_alternative",
+				"platform":     platform,
+				"buildType":    buildType,
 				"kernelPath":   altPath,
 				"isSymlink":    isSymlink,
 				"size":         info.Size(),
@@ -2709,6 +2757,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	logDebug("lib/common.go:1880", "Kernel search complete", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "kernel_search_complete",
+		"platform":     platform,
+		"buildType":    buildType,
 		"kernelFound":  kernelFound,
 		"kernelSrc":    kernelSrc,
 		"checkedPaths": alternativeKernelPaths,
@@ -2727,6 +2777,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 		logDebug("lib/common.go:1895", "Kernel not found in any location", map[string]interface{}{
 			"hypothesisId": "G",
 			"step":         "kernel_not_found_anywhere",
+			"platform":     platform,
+			"buildType":    buildType,
 			"systemPath":   systemPath,
 			"checkedPaths": alternativeKernelPaths,
 		})
@@ -2748,6 +2800,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 		logDebug("lib/common.go:1905", "Before guix build linux-libre", map[string]interface{}{
 			"hypothesisId": "H",
 			"step":         "before_guix_build_kernel",
+			"platform":     platform,
+			"buildType":    buildType,
 		})
 		// #endregion
 		
@@ -2790,6 +2844,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 					logDebug("lib/common.go:2135", "All non-network hypotheses failed", map[string]interface{}{
 						"hypothesisId": "ALL",
 						"step":         "all_failed_no_network",
+						"platform":     platform,
+						"buildType":    buildType,
 						"networkError": networkErr.Error(),
 					})
 					return fmt.Errorf("network unavailable and no kernel found via alternative searches: %w", networkErr)
@@ -2961,6 +3017,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	logDebug("lib/common.go:1905", "Before kernel copy", map[string]interface{}{
 		"hypothesisId": "G",
 		"step":         "before_kernel_copy",
+		"platform":     platform,
+		"buildType":    buildType,
 		"kernelSrc":    kernelSrc,
 		"kernelDest":   kernelDest,
 	})
@@ -3126,8 +3184,10 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 			
 			// #region agent log
 			logDebug("lib/common.go:1998", "guix system init failed (attempt)", map[string]interface{}{
-				"hypothesisId": "D",
+				"hypothesisId": "G",
 				"step":         "guix_system_init_failed_attempt",
+				"platform":     platform,
+				"buildType":    buildType,
 				"attempt":      attempt,
 				"maxRetries":   maxRetries,
 				"error":        err.Error(),
@@ -3141,8 +3201,10 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 			daemonCheckErr := checkDaemonResponsive()
 			// #region agent log
 			logDebug("lib/common.go:2010", "Daemon connection check after failure", map[string]interface{}{
-				"hypothesisId": "D",
+				"hypothesisId": "G",
 				"step":         "daemon_check_after_failure",
+				"platform":     platform,
+				"buildType":    buildType,
 				"attempt":      attempt,
 				"daemonCheckErr": func() string {
 					if daemonCheckErr != nil {
@@ -3160,8 +3222,10 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 				restartErr := EnsureGuixDaemonRunning()
 				// #region agent log
 				logDebug("lib/common.go:2023", "Daemon restart attempted", map[string]interface{}{
-					"hypothesisId": "D",
+					"hypothesisId": "G",
 					"step":         "daemon_restart_attempted",
+					"platform":     platform,
+					"buildType":    buildType,
 					"attempt":      attempt,
 					"restartErr": func() string {
 						if restartErr != nil {
@@ -3200,8 +3264,10 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 		fmt.Println("  2. Or run the recovery tool: /root/recovery-complete-install.sh")
 		// #region agent log
 		logDebug("lib/common.go:1840", "guix system init failed", map[string]interface{}{
-			"hypothesisId": "D",
+			"hypothesisId": "G",
 			"step":         "guix_system_init_failed",
+			"platform":     platform,
+			"buildType":    buildType,
 			"error":        lastErr.Error(),
 		})
 		// #endregion
@@ -3251,6 +3317,8 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 		logDebug("lib/common.go:2005", "Kernel/initrd missing after bootloader install, starting recovery", map[string]interface{}{
 			"hypothesisId": "G",
 			"step":         "before_recovery_after_bootloader",
+			"platform":     platform,
+			"buildType":    buildType,
 			"kernelCount":  len(kernels),
 			"initrdCount":  len(initrds),
 		})
@@ -4248,7 +4316,8 @@ func SearchSystemGenerationDeep(systemPath, platform, buildType string) (kernelP
 }
 
 // Hypothesis N: Store-Wide Kernel Search
-// SearchStoreForKernel searches entire /gnu/store for linux-libre packages as last resort
+// SearchStoreForKernel searches entire /gnu/store for kernel packages as last resort
+// Platform-aware: searches for 'linux' (nonguix) or 'linux-libre' (free software) based on buildType
 func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath string, err error) {
 	logDebug("lib/common.go:3482", "Starting store-wide kernel search", map[string]interface{}{
 		"hypothesisId": "N",
@@ -4257,26 +4326,49 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 		"buildType":    buildType,
 	})
 
-	// Find all linux-libre packages in store
-	findCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-libre-* 2>/dev/null | head -5")
+	// Determine which kernel package to search for based on buildType
+	kernelPackageName := "linux-libre" // Default for libre builds
+	if buildType == "non-libre" {
+		kernelPackageName = "linux" // Use 'linux' for nonguix builds
+	}
+
+	// Find kernel packages in store (try both linux and linux-libre for non-libre builds)
+	var findCmd *exec.Cmd
+	if buildType == "non-libre" {
+		// For non-libre, search for 'linux' first (nonguix), fallback to 'linux-libre' if needed
+		findCmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-* 2>/dev/null | grep -v 'linux-libre' | head -5")
+	} else {
+		// For libre builds, search for 'linux-libre' only
+		findCmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-libre-* 2>/dev/null | head -5")
+	}
+	
 	output, err := findCmd.Output()
-	if err != nil {
-		logDebug("lib/common.go:3491", "No linux-libre packages found in store", map[string]interface{}{
-			"hypothesisId": "N",
-			"step":         "no_packages_found",
-			"platform":     platform,
-			"buildType":    buildType,
-			"error":        err.Error(),
-		})
-		return "", "", fmt.Errorf("no linux-libre packages found in store")
+	if err != nil || len(output) == 0 {
+		// For non-libre builds, if 'linux' not found, try 'linux-libre' as fallback
+		if buildType == "non-libre" {
+			findCmd = exec.Command("bash", "-c", "ls -td /gnu/store/*-linux-libre-* 2>/dev/null | head -5")
+			output, err = findCmd.Output()
+		}
+		if err != nil || len(output) == 0 {
+			logDebug("lib/common.go:3491", "No kernel packages found in store", map[string]interface{}{
+				"hypothesisId": "N",
+				"step":         "no_packages_found",
+				"platform":     platform,
+				"buildType":    buildType,
+				"packageName":  kernelPackageName,
+				"error":        func() string { if err != nil { return err.Error() }; return "no packages found" }(),
+			})
+			return "", "", fmt.Errorf("no %s packages found in store", kernelPackageName)
+		}
 	}
 
 	packages := strings.Split(strings.TrimSpace(string(output)), "\n")
-	logDebug("lib/common.go:3501", "Found linux-libre packages", map[string]interface{}{
+	logDebug("lib/common.go:3501", "Found kernel packages", map[string]interface{}{
 		"hypothesisId": "N",
 		"step":         "packages_found",
 		"platform":     platform,
 		"buildType":    buildType,
+		"packageName":  kernelPackageName,
 		"packageCount": len(packages),
 		"packages":     packages,
 	})
@@ -4311,20 +4403,50 @@ func SearchStoreForKernel(platform, buildType string) (kernelPath, initrdPath st
 		}
 	}
 
-	// Search for initrd packages
-	findInitrdCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-initrd* 2>/dev/null | head -1")
+	// Search for initrd packages (exclude raw-initrd and other placeholders)
+	findInitrdCmd := exec.Command("bash", "-c", "ls -td /gnu/store/*-initrd* 2>/dev/null | grep -v 'raw-initrd' | head -5")
 	initrdOutput, err := findInitrdCmd.Output()
 	if err == nil && len(initrdOutput) > 0 {
-		possibleInitrd := strings.TrimSpace(string(initrdOutput))
-		if _, err := os.Stat(possibleInitrd); err == nil {
-			initrdPath = possibleInitrd
-			logDebug("lib/common.go:3546", "Initrd found in store", map[string]interface{}{
-				"hypothesisId": "N",
-				"step":         "initrd_from_store",
-				"platform":     platform,
-				"buildType":    buildType,
-				"initrdPath":   initrdPath,
-			})
+		initrdCandidates := strings.Split(strings.TrimSpace(string(initrdOutput)), "\n")
+		for _, candidate := range initrdCandidates {
+			candidate = strings.TrimSpace(candidate)
+			if candidate == "" {
+				continue
+			}
+			// Check if it's a real file (not symlink) and has reasonable size (> 10MB)
+			if info, err := os.Stat(candidate); err == nil {
+				// Check if it's a symlink
+				if linkInfo, err := os.Lstat(candidate); err == nil && linkInfo.Mode()&os.ModeSymlink != 0 {
+					// Follow symlink to check actual file
+					if resolved, err := filepath.EvalSymlinks(candidate); err == nil {
+						if resolvedInfo, err := os.Stat(resolved); err == nil && resolvedInfo.Size() > 10*1024*1024 {
+							initrdPath = resolved
+							logDebug("lib/common.go:3546", "Initrd found in store (via symlink)", map[string]interface{}{
+								"hypothesisId": "N",
+								"step":         "initrd_from_store",
+								"platform":     platform,
+								"buildType":    buildType,
+								"initrdPath":   initrdPath,
+								"symlink":      candidate,
+								"size":         resolvedInfo.Size(),
+							})
+							break
+						}
+					}
+				} else if info.Size() > 10*1024*1024 {
+					// Direct file with reasonable size
+					initrdPath = candidate
+					logDebug("lib/common.go:3546", "Initrd found in store", map[string]interface{}{
+						"hypothesisId": "N",
+						"step":         "initrd_from_store",
+						"platform":     platform,
+						"buildType":    buildType,
+						"initrdPath":   initrdPath,
+						"size":         info.Size(),
+					})
+					break
+				}
+			}
 		}
 	}
 

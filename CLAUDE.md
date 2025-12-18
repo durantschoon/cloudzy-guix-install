@@ -199,6 +199,28 @@ Use the same path for consistency and reliability.
 10. **Don't refactor without integration tests** - Verify functionality after moving code
 11. **Don't use wrong bash shebang** - See "Bash Shebang Paths" above
 
+## Kernel Tracking System
+
+### Hypothesis ID Policy
+
+**CRITICAL:** Hypothesis IDs (letters) must be consistent across all platforms. The same letter always means the same hypothesis strategy, regardless of platform.
+
+**Current Hypothesis Assignments:**
+- **G**: Standard Build Path (both platforms)
+- **M**: Network Diagnostics (both platforms)
+- **H**: Build Kernel Package (both platforms)
+- **K**: Deep System Generation Search (both platforms)
+- **N**: Store-Wide Kernel Search (both platforms)
+- **E**: Error Recovery (both platforms)
+
+**When Adding New Hypotheses:**
+- Use the next available letter alphabetically
+- It's OK to skip letters if a hypothesis is platform-specific (e.g., if cloudzy needs something framework-dual doesn't)
+- Document any platform-specific hypotheses clearly
+- Ensure the same letter is never reused for different purposes across platforms
+
+**See also:** Full documentation in `docs/KERNEL_TRACKING.md` and `docs/TROUBLESHOOTING.md`
+
 ## Development Workflow
 
 ### Pre-Deployment Validation
@@ -219,12 +241,13 @@ Remote Guix installations are expensive in time and money. A single syntax error
 2. **Store path validation** - Ensures paths are validated before use
 3. **Error handling** - Checks exec.Command calls have error handling
 4. **Hypothesis logging** - Verifies platform/buildType fields are present
-5. **Unicode in ISO scripts** - Catches characters that break on Guix terminal
-6. **Function signatures** - Validates callers match function definitions
-7. **Compilation** - Ensures code compiles successfully
-8. **Unit tests** - Runs all tests to verify functionality
-9. **Manifest consistency** - Checks if manifest needs updating
-10. **Anti-patterns** - Detects os.Stdin usage, stdin consumption issues
+5. **Hypothesis ID consistency** - Ensures same letter = same hypothesis across platforms (see Hypothesis ID Policy in docs/KERNEL_TRACKING.md)
+6. **Unicode in ISO scripts** - Catches characters that break on Guix terminal
+7. **Function signatures** - Validates callers match function definitions
+8. **Compilation** - Ensures code compiles successfully
+9. **Unit tests** - Runs all tests to verify functionality
+10. **Manifest consistency** - Checks if manifest needs updating
+11. **Anti-patterns** - Detects os.Stdin usage, stdin consumption issues
 
 **When to run:**
 
