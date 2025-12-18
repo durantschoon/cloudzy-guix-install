@@ -1285,7 +1285,9 @@ func RunGuixSystemInit(platform string) error {
 	})
 	// #endregion
 	
-	buildCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://substitutes.nonguix.org https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+	// CRITICAL: Use --no-substitutes to force actual build instead of cached results
+	// Cached builds may skip initrd generation, leading to incomplete system generations
+	buildCmd := exec.Command("guix", "time-machine", "-C", channelsPath, "--", "system", "build", "/mnt/etc/config.scm", "--no-substitutes", "--no-grafts")
 	
 	// Capture both stdout and stderr to analyze initrd generation
 	var buildStdout bytes.Buffer
@@ -1342,12 +1344,41 @@ func RunGuixSystemInit(platform string) error {
 		"checking":     "system_generation_exists",
 		"stdoutLen":    buildStdout.Len(),
 		"stderrLen":    buildStderr.Len(),
+		"stdoutPreview": func() string {
+			if buildStdout.Len() > 0 {
+				preview := buildStdout.String()
+				if len(preview) > 500 {
+					return preview[:500] + "..."
+				}
+				return preview
+			}
+			return ""
+		}(),
+		"stderrPreview": func() string {
+			if buildStderr.Len() > 0 {
+				preview := buildStderr.String()
+				if len(preview) > 500 {
+					return preview[:500] + "..."
+				}
+				return preview
+			}
+			return ""
+		}(),
 		"initrdMentions": initrdMentions,
 		"initrdErrors": initrdErrors,
 		"hasInitrdMentions": len(initrdMentions) > 0,
 		"hasInitrdErrors": len(initrdErrors) > 0,
 	})
 	// #endregion
+	
+	// Warn if build output is suspiciously short (suggests cached results)
+	if buildStdout.Len() < 100 && buildStderr.Len() == 0 {
+		fmt.Println("\n[WARN] Build output is very short - may be using cached results")
+		fmt.Printf("       stdout: %d bytes, stderr: %d bytes\n", buildStdout.Len(), buildStderr.Len())
+		fmt.Println("       This may cause incomplete system generation (missing kernel/initrd)")
+		fmt.Println("       If kernel/initrd are missing, try: guix gc -D /gnu/store/*-system")
+		fmt.Println()
+	}
 	
 	// Warn if initrd errors found
 	if len(initrdErrors) > 0 {
