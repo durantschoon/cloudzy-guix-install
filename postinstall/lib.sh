@@ -8,7 +8,7 @@ msg() { printf "\n\033[1;34m==> %s\033[0m\n" "$*"; }
 warn() { printf "\n\033[1;33m[warn]\033[0m %s\n" "$*"; }
 err() { printf "\n\033[1;31m[err]\033[0m  %s\n" "$*"; }
 info() { printf "  %s\n" "$*"; }
-success() { printf "\n\033[1;32m✓ %s\033[0m\n" "$*"; }
+success() { printf "\n\033[1;32m[OK] %s\033[0m\n" "$*"; }
 
 # Ask yes/no question
 # Usage: ask_yes "prompt" [default]
@@ -133,7 +133,7 @@ add_ssh() {
 
   # Use Guile helper to add SSH service (preferred method)
   if guile_add_service "(gnu services ssh)" "(service openssh-service-type)"; then
-    info "✓ SSH service added"
+    info "[OK] SSH service added"
     info "After reconfigure, SSH will be available on port 22"
   else
     err "Failed to add SSH service"
@@ -180,7 +180,7 @@ add_desktop() {
     
     # Replace %base-services with %desktop-services
     if safe_edit_config 's|%base-services|%desktop-services|g'; then
-      info "✓ Switched to %desktop-services"
+      info "[OK] Switched to %desktop-services"
       info "  Note: %desktop-services includes NetworkManager and wpa-supplicant"
       info "        You may want to remove explicit NetworkManager/wpa-supplicant entries"
     else
@@ -192,7 +192,7 @@ add_desktop() {
 
   # Use Guile helper to add desktop service
   if guile_add_service "(gnu services desktop)" "(service $service)"; then
-    info "✓ $desktop desktop added"
+    info "[OK] $desktop desktop added"
     echo ""
     
     # Warn about NetworkManager if %desktop-services is used
@@ -239,11 +239,11 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
             
-            info "✓ GNOME autostart script created: ~/.config/autostart/keyboard-layout.desktop"
+            info "[OK] GNOME autostart script created: ~/.config/autostart/keyboard-layout.desktop"
             info "  This will automatically set keyboard layout ($layout with $options) when GNOME starts"
             info "  Uses gsettings (for Wayland/GNOME) instead of setxkbmap (X11 only)"
             echo ""
-            warn "⚠️  IMPORTANT: GDM Login Screen Keyboard Layout"
+            warn "[WARN] IMPORTANT: GDM Login Screen Keyboard Layout"
             warn "   The autostart script only runs AFTER you log in."
             warn "   The GDM login screen may use a different keyboard layout than the console."
             warn "   If you can't log in:"
@@ -345,7 +345,7 @@ add_console_font() {
   local font_service_expr="(service console-font-service-type (map (lambda (tty) (cons tty \"$font_name\")) '(\"tty1\" \"tty2\" \"tty3\" \"tty4\" \"tty5\" \"tty6\")))"
   
   if guile_add_service "(gnu services base)" "$font_service_expr"; then
-    info "✓ Console font '$font_name' configured for all TTYs"
+    info "[OK] Console font '$font_name' configured for all TTYs"
     info "Font will be applied after running 'r' to reconfigure"
   else
     err "Failed to add console font service"
@@ -374,7 +374,7 @@ add_packages() {
   # Replace minimal packages with useful defaults
   safe_edit_config 's|(packages %base-packages)|(packages\n  (append (list (specification->package "emacs")\n                (specification->package "git")\n                (specification->package "vim")\n                (specification->package "htop")\n                (specification->package "curl")\n                (specification->package "wget")\n                (specification->package "go"))\n          %base-packages))|'
 
-  info "✓ Added: emacs, git, vim, htop, curl, wget, go"
+  info "[OK] Added: emacs, git, vim, htop, curl, wget, go"
 }
 
 # Add nonguix channel info

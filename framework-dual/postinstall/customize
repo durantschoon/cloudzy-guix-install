@@ -74,9 +74,9 @@ add_networkmanager() {
   # Add NetworkManager
   if guile_add_service "(gnu services networking)" "(service network-manager-service-type)"; then
     if [ "$has_wpa" = true ]; then
-      info "✓ NetworkManager service added (wpa-supplicant was already configured)"
+      info "[OK] NetworkManager service added (wpa-supplicant was already configured)"
     else
-      info "✓ NetworkManager and wpa-supplicant services added"
+      info "[OK] NetworkManager and wpa-supplicant services added"
     fi
   else
     err "Failed to add NetworkManager service"
@@ -106,7 +106,7 @@ add_framework_hardware() {
   # Add firmware to operating-system
   safe_edit_config '/^(operating-system/a\ (firmware (list linux-firmware))'
 
-  info "✓ Added WiFi/Bluetooth firmware (linux-firmware)"
+  info "[OK] Added WiFi/Bluetooth firmware (linux-firmware)"
   info "Note: For best results, also add nonguix channel for proprietary firmware"
 }
 
