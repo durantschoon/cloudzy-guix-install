@@ -322,12 +322,29 @@ func WriteInstallReceipt(platform string, username string) error {
     }
 
     // Check kernel/initrd presence
-    if files, _ := filepath.Glob("/mnt/boot/vmlinuz-*"); len(files) > 0 {
+    // Check for kernel (try both exact name and wildcard pattern)
+    files, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
+    if len(files) == 0 {
+        // Try exact name (what installer creates)
+        if _, err := os.Stat("/mnt/boot/vmlinuz"); err == nil {
+            files = []string{"/mnt/boot/vmlinuz"}
+        }
+    }
+    if len(files) > 0 {
         receipt = append(receipt, fmt.Sprintf("- Kernel: %s", filepath.Base(files[0])))
     } else {
         receipt = append(receipt, "- Kernel: MISSING")
     }
-    if files, _ := filepath.Glob("/mnt/boot/initrd-*"); len(files) > 0 {
+    
+    // Check for initrd (try both exact name and wildcard pattern)
+    files, _ = filepath.Glob("/mnt/boot/initrd-*")
+    if len(files) == 0 {
+        // Try exact name (what installer creates)
+        if _, err := os.Stat("/mnt/boot/initrd"); err == nil {
+            files = []string{"/mnt/boot/initrd"}
+        }
+    }
+    if len(files) > 0 {
         receipt = append(receipt, fmt.Sprintf("- Initrd: %s", filepath.Base(files[0])))
     } else {
         receipt = append(receipt, "- Initrd: MISSING")
@@ -2344,6 +2361,43 @@ func RunGuixSystemInit(platform string) error {
 		}
 	}
 
+	// CRITICAL: Verify files exist immediately after copy
+	fmt.Println()
+	fmt.Println("Verifying files exist after copy...")
+	kernelExistsAfterCopy := false
+	initrdExistsAfterCopy := false
+	if info, err := os.Stat("/mnt/boot/vmlinuz"); err == nil {
+		kernelExistsAfterCopy = true
+		fmt.Printf("[OK] Kernel verified: /mnt/boot/vmlinuz (%.1f MB)\n", float64(info.Size())/1024/1024)
+	} else {
+		fmt.Printf("[ERROR] Kernel missing after copy: %v\n", err)
+	}
+	if info, err := os.Stat("/mnt/boot/initrd"); err == nil {
+		initrdExistsAfterCopy = true
+		fmt.Printf("[OK] Initrd verified: /mnt/boot/initrd (%.1f MB)\n", float64(info.Size())/1024/1024)
+	} else {
+		fmt.Printf("[ERROR] Initrd missing after copy: %v\n", err)
+	}
+	
+	// #region agent log
+	logDebug("lib/common.go:2348", "File verification after copy", map[string]interface{}{
+		"hypothesisId": "G",
+		"step":         "files_verified_after_copy",
+		"platform":     platform,
+		"buildType":    buildType,
+		"kernelExistsAfterCopy": kernelExistsAfterCopy,
+		"initrdExistsAfterCopy": initrdExistsAfterCopy,
+		"kernelDest": "/mnt/boot/vmlinuz",
+		"initrdDest": "/mnt/boot/initrd",
+	})
+	// #endregion
+	
+	if !kernelExistsAfterCopy || !initrdExistsAfterCopy {
+		fmt.Println("\n[ERROR] Files missing after copy - checking /mnt/boot contents:")
+		exec.Command("ls", "-lah", "/mnt/boot/").Run()
+		return fmt.Errorf("files missing after copy: kernel=%v initrd=%v", kernelExistsAfterCopy, initrdExistsAfterCopy)
+	}
+
 	fmt.Println()
 	if initrdFound {
 		fmt.Println("[SUCCESS] Kernel and initrd files copied to /mnt/boot/")
@@ -2562,10 +2616,17 @@ func VerifyInstallation() error {
 	PrintSectionHeader("Verifying Installation")
 	allGood := true
 
-	// Check for kernel
+	// Check for kernel (try both exact name and wildcard pattern)
 	kernels, _ := filepath.Glob("/mnt/boot/vmlinuz-*")
+	kernelExact := "/mnt/boot/vmlinuz"
 	if len(kernels) == 0 {
-		fmt.Println("[ERROR] No kernel found in /mnt/boot/vmlinuz-*")
+		// Try exact name (what installer creates)
+		if _, err := os.Stat(kernelExact); err == nil {
+			kernels = []string{kernelExact}
+		}
+	}
+	if len(kernels) == 0 {
+		fmt.Println("[ERROR] No kernel found in /mnt/boot/vmlinuz* or /mnt/boot/vmlinuz")
 		fmt.Println("        CRITICAL: System will not boot without a kernel!")
 		allGood = false
 	} else {
@@ -2576,10 +2637,17 @@ func VerifyInstallation() error {
 		}
 	}
 
-	// Check for initrd
+	// Check for initrd (try both exact name and wildcard pattern)
 	initrds, _ := filepath.Glob("/mnt/boot/initrd-*")
+	initrdExact := "/mnt/boot/initrd"
 	if len(initrds) == 0 {
-		fmt.Println("[ERROR] No initrd found in /mnt/boot/initrd-*")
+		// Try exact name (what installer creates)
+		if _, err := os.Stat(initrdExact); err == nil {
+			initrds = []string{initrdExact}
+		}
+	}
+	if len(initrds) == 0 {
+		fmt.Println("[ERROR] No initrd found in /mnt/boot/initrd* or /mnt/boot/initrd")
 		fmt.Println("        CRITICAL: System will not boot without an initrd!")
 		allGood = false
 	} else {

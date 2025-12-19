@@ -89,15 +89,36 @@ func runRecovery(retryCount int) error {
 		fmt.Println("[OK] System init already complete - skipping")
 	}
 
-	// Step 6: Set user password
+	// Step 6: Set user password (CRITICAL - must always run)
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("  SETTING USER PASSWORD")
+	fmt.Println("========================================")
+	fmt.Println()
 	username, err := detectUsername()
 	if err != nil {
-		return fmt.Errorf("failed to detect username: %w", err)
-	}
-
-	if err := lib.SetUserPassword(username); err != nil {
-		fmt.Printf("[WARN] Failed to set password: %v\n", err)
-		fmt.Println("You can set it manually after first boot.")
+		fmt.Printf("[ERROR] Failed to detect username: %v\n", err)
+		fmt.Println("        Password setup will be skipped.")
+		fmt.Println("        You can set it manually after first boot with:")
+		fmt.Println("          sudo passwd <username>")
+		fmt.Println()
+		// Don't fail the entire recovery - password can be set manually
+	} else {
+		fmt.Printf("Detected username: %s\n", username)
+		fmt.Println("You will be prompted to enter a password for this user.")
+		fmt.Println("This password is required to log in after first boot.")
+		fmt.Println()
+		
+		if err := lib.SetUserPassword(username); err != nil {
+			fmt.Printf("[ERROR] Failed to set password: %v\n", err)
+			fmt.Println("        You can set it manually after first boot with:")
+			fmt.Printf("          sudo passwd %s\n", username)
+			fmt.Println()
+			// Don't fail the entire recovery - password can be set manually
+		} else {
+			fmt.Printf("[OK] Password set successfully for user: %s\n", username)
+			fmt.Println()
+		}
 	}
 
 	// Step 7: Download customization tools
