@@ -4688,16 +4688,86 @@ func SetUserPassword(username string) error {
 		}
 	}
 
-	passwdCmd := exec.Command("chroot", "/mnt", "/run/current-system/profile/bin/passwd", username)
+	// Try to find passwd binary in chroot
+	passwdPaths := []string{
+		"/run/current-system/profile/bin/passwd",
+		"/run/current-system/profile/sbin/passwd",
+		"/usr/bin/passwd",
+		"/bin/passwd",
+	}
+	
+	var passwdPath string
+	for _, path := range passwdPaths {
+		fullPath := "/mnt" + path
+		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
+			passwdPath = path
+			break
+		}
+	}
+	
+	if passwdPath == "" {
+		// Try to find it dynamically
+		findCmd := exec.Command("chroot", "/mnt", "/run/current-system/profile/bin/bash", "-c", "which passwd || find /run/current-system -name passwd -type f 2>/dev/null | head -1")
+		if output, err := findCmd.Output(); err == nil {
+			path := strings.TrimSpace(string(output))
+			if path != "" && strings.HasPrefix(path, "/") {
+				passwdPath = path
+			}
+		}
+	}
+	
+	if passwdPath == "" {
+		return fmt.Errorf("passwd binary not found in chroot - cannot set password interactively. Set it manually after boot with: sudo passwd %s", username)
+	}
+	
+	fmt.Printf("Using passwd at: %s\n", passwdPath)
+	fmt.Println("You will be prompted to enter a password twice.")
+	fmt.Println()
+	
+	passwdCmd := exec.Command("chroot", "/mnt", passwdPath, username)
 	passwdCmd.Stdin = os.Stdin
 	passwdCmd.Stdout = os.Stdout
 	passwdCmd.Stderr = os.Stderr
+	
+	// #region agent log
+	logDebug("lib/common.go:4691", "Attempting to set user password", map[string]interface{}{
+		"step": "set_password_start",
+		"username": username,
+		"passwdPath": passwdPath,
+		"chrootPath": "/mnt",
+	})
+	// #endregion
+	
 	if err := passwdCmd.Run(); err != nil {
+		// #region agent log
+		logDebug("lib/common.go:4696", "Password set failed", map[string]interface{}{
+			"step": "set_password_failed",
+			"username": username,
+			"passwdPath": passwdPath,
+			"error": err.Error(),
+		})
+		// #endregion
+		fmt.Printf("\n[ERROR] Failed to set password via chroot: %v\n", err)
+		fmt.Println("        This is often due to:")
+		fmt.Println("        - Missing /run/current-system symlink in chroot")
+		fmt.Println("        - Missing passwd binary or dependencies")
+		fmt.Println("        - Chroot environment not fully set up")
+		fmt.Println()
+		fmt.Println("        You can set the password manually after first boot with:")
+		fmt.Printf("          sudo passwd %s\n", username)
+		fmt.Println()
 		return fmt.Errorf("failed to set user password: %w", err)
 	}
 
 	fmt.Println()
 	fmt.Printf("Password set successfully for user: %s\n", username)
+	
+	// #region agent log
+	logDebug("lib/common.go:4700", "Password set successfully", map[string]interface{}{
+		"step": "set_password_success",
+		"username": username,
+	})
+	// #endregion
 
 	return nil
 }
