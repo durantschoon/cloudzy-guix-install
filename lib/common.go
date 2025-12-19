@@ -4748,11 +4748,15 @@ func SetUserPassword(username string) error {
 			// #endregion
 			
 			// Set up PATH inside chroot and run passwd
+			// Pass username as environment variable to ensure it's available
 			passwdCmd := exec.Command("chroot", "/mnt", bashPath, "-c",
 				"export PATH=\"/run/current-system/profile/bin:/run/current-system/profile/sbin:/usr/bin:/bin:$PATH\"; "+
-				"if command -v passwd >/dev/null 2>&1; then passwd \""+username+"\"; else "+
+				"export USER_NAME=\""+username+"\"; "+
+				"if command -v passwd >/dev/null 2>&1; then passwd \"$USER_NAME\"; else "+
 				"PASSWD_PATH=$(find /gnu/store -name passwd -type f -path '*/bin/passwd' 2>/dev/null | head -1); "+
-				"if [ -n \"$PASSWD_PATH\" ]; then \"$PASSWD_PATH\" \""+username+"\"; else echo 'passwd not found'; exit 1; fi; fi")
+				"if [ -n \"$PASSWD_PATH\" ]; then \"$PASSWD_PATH\" \"$USER_NAME\"; else echo 'passwd not found'; exit 1; fi; fi")
+			// Set USER_NAME environment variable for the command
+			passwdCmd.Env = append(os.Environ(), "USER_NAME="+username)
 			passwdCmd.Stdin = os.Stdin
 			passwdCmd.Stdout = os.Stdout
 			passwdCmd.Stderr = os.Stderr
