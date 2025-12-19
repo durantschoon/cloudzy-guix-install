@@ -95,6 +95,18 @@ if [ -f lib/fix-network.scm ]; then
     echo "$hash  lib/fix-network.scm" >> "$MANIFEST_FILE"
 fi
 
+# Finish installation script (Guile)
+if [ -f lib/finish-installation.scm ]; then
+    hash=$(shasum -a 256 lib/finish-installation.scm | awk '{print $1}')
+    echo "$hash  lib/finish-installation.scm" >> "$MANIFEST_FILE"
+fi
+
+# Postinstall library (Guile)
+if [ -f postinstall/lib.scm ]; then
+    hash=$(shasum -a 256 postinstall/lib.scm | awk '{print $1}')
+    echo "$hash  postinstall/lib.scm" >> "$MANIFEST_FILE"
+fi
+
 echo "" >> "$MANIFEST_FILE"
 echo "## Diagnostic Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
@@ -127,6 +139,20 @@ for customize in */postinstall/customize; do
         hash=$(shasum -a 256 "$customize" | awk '{print $1}')
         echo "$hash  $customize" >> "$MANIFEST_FILE"
     fi
+done
+
+# Platform-specific customization tools (Guile Scheme)
+for customize_scm in */postinstall/customize.scm; do
+    if [ -f "$customize_scm" ]; then
+        hash=$(shasum -a 256 "$customize_scm" | awk '{print $1}')
+        echo "$hash  $customize_scm" >> "$MANIFEST_FILE"
+    fi
+done
+
+# Postinstall recipe scripts (Guile Scheme)
+find postinstall/recipes -name "*.scm" -type f | sort | while read -r file; do
+    hash=$(shasum -a 256 "$file" | awk '{print $1}')
+    echo "$hash  $file" >> "$MANIFEST_FILE"
 done
 
 echo ""

@@ -4598,10 +4598,16 @@ func DownloadCustomizationTools(platform string, username string) error {
 		return err
 	}
 
-	// Download customize script
+	// Download customize script (Guile Scheme version)
 	customizePath := filepath.Join(destDir, "customize")
-	customizeURL := fmt.Sprintf("%s/%s/postinstall/customize", rawBase, platform)
-	
+	// Use .scm extension for cloudzy (converted to Guile), keep .sh for others during transition
+	var customizeURL string
+	if platform == "cloudzy" {
+		customizeURL = fmt.Sprintf("%s/%s/postinstall/customize.scm", rawBase, platform)
+	} else {
+		customizeURL = fmt.Sprintf("%s/%s/postinstall/customize", rawBase, platform)
+	}
+
 	// Check if customize script already exists (idempotent - skip if exists)
 	if _, err := os.Stat(customizePath); err == nil {
 		fmt.Printf("[OK] Customize script already exists at %s - skipping download\n", customizePath)

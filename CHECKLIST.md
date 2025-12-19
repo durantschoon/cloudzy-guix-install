@@ -86,8 +86,6 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ### Front 2: Cloudzy (Guile Conversion & Testing)
 **Focus**: Complete conversion to `.scm` scripts and comprehensive testing
 
-**Note**: Guile conversion paused while focusing on kernel/network fixes
-
 **Guile Conversion Project (IN PROGRESS):**
 
 See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
@@ -95,11 +93,13 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - ✅ Phase 1: Library infrastructure complete → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-1-2025-11-15)
 - ✅ Phase 2: Update postinstall scripts to use Guile helper → [See archive](archive/CHECKLIST_COMPLETED.md#guile-conversion-project---phase-2-2025-11-15)
 - ✅ Phase 3: All scripts converted (20 total) → See "Batch Conversion System" section below
-- ⏳ **Phase 4: Cloudzy Deployment** (CURRENT FOCUS)
-  - Review all converted scripts in `tools/converted-scripts/`
-  - Test converted scripts (verify functionality matches bash versions)
-  - Deploy converted scripts (replace `.sh` references with `.scm` in cloudzy codebase)
-  - Remove original `.sh` files after successful deployment
+- ✅ **Phase 4: Cloudzy Deployment** (IN PROGRESS - 2025-12-18)
+  - ✅ Deployed `postinstall/lib.scm` (converted from `postinstall/lib.sh`)
+  - ✅ Deployed all recipe scripts to `postinstall/recipes/add/` (development, fonts, spacemacs, doom-emacs, vanilla-emacs)
+  - ✅ Converted `cloudzy/postinstall/customize` to `cloudzy/postinstall/customize.scm`
+  - ✅ Updated `lib/common.go` to download `.scm` version for cloudzy platform
+  - ⏳ **Remaining**: Test converted scripts on actual Cloudzy VPS installation
+  - ⏳ **Remaining**: Remove original `.sh` files after successful testing
   - **Goal**: Complete Guile conversion for cloudzy platform
 
 - ✅ Batch Conversion Tools (COMPLETED) → [See archive](archive/CHECKLIST_COMPLETED.md#batch-conversion-tools-improvements-2025-11-15)
@@ -263,14 +263,20 @@ cd ~/guix-customize
 - `postinstall/recipes/add-vanilla-emacs.scm`
 - Plus test files and templates
 
-**⚠️ Important:** All scripts are converted but **not yet reviewed, tested, or deployed**. Original `.sh` versions still in use.
+**✅ Deployment Status (2025-12-18):**
+- ✅ `postinstall/lib.scm` deployed (converted from `postinstall/lib.sh`)
+- ✅ All recipe scripts deployed to `postinstall/recipes/add/`:
+  - `development.scm`, `fonts.scm`, `spacemacs.scm`
+  - `doom/emacs.scm`, `vanilla/emacs.scm`
+- ✅ `cloudzy/postinstall/customize.scm` created (converted from bash)
+- ✅ `lib/common.go` updated to download `.scm` version for cloudzy platform
+- ⏳ **Testing**: Scripts deployed but not yet tested on actual Cloudzy VPS
 
 **Next Steps (Cloudzy Focus):**
-1. ⏳ **Review** converted scripts in `tools/converted-scripts/` for correctness
-2. ⏳ **Test** converted scripts (run tests, verify functionality matches bash versions)
-3. ⏳ **Deploy** converted scripts (replace `.sh` references with `.scm` in cloudzy codebase)
-4. ⏳ **Remove** original `.sh` files after successful deployment
-5. ⏳ **Comprehensive testing** of cloudzy installer with all `.scm` scripts
+1. ⏳ **Test** converted scripts on Cloudzy VPS (verify functionality matches bash versions)
+2. ⏳ **Remove** original `.sh` files after successful testing (`postinstall/lib.sh`, `cloudzy/postinstall/customize`)
+3. ⏳ **Comprehensive testing** of cloudzy installer with all `.scm` scripts
+4. ⏳ **Document** any issues found during testing
 
 **Documentation:**
 - **Getting Started**: [tools/README.md](tools/README.md) - Complete workflow and usage guide
