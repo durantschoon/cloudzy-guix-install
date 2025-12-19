@@ -2609,6 +2609,39 @@ func InstallVerificationScript() error {
 	return nil
 }
 
+// InstallFinishScript installs the finish-installation.scm script to /root/
+func InstallFinishScript() error {
+	// Try multiple locations for the finish script
+	var scriptContent []byte
+	var err error
+	
+	// Try lib directory first (when running from repo root - most common case)
+	scriptContent, err = os.ReadFile("lib/finish-installation.scm")
+	if err != nil {
+		// Try current directory (when running from lib/ directory)
+		scriptContent, err = os.ReadFile("finish-installation.scm")
+	}
+	if err != nil {
+		// Try absolute path (when script was already copied to /root/)
+		scriptContent, err = os.ReadFile("/root/finish-installation.scm")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to find finish-installation.scm in lib/, current dir, or /root/: %w", err)
+	}
+
+	// Install to /root/ (for use on ISO before reboot)
+	rootPath := "/root/finish-installation.scm"
+	if err := os.WriteFile(rootPath, scriptContent, 0755); err != nil {
+		return fmt.Errorf("failed to write %s: %w", rootPath, err)
+	}
+	fmt.Printf("[OK] Finish script installed to: %s\n", rootPath)
+	fmt.Println("     Run after installation completes: guile /root/finish-installation.scm")
+	fmt.Println("     Or: /root/finish-installation.scm (if executable)")
+	fmt.Println()
+
+	return nil
+}
+
 // VerifyInstallation verifies that all critical files were installed
 // This is a basic check - use RunComprehensiveVerification for full verification
 func VerifyInstallation() error {
