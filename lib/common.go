@@ -4688,76 +4688,157 @@ func SetUserPassword(username string) error {
 		}
 	}
 
-	// Try to find passwd binary in chroot
-	passwdPaths := []string{
-		"/run/current-system/profile/bin/passwd",
-		"/run/current-system/profile/sbin/passwd",
-		"/usr/bin/passwd",
-		"/bin/passwd",
-	}
-	
+	// Try to find passwd binary in Guix store
+	// In Guix, passwd is typically in a shadow package in /gnu/store
 	var passwdPath string
-	for _, path := range passwdPaths {
-		fullPath := "/mnt" + path
-		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
-			passwdPath = path
-			break
+	
+	// First, try to find passwd in the Guix store
+	findCmd := exec.Command("bash", "-c", "find /mnt/gnu/store -name 'passwd' -type f -path '*/bin/passwd' 2>/dev/null | head -1")
+	if output, err := findCmd.Output(); err == nil {
+		path := strings.TrimSpace(string(output))
+		if path != "" {
+			// Convert to chroot-relative path
+			passwdPath = strings.TrimPrefix(path, "/mnt")
 		}
 	}
 	
+	// If not found in store, try using bash with PATH setup (like recovery script does)
 	if passwdPath == "" {
-		// Try to find it dynamically
-		findCmd := exec.Command("chroot", "/mnt", "/run/current-system/profile/bin/bash", "-c", "which passwd || find /run/current-system -name passwd -type f 2>/dev/null | head -1")
-		if output, err := findCmd.Output(); err == nil {
-			path := strings.TrimSpace(string(output))
-			if path != "" && strings.HasPrefix(path, "/") {
-				passwdPath = path
+		// Use bash wrapper that sets up PATH to find passwd
+		// This mimics what the recovery script does: chroot with bash that has PATH set
+		fmt.Println("Finding passwd via bash with PATH setup...")
+		
+		// Try to find bash first
+		bashPath := ""
+		bashPaths := []string{
+			"/run/current-system/profile/bin/bash",
+			"/bin/bash",
+		}
+		for _, bp := range bashPaths {
+			if _, err := os.Stat("/mnt" + bp); err == nil {
+				bashPath = bp
+				break
 			}
 		}
+		
+		if bashPath == "" {
+			// Find bash in store
+			findBashCmd := exec.Command("bash", "-c", "find /mnt/gnu/store -name 'bash' -type f -path '*/bin/bash' 2>/dev/null | head -1")
+			if output, err := findBashCmd.Output(); err == nil {
+				path := strings.TrimSpace(string(output))
+				if path != "" {
+					bashPath = strings.TrimPrefix(path, "/mnt")
+				}
+			}
+		}
+		
+		if bashPath != "" {
+			// Use bash wrapper that sets PATH and runs passwd
+			fmt.Printf("Using bash wrapper at: %s\n", bashPath)
+			fmt.Println("You will be prompted to enter a password twice.")
+			fmt.Println()
+			
+			// #region agent log
+			logDebug("lib/common.go:4691", "Attempting to set user password via bash wrapper", map[string]interface{}{
+				"step": "set_password_start",
+				"username": username,
+				"bashPath": bashPath,
+				"chrootPath": "/mnt",
+			})
+			// #endregion
+			
+			// Set up PATH inside chroot and run passwd
+			passwdCmd := exec.Command("chroot", "/mnt", bashPath, "-c",
+				"export PATH=\"/run/current-system/profile/bin:/run/current-system/profile/sbin:/usr/bin:/bin:$PATH\"; "+
+				"if command -v passwd >/dev/null 2>&1; then passwd \""+username+"\"; else "+
+				"PASSWD_PATH=$(find /gnu/store -name passwd -type f -path '*/bin/passwd' 2>/dev/null | head -1); "+
+				"if [ -n \"$PASSWD_PATH\" ]; then \"$PASSWD_PATH\" \""+username+"\"; else echo 'passwd not found'; exit 1; fi; fi")
+			passwdCmd.Stdin = os.Stdin
+			passwdCmd.Stdout = os.Stdout
+			passwdCmd.Stderr = os.Stderr
+			
+			if err := passwdCmd.Run(); err != nil {
+				// #region agent log
+				logDebug("lib/common.go:4696", "Password set failed", map[string]interface{}{
+					"step": "set_password_failed",
+					"username": username,
+					"bashPath": bashPath,
+					"error": err.Error(),
+				})
+				// #endregion
+				fmt.Printf("\n[ERROR] Failed to set password via chroot: %v\n", err)
+				fmt.Println("        The passwd binary may not be available in the chroot environment.")
+				fmt.Println("        This is normal - you can set the password manually after first boot with:")
+				fmt.Printf("          sudo passwd %s\n", username)
+				fmt.Println()
+				return fmt.Errorf("failed to set user password: %w", err)
+			}
+			
+			fmt.Println()
+			fmt.Printf("Password set successfully for user: %s\n", username)
+			
+			// #region agent log
+			logDebug("lib/common.go:4700", "Password set successfully", map[string]interface{}{
+				"step": "set_password_success",
+				"username": username,
+			})
+			// #endregion
+			
+			return nil
+		}
 	}
 	
-	if passwdPath == "" {
-		return fmt.Errorf("passwd binary not found in chroot - cannot set password interactively. Set it manually after boot with: sudo passwd %s", username)
-	}
-	
-	fmt.Printf("Using passwd at: %s\n", passwdPath)
-	fmt.Println("You will be prompted to enter a password twice.")
-	fmt.Println()
-	
-	passwdCmd := exec.Command("chroot", "/mnt", passwdPath, username)
-	passwdCmd.Stdin = os.Stdin
-	passwdCmd.Stdout = os.Stdout
-	passwdCmd.Stderr = os.Stderr
-	
-	// #region agent log
-	logDebug("lib/common.go:4691", "Attempting to set user password", map[string]interface{}{
-		"step": "set_password_start",
-		"username": username,
-		"passwdPath": passwdPath,
-		"chrootPath": "/mnt",
-	})
-	// #endregion
-	
-	if err := passwdCmd.Run(); err != nil {
+	// If we found passwd directly, use it
+	if passwdPath != "" {
+		fmt.Printf("Using passwd at: %s\n", passwdPath)
+		fmt.Println("You will be prompted to enter a password twice.")
+		fmt.Println()
+		
+		passwdCmd := exec.Command("chroot", "/mnt", passwdPath, username)
+		passwdCmd.Stdin = os.Stdin
+		passwdCmd.Stdout = os.Stdout
+		passwdCmd.Stderr = os.Stderr
+		
 		// #region agent log
-		logDebug("lib/common.go:4696", "Password set failed", map[string]interface{}{
-			"step": "set_password_failed",
+		logDebug("lib/common.go:4691", "Attempting to set user password", map[string]interface{}{
+			"step": "set_password_start",
 			"username": username,
 			"passwdPath": passwdPath,
-			"error": err.Error(),
+			"chrootPath": "/mnt",
 		})
 		// #endregion
-		fmt.Printf("\n[ERROR] Failed to set password via chroot: %v\n", err)
-		fmt.Println("        This is often due to:")
-		fmt.Println("        - Missing /run/current-system symlink in chroot")
-		fmt.Println("        - Missing passwd binary or dependencies")
-		fmt.Println("        - Chroot environment not fully set up")
+		
+		if err := passwdCmd.Run(); err != nil {
+			// #region agent log
+			logDebug("lib/common.go:4696", "Password set failed", map[string]interface{}{
+				"step": "set_password_failed",
+				"username": username,
+				"passwdPath": passwdPath,
+				"error": err.Error(),
+			})
+			// #endregion
+			fmt.Printf("\n[ERROR] Failed to set password via chroot: %v\n", err)
+			fmt.Println("        You can set the password manually after first boot with:")
+			fmt.Printf("          sudo passwd %s\n", username)
+			fmt.Println()
+			return fmt.Errorf("failed to set user password: %w", err)
+		}
+		
 		fmt.Println()
-		fmt.Println("        You can set the password manually after first boot with:")
-		fmt.Printf("          sudo passwd %s\n", username)
-		fmt.Println()
-		return fmt.Errorf("failed to set user password: %w", err)
+		fmt.Printf("Password set successfully for user: %s\n", username)
+		
+		// #region agent log
+		logDebug("lib/common.go:4700", "Password set successfully", map[string]interface{}{
+			"step": "set_password_success",
+			"username": username,
+		})
+		// #endregion
+		
+		return nil
 	}
+	
+	// If we get here, we couldn't find passwd or bash
+	return fmt.Errorf("passwd binary not found in chroot - cannot set password interactively. Set it manually after boot with: sudo passwd %s", username)
 
 	fmt.Println()
 	fmt.Printf("Password set successfully for user: %s\n", username)
