@@ -1926,7 +1926,11 @@ This issue was discovered on **framework-dual** (physical hardware) but applies 
 
 ## 🔧 The 3-Step Kernel/Initrd Workaround
 
+**Status:** ✅ **SOLVED (2025-01-XX)** - Framework-dual installation now works correctly with comprehensive fixes.
+
 **The Mystery Continues:** After fixing the `/var/lock` issue, we discovered another problem on hardware platforms (Framework 13): `guix system init` would complete successfully, but the system wouldn't boot because `/boot/vmlinuz*` and `/boot/initrd*` files were missing!
+
+**The Rediscovery (2025-01-XX):** This issue was solved before but had to be rediscovered. Kernel tracking logs (logs 7-16) revealed the root causes through systematic hypothesis-driven debugging. This section documents the complete solution to prevent future loss of knowledge.
 
 ### The Original Problem
 
@@ -2046,24 +2050,39 @@ file /mnt/boot/vmlinuz
 
 #### Step 2: Finding the System Generation
 
+**⚠️ CRITICAL BUG FIX (2025-01-XX):** The installer MUST use the system path from `guix system build` output, NOT search for the newest one!
+
 **After `guix system build` completes:**
 
-1. **The installer searches for the newest system generation:**
+1. **CRITICAL: Extract system path from build output:**
    ```bash
-   ls -td /gnu/store/*-system 2>/dev/null | head -1
+   # guix system build outputs: /gnu/store/xxxxx-system
+   systemPath=$(guix time-machine -C channels.scm -- system build /mnt/etc/config.scm)
    ```
-   - This finds the most recently created `*-system` directory
-   - The directory name looks like: `/gnu/store/abc123def456-...-system`
-   - This is where the kernel and initrd files should be
+   - The build command outputs the exact system generation path
+   - **DO NOT** use `ls -td /gnu/store/*-system | head -1` - this finds the WRONG (old cached) system!
+   - Using the wrong system generation leads to incomplete system (only `["gnu","gnu.go","guix"]` entries)
 
-2. **Verification:** The installer lists contents of the system directory:
+2. **Why this matters:**
+   - Build output: `/gnu/store/v4fisq22npmk12aqjbsw4la4679ld9f2-system` (NEW, complete)
+   - Searching finds: `/gnu/store/0wqwbqgvw60bvc1jhry5x6axbspkz3f1-guix-system` (OLD, incomplete)
+   - Result: Using wrong system generation that lacks kernel/initrd symlinks
+   - **Root cause:** Cached incomplete system generations from previous failed builds
+
+3. **Verification:** The installer lists contents of the system directory:
    ```bash
    ls -lh /gnu/store/xxxxx-system/
    ```
-   - Should show: `kernel`, `initrd`, `boot/`, and other files
-   - If `kernel` or `initrd` are missing here, the build failed silently
+   - Should show: `kernel`, `initrd`, `boot/`, `activate`, `etc`, `locale`, `parameters`, `profile` (8+ entries)
+   - If only `["gnu","gnu.go","guix"]` (3 entries), you're using the WRONG system generation!
 
-**Potential Failure Point:** If no `*-system` directories exist, or if the newest one doesn't contain `kernel` and `initrd`, the build step failed.
+**Implementation (lib/common.go:1407-1490):**
+- Extract `systemPathFromOutput` from build output
+- Compare with existing system paths before build to detect cached ones
+- Use `systemPathFromOutput` if available, only fall back to searching if build output didn't contain path
+- Log warning if paths don't match
+
+**Potential Failure Point:** If build output doesn't contain system path, or if wrong system generation is used, kernel/initrd will be missing.
 
 #### Step 3: Copying Kernel Files to /boot
 
@@ -2077,14 +2096,34 @@ file /mnt/boot/vmlinuz
    - `/mnt/boot/` is where GRUB expects to find kernel files
    - Files are named `vmlinuz` (kernel) and `initrd` (initrd) for GRUB compatibility
 
-3. **The copy command (CRITICAL: Must dereference symlinks):**
+3. **The copy command (CRITICAL: Must handle symlinks correctly):**
+
+   **⚠️ CRITICAL BUG FIX (2025-01-XX):** Kernel symlink points to a PROFILE DIRECTORY, not a file!
+
    ```bash
-   # Use -L flag to dereference symlinks and copy actual files
-   cp -L /gnu/store/xxxxx-system/kernel /mnt/boot/vmlinuz
-   cp -L /gnu/store/xxxxx-system/initrd /mnt/boot/initrd
+   # Kernel symlink structure:
+   /gnu/store/xxxxx-system/kernel -> /gnu/store/...-profile/  (DIRECTORY!)
+   # Actual kernel binary is inside: /gnu/store/...-profile/bzImage
+   
+   # Initrd symlink structure:
+   /gnu/store/xxxxx-system/initrd -> /gnu/store/...-combined-initrd/initrd.img  (FILE)
    ```
 
-   **Why `-L` is required:** On Cloudzy (free-software installs), `kernel` and `initrd` in the system generation are symlinks pointing to other store paths. Without `-L`, you'll copy the symlink itself (a few bytes) instead of the actual kernel binary (5-15 MB).
+   **Implementation (lib/common.go:2004-2084):**
+   - Detect if kernel is symlink pointing to directory
+   - Resolve symlink and search for kernel binary inside profile:
+     - `bzImage` (most common)
+     - `vmlinuz`
+     - `Image`
+     - `boot/bzImage`
+     - `boot/vmlinuz`
+   - Use actual kernel binary path for copy instead of symlink
+   - For initrd: Use `-L` flag to dereference symlink (points to file)
+
+   **Why this matters:**
+   - `cp -L` on kernel symlink tries to copy a directory → fails
+   - Need to find actual `bzImage` file inside the profile directory
+   - Initrd symlink points directly to file, so `cp -L` works fine
 
 4. **Verification after copy:**
    - Check that `/mnt/boot/vmlinuz` exists and has reasonable size (> 5 MB)
@@ -2116,7 +2155,43 @@ file /mnt/boot/vmlinuz
 
 **Critical Issue:** `guix system init` may remove the kernel files we just copied! This is why we need to verify again after Step 4.
 
+**⚠️ IMPORTANT:** After `guix system init` completes successfully, you MUST verify files still exist before rebooting. The installer now does this automatically, but if running manually, always check:
+
+```bash
+# Verify kernel and initrd exist
+ls -lh /mnt/boot/vmlinuz* /mnt/boot/initrd*
+
+# If missing, copy from system generation
+SYSTEM_PATH=$(readlink -f /mnt/run/current-system)
+cp -L "$SYSTEM_PATH/kernel" /mnt/boot/vmlinuz
+cp -L "$SYSTEM_PATH/initrd" /mnt/boot/initrd
+```
+
 #### Step 5: Post-Init Verification and Recovery
+
+**Before Rebooting:**
+
+1. **Sync filesystems:**
+   ```bash
+   sync
+   ```
+   Ensures all writes are flushed to disk.
+
+2. **Unmount all filesystems:**
+   ```bash
+   umount -R /mnt
+   ```
+   The `-R` flag recursively unmounts all mounts under `/mnt` (including `/mnt/boot/efi`, `/mnt/proc`, etc.)
+
+3. **Reboot:**
+   ```bash
+   reboot
+   ```
+   Remove the ISO/USB and boot from the installed system.
+
+**⚠️ CRITICAL:** Always sync and unmount before rebooting! Failure to unmount can cause filesystem corruption.
+
+#### Step 6: Post-Init Verification and Recovery
 
 **After `guix system init` completes:**
 

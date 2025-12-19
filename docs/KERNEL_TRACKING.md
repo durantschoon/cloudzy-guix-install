@@ -262,6 +262,76 @@ grep '"buildType":"non-libre"' /tmp/kernel_tracking.log | jq .
 - ✅ Hypothesis ID consistency policy established (2025-01-XX): Same letter = same hypothesis across platforms
 - ✅ Fixed inconsistency: Changed Hypothesis "D" (daemon retry) to "G" in cloudzy to match framework-dual (2025-01-XX)
 
+### Critical Bug Fixes Discovered via Kernel Tracking (2025-01-XX)
+
+**Kernel tracking logs (7th-16th) revealed three critical bugs:**
+
+#### Bug 1: Using Wrong System Generation Path
+**Discovery:** Logs showed build output contained correct system path, but code was searching and finding wrong (old cached) path.
+
+**Evidence from logs:**
+- Build output: `/gnu/store/v4fisq22npmk12aqjbsw4la4679ld9f2-system` (NEW, complete)
+- Code found: `/gnu/store/0wqwbqgvw60bvc1jhry5x6axbspkz3f1-guix-system` (OLD, incomplete)
+- Result: System generation only had `["gnu","gnu.go","guix"]` entries
+
+**Fix (commit c4e91aa):**
+- Extract `systemPathFromOutput` from build output
+- Use path from build output if available
+- Only fall back to searching if build output didn't contain path
+- Log warning if paths don't match
+
+**Impact:** This was THE critical bug preventing framework-dual installation from working.
+
+#### Bug 2: Kernel Symlink Points to Directory
+**Discovery:** Kernel copy failed because kernel symlink points to profile directory, not a file.
+
+**Evidence from logs:**
+- `kernelInfo.symlinkTarget: "/gnu/store/...-profile"` (directory)
+- `kernel_copy_failed: exit status 1`
+- `cp -L` tried to copy directory → failed
+
+**Fix (commit 7642cc2):**
+- Detect if kernel symlink points to directory
+- Resolve symlink and search for `bzImage` inside profile
+- Try multiple paths: `bzImage`, `vmlinuz`, `Image`, `boot/bzImage`, `boot/vmlinuz`
+- Use actual kernel binary path for copy
+
+**Impact:** Kernel copy now succeeds by finding actual binary file.
+
+#### Bug 3: Initrd Packages Are Directories
+**Discovery:** Initrd search found packages (directories) but code expected files directly.
+
+**Evidence from logs:**
+- Found: `/gnu/store/...-microcode-initrd` (directory)
+- Code rejected it because it was a directory
+- Actual initrd file: `/gnu/store/...-microcode-initrd/initrd.cpio` (inside directory)
+
+**Fix (commit 54e61eb):**
+- Look inside initrd package directories for actual initrd files
+- Try common paths: `initrd.cpio.gz`, `initrd.img`, `initrd.cpio`, `initrd`
+- Use recursive `find` as fallback
+- Log directory contents if initrd not found
+
+**Impact:** Initrd recovery now works correctly.
+
+#### How Kernel Tracking Helped
+1. **Systematic logging:** Every step logged with hypothesis ID, step, and context
+2. **Before/after comparison:** Logs showed what existed before build vs. after
+3. **Path tracking:** Logged exact paths being used vs. what build output said
+4. **Size validation:** Logged file sizes to detect symlinks vs. actual files
+5. **Error details:** Logged exact error messages and exit codes
+
+**Key insight:** Without kernel tracking logs, these bugs would have been nearly impossible to diagnose. The structured logging made it clear:
+- Which system generation was being used
+- Why kernel copy was failing
+- Where initrd files actually were
+
+**Lessons learned:**
+- Always use system path from build output, never search
+- Kernel symlinks point to directories, not files
+- Initrd packages are directories containing the actual files
+- Kernel tracking is essential for debugging complex Guix installation issues
+
 ## Code Locations
 
 - **Main logging function:** `lib/common.go:logDebug()` (line ~3410)
