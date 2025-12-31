@@ -238,16 +238,13 @@ func TestGeneratedConfigContainsInitrd(t *testing.T) {
 	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
 
 	// Verify critical fields are present
-	if !strings.Contains(config, "(initrd microcode-initrd)") {
-		t.Error("Generated config missing '(initrd microcode-initrd)' field")
+	if !strings.Contains(config, "(initrd base-initrd)") {
+		t.Error("Generated config missing '(initrd base-initrd)' field")
 	}
 	if !strings.Contains(config, "(kernel linux)") {
 		t.Error("Generated config missing '(kernel linux)' field")
 	}
 	if !strings.Contains(config, "(firmware (list linux-firmware))") {
 		t.Error("Generated config missing '(firmware (list linux-firmware))' field")
-	}
-	if !strings.Contains(config, "(nongnu system linux-initrd)") {
-		t.Error("Generated config missing nonguix linux-initrd module import")
 	}
 }

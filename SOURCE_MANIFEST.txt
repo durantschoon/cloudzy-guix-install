@@ -19,7 +19,7 @@ e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-du
 992a35541e314aa7007e7ea6e39c14f8593803edb7191a63c1901a1f682dfba3  ./framework-dual/install/01-partition-check.go
 48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
 5cf15120906a8878178330a9647087c7c5e5dcac4ded4c1237c6a0b5a8d7fd18  ./framework-dual/install/02-mount-existing.go
-39c740351611d18344ed62814e22757b9128d250b8e52307f46efba5fc86a655  ./framework-dual/install/03-config-dual-boot_test.go
+9485dd0042c954c28a949ecd6f7cfcaabde759f5a068a05e7333a4625998bf58  ./framework-dual/install/03-config-dual-boot_test.go
 6dccd3f966f8ff9b9680d5b210fc2366b2ba29231ee7a1736f4d2f30d165fa62  ./framework-dual/install/03-config-dual-boot.go
 88ec2e3db371a7b10dfd919a2cba0646956ec84d257080f85a8e02cb73e9ebb2  ./framework-dual/install/04-system-init.go
 8fb7f99a29777c429c071e0eeb2e09055fe3b63e4eef37b03373f73daa501441  ./framework-dual/install/state.go
