@@ -3029,6 +3029,10 @@ func VerifyAndRecoverKernelFiles(maxAttempts int, platform, buildType string) er
 			// #endregion
 			if info, err := os.Stat(kernelSrc); err != nil {
 				fmt.Printf("[ERROR] Kernel not found in system generation: %s\n", kernelSrc)
+				// Diagnostic: List contents of system generation to see what IS there
+				fmt.Println("       Contents of system generation:")
+				exec.Command("ls", "-la", systemPath).Run()
+				
 				// #region agent log
 				logDebug("lib/common.go:1697", "Kernel not found in system generation", map[string]interface{}{
 					"hypothesisId": "E",

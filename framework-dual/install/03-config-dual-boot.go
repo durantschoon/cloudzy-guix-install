@@ -209,7 +209,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
           (mount-point "/data")
           (device (file-system-label "DATA"))
           (type "ext4")
-          (options "defaults,noatime"))
+          (options "noatime"))
 `
   }
 
@@ -271,7 +271,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
 %s
  ;; Linux kernel with proprietary firmware support (from nonguix)
  (kernel linux)
- (initrd microcode-initrd)
+ (initrd base-initrd)
  (firmware (list linux-firmware))
 
  ;; Framework 13 AMD specific initrd modules
@@ -288,8 +288,11 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
             "i2c_piix4")  ; SMBus/I2C for sensors - loadable module
           (remove %s %%base-initrd-modules)))
 
- ;; Kernel arguments - minimal for compatibility
- (kernel-arguments '("quiet"))
+ ;; Kernel arguments - Framework 13 AMD GPU boot hang prevention
+ ;; These parameters prevent boot hangs at "Loading kernel modules..."
+ ;; Note: acpi=off removed - it causes USB controller (xhci_hcd) initialization failures
+ ;; See docs/INSTALLATION_KNOWLEDGE.md and docs/FRAMEWORK_STARTUP_HANG_FIX.md for details
+ (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
 
  (bootloader
   (bootloader-configuration

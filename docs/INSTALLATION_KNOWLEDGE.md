@@ -228,7 +228,7 @@ Always use `(file-system-label "LABEL_NAME")` instead of `(uuid "xxxx-xxxx" 'ext
 - **`/data`** - Shared data partition for files, documents, media
 - **`/home`** - User home directories remain on the root filesystem
 - **Benefits**: Cleaner separation, easier backup, shared access across systems
-- **Options**: `defaults,noatime` for better performance on data storage
+- **Options**: `noatime` for better performance on data storage (note: `defaults` is not a valid ext4 option)
 
 **Framework-dual specific**: The framework-dual installer uses the `DATA` environment variable (not `HOME_PARTITION`) to detect and mount the DATA partition. The partition should be labeled `DATA` and will be automatically detected during Step 01.
 
@@ -733,6 +733,16 @@ The installer now uses a 3-step process instead of calling `system init` directl
 
 **For manual installations**: Always use the 3-step approach above. Don't rely on `guix system init` alone to copy kernel files.
 - Required for proper kernel initialization
+
+### Microcode vs Base Initrd (2025-12-31 Updates)
+
+**Issue**: In some configurations (specifically framework-dual with nonguix), `microcode-initrd` was failing to generate an output file, leading to the "missing initrd" error even when the system build appeared to succeed.
+
+**Fix**: We switched to `base-initrd` in the `framework-dual` configuration.
+- `base-initrd`: Standard Guix initrd, reliable.
+- `microcode-initrd`: Wraps standard initrd with CPU microcode.
+
+**Recommendation**: If you encounter missing initrd files despite using `microcode-initrd`, try reverting to `base-initrd` in your `config.scm` and adding `(firmware (list linux-firmware))` separately. Microcode can often be loaded later or isn't strictly required for boot (though recommended).
 
 ### Universal Verification Practices (APPLIES TO ALL PLATFORMS)
 
