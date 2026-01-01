@@ -38,6 +38,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 8. ✅ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored critical AMD GPU kernel arguments (`nomodeset`, `noapic`, `nolapic`) in `framework-dual/install/03-config-dual-boot.go` which were accidentally reverted during a refactor.
 9. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
 10. ✅ **Build Failure Diagnostics (2026-01-01)**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
+11. ✅ **Log Serving Tool (2026-01-01)**: Created `tools/serve-logs.scm` to easily gather logs and serve them via HTTP for remote debugging. Added unit tests in `tools/test-serve-logs.scm`.
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 

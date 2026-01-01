@@ -130,6 +130,16 @@ if [ -f investigate-kernel-location.sh ]; then
 fi
 
 echo "" >> "$MANIFEST_FILE"
+echo "## Tools" >> "$MANIFEST_FILE"
+echo "" >> "$MANIFEST_FILE"
+
+# Log serving helper (Guile)
+if [ -f tools/serve-logs.scm ]; then
+    hash=$(shasum -a 256 tools/serve-logs.scm | awk '{print $1}')
+    echo "$hash  tools/serve-logs.scm" >> "$MANIFEST_FILE"
+fi
+
+echo "" >> "$MANIFEST_FILE"
 echo "## Post-Install Customization Scripts" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
 

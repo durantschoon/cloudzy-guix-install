@@ -59,6 +59,10 @@ badf8e3777a8a08f6e5468ed1558b0ab6122d4d1f0b84cc64ffbecccd7a4ddcd  lib/validate-b
 61c42f1a2ea25fcaebc46f8b66b28c4c44178f9b3917dce6a21141616460bfa2  diagnose-guix-build.sh
 f6c1207f91bce6538f2de25252655713b0fc78758998717f205038fe14d8fd2e  investigate-kernel-location.sh
 
+## Tools
+
+441e08ba9ff8a3eda4168b67352a4013bd14a869b37daf532237815db40830c6  tools/serve-logs.scm
+
 ## Post-Install Customization Scripts
 
 484b91b3ab247573b58a32d6ce314390d1494c389cf61e18d6ea82adc70037ee  cloudzy/postinstall/customize
