@@ -61,7 +61,7 @@ f6c1207f91bce6538f2de25252655713b0fc78758998717f205038fe14d8fd2e  investigate-ke
 
 ## Tools
 
-ff640ceed9b49b53dac9e55d2af60ce5554e036ae2abcf55520de903427293bf  tools/serve-logs.scm
+4d274ed4138ea3262b14b60d8e0395b376c1d327cf3c922816bb5023e15abf45  tools/serve-logs.scm
 
 ## Post-Install Customization Scripts
 
