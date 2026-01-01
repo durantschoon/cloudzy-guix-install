@@ -1,15 +1,20 @@
 #!/usr/bin/env guile
 !#
 
-;;; serve-logs.scm -- Gather logs and serve them over HTTP
+;;; serve-logs.scm -- Gather logs and serve them over HTTP (Zero Dependency)
 ;;; Usage: guile serve-logs.scm
 
 (use-modules (ice-9 popen)
              (ice-9 rdelim)
              (ice-9 format)
              (ice-9 ftw)
+             (ice-9 binary-ports)
              (srfi srfi-1)
-             (srfi srfi-26))
+             (srfi srfi-26)
+             (web server)
+             (web request)
+             (web response)
+             (web uri))
 
 (define %log-dir "/root/logs")
 (define %source-logs
@@ -50,24 +55,53 @@
   (let ((output (run-command "ip route get 1.1.1.1 | awk '{print $7}' | head -n 1")))
     (string-trim-right output)))
 
-(define (check-python)
-  (zero? (system* "which" "python3")))
+;;; Web Server Logic
 
-(define (install-python)
-  (log-info "Python3 not found. Attempting to install...")
-  (log-info "WARNING: This requires downloading data. If disk is full, this may fail.")
-  (system* "guix" "package" "-i" "python"))
+(define (list-files-html dir)
+  (let ((files (scandir dir (lambda (name) (not (member name '("." "..")))))))
+    (string-append
+     "<html><head><title>Installation Logs</title></head>"
+     "<body><h1>Installation Logs</h1><ul>"
+     (string-join
+      (map (lambda (f) (format #f "<li><a href=\"/~a\">~a</a></li>" f f))
+           files)
+      "\n")
+     "</ul></body></html>")))
+
+(define (request-handler request body)
+  (let* ((path (uri-path (request-uri request)))
+         (clean-path (if (string-prefix? "/" path) (substring path 1) path))
+         (file-path (string-append %log-dir "/" clean-path)))
+    
+    (cond
+     ;; Serve index
+     ((string-null? clean-path)
+      (values '((content-type . (text/html)))
+              (list-files-html %log-dir)))
+     
+     ;; Serve file if exists
+     ((and (not (string-contains clean-path "..")) ; Basic security
+           (file-exists? file-path)
+           (not (file-is-directory? file-path)))
+      (let* ((size (stat:size (stat file-path)))
+             (content (call-with-input-file file-path get-bytevector-all)))
+        (values `((content-type . (text/plain)))
+                content)))
+     
+     ;; 404
+     (else
+      (values '((content-type . (text/plain)))
+              "404 Not Found")))))
 
 (define (serve-logs ip)
   (log-info "Starting HTTP server...")
   (format #t "~%~%=================================================~%")
-  (format #t "   LOG SERVER RUNNING~%")
+  (format #t "   LOG SERVER RUNNING (Zero Dependency)~%")
   (format #t "   Access logs at: http://~a:8000/~%" ip)
   (format #t "   (Press Ctrl+C to stop)~%")
   (format #t "=================================================~%~%")
-  ;; Change to log dir and run python server
-  (chdir %log-dir)
-  (system* "python3" "-m" "http.server" "8000"))
+  
+  (run-server request-handler 'http '(#:port 8000)))
 
 (define (main args)
   (log-info "Initializing log server...")
@@ -81,14 +115,7 @@
             %source-logs)
   (dump-dmesg)
   
-  ;; 3. Check Python
-  (unless (check-python)
-    (install-python)
-    (unless (check-python)
-      (log-error "Failed to install Python. Cannot start web server.")
-      (exit 1)))
-      
-  ;; 4. Get IP and Serve
+  ;; 3. Get IP and Serve
   (let ((ip (get-ip-address)))
     (if (string-null? ip)
         (log-error "Could not detect IP address.")
