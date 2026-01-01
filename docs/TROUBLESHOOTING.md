@@ -274,3 +274,35 @@ If kernel discovery fails:
 2. Check system: `ls -la /gnu/store/*-guix-system/`
 3. Verify store: `guix gc --verify`
 4. Report with platform, logs, `guix describe` output
+
+## Remote Debugging & Log Collection
+
+When an installation fails on a remote machine (like a Cloudzy VPS) where copying text from the terminal is difficult, you can use the built-in log serving tool.
+
+### Using the Log Server
+
+The `tools/serve-logs.scm` script (installed to `/root/serve-logs.scm` by the bootstrap script) gathers all relevant logs and serves them over HTTP.
+
+1.  **Run the tool:**
+    ```bash
+    guile tools/serve-logs.scm
+    # Or if running from /root after bootstrap:
+    guile /root/serve-logs.scm
+    ```
+
+2.  **Access the logs:**
+    The script will print a URL, usually:
+    ```
+    http://<YOUR_IP>:8000/
+    ```
+    Open this URL in your local browser to view and download:
+    - `guix-install.log` (Main installation log)
+    - `dmesg.txt` (Kernel ring buffer, critical for OOM kills)
+    - `config.scm` (System configuration)
+    - `guix-daemon.log` (Daemon logs)
+
+### What to Look For
+
+- **OOM Kills:** Check `dmesg.txt` for "Out of memory: Kill process".
+- **Daemon Crashes:** Check `guix-daemon.log` for unexpected stops.
+- **Build Errors:** Check `guix-install.log` for the specific build phase failure.

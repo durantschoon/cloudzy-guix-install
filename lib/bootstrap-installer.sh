@@ -417,6 +417,7 @@ CRITICAL_SCRIPTS=(
     "lib/clean-install.sh"
     "lib/verify-guix-install.sh"
     "lib/recovery-complete-install.sh"
+    "tools/serve-logs.scm"
 )
 
 for script in "${CRITICAL_SCRIPTS[@]}"; do
