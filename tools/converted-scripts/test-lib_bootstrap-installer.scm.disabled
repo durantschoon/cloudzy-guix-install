@@ -1,3 +1,4 @@
+#!/usr/bin/env guile
 !#
 
 ;;; Test suite for bootstrap-installer.scm
@@ -13,7 +14,8 @@
 ;;; Helper Functions Tests
 
 (test-group "parse-arguments"
-  (load "../bootstrap-installer.scm")
+  ;; Load the module under test relative to this test file
+  (load (string-append (dirname (current-filename)) "/lib_bootstrap-installer.scm"))
   
   (test-equal "parse empty args"
     '((channel-repo . "")
