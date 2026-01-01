@@ -315,10 +315,14 @@ If you see an error like:
 ```
 /ventoy/init:65:1 unterminated #! ... !# comment
 ```
-or other syntax errors during boot, it is because **Guix System ISOs are incompatible with Ventoy**.
+or other syntax errors during boot, it indicates a compatibility issue between Ventoy's boot script and the Guix ISO structure. While recent Ventoy versions claim support, regressions are common.
 
-#### Solution
-You must write the ISO image directly to the USB drive (erasing its contents) instead of copying it to a Ventoy partition.
+#### Workarounds (Try these first)
+1.  **Use GRUB2 Mode:** When in the Ventoy menu, select the Guix ISO and press **Ctrl+R** to toggle "GRUB2 Mode" before booting. This often bypasses the buggy script.
+2.  **Update Ventoy:** Ensure you are on the absolute latest version.
+
+#### The Reliable Fix
+If the above fail, you **must** write the ISO directly to the USB drive using `dd`. This eliminates Ventoy entirely for this installation.
 
 **On Linux/macOS (using dd):**
 ```bash
@@ -327,4 +331,4 @@ sudo dd if=guix-system-install-1.4.0.x86_64-linux.iso of=/dev/sdX bs=4M status=p
 ```
 
 **On Windows:**
-Use a tool like **Rufus** (select "DD Mode" if asked) or **Balena Etcher**.
+Use **Rufus** (select "DD Mode" if asked) or **Balena Etcher**.
