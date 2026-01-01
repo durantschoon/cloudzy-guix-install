@@ -36,6 +36,8 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 6. ✅ **Framework-dual Initrd Fix (2025-12-31)**: Switched from `microcode-initrd` to `base-initrd` in framework-dual config to resolve missing initrd file issue. Added directory listing diagnostics to `lib/common.go` for better debugging of missing kernel files.
 7. ✅ **Cloudzy "No Space Left" Fix (2025-12-31)**: Fixed "No space left on device" error during Guix installation on Cloudzy. Root cause: Recovery script reused stale `cow-store` pointing to RAM. Fix: Auto-mount `/mnt` in recovery and force restart `cow-store` to bind to disk.
 8. ✅ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored critical AMD GPU kernel arguments (`nomodeset`, `noapic`, `nolapic`) in `framework-dual/install/03-config-dual-boot.go` which were accidentally reverted during a refactor.
+9. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
+10. ✅ **Build Failure Diagnostics (2026-01-01)**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 

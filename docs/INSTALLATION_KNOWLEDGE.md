@@ -3229,3 +3229,33 @@ Restored the correct kernel arguments:
 (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
 ```
 Lesson: Always check `kernel-arguments` when refactoring configuration generators, as they often contain critical hardware workarounds.
+
+## Daemon Instability & The "Daisy Chain of Failure" (Cloudzy)
+
+### Failure Pattern
+On low-resource VPS instances (Cloudzy, 2GB-4GB RAM), step 4 often fails in a specific pattern:
+1.  **Daemon Death**: `guix-daemon` is responsive initially but dies ("unable to connect") during the heavy build (e.g., around `ruby.drv`).
+2.  **Retry**: User restarts the daemon (`herd start guix-daemon`) and re-runs the bootstrap script.
+3.  **Space Exhaustion**: The retry fails with "No space left on device" (fixed in recovery script v1.1, but still a symptom of the retry loop).
+
+### Root Cause (OOM)
+The daemon likely dies due to **Out Of Memory (OOM)** kills during heavy compilation. Even with swap, concurrent build jobs can exhaust memory + swap, causing the kernel to kill the daemon or build process.
+
+### Mitigation
+1.  **Reduce Parallelism**:
+    Run `guix system init` with strict limits:
+    ```bash
+    guix system init /mnt/etc/config.scm /mnt --cores=1 --max-jobs=1
+    ```
+    *Note: The installer defaults to allowing some parallelism. Configuring this manually might be required.*
+
+2.  **Verify Swap**:
+    Ensure swap is active *before* retrying:
+    ```bash
+    free -h
+    # If swap is 0:
+    swapon /mnt/swapfile
+    ```
+
+3.  **Use Recovery Script**:
+    Always use the Go-based recovery script (`cmd/recovery/main.go`) for retries, as it correctly handles mounts and space management.

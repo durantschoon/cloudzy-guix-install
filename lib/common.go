@@ -3376,10 +3376,22 @@ func RunGuixSystemInitFreeSoftware(platform string) error {
 	})
 	// #endregion
 	
-	buildCmd := exec.Command("guix", "system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org")
+	// Build arguments
+	args := []string{"system", "build", "/mnt/etc/config.scm", "--substitute-urls=https://ci.guix.gnu.org https://bordeaux.guix.gnu.org"}
+
+	// Enforce low parallelism on Cloudzy (low memory VPS) to prevent OOM
+	if platform == "cloudzy" {
+		fmt.Println("Enforcing strict parallelism limits (cores=1, max-jobs=1) for Cloudzy to prevent OOM...")
+		args = append(args, "--cores=1", "--max-jobs=1")
+	}
+
+	buildCmd := exec.Command("guix", args...)
 	buildCmd.Stdout = os.Stdout
 	buildCmd.Stderr = os.Stderr
 		if err := buildCmd.Run(); err != nil {
+		// Run diagnostics to help debug the failure (especially OOM)
+		DiagnoseBuildFailure()
+
 		// #region agent log
 		logDebug("lib/common.go:1817", "guix system build failed", map[string]interface{}{
 			"hypothesisId": "G",
@@ -6335,4 +6347,28 @@ func ValidateChannels() error {
 	
 	fmt.Println("[OK] Channel configuration is valid")
 	return nil
+}
+
+// DiagnoseBuildFailure runs diagnostic commands to help identify the root cause of a build failure
+func DiagnoseBuildFailure() {
+	PrintSectionHeader("Build Failure Diagnostics")
+
+	fmt.Println("1. Checking kernel logs for OOM kills (dmesg):")
+	// Use sh -c to handle piping
+	if err := RunCommand("sh", "-c", "dmesg | tail -n 50"); err != nil {
+		fmt.Printf("   Failed to read dmesg: %v\n", err)
+	}
+	fmt.Println()
+
+	fmt.Println("2. Checking memory state:")
+	if err := RunCommand("free", "-h"); err != nil {
+		fmt.Printf("   Failed to read memory state: %v\n", err)
+	}
+	fmt.Println()
+
+	fmt.Println("3. Checking daemon status:")
+	if err := RunCommand("herd", "status", "guix-daemon"); err != nil {
+		fmt.Printf("   Failed to check daemon status: %v\n", err)
+	}
+	fmt.Println()
 }
