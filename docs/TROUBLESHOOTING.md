@@ -306,3 +306,25 @@ The `tools/serve-logs.scm` script (installed to `/root/serve-logs.scm` by the bo
 - **OOM Kills:** Check `dmesg.txt` for "Out of memory: Kill process".
 - **Daemon Crashes:** Check `guix-daemon.log` for unexpected stops.
 - **Build Errors:** Check `guix-install.log` for the specific build phase failure.
+
+## Installation Media Issues
+
+### Ventoy Incompatibility
+
+If you see an error like:
+```
+/ventoy/init:65:1 unterminated #! ... !# comment
+```
+or other syntax errors during boot, it is because **Guix System ISOs are incompatible with Ventoy**.
+
+#### Solution
+You must write the ISO image directly to the USB drive (erasing its contents) instead of copying it to a Ventoy partition.
+
+**On Linux/macOS (using dd):**
+```bash
+# Replace /dev/sdX with your USB drive device
+sudo dd if=guix-system-install-1.4.0.x86_64-linux.iso of=/dev/sdX bs=4M status=progress && sync
+```
+
+**On Windows:**
+Use a tool like **Rufus** (select "DD Mode" if asked) or **Balena Etcher**.
