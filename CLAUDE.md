@@ -486,6 +486,11 @@ We work from `CHECKLIST.md` and track progress explicitly:
 - Keep commits aligned with checklist items so changes are auditable
 - If items spawn new sub-tasks, add them to the checklist and complete them before closing the parent
 
+**Retention Policy:**
+- Keep the **5 most recent** completed items in the "Latest Completed Items" list in `CHECKLIST.md`.
+- Move older items to `archive/CHECKLIST_COMPLETED.md` (newest at top).
+- This keeps the active checklist focused and readable.
+
 ### Resolve Design Conflicts Early
 
 If you encounter a potential conflict between existing code, documentation, or stated design goals:

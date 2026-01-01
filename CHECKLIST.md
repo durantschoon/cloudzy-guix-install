@@ -28,17 +28,11 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Recovery script rewritten in Go (2025-01-XX)**: Complete rewrite of recovery tool from bash to Go → Created `cmd/recovery/main.go` that shares code with main installer via `lib/common.go`, eliminates sync issues, consistent error handling and retry logic, falls back to bash script if Go build fails
-2. ✅ **Kernel symlink discovery and cp -L fix (2025-01-XX)**: Critical discovery that kernel/initrd in system generation are symlinks on Cloudzy → Updated all `cp` commands to use `-L` flag to dereference symlinks, documented in `INSTALLATION_KNOWLEDGE.md`, explains why kernel files appeared to copy but were actually tiny symlink files
-3. ✅ **Network/DNS troubleshooting documentation (2025-01-XX)**: Added comprehensive troubleshooting section to `INSTALLATION_KNOWLEDGE.md` → Documents `diagnose-guix-build.sh` usage, DNS resolution failures, network interface configuration, firewall issues, workarounds with fallback builds, references `lib/fix-network.scm` script (Guile)
-4. ✅ **Recovery script kernel/initrd verification improvements**: Added comprehensive verification for framework-dual recovery → Verifies kernel/initrd exist in system generation BEFORE copying, verifies files copied successfully, verifies before Step 3 bootloader install, better error messages for AMD GPU/nonguix issues
-5. ✅ **Recovery script platform auto-detection**: Added automatic platform detection (framework-dual vs cloudzy) if GUIX_PLATFORM not set → Uses same detection logic as verify script, ensures correct customize script downloaded
-6. ✅ **Framework-dual Initrd Fix (2025-12-31)**: Switched from `microcode-initrd` to `base-initrd` in framework-dual config to resolve missing initrd file issue. Added directory listing diagnostics to `lib/common.go` for better debugging of missing kernel files.
-7. ✅ **Cloudzy "No Space Left" Fix (2025-12-31)**: Fixed "No space left on device" error during Guix installation on Cloudzy. Root cause: Recovery script reused stale `cow-store` pointing to RAM. Fix: Auto-mount `/mnt` in recovery and force restart `cow-store` to bind to disk.
-8. ✅ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored critical AMD GPU kernel arguments (`nomodeset`, `noapic`, `nolapic`) in `framework-dual/install/03-config-dual-boot.go` which were accidentally reverted during a refactor.
-9. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
-10. ✅ **Build Failure Diagnostics (2026-01-01)**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
-11. ✅ **Log Serving Tool (2026-01-01)**: Created `tools/serve-logs.scm` to easily gather logs and serve them via HTTP for remote debugging. Added unit tests in `tools/test-serve-logs.scm`.
+1. ✅ **Log Serving Tool (2026-01-01)**: Created `tools/serve-logs.scm` to easily gather logs and serve them via HTTP for remote debugging. Added unit tests in `tools/test-serve-logs.scm`.
+2. ✅ **Build Failure Diagnostics (2026-01-01)**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
+3. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
+4. ✅ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored critical AMD GPU kernel arguments (`nomodeset`, `noapic`, `nolapic`) in `framework-dual/install/03-config-dual-boot.go` which were accidentally reverted during a refactor.
+5. ✅ **Cloudzy "No Space Left" Fix (2025-12-31)**: Fixed "No space left on device" error during Guix installation on Cloudzy. Root cause: Recovery script reused stale `cow-store` pointing to RAM. Fix: Auto-mount `/mnt` in recovery and force restart `cow-store` to bind to disk.
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 

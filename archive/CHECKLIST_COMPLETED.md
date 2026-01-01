@@ -2,11 +2,23 @@
 
 This archive contains all completed items from CHECKLIST.md, listed with newest items at the top.
 
-**Last Updated:** 2025-01-XX
+**Last Updated:** 2026-01-01
 
 ---
 
-## Comprehensive Filesystem Recovery Script (2025-01-XX)
+## 2025-12-31
+
+- ✅ **Framework-dual Initrd Fix**: Switched from `microcode-initrd` to `base-initrd` in framework-dual config to resolve missing initrd file issue. Added directory listing diagnostics to `lib/common.go` for better debugging of missing kernel files.
+
+## 2025-12-16
+
+- ✅ **Recovery script rewritten in Go**: Complete rewrite of recovery tool from bash to Go → Created `cmd/recovery/main.go` that shares code with main installer via `lib/common.go`, eliminates sync issues, consistent error handling and retry logic, falls back to bash script if Go build fails
+- ✅ **Kernel symlink discovery and cp -L fix**: Critical discovery that kernel/initrd in system generation are symlinks on Cloudzy → Updated all `cp` commands to use `-L` flag to dereference symlinks, documented in `INSTALLATION_KNOWLEDGE.md`, explains why kernel files appeared to copy but were actually tiny symlink files
+- ✅ **Network/DNS troubleshooting documentation**: Added comprehensive troubleshooting section to `INSTALLATION_KNOWLEDGE.md` → Documents `diagnose-guix-build.sh` usage, DNS resolution failures, network interface configuration, firewall issues, workarounds with fallback builds, references `lib/fix-network.scm` script (Guile)
+- ✅ **Recovery script kernel/initrd verification improvements**: Added comprehensive verification for framework-dual recovery → Verifies kernel/initrd exist in system generation BEFORE copying, verifies files copied successfully, verifies before Step 3 bootloader install, better error messages for AMD GPU/nonguix issues
+- ✅ **Recovery script platform auto-detection**: Added automatic platform detection (framework-dual vs cloudzy) if GUIX_PLATFORM not set → Uses same detection logic as verify script, ensures correct customize script downloaded
+
+## Comprehensive Filesystem Recovery Script (2025-11-25)
 
 - ✅ **Comprehensive recovery script**: Created `lib/recover-filesystem-invariants.sh`
   - Fixes filesystem layout (empties `/run`, fixes `/var/run`, `/var/lock` symlinks)
@@ -25,7 +37,7 @@ This archive contains all completed items from CHECKLIST.md, listed with newest 
 
 ---
 
-## ISO Artifacts Cleanup Implementation (2025-01-XX)
+## ISO Artifacts Cleanup Implementation (2025-11-20)
 
 - ✅ **ISO artifacts cleanup function**: Created `CleanupISOArtifacts()` in `lib/common.go`
   - Fixes `/var/run` → `/run` symlink (CRITICAL - prevents service failures)
@@ -51,7 +63,7 @@ This archive contains all completed items from CHECKLIST.md, listed with newest 
 
 ---
 
-## Cloudzy Initrd Configuration Fix (2025-01-XX)
+## Cloudzy Initrd Configuration Fix (2025-10-13)
 
 - ✅ Fixed "Invalid keyword" error during config validation on cloudzy
   - **Issue**: `base-initrd` function doesn't accept `#:linux` and `#:linux-modules` keyword arguments that Guix automatically passes when `(kernel linux-libre)` is specified
