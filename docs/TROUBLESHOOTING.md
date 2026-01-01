@@ -317,12 +317,8 @@ If you see an error like:
 ```
 or other syntax errors during boot, it indicates a compatibility issue between Ventoy's boot script and the Guix ISO structure. While recent Ventoy versions claim support, regressions are common.
 
-#### Workarounds (Try these first)
-1.  **Use GRUB2 Mode:** When in the Ventoy menu, select the Guix ISO and press **Ctrl+R** to toggle "GRUB2 Mode" before booting. This often bypasses the buggy script.
-2.  **Update Ventoy:** Ensure you are on the absolute latest version.
-
-#### The Reliable Fix
-If the above fail, you **must** write the ISO directly to the USB drive using `dd`. This eliminates Ventoy entirely for this installation.
+#### The Reliable Fix (Recommended)
+You **must** write the ISO directly to the USB drive using `dd`. This eliminates Ventoy entirely for this installation, which is known to be problematic with Guix System ISOs.
 
 **On Linux/macOS (using dd):**
 ```bash
@@ -332,3 +328,8 @@ sudo dd if=guix-system-install-1.4.0.x86_64-linux.iso of=/dev/sdX bs=4M status=p
 
 **On Windows:**
 Use **Rufus** (select "DD Mode" if asked) or **Balena Etcher**.
+
+#### Alternative Workarounds (Low Success Rate)
+Some users report success with these methods, but **results vary**:
+1.  **Use GRUB2 Mode:** When in the Ventoy menu, select the Guix ISO and press **Ctrl+R** to toggle "GRUB2 Mode" before booting. (User reports indicate this often fails).
+2.  **Update Ventoy:** Ensure you are on the absolute latest version.
