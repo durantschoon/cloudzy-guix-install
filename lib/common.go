@@ -6371,4 +6371,9 @@ func DiagnoseBuildFailure() {
 		fmt.Printf("   Failed to check daemon status: %v\n", err)
 	}
 	fmt.Println()
+
+	PrintSectionHeader("Remote Debugging")
+	fmt.Println("To view full logs in your browser, run:")
+	fmt.Println("  guile /root/serve-logs.scm")
+	fmt.Println()
 }
