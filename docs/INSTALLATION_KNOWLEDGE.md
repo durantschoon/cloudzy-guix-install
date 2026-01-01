@@ -3197,3 +3197,35 @@ guix build --version
 ---
 
 **Remember:** The Guix installation is more forgiving than it seems. Most failures can be recovered by re-running the same command without rebooting.
+
+## Recovery Script "No Space Left on Device" (2025-12-31)
+
+### Symptoms
+When running the recovery script (or re-running the bootstrap script) on Cloudzy VPS, the process would fail with "No space left on device" specifically during `guix system init` or config validation.
+
+### Root Cause
+1.  **Stale cow-store**: The installer uses `cow-store` to redirect writes from the ISO's RAM-based `/gnu/store` to the target disk's `/mnt`. If the installer is interrupted and re-run, `cow-store` might already be running.
+2.  **Incorrect Binding**: If `cow-store` was started in a previous attempt (or accidentally before `/mnt` was mounted), it would bind the store overlay to the RAM disk instead of the physical disk.
+3.  **Passive Recovery**: The recovery script checked valid mounts but didn't fix them, and blindly trusted an existing `cow-store` service.
+
+### Solution
+The recovery script (`cmd/recovery/main.go`) was updated to:
+1.  **Auto-Mount**: Automatically mount `GUIX_ROOT` to `/mnt` (and EFI to `/mnt/boot/efi`) if they are missing.
+2.  **Force Restart**: Explicitly stop and restart `cow-store` before system initialization (`herd stop cow-store` -> `lib.StartCowStore`). This ensures the overlay binds to the *current* `/mnt` (the physical disk), not a stale RAM mount.
+
+---
+
+## Framework 13 AMD Startup Hang Regression (2025-12-31)
+
+### Incident
+A regression was introduced in `framework-dual/install/03-config-dual-boot.go` where critical kernel arguments (`nomodeset`, `noapic`, `nolapic`) were lost.
+
+### Cause
+During a refactor to filter built-in kernel modules (`nvme`, `xhci_pci`) from the initrd (to fix "module not found" errors), the `kernel-arguments` line was inadvertently reset to a default template: `('("quiet" "loglevel=3"))`.
+
+### Fix
+Restored the correct kernel arguments:
+```scheme
+(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
+```
+Lesson: Always check `kernel-arguments` when refactoring configuration generators, as they often contain critical hardware workarounds.

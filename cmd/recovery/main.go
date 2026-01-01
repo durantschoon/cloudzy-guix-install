@@ -160,17 +160,27 @@ func verifyMounts() error {
 	fmt.Println("=== Verifying Mounts ===")
 
 	if !lib.IsMounted("/mnt") {
-		return fmt.Errorf("/mnt is not mounted! Please run: mount LABEL=GUIX_ROOT /mnt")
+		fmt.Println("[WARN] /mnt is not mounted. Attempting to mount GUIX_ROOT...")
+		if err := lib.MountByLabel("GUIX_ROOT", "/mnt"); err != nil {
+			return fmt.Errorf("failed to mount /mnt: %w. Please check partitions.", err)
+		}
+		fmt.Println("[OK] Automatically mounted GUIX_ROOT to /mnt")
+	} else {
+		fmt.Println("[OK] /mnt is mounted")
 	}
-	fmt.Println("[OK] /mnt is mounted")
 
 	// Check if EFI partition should be mounted (UEFI systems)
 	bootMode := lib.DetectBootModeFromConfig("/mnt/etc/config.scm")
 	if bootMode == "uefi" {
 		if !lib.IsMounted("/mnt/boot/efi") {
-			return fmt.Errorf("/mnt/boot/efi is not mounted! Please run: mount LABEL=EFI /mnt/boot/efi")
+			fmt.Println("[WARN] /mnt/boot/efi is not mounted. Attempting to mount EFI...")
+			if err := lib.MountByLabel("EFI", "/mnt/boot/efi"); err != nil {
+				return fmt.Errorf("failed to mount /mnt/boot/efi: %w. Please check partitions.", err)
+			}
+			fmt.Println("[OK] Automatically mounted EFI to /mnt/boot/efi")
+		} else {
+			fmt.Println("[OK] /mnt/boot/efi is mounted")
 		}
-		fmt.Println("[OK] /mnt/boot/efi is mounted")
 	}
 
 	return nil
@@ -290,6 +300,11 @@ func runSystemInit(platform string) error {
 			return fmt.Errorf("ESP verification failed: %w", err)
 		}
 	}
+
+	// Force restart cow-store to ensure it binds to the correct (disk) /mnt
+	// This is critical for recovery where /mnt might have been remounted
+	fmt.Println("Restarting cow-store to ensure valid store redirection...")
+	exec.Command("herd", "stop", "cow-store").Run()
 
 	// Start cow-store
 	if err := lib.StartCowStore(); err != nil {

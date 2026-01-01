@@ -247,4 +247,14 @@ func TestGeneratedConfigContainsInitrd(t *testing.T) {
 	if !strings.Contains(config, "(firmware (list linux-firmware))") {
 		t.Error("Generated config missing '(firmware (list linux-firmware))' field")
 	}
+
+	// Verify kernel arguments
+	// Should contain nomodeset, noapic, and nolapic to prevent boot hangs
+	expectedArgs := `(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))`
+	if !strings.Contains(config, expectedArgs) {
+		t.Errorf("Generated config missing expected kernel arguments.\nExpected: %s\nGot: %s", expectedArgs, config)
+	}
+	if !strings.Contains(config, "nomodeset") {
+		t.Error("Generated config MUST contain 'nomodeset'")
+	}
 }

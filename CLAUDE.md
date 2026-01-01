@@ -511,3 +511,14 @@ After a developer completes a milestone, offer to review changes by adopting one
    - Goal: confidence that dual‑boot stays usable and recoverable
 
 How to offer: “Do you want a review as a [Mid‑Level Unix User], [Seasoned Guix User], or [Dual‑Boot Laptop Owner]?”
+
+## User Shorthand
+
+The user may use single-letter prefixes to provide context-specific feedback:
+
+- **C:** = Feedback for **Cloudzy** (free software, VPS)
+- **F:** = Feedback for **Framework-dual** (nonguix, laptop)
+- **R:** = Feedback for **Raspberry Pi** (ARM, hardware)
+
+Example: "C: The install hung" -> Interpret as "The Cloudzy install hung".
+After the user uses the shorthands, print a confirmation message to the console.

@@ -41,6 +41,17 @@ func (s *Step04SystemInit) RunWarnings(state *State) error {
 func (s *Step04SystemInit) RunClean(state *State) error {
     // Enable command logging
     lib.EnableCommandLogging("/tmp/guix-install.log")
+
+    // CRITICAL: Ensure /mnt is mounted before writing anything
+    // Check if /mnt is mounted
+    if !lib.IsMounted("/mnt") {
+        fmt.Println("/mnt is not mounted - attempting to mount GUIX_ROOT...")
+        if err := lib.MountByLabel("GUIX_ROOT", "/mnt"); err != nil {
+             return fmt.Errorf("failed to mount /mnt (required to avoid filling RAM): %w", err)
+        }
+        fmt.Println("[OK] Mounted GUIX_ROOT to /mnt")
+    }
+
 	// Set up temporary directory on the target partition (has more space than ISO)
 	tmpDir := "/mnt/var/tmp"
 	if err := os.MkdirAll(tmpDir, 0777); err != nil {
