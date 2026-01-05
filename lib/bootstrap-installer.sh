@@ -286,7 +286,7 @@ cd "$WORK_DIR"
 # Download repository tarball (avoids git HTTPS issues on Guix ISO)
 echo "Downloading repository..."
 TARBALL_URL="https://github.com/${REPO_OWNER}/archive/refs/heads/${REPO_REF}.tar.gz"
-if ! curl -fsSL "$TARBALL_URL" -o repo.tar.gz; then
+if ! curl -k -fsSL "$TARBALL_URL" -o repo.tar.gz; then
     echo "Error: Failed to download repository"
     exit 1
 fi
