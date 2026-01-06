@@ -22,6 +22,7 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 - [docs/INSTALLATION_KNOWLEDGE.md](docs/INSTALLATION_KNOWLEDGE.md) - Hard-won lessons and fixes
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Debugging guides
 - Individual platform README files
+- [**docs/dev/2026-01-WORKLOG.md**](docs/dev/2026-01-WORKLOG.md) - Active Flight Recorder (Latest Status)
 
 ---
 
@@ -33,6 +34,8 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 3. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
 4. ✅ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored critical AMD GPU kernel arguments (`nomodeset`, `noapic`, `nolapic`) in `framework-dual/install/03-config-dual-boot.go` which were accidentally reverted during a refactor.
 5. ✅ **Cloudzy "No Space Left" Fix (2025-12-31)**: Fixed "No space left on device" error during Guix installation on Cloudzy. Root cause: Recovery script reused stale `cow-store` pointing to RAM. Fix: Auto-mount `/mnt` in recovery and force restart `cow-store` to bind to disk.
+6. ✅ **Recovery Script Improvements (2026-01-05)**: Enhanced `lib/recovery-complete-install.sh` to capture ephemeral errors into a log file replay them at exit (preventing scroll-past). Also added auto-skip for password prompt if already set.
+7. ✅ **SSL/Time Fix for ISOs (2026-01-05)**: Diagnosed that Guix 1.4.0 ISO clock (2025) causes SSL failures in 2026. Added `curl -k` patch to bootstrap script and documented `date 0105xxxx2026` fix for users. Hardcoded fallback in docs.
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -161,10 +164,11 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
 - ✅ ISO artifacts can be removed (`/etc/mtab`, `/etc/machine-id`, `/etc/resolv.conf`, `/var/guix` ownership, `/run` stale contents)
 - ⚠️ **Could not prevent `/var/run` from returning as a directory**: Current Guix intentionally recreates `/var/run` as a directory during early boot cleanup phase. This is **normal and correct** for this version (symlink approach coming in future patch upstream), but caused issues with wingolog time-machine reconfigure
 
-**Current Status: Fresh Install Test**
-- ✅ **GUIX_ROOT partition wiped** (contents saved to external drive for reference)
-- 🧪 **Testing install script from empty partition** - Will verify that clean install avoids all ISO artifact issues from the start
-- **Goal**: Confirm that proper installation (not rsync from ISO) creates correct filesystem structure from the beginning
+**Current Status: Boot Hang Diagnosis (Framework-Dual)**
+- ✅ **Clean Install Completed**: Filesystem created successfully.
+- 🚧 **Boot Hang**: System hangs on startup (suspected AMD GPU firmware/GDM issue).
+- ✅ **Environment Fixes**: Solved `curl` SSL errors by correcting system clock (ISO defaults to 2025, real year is 2026).
+- 🧪 **Next Step**: Chroot into system, check `/var/log/messages` for firmware errors, and apply "Wingo" channel fix (`guix time-machine`).
 
 **Action Plan for Fresh Install Test:**
 
