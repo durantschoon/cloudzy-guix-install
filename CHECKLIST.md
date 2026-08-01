@@ -356,10 +356,40 @@ cd ~/guix-customize
 - ✅ Verification after guix system init: checks for kernel/initrd files and broken symlink, retries with manual copy if needed
 - ✅ VERBOSE=1 instructions added everywhere verify script is mentioned (helps debug file detection issues)
 
-**Oracle Cloud Free Tier Support (Future Work):**
+**Oracle Cloud Free Tier Support (In Progress, 2026-07-31):**
 
-- ⏳ **Goal**: Adapt cloudzy installer to work on Oracle Cloud Free Tier VPS instances
+- ⏳ **Goal**: Run Guix System on Oracle Cloud Free Tier
 - **Why**: Oracle Cloud Free Tier offers ARM64 and x86_64 instances with generous free tier limits, expanding platform support
+
+- 🚩 **Blocking finding**: **OCI cannot boot an ISO.** Importing an ISO is not
+  supported; OCI accepts only QCOW2/VMDK custom images uploaded to Object
+  Storage. Every platform in this repo — cloudzy included — is built on "boot
+  the Guix live ISO → partition → mount → `guix system init`", so that model
+  does not transfer. Oracle is an **image-build** platform, not an ISO-boot
+  platform, and is therefore not a `cp -r cloudzy oracle` job.
+
+- **Approach adopted**: build locally with `guix system image -t qcow2
+  --image-size=50G` → upload to Object Storage → import as custom image
+  (launch mode `PARAVIRTUALIZED`) → launch `VM.Standard.E2.1.Micro`.
+
+- ✅ `oci` CLI installed and authenticating (home region `us-ashburn-1`)
+- ✅ `oracle/image/oracle-image.scm` written — headless, SSH-key-only,
+  serial console on `ttyS0`, swap file service for the 1 GiB shape
+- ✅ Validated: `guix system image ... --dry-run` evaluates cleanly and
+  computes a full derivation
+- ✅ `oracle/image/oracle-image_purpose.txt` documents every setting and the
+  deliberate omissions (no `initrd-modules`, root label must stay
+  `Guix_image`, swap as a shepherd service rather than `swap-devices`)
+- ⏳ Not yet booted — untested in QEMU and on OCI
+- ⏳ Upload / import / launch commands drafted in `oracle/README.md` but unrun
+- ⏳ Open question: boot volume may appear as `/dev/sda` rather than
+  `/dev/vda`, which would break the first `guix system reconfigure`
+
+- **Superseded analysis** — the Top 5 below was written assuming the cloudzy
+  ISO installer could be adapted. Kept for reference, but items 1–2 and 5
+  (device detection, boot mode, partitioning) are now handled declaratively by
+  the image definition rather than by runtime detection. Items 3–4 (network
+  interface naming, serial console) remain relevant.
 - **Top 5 Things Needed to Update Cloudzy Scripts:**
 
   1. **Device Detection Updates** (`cloudzy/install/01-partition.go`):

@@ -1,0 +1,273 @@
+oracle-image.scm -- purpose and justification of each section
+=============================================================
+
+Verified against Guix 17c2142271bb4857cc0e517ac42af50b4a55aef6 (2026-07-31).
+Where this file cites a Guix source location, that location was read, not
+recalled; re-check it after a `guix pull`.
+
+
+WHY THIS PLATFORM DOES NOT LOOK LIKE THE OTHERS
+-----------------------------------------------
+
+Every other platform in this repository (cloudzy, framework, framework-dual)
+follows: boot the Guix live ISO -> partition -> mount -> write config.scm ->
+`guix system init`.  Oracle cannot do this.  OCI does not support importing or
+booting an ISO at all; it accepts only QCOW2/VMDK custom images uploaded to
+Object Storage, or in-place manipulation of a running instance's boot volume.
+
+So the Oracle flow inverts: the image is built on the developer's machine with
+`guix system image`, uploaded, imported as a custom image, and launched.  There
+are no numbered install steps, no State struct, and no Go code -- the entire
+"installer" is this one declarative file.
+
+Consequence worth stating plainly: nothing in this file can be fixed by
+re-running an installer.  A mistake here produces an instance that must be
+debugged over the OCI serial console or thrown away.  That is why the serial
+console configuration below is not optional polish.
+
+
+MODULE IMPORTS
+--------------
+
+(gnu)                 operating-system, file-system, user-account, etc.
+(guix gexp)           #~ and file-append, used by the swap file service.
+                      Imported explicitly rather than relying on (gnu) to
+                      re-export it, so the file does not break if that
+                      re-export changes.
+
+use-service-modules networking shepherd ssh
+                      networking -> dhcpcd-service-type
+                      shepherd   -> shepherd-service, shepherd-root-service-type
+                      ssh        -> openssh-service-type
+
+use-package-modules base linux ssh
+                      base  -> coreutils (dd)
+                      linux -> util-linux (mkswap, swapon, swapoff)
+                      ssh   -> openssh-sans-x
+
+
+SITE-SPECIFIC SETTINGS
+----------------------
+
+%user-name / %full-name
+    "guix" matches the default in cloudzy/install/03-config.go, so the two
+    free-software platforms present the same account name.  Deliberately NOT
+    "opc": that is Oracle Linux's cloud-init user and carries no meaning on a
+    Guix image.
+
+%host-name
+    Cosmetic.  OCI also sets a hostname over DHCP; this is the fallback.
+
+%timezone
+    Matches the cloudzy default.  UTC would arguably be more correct for a
+    server, but consistency across platforms in this repo was preferred; the
+    user changes it in one place if they disagree.
+
+%authorized-key
+    local-file resolves relative to this .scm file, so the key is picked up
+    from oracle/image/authorized-key.pub at build time.
+
+    This is the single most dangerous value in the file.  Guix has no
+    cloud-init: there is no mechanism to inject an SSH key when the instance
+    launches, the way every other distribution's cloud image does.  The key is
+    compiled into the image.  If it is wrong, SSH is unreachable, and because
+    password authentication is disabled the only way back in is the OCI serial
+    console.
+
+    Although you might be tempted to also enable password authentication "just
+    as a backup", we do not: an internet-facing sshd with password auth is
+    exactly the thing that gets a free-tier instance compromised and the
+    account suspended.  The serial console is the backup.
+
+%swapfile-size-mib
+    2048.  VM.Standard.E2.1.Micro has 1 GiB of RAM.  A headless Guix system
+    idles fine in 1 GiB, but `guix pull` and `guix system reconfigure` are
+    memory-hungry and get OOM-killed without swap.  2 GiB is a compromise
+    between "enough to reconfigure" and "not wasting boot volume".
+
+
+%swapfile-service
+---------------
+
+Why a shepherd service rather than the operating-system 'swap-devices' field:
+'swap-devices' expects the swap area to already exist.  Nothing in a freshly
+built image has created one, so declaring it there yields a boot-time failure
+to enable a file that is not there.
+
+The service is one-shot? #t and guards on (file-exists? ...), which makes it
+idempotent: it creates the file on first boot and merely re-enables it on
+every subsequent boot.
+
+requirement '(file-systems) -- the root file system must be mounted before
+there is anywhere to put /swapfile.
+
+dd, not fallocate.  fallocate on ext4 produces unwritten extents, and swapon
+refuses a swap file containing them ("swapon: /swapfile: skipping - it appears
+to have holes").  dd writes real zeroes.  This costs a few seconds of first
+boot and is the reason the size is 2 GiB rather than something larger.
+
+chmod #o600 before mkswap: swapon warns loudly about insecure permissions
+otherwise.
+
+`run` is defined locally as (zero? (apply system* args)) rather than using
+`invoke` from (guix build utils).  Shepherd services execute inside the
+shepherd's own Guile, where (guix build utils) is not guaranteed to be
+imported; system* always is.
+
+The stop procedure returns #f, which is the shepherd convention for "this
+service is now stopped".
+
+
+OPERATING-SYSTEM FIELDS
+-----------------------
+
+kernel linux-libre
+    Free software only, matching the cloudzy platform's constraint.  This
+    costs nothing here: OCI paravirtualized instances present virtio devices,
+    and virtio requires no redistributable firmware blobs.  Contrast with
+    framework/framework-dual, which need nonguix for WiFi firmware.
+
+initrd-modules -- deliberately ABSENT
+    %base-initrd-modules already contains virtio_pci, virtio_balloon,
+    virtio_blk, virtio_net, virtio_console, virtio-rng, virtio_mmio and
+    virtio_scsi (gnu/system/linux-initrd.scm, default-initrd-modules).  That
+    is everything a paravirtualized OCI instance needs to find its root disk
+    and its VNIC.
+
+    Although you might be tempted to add an initrd-modules field listing the
+    virtio modules explicitly "to be safe", do not.  See
+    docs/NVME_MODULE_FIX.md for the framework case where naming a module that
+    the kernel has built in caused `guix system build` to fail outright.  The
+    same failure mode applies here.
+
+kernel-arguments
+    console=tty0 keeps output on the emulated VGA console.
+    console=ttyS0,115200n8 is what the OCI serial console attaches to.
+
+    Order matters: Linux sends /dev/console to the LAST console= listed, so
+    ttyS0 last means kernel panics land in the OCI console where they can
+    actually be read.
+
+    Second, non-obvious effect: %base-services runs agetty with (tty #f),
+    meaning "auto-detect", and that auto-detection reads the console= argument
+    from the kernel command line (gnu/services/base.scm, %base-services).  So
+    adding ttyS0 here is also what produces a login prompt on the serial line.
+    No explicit agetty service is needed.
+
+    %default-kernel-arguments is appended rather than replaced so the Guix
+    defaults are preserved.
+
+bootloader
+    grub-bootloader (BIOS), not grub-efi-bootloader.  This must agree with two
+    other choices:
+
+      image type 'qcow2'      -> mbr-hybrid-disk-image, MBR + hybrid ESP
+      OCI launch mode         -> PARAVIRTUALIZED (BIOS boot + virtio devices)
+
+    The UEFI alternative is image type 'qcow2-gpt' (efi-disk-image, GPT+ESP)
+    with launch mode NATIVE and grub-efi-bootloader.  Mixing the two -- e.g.
+    grub-bootloader with qcow2-gpt -- produces an image that builds fine and
+    then does not boot.
+
+    targets '("/dev/vda")
+    For an image build the bootloader is installed into the image file itself,
+    so this value is not what makes the build work.  It matters LATER: the
+    first `guix system reconfigure` run on the live instance will try to
+    install GRUB to this path.  If OCI presents the boot volume as /dev/sda
+    rather than /dev/vda, that reconfigure fails.  Check `lsblk` on the
+    running instance and correct this before the first reconfigure.
+
+    terminal-outputs/inputs '(console serial_0), serial-unit 0,
+    serial-speed 115200
+    Mirrors the GRUB menu onto the serial line.  This is what lets a broken
+    system be recovered from the OCI console by selecting a previous
+    generation.  Valid symbols are console, serial_0..serial_3, gfxterm,
+    vga_text (gnu/bootloader/grub.scm).  Note 'serial_0', not 'serial'.
+
+    timeout 3 -- short enough not to waste boot time, long enough to catch the
+    menu over a laggy serial console.
+
+file-systems -- the "Guix_image" label
+    THIS STRING IS NOT ARBITRARY AND MUST NOT BE "PRETTIFIED".
+
+    `guix system image` writes the label "Guix_image" onto the root partition;
+    it is defined as root-label in gnu/system/image.scm:126.  The initrd finds
+    the root file system by that label.  Change it to something friendlier
+    like "GUIX_ROOT" -- which is what the other platforms in this repo use,
+    because they run mkfs themselves and choose their own label -- and the
+    image builds successfully and then drops to a Guile rescue REPL on boot,
+    because the initrd cannot find a partition with that label.
+
+users
+    No (password ...) field.  A user-account without one gets a locked
+    password, which blocks password login while leaving SSH key login working.
+    That is the intent, not an oversight.
+
+    supplementary-groups '("wheel" "netdev") -- wheel for sudo, netdev to
+    manage network interfaces.
+
+sudoers-file
+    %wheel ALL=NOPASSWD:ALL
+
+    This is a consequence of the locked password above, not a convenience: the
+    account has no password, so a password-prompting sudo could never succeed
+    and the user could never become root on their own machine.  Other
+    distributions' cloud images reach the same place via cloud-init, which
+    writes an equivalent NOPASSWD rule for the default user.
+
+    The security trade is real and worth stating: anyone who obtains the SSH
+    private key gets root.  Given the key is the only way in at all, this does
+    not widen the attack surface much.
+
+packages %base-packages
+    Minimal by design, consistent with the rest of the repo -- customize after
+    first boot.  Worth knowing: nss-certs is already included via
+    %base-packages-networking (gnu/system.scm:984), so `guix pull` has working
+    TLS immediately.  It does not need to be added.
+
+services
+    dhcpcd-service-type, not dhcp-client-service-type.  The latter is
+    deprecated in Guix 17c2142 and emits a warning on every evaluation.
+
+    openssh-service-type with openssh-sans-x: the plain openssh package pulls
+    in X11 for X forwarding, which is dead weight in a headless server image.
+
+    %base-services is appended, which brings the agetty discussed above,
+    syslogd, and the rest of the standard set.
+
+
+IMAGE SIZE: WHY 50G, AND WHAT IT REPLACES
+-----------------------------------------
+
+Build with --image-size=50G.
+
+The obvious alternative is to build a small image (say 5G) and grow the root
+partition on first boot, which is what cloud-init's growpart does elsewhere.
+That would require writing a first-boot service that detects the boot device,
+grows the last partition, and runs resize2fs -- code that cannot be tested
+without a live OCI instance and that fails in ways that leave the instance
+unbootable.
+
+Building at 50G instead makes the partition table already span the whole boot
+volume, and the growth service disappears entirely.  The upload cost is
+minimal because the qcow2 is compressed and sparse: unwritten space costs
+almost nothing on the wire.
+
+50G is chosen to match the OCI default boot volume size.  The boot volume must
+be at least as large as the image, and Always Free allows 200 GB of block
+storage total, so two 50G micro instances fit comfortably.
+
+
+STATUS
+------
+
+Validated: `guix system image -t qcow2 --image-size=50G --dry-run` evaluates
+cleanly and computes a full derivation (323.0 MB of substitutes).
+
+NOT yet validated: nothing here has been booted -- not in QEMU, not on OCI.
+The following are reasoned but unproven, and are the first things to suspect
+if the instance does not come up:
+
+  - PARAVIRTUALIZED launch mode accepting a BIOS/MBR qcow2 image
+  - whether the boot volume appears as /dev/vda or /dev/sda (see 'targets')
+  - the serial console actually reaching a login prompt
