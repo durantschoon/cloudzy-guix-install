@@ -1,5 +1,32 @@
 # Wingolog Channel Analysis: Why Initrd Isn't Being Created
 
+> ## SUPERSEDED — retained for history
+>
+> **Do not implement the recommendation in this document.** It concludes that
+> framework-dual should pin guix and nonguix to wingolog-era commits
+> (2024-02-16). That conclusion was adopted, and it was wrong for the hardware
+> this repo targets.
+>
+> The laptop is a **Framework Laptop 13 (AMD Ryzen AI 300)** — Strix Point, GPU
+> `1002:1114`. That silicon shipped in July 2024, roughly five months *after*
+> the commits recommended below, and its amdgpu firmware (`psp_14_0_4`,
+> `gc_11_5_*`, `dcn_3_5_*`) does not exist in a Feb-2024 `linux-firmware`.
+> Pinning backwards guaranteed the `Direct firmware load ... failed with error
+> -2` failure it was meant to fix.
+>
+> Wingo's post concerns the earlier **Ryzen 7040** Framework 13. The analysis
+> below is sound for that machine; the error was transferring it to a newer one
+> without re-validating.
+>
+> **Current policy:** [CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md) —
+> both channels stay pinned, but the pin must always be *newer* than the target
+> hardware.
+>
+> The framing below ("initrd isn't being created") should also be read
+> skeptically. The initrd symptoms were entangled with an `initrd-modules` list
+> that named modules the kernel did not build as modules; see
+> [NVME_MODULE_FIX.md](./NVME_MODULE_FIX.md).
+
 ## Problem Summary
 
 The framework-dual installation is failing to create initrd files during `guix time-machine system build`. After analyzing the wingolog-era approach and comparing it to our implementation, we've identified several critical discrepancies.

@@ -223,36 +223,82 @@ Use the same path for consistency and reliability.
 
 ### Channel Pinning Policy
 
-**CRITICAL:** Framework-dual installations MUST use wingolog-era pinned channels (Feb 2024 commits) to ensure initrd generation works correctly.
+**CRITICAL:** Framework-dual pins both channels to a specific commit pair, and that
+pin must always be **NEWER than the target hardware**.
+
+The pin lives in `lib/common.go` as `FrameworkDualGuixCommit` /
+`FrameworkDualNonguixCommit` / `FrameworkDualPinDate`.
+
+**Pinning is for reproducibility, not for going back in time.** This repo
+previously pinned framework-dual to wingolog-era commits (2024-02-16) and marked
+that CRITICAL. On Framework 13 **Ryzen AI 300** hardware that pin is
+unconditionally broken: the GPU is Strix Point (`1002:1114`), whose amdgpu
+firmware (`psp_14_0_4`, `gc_11_5_*`, `dcn_3_5_*`) entered linux-firmware in
+mid-2024 and whose gfx11.5 support entered Linux 6.10. A Feb-2024 pin predates
+both, so amdgpu dies with `Direct firmware load for amdgpu/psp_14_0_4_toc.bin
+failed with error -2`. Pinning backwards can never supply firmware for hardware
+that did not exist yet.
+
+**DO:**
+- Keep both channels pinned to an explicit commit pair
+- Verify a candidate pin provides kernel >= 6.10 and mid-2024-or-later firmware
+- Record the date the pin was resolved, so staleness is visible
 
 **DO NOT:**
-- Change framework-dual to use unpinned channels
+- Pin to a commit older than the hardware you are installing on
 - Remove the platform check in `SetupNonguixChannel()`
-- Update commits without testing initrd generation
+- Assume a pin that worked on Ryzen 7040 works on Ryzen AI 300 — Wingo's post is
+  about the earlier machine
 
-**See:** `docs/CHANNEL_PINNING_POLICY.md` for complete policy and `docs/WINGOLOG_CHANNEL_ANALYSIS.md` for technical analysis.
+**See:** `docs/CHANNEL_PINNING_POLICY.md` for how to move the pin forward and
+`docs/WINGOLOG_CHANNEL_ANALYSIS.md` for the historical analysis and why it no
+longer applies.
 
-### NVMe Module Filtering Policy
+### initrd Module Policy
 
-**CRITICAL:** Framework-dual and framework installations MUST filter `nvme` from `initrd-modules` because:
+**Framework and framework-dual use `%base-initrd-modules` unchanged.**
 
-1. **NVMe is built-in to kernel 6.6.16**: In wingolog-era pinned channels (Feb 2024), kernel 6.6.16 has NVMe support compiled directly into the kernel, not as a loadable module
-2. **ISO Guix version compatibility**: The ISO's Guix version may be newer than wingolog-era, causing module expectation mismatches (similar to the glibc issue in commit `36e1674`)
-3. **Prevents build failures**: Including `nvme` in `initrd-modules` causes "kernel module not found" errors during `guix time-machine system build`
+The initrd only has to mount the root filesystem; udev loads everything else once
+the real system is up. Guix's default already includes `usbhid` and `hid-generic`
+for keyboards during early boot.
 
-**Implementation:**
-- Both `framework-dual/install/03-config-dual-boot.go` and `framework/install/03-config.go` use:
-  ```scheme
-  (remove (lambda (module) (string=? module "nvme")) %base-initrd-modules)
-  ```
-- This filters `nvme` even if it appears in `%base-initrd-modules`
+Two pieces of former policy were removed because they were wrong:
 
-**DO NOT:**
-- ❌ Add `nvme` back to `initrd-modules` - it's built-in, not a loadable module
-- ❌ Remove the filter - this prevents compatibility issues across ISO versions
-- ❌ Assume `nvme` will work as a module - verify kernel configuration first
+1. **The `nvme` / `xhci_pci` filter was always a no-op.** Neither name appears in
+   `%base-initrd-modules` (see `default-initrd-modules` in
+   `gnu/system/linux-initrd.scm`), so `(remove <pred> %base-initrd-modules)`
+   never removed anything. Worse, "built-in to 6.6.16" is a claim about one
+   pinned kernel; hardcoding it would eventually strip a module a newer kernel
+   genuinely needs to mount root.
+2. **`amdgpu` does not belong in the initrd.** Loading the GPU driver there also
+   requires its firmware in the initrd — a second way to fail before any console
+   exists to show the failure.
 
-**See:** `docs/NVME_MODULE_FIX.md` for complete technical documentation and `docs/CHANNEL_PINNING_POLICY.md` for related channel pinning requirements.
+**If a module ever must be filtered,** determine it from the built kernel with
+`lib.FindKernelPackageForModules` + `lib.CheckKernelModulesAvailable`, which
+inspect the actual store path, and feed the result to
+`lib.BuildInitrdModulesExpr`. Do not hardcode a kernel-version-specific list.
+
+**NVMe caveat:** `nvme` is absent because the driver is built into the kernel.
+If a future pin makes it modular, root will fail to mount and `nvme` must be
+added. See `docs/NVME_MODULE_FIX.md`.
+
+### Kernel Argument Policy
+
+**`kernel-arguments` must APPEND to `%default-kernel-arguments`, never replace it.**
+The default carries `modprobe.blacklist=usbmouse,usbkbd`, and upstream blacklists
+`usbkbd` because it races `usbhid` (bugs.gnu.org/35574). Replacing the list
+silently drops that.
+
+**Never add `nomodeset`, `noapic`, `nolapic`, or `acpi=off` to framework-dual.**
+All four were added as workarounds for a boot hang whose real cause was the stale
+channel pin above. `noapic`+`nolapic` force legacy 8259 interrupt routing, which
+modern AMD platforms do not reliably provide — the internal keyboard is an i8042
+`AT Translated Set 2 keyboard` on IRQ 1, so it receives no interrupts and the
+greeter ignores every keystroke. A regression test in
+`framework-dual/install/03-config-dual-boot_test.go` enforces this.
+
+**See:** `docs/FRAMEWORK_STARTUP_HANG_FIX.md`.
 
 ## Development Workflow
 

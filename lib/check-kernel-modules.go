@@ -8,22 +8,54 @@ import (
 	"strings"
 )
 
-// GetBuiltInModulesForKernel66 returns a list of modules known to be built-in
-// to kernel 6.6.16 (wingolog-era). These should be filtered from initrd-modules.
-// This is based on kernel 6.6.16 configuration where many drivers are built-in
-// rather than loadable modules for better performance and reliability.
+// GetBuiltInModulesToFilter returns module names to strip from
+// %base-initrd-modules before they reach the generated config.
 //
-// To determine which modules are built-in:
-// 1. Build the kernel package: guix build linux
-// 2. Check /gnu/store/<hash>-linux-6.6.16/lib/modules/<version>/kernel/
-// 3. If a module doesn't exist there, it's built-in
-// 4. Add it to this list to prevent "kernel module not found" errors
-func GetBuiltInModulesForKernel66() []string {
-	return []string{
-		"nvme",      // NVMe SSD support - built-in for better performance
-		"xhci_pci",  // USB 3.0 host controller - built-in for USB support
-		// Add more as discovered through installation failures or kernel package inspection
+// It is deliberately EMPTY, and that is not an oversight.
+//
+// The list used to be []string{"nvme", "xhci_pci"} on the theory that those are
+// built into kernel 6.6.16 and would raise "kernel module not found" during
+// initrd generation. Two things are wrong with that:
+//
+//  1. Neither name is in %base-initrd-modules in the first place. Guix's
+//     default-initrd-modules (gnu/system/linux-initrd.scm) lists ahci,
+//     usb-storage, uas, usbhid, hid-generic, hid-apple, mmc_block, dm-crypt,
+//     xts, serpent_generic, wp512, nls_iso8859-1, pata_acpi, pata_atiixp, isci
+//     and the virtio set. So (remove <pred> %base-initrd-modules) never removed
+//     anything: the filter has always been a no-op.
+//
+//  2. "built-in to 6.6.16" is a statement about one pinned kernel. Now that
+//     framework-dual tracks a recent kernel, hardcoding it would eventually be
+//     wrong in the dangerous direction -- stripping a module that the new
+//     kernel really does need to mount root.
+//
+// The mechanism is kept rather than deleted because it is the correct shape for
+// a real fix: if a module ever must be filtered, determine it from the built
+// kernel with FindKernelPackageForModules + CheckKernelModulesAvailable below,
+// which inspect the actual store path instead of guessing.
+func GetBuiltInModulesToFilter() []string {
+	return []string{}
+}
+
+// BuildInitrdModulesExpr returns the Guile expression to use as the value of
+// the operating-system 'initrd-modules' field.
+//
+// With no modules to filter (the normal case) this is the bare
+// %base-initrd-modules, so the generated config says plainly that it uses the
+// Guix default. With modules to filter it emits a 'remove' over a predicate.
+// The caller must have (srfi srfi-1) in scope for 'remove'.
+func BuildInitrdModulesExpr(filterModules []string) string {
+	if len(filterModules) == 0 {
+		return "%base-initrd-modules"
 	}
+
+	conditions := make([]string, 0, len(filterModules))
+	for _, mod := range filterModules {
+		conditions = append(conditions, fmt.Sprintf(`(string=? module "%s")`, mod))
+	}
+
+	return fmt.Sprintf("(remove (lambda (module) (or %s))\n          %%base-initrd-modules)",
+		strings.Join(conditions, " "))
 }
 
 // CheckKernelModulesAvailable checks which modules are available as loadable modules

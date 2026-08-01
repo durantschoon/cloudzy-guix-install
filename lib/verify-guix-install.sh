@@ -310,9 +310,29 @@ if check_file "/etc/config.scm" "System configuration" yes; then
         info "  Kernel args: $kargs"
 
         # Warn about problematic parameters
-        if echo "$kargs" | grep -q "acpi=off\|noapic\|nolapic"; then
-            warn "  Aggressive kernel parameters detected (may cause boot issues)"
+        if echo "$kargs" | grep -q "acpi=off\|noapic\|nolapic\|nomodeset"; then
+            warn "  Aggressive kernel parameters detected - these break this hardware"
+            warn "    noapic/nolapic starve the i8042 internal keyboard of interrupts"
+            warn "    acpi=off breaks xhci_hcd (USB); nomodeset disables modesetting"
+            warn "    See docs/FRAMEWORK_STARTUP_HANG_FIX.md"
         fi
+
+        # kernel-arguments must build on the Guix default, not replace it:
+        # %default-kernel-arguments carries modprobe.blacklist=usbmouse,usbkbd,
+        # and usbkbd races usbhid (bugs.gnu.org/35574).
+        if ! echo "$kargs" | grep -q "%default-kernel-arguments"; then
+            warn "  kernel-arguments replaces %default-kernel-arguments instead of appending"
+            warn "    This drops modprobe.blacklist=usbmouse,usbkbd"
+        fi
+    fi
+
+    # VFS mount flags must go in 'flags', not 'options'. A VFS token in
+    # 'options' makes the kernel reject the mount; if that happens on a
+    # non-root filesystem the file-systems target fails, user-processes never
+    # starts, and the machine boots with no login ttys at all.
+    if grep -qE '\(options "[^"]*(noatime|defaults|nosuid|nodev|ro)' "${ROOT}/etc/config.scm" 2>/dev/null; then
+        warn "  VFS mount flags found in (options ...) - use (flags '(no-atime ...)) instead"
+        warn "    ext4 rejects these as parameters and the mount fails"
     fi
 fi
 

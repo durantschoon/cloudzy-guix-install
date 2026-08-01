@@ -1014,20 +1014,23 @@ After successful installation, `/mnt/boot` should contain:
 
 ## 🖥️ Framework 13 AMD GPU Boot Issues
 
-### Critical Kernel Parameters
-
-**Framework 13 with AMD GPU requires specific kernel parameters to prevent boot hangs:**
+### Correct Kernel Parameters
 
 ```scheme
-(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=off" "noapic" "nolapic"))
+(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
 ```
 
-### What These Parameters Do
+**Append, never replace.** `%default-kernel-arguments` carries
+`modprobe.blacklist=usbmouse,usbkbd`; upstream blacklists `usbkbd` because it
+races `usbhid` (bugs.gnu.org/35574).
 
-- **`nomodeset`**: Disables kernel mode setting (fixes AMD GPU display issues)
-- **`acpi=off`**: Disables ACPI (prevents power management conflicts)
-- **`noapic`**: Disables APIC (prevents interrupt controller issues)
-- **`nolapic`**: Disables Local APIC (prevents local interrupt issues)
+> **Reversed 2026-08-01.** This section used to prescribe
+> `nomodeset acpi=off noapic nolapic`. **Do not add them.** They were workarounds
+> for a boot hang whose actual cause was a channel pin older than the GPU, and
+> each broke something: `acpi=off` killed `xhci_hcd` USB, and `noapic`+`nolapic`
+> starved the internal i8042 keyboard of interrupts so the greeter ignored every
+> keystroke. Full account in
+> [FRAMEWORK_STARTUP_HANG_FIX.md](./FRAMEWORK_STARTUP_HANG_FIX.md).
 
 ### Boot Hang Symptoms
 
@@ -1036,31 +1039,37 @@ After successful installation, `/mnt/boot` should contain:
 - Never reaches login prompt
 - Ctrl+C doesn't work
 
+These are also what a **GPU that never finishes initializing** looks like. On
+Ryzen AI 300 the usual cause is amdgpu firmware older than the GPU — check for
+`Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2` before
+touching kernel arguments. See
+[CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md).
+
 ### Manual Recovery
 
-If you encounter boot hangs:
+At the GRUB menu, press `e` and **remove** `quiet` and `loglevel=3` so you can
+read the failure, then Ctrl+X to boot. Diagnose from the messages rather than
+adding parameters that suppress them.
 
-1. **At GRUB menu, press 'e' to edit**
-2. **Find the kernel line and add parameters:**
+If an installed system has the old arguments, delete `nomodeset`, `noapic`,
+`nolapic` and `acpi=off` from the `linux` line the same way. Nothing is written
+to disk, so a plain reboot undoes it.
 
-   ```
-   linux /boot/vmlinuz-... quiet splash nomodeset acpi=off noapic nolapic 3
-   ```
-
-3. **Press Ctrl+X or F10 to boot**
-
-### Framework 13 Specific Initrd Modules
+### Framework 13 Initrd Modules
 
 ```scheme
-(initrd-modules
- (append '("amdgpu"      ; AMD GPU driver (critical for display)
-           "xhci_pci"    ; USB 3.0 host controller
-           "usbhid"      ; USB keyboard/mouse
-           "i2c_piix4")  ; SMBus/I2C for sensors
-         %base-initrd-modules))
+(initrd-modules %base-initrd-modules)
 ```
 
-**Note:** `nvme` is **not** included because it's built-in to kernel 6.6.16 (wingolog-era). Including it causes "kernel module not found" errors during system build.
+Use the Guix default. It already contains `usbhid` and `hid-generic` for
+early-boot keyboards. `amdgpu`, `xhci_pci` and `i2c_piix4` were previously
+prepended here and have been removed — the initrd only has to mount root, and
+`amdgpu` in the initrd also drags its firmware in, which is one more way to fail
+before there is a console to see it on.
+
+**Note:** `nvme` is absent because the driver is built into the kernel. If a
+future channel pin makes it modular, root will fail to mount and it must be
+added. See [NVME_MODULE_FIX.md](./NVME_MODULE_FIX.md).
 
 ## 🧰 Dual-Boot with Pop!_OS
 
@@ -3223,12 +3232,30 @@ A regression was introduced in `framework-dual/install/03-config-dual-boot.go` w
 ### Cause
 During a refactor to filter built-in kernel modules (`nvme`, `xhci_pci`) from the initrd (to fix "module not found" errors), the `kernel-arguments` line was inadvertently reset to a default template: `('("quiet" "loglevel=3"))`.
 
-### Fix
-Restored the correct kernel arguments:
+### Fix (at the time)
+Restored the arguments that had been lost:
 ```scheme
 (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
 ```
-Lesson: Always check `kernel-arguments` when refactoring configuration generators, as they often contain critical hardware workarounds.
+Lesson recorded then: always check `kernel-arguments` when refactoring
+configuration generators, as they often contain critical hardware workarounds.
+
+### Postscript (2026-08-01)
+
+**The "regression" was closer to correct than the restore was.** Those three
+arguments were not a hardware workaround; they were a misdiagnosis. `noapic` and
+`nolapic` starve the internal i8042 keyboard of interrupts, and `nomodeset`
+contradicts loading `amdgpu` at all. The boot hang they appeared to fix was
+amdgpu failing on firmware older than the GPU, caused by the wingolog-era channel
+pin.
+
+They have now been removed for good, and a regression test fails the build if any
+of them reappear. See
+[FRAMEWORK_STARTUP_HANG_FIX.md](./FRAMEWORK_STARTUP_HANG_FIX.md) and
+[CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md).
+
+**Better lesson:** an argument that "fixes" a hang without an explanation of the
+underlying failure is a suspect, not an asset. Find the driver error first.
 
 ## Daemon Instability & The "Daisy Chain of Failure" (Cloudzy)
 

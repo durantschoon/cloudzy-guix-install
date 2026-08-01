@@ -12,34 +12,34 @@ ef5cc8642b785280e930bf80825fab32cf44f5ac755a7cb250ebd01feedcb120  ./cloudzy/inst
 af1874cedf600e6971e127c99e12aff946c074cda6c4024b3618d108dd594e29  ./cloudzy/install/03-config.go
 c8e9fa608c6e336a0c6adb6941b9095932fc22668a1d96b45e60275369ed3438  ./cloudzy/install/04-system-init.go
 2f5888d739db6a21bf724a73712cf6b4299355cc42bb694c39d65f328d322e49  ./cloudzy/install/state.go
-2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
 b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-words/main.go
+2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
 cf4cd7858fb6f1a5b284d7b51389effb9cea3d79d81879f6acd2be910f4cc120  ./cmd/recovery/main.go
-e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 992a35541e314aa7007e7ea6e39c14f8593803edb7191a63c1901a1f682dfba3  ./framework-dual/install/01-partition-check.go
-48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
+e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
 5cf15120906a8878178330a9647087c7c5e5dcac4ded4c1237c6a0b5a8d7fd18  ./framework-dual/install/02-mount-existing.go
-07bf78341b13bbb85d23688a5f644e592323838b3f3f06bcff2a148b1d757027  ./framework-dual/install/03-config-dual-boot_test.go
-6dccd3f966f8ff9b9680d5b210fc2366b2ba29231ee7a1736f4d2f30d165fa62  ./framework-dual/install/03-config-dual-boot.go
+48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
+a4b51819c92aee9ea035fa3dfe9f6d7e9122c72cb9460699b9deaf0b7144d108  ./framework-dual/install/03-config-dual-boot.go
+b8dd15095171668a300d91f110f58fecf2650c292dc5c5f19db8c1f637fc78d4  ./framework-dual/install/03-config-dual-boot_test.go
 88ec2e3db371a7b10dfd919a2cba0646956ec84d257080f85a8e02cb73e9ebb2  ./framework-dual/install/04-system-init.go
 8fb7f99a29777c429c071e0eeb2e09055fe3b63e4eef37b03373f73daa501441  ./framework-dual/install/state.go
 a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
 365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
+58b56f717fe04630447fae857d5f7d26734bd79187c7d9be20163fb6859af58b  ./framework/install/03-config.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
-2497581699c46f31548d9e390dad242f359f3fb49753db061fddc86a63d8aad0  ./framework/install/03-config.go
 17b2a8adaeb45d3df913ea44ecf19b1dc24a29749dfa699ae08c9a3c8f73df17  ./framework/install/04-system-init.go
 abc5adff7532385203b236564f6aa59b1755f1f3e091cb5f3b66ae1e9cffc39f  ./framework/install/state.go
-997206a1b9c0f7525a3c9e73bba1d719ba1363dcf4a46fbfd1126d159138cad5  ./lib/check-kernel-modules.go
+cf0e0f9a551560cf335782c3cf1e8301c044911eec3a302e0cacf489b6fd2e68  ./lib/check-kernel-modules.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
+b653fa4f6bfba1e8dd2310db332b2cba83432c14282e699d56a8a2619511969f  ./lib/common.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-127540ed77bcf13636c9ef6247d59768133e161f949da1a5dc0b52fb13548bdc  ./lib/common.go
 ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
 f8a1bca8b786bf90a766e78faeb3d4c8ab2bddaa07cfd2acbaa1c01f1bc1f8eb  lib/bootstrap-installer.sh
 488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
-e59161142768e53e575d1e8a200d7ea325049e7f42ae2e9d9a47e4237b6a4e91  lib/verify-guix-install.sh
+11537f49ea21ecc83299bc2b6ace77b0e12682b2b89937573e70d8a676e32997  lib/verify-guix-install.sh
 8eaa6cee4a629a24426621416a39d5629df8693d3b1f408b39da4f12756b06cf  lib/recovery-complete-install.sh
 7ba7183ec8de691428cf30aed2c550e085b79869644e4a64fd44a68c0769597f  lib/fix-iso-artifacts.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh

@@ -838,10 +838,36 @@ func GetChannelsPath() string {
 	return "/tmp/channels.scm"
 }
 
+// Pinned channel commits for the framework-dual platform.
+//
+// Both channels are pinned so that an install is reproducible and the receipt
+// written by RecordChannelCommits identifies an exact pair. The pin must stay
+// NEW ENOUGH for the target hardware's firmware to exist:
+//
+//	Framework 13 Ryzen AI 300 (Strix Point, GPU 1002:1114) needs amdgpu
+//	firmware psp_14_0_4 / gc_11_5_* / dcn_3_5_*, added to linux-firmware in
+//	mid-2024, and kernel >= 6.10 for the gfx11.5 IP blocks.
+//
+// To move the pin forward, see docs/CHANNEL_PINNING_POLICY.md.
+const (
+	// FrameworkDualGuixCommit is the pinned guix channel commit.
+	FrameworkDualGuixCommit = "df2d121208127ac22f10e0f7c2f38d6c74e106a3"
+	// FrameworkDualNonguixCommit is the pinned nonguix channel commit.
+	FrameworkDualNonguixCommit = "73baab37361b3a81f326aa3fdec78840f5acc577"
+	// FrameworkDualPinDate is when the two commits above were resolved from
+	// channel HEAD. Recorded so a reader can tell how stale the pin is.
+	FrameworkDualPinDate = "2026-08-01"
+)
+
 // SetupNonguixChannel sets up the nonguix channel for proprietary firmware and kernel
-// For framework-dual platform, uses wingolog-era pinned channels (Feb 2024 commits)
-// to ensure compatible guix+nonguix versions that properly generate initrd files.
-// CRITICAL: Do not change framework-dual to use unpinned channels - this breaks initrd generation.
+// For framework-dual platform, both channels are pinned to a known pair of commits so
+// installs stay reproducible and the receipt in RecordChannelCommits means something.
+//
+// The pin is deliberately RECENT, not historical. It was previously pinned to
+// wingolog-era commits (Feb 2024), which cannot work on Ryzen AI 300 hardware:
+// that silicon shipped ~5 months after those commits and its amdgpu firmware
+// (psp_14_0_4, gc_11_5_*, dcn_3_5_*) does not exist in a Feb 2024 linux-firmware.
+// See docs/CHANNEL_PINNING_POLICY.md before changing these commits.
 func SetupNonguixChannel(platform string) error {
 	fmt.Println("The Nonguix channel provides:")
 	fmt.Println("  - Proprietary firmware (WiFi, Bluetooth, GPU drivers)")
@@ -877,22 +903,20 @@ func SetupNonguixChannel(platform string) error {
 	fmt.Println("[OK] User consented to trust Nonguix")
 	fmt.Println()
 
-	// CRITICAL: For framework-dual, use wingolog-era pinned channels
-	// This ensures compatible guix+nonguix versions that properly generate initrd files.
-	// See docs/WINGOLOG_CHANNEL_ANALYSIS.md for why this is necessary.
+	// For framework-dual, pin both channels to a known recent pair.
+	// See docs/CHANNEL_PINNING_POLICY.md for how to move this pin forward.
 	var channelsContent string
 	if platform == "framework-dual" {
-		fmt.Println("[INFO] Using wingolog-era pinned channels for framework-dual")
-		fmt.Println("       This ensures compatible guix+nonguix versions for initrd generation")
+		fmt.Printf("[INFO] Using pinned channels for framework-dual (%s)\n", FrameworkDualPinDate)
+		fmt.Println("       Pinned for reproducibility; recent enough for Ryzen AI 300 amdgpu firmware")
 		fmt.Println()
-		// Wingolog-era channels: both guix and nonguix pinned to Feb 2024 commits
-		channelsContent = `(list
+		channelsContent = fmt.Sprintf(`(list
   (channel
     (name 'guix)
     (url "https://git.savannah.gnu.org/git/guix.git")
     (branch "master")
-    ;; Commit from 2024-02-16 23:19:48 +0100 (wingolog era)
-    (commit "91d80460296e2d5a01704d0f34fb966a45a165ae")
+    ;; Channel HEAD as resolved on %s
+    (commit "%s")
     (introduction
      (make-channel-introduction
       "9edb3f66fd807b096b48283debdcddccfea34bad"
@@ -902,13 +926,15 @@ func SetupNonguixChannel(platform string) error {
     (name 'nonguix)
     (url "https://gitlab.com/nonguix/nonguix")
     (branch "master")
-    ;; Commit from 2024-02-14 16:36:06 -0500 (wingolog era)
-    (commit "10318ef7dd53c946bae9ed63f7e0e8bb8941b6b1")
+    ;; Channel HEAD as resolved on %s
+    (commit "%s")
     (introduction
      (make-channel-introduction
       "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
       (openpgp-fingerprint
-       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))`
+       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))`,
+			FrameworkDualPinDate, FrameworkDualGuixCommit,
+			FrameworkDualPinDate, FrameworkDualNonguixCommit)
 	} else {
 		// For other platforms, use current master (unpinned)
 		channelsContent = `(cons* (channel
@@ -967,8 +993,9 @@ func SetupNonguixChannel(platform string) error {
 	fmt.Println("[OK] Nonguix channel setup complete")
 	fmt.Printf("    Channel file created: %s\n", channelsPath)
 	if platform == "framework-dual" {
-		fmt.Println("    Using wingolog-era pinned channels (Feb 2024 commits)")
-		fmt.Println("    This ensures compatible guix+nonguix versions for initrd generation")
+		fmt.Printf("    Using pinned channels (%s)\n", FrameworkDualPinDate)
+		fmt.Printf("      guix    %s\n", FrameworkDualGuixCommit)
+		fmt.Printf("      nonguix %s\n", FrameworkDualNonguixCommit)
 	}
 	fmt.Println("    Will be used by 'guix time-machine' during system init")
 	fmt.Println()

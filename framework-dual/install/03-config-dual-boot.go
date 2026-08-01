@@ -205,11 +205,20 @@ func (s *Step03ConfigDualBoot) RunClean(state *State) error {
 func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, targets string) string {
   dataFS := ""
   if state.HomePartition != "" {
+    // no-atime goes in 'flags', NOT in 'options'.
+    //
+    // 'options' is passed verbatim as mount(2)'s data argument, i.e. it may
+    // only contain filesystem-specific parameters. A VFS-level token there
+    // makes the kernel reject the mount with "ext4: Unknown parameter
+    // 'noatime'". On a non-root filesystem that is unrecoverable in place:
+    // file-system-/data fails, so the file-systems target fails, so
+    // user-processes never starts, and the machine boots with no login ttys.
+    // 'flags' takes symbols and is converted to mount flag bits instead.
     dataFS = `         (file-system
           (mount-point "/data")
           (device (file-system-label "DATA"))
           (type "ext4")
-          (options "noatime"))
+          (flags '(no-atime)))
 `
   }
 
@@ -235,22 +244,33 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
     }
   }
   
-  // Get list of built-in modules to filter (for kernel 6.6.16)
-  builtInModules := lib.GetBuiltInModulesForKernel66()
-  
-  // Generate filter predicate for Guile Scheme
-  // Creates: (lambda (module) (or (string=? module "nvme") (string=? module "xhci_pci") ...))
-  filterPredicate := ""
-  if len(builtInModules) > 0 {
-    conditions := []string{}
-    for _, mod := range builtInModules {
-      conditions = append(conditions, fmt.Sprintf(`(string=? module "%s")`, mod))
-    }
-    filterPredicate = fmt.Sprintf(`(lambda (module) (or %s))`, strings.Join(conditions, " "))
-  } else {
-    // Fallback: always false (no filtering)
-    filterPredicate = `(lambda (module) #f)`
-  }
+  // Build the initrd-modules expression.
+  //
+  // Normally this is just %base-initrd-modules. If GetBuiltInModulesToFilter
+  // ever becomes non-empty (because a kernel really does build one of these in
+  // and Guix would fail to find it), wrap it in a 'remove' instead of emitting
+  // a no-op filter -- an always-false predicate in the generated config reads
+  // like something is being filtered when nothing is.
+  initrdModules := lib.BuildInitrdModulesExpr(lib.GetBuiltInModulesToFilter())
+
+  // Kernel arguments removed from the template below, and why. These are named
+  // here rather than in the generated config so that grepping a deployed
+  // config.scm for them stays a reliable "this machine is misconfigured" check.
+  //
+  //   nomodeset  Disables kernel modesetting. Contradicts loading amdgpu and
+  //              linux-firmware at all, and leaves an unaccelerated console.
+  //   noapic     Disables the I/O APIC.
+  //   nolapic    Disables the local APIC. Together these force legacy 8259
+  //              interrupt routing, which modern AMD platforms do not reliably
+  //              provide. The internal keyboard is an i8042 "AT Translated Set
+  //              2 keyboard" on IRQ 1, so it receives no interrupts: the
+  //              greeter renders and then ignores every keystroke. nolapic
+  //              also drops the machine to a single core.
+  //   acpi=off   Already removed earlier; broke xhci_hcd USB init.
+  //
+  // All four were workarounds for a boot hang whose actual cause was amdgpu
+  // failing on firmware older than the GPU. That is fixed by the channel pin
+  // in lib/common.go, not by disabling the interrupt controller.
 
   config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
 ;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
@@ -274,25 +294,35 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  (initrd base-initrd)
  (firmware (list linux-firmware))
 
- ;; Framework 13 AMD specific initrd modules
- ;; Note: Some modules are built-in to kernel 6.6.16, not loadable modules
- ;; Including them in initrd-modules causes "kernel module not found" errors
- ;; We filter known built-in modules from base-initrd-modules as a safeguard
- ;; Known built-in modules in kernel 6.6.16 (wingolog-era):
- ;;   - nvme: NVMe SSD support (built-in for performance)
- ;;   - xhci_pci: USB 3.0 host controller (built-in for USB support)
- ;; These are filtered out even if they appear in %%base-initrd-modules
- (initrd-modules
-  (append '("amdgpu"      ; AMD GPU driver (critical for display) - loadable module
-            "usbhid"      ; USB keyboard/mouse - loadable module
-            "i2c_piix4")  ; SMBus/I2C for sensors - loadable module
-          (remove %s %%base-initrd-modules)))
+ ;; The initrd only has to get us far enough to mount the root filesystem;
+ ;; everything else is udev's job once the real system is up.
+ ;;
+ ;; %%base-initrd-modules already covers this machine: ahci, usb-storage/uas,
+ ;; and -- importantly for a laptop -- usbhid and hid-generic for keyboards
+ ;; during early boot.  We previously prepended three modules here; all three
+ ;; are removed on purpose:
+ ;;   - amdgpu:    not needed to mount root.  Loading the GPU driver from the
+ ;;                initrd also means its firmware must be in the initrd, which
+ ;;                is a second way to fail before there is any console to see
+ ;;                it on.  udev loads it fine later.
+ ;;   - usbhid:    already in %%base-initrd-modules; listing it twice is noise.
+ ;;   - i2c_piix4: SMBus for sensors.  Nothing to do with booting.
+ ;;
+ ;; NVMe note: "nvme" is deliberately absent, matching %%base-initrd-modules.
+ ;; NVMe root works because the driver is built into the kernel rather than
+ ;; loadable.  If a future kernel makes it modular, root will fail to mount and
+ ;; "nvme" must be added here -- see docs/NVME_MODULE_FIX.md.
+ (initrd-modules %s)
 
- ;; Kernel arguments - Framework 13 AMD GPU boot hang prevention
- ;; These parameters prevent boot hangs at "Loading kernel modules..."
- ;; Note: acpi=off removed - it causes USB controller (xhci_hcd) initialization failures
- ;; See docs/INSTALLATION_KNOWLEDGE.md and docs/FRAMEWORK_STARTUP_HANG_FIX.md for details
- (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
+ ;; Kernel arguments.  Append to %%default-kernel-arguments rather than
+ ;; replacing it: the default carries modprobe.blacklist=usbmouse,usbkbd, and
+ ;; upstream blacklists usbkbd because it races usbhid (bugs.gnu.org/35574).
+ ;; On a laptop, losing that blacklist is a way to lose your keyboard.
+ ;;
+ ;; Several display/interrupt workarounds that used to live here have been
+ ;; removed -- do not add them back without reading
+ ;; docs/FRAMEWORK_STARTUP_HANG_FIX.md first.
+ (kernel-arguments (append '("loglevel=3") %%default-kernel-arguments))
 
  (bootloader
   (bootloader-configuration
@@ -327,7 +357,7 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
     state.HostName,          // host-name
     state.Timezone,          // timezone
     keyboardLayoutConfig,    // keyboard-layout (conditional)
-    filterPredicate,         // filter predicate for built-in modules
+    initrdModules,           // initrd-modules expression
     bootloader,              // bootloader
     targets,                 // targets
     dataFS,                  // data filesystem conditional

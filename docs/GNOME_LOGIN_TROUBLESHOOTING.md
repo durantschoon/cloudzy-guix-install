@@ -17,38 +17,70 @@ On a Framework 13 AMD running Guix System you see:
 
 ### Root Cause
 
-This is **not** a "GDM is broken" issue. It's a **"the current mixed guix + nonguix heads don't give you working AMD firmware for this specific laptop"** issue.
+This is **not** a "GDM is broken" issue. The display manager works and the
+password is correct; the graphics stack never initializes because **the amdgpu
+firmware is older than the GPU**.
 
-The display manager works, the password is correct, but the graphics stack fails to initialize because:
-- The kernel and firmware versions from current guix/nonguix master don't match what the Framework 13 AMD hardware needs
-- The AMD GPU firmware is missing or incompatible
-- GNOME/Mutter can't start without a working GPU
+Read the firmware name in the error — it identifies the silicon:
+
+| Blob | Hardware |
+| --- | --- |
+| `psp_14_0_4_*` | Strix Point (Ryzen AI 300) |
+| `gc_11_5_*`, `dcn_3_5_*` | gfx11.5 / Radeon 880M–890M |
+
+Confirm what you actually have before choosing a fix:
+
+```bash
+lspci -nn | grep -iE 'vga|display'      # 1002:1114 = Radeon 890M, Strix Point
+cat /sys/class/dmi/id/product_name      # e.g. Laptop 13 (AMD Ryzen AI 300 Series)
+```
 
 ---
 
-## Solution: Pin to Known-Good Wingo Versions
+## Solution: move the channel pin FORWARD
 
-[Wingo's "Guix on the Framework 13 AMD" blog post](https://wingolog.org/archives/2024/02/16/guix-on-the-framework-13-amd) solves this by:
+> **Important:** this document previously told you to pin *backwards*, to
+> wingolog-era commits from 2024-02-16. **On Ryzen AI 300 that is the cause of
+> this error, not the cure.** See the correction below.
 
-1. Using the `linux` + `linux-firmware` packages from the nonguix channel (instead of `linux-libre`)
-2. Adding the right `initrd-modules` for `amdgpu`, `nvme`, `xhci_pci`, etc.
-3. **Using a known-good snapshot of guix + nonguix** instead of whatever happens to be at HEAD today
+For Ryzen AI 300 you need:
 
-You may have already done (1) and (2). The missing piece is **(3): pinning to a known-good snapshot**, rather than chasing current master for both channels.
+- **kernel >= 6.10** — where amdgpu gained gfx11.5 IP support
+- **linux-firmware from mid-2024 or later** — where `psp_14_0_4`, `gc_11_5_*` and
+  `dcn_3_5_*` were added
+
+The repo's pin is in `lib/common.go` (`FrameworkDualGuixCommit` /
+`FrameworkDualNonguixCommit`). To move it forward, follow
+[CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md).
+
+Then reconfigure through the pinned channels:
+
+```bash
+guix time-machine -C ~/channels.scm -- system reconfigure /etc/config.scm
+```
+
+### Why the old advice was wrong
+
+Wingo's post is about the **Ryzen 7040** Framework 13. Strix Point shipped in
+July 2024, about five months *after* those commits, so a Feb-2024 snapshot cannot
+contain firmware for it. Pinning backwards to fix a missing-firmware error for
+new hardware is self-defeating: it guarantees the error it was meant to remove.
+
+Corroboration from the Pop!_OS side of the same laptop, where amdgpu works:
+kernel 7.0.11, linux-firmware 20260221, and `psp_14_0_4_toc.bin` present.
+
+If you are on a **Ryzen 7040** Framework 13, the wingolog pin may still be
+appropriate — but verify it against your own `lspci` output rather than assuming.
 
 ---
 
-## High-Level Solution
+## Historical procedure (superseded — do not follow on Ryzen AI 300)
 
-**Goal:** Reproduce Wingo's working environment by pinning channel versions, and re-configuring your Framework-13 config through `guix time-machine`.
-
-**Steps:**
-
-1. Choose "Wingo versions" = "the commits of guix and nonguix as of his post date (2024-02-16)"
-2. Use git to discover those commits
-3. Write a `wingolog-channels.scm` that pins both channels to those commits
-4. Run `guix time-machine -C wingolog-channels.scm -- system reconfigure framework-13.scm`
-5. Reboot and verify that GDM/gnome-shell now gets a working graphics stack
+The rest of this document walks through discovering and applying the wingolog-era
+commits. It is retained because the *mechanics* of pinning and of
+`guix time-machine ... system reconfigure` are still correct and useful; only the
+choice of commits is wrong. Substitute a recent commit pair for the Feb-2024 ones
+throughout.
 
 ---
 

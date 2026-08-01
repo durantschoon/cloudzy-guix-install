@@ -420,78 +420,79 @@ See [GNOME_LOGIN_TROUBLESHOOTING.md](GNOME_LOGIN_TROUBLESHOOTING.md) for desktop
 
 ### AMD GPU Boot Issues
 
-**Problem:** Framework 13 AMD laptops may experience boot hangs.
+**Problem:** Framework 13 AMD laptops may appear to hang on boot, or reach the
+GDM greeter and then ignore the keyboard / loop back to the login screen.
 
-**Solution:** Installer automatically includes kernel parameters:
+**Actual cause on Ryzen AI 300:** amdgpu firmware older than the GPU. Look for:
 
-```scheme
-(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=off" "noapic" "nolapic"))
+```
+Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2
+amdgpu: Fatal error during GPU init
 ```
 
-**What these parameters do:**
+A GPU that never finishes initializing looks like a hang. Fix the channel pin,
+not the kernel arguments — see
+[CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md).
 
-- **`nomodeset`**: Disables kernel mode setting (fixes AMD GPU display issues)
-- **`acpi=off`**: Disables ACPI (prevents power management conflicts)
-- **`noapic`**: Disables APIC (prevents interrupt controller issues)
-- **`nolapic`**: Disables Local APIC (prevents local interrupt issues)
+**Kernel parameters the installer generates:**
 
-**Boot hang symptoms:**
+```scheme
+(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
+```
 
-- System hangs at "Loading kernel modules..."
-- Repeating "time with localhost and MARK" messages every 20 minutes
-- Never reaches login prompt
+> **Changed 2026-08-01.** This guide used to say the installer includes
+> `nomodeset acpi=off noapic nolapic`. It no longer does, and you should not add
+> them. `acpi=off` breaks `xhci_hcd` USB; `noapic`+`nolapic` force legacy 8259
+> interrupt routing and starve the internal i8042 keyboard, so the greeter
+> ignores every keystroke; `nomodeset` contradicts loading `amdgpu` at all. See
+> [FRAMEWORK_STARTUP_HANG_FIX.md](./FRAMEWORK_STARTUP_HANG_FIX.md).
 
 **Manual recovery:**
 
-1. At GRUB menu, press 'e' to edit
-2. Find the kernel line and add parameters:
-   ```
-   linux /boot/vmlinuz-... quiet splash nomodeset acpi=off noapic nolapic 3
-   ```
-3. Press Ctrl+X or F10 to boot
+1. At the GRUB menu, press `e`
+2. **Remove** `quiet` and `loglevel=3` so the failure is visible (and delete
+   `nomodeset`/`noapic`/`nolapic`/`acpi=off` if an older install left them there)
+3. Press Ctrl+X to boot, and read the messages
 
-### Framework 13 Specific Initrd Modules
+Nothing is written to disk; a plain reboot restores the previous arguments.
 
-**Required modules for Framework 13:**
+### Framework 13 Initrd Modules
 
 ```scheme
-(initrd-modules
- (append '("amdgpu"      ; AMD GPU driver (critical for display)
-           "xhci_pci"    ; USB 3.0 host controller
-           "usbhid"      ; USB keyboard/mouse
-           "i2c_piix4")  ; SMBus/I2C for sensors
-         %base-initrd-modules))
+(initrd-modules %base-initrd-modules)
 ```
 
-**Note:** `nvme` is **not** included because it's built-in to kernel 6.6.16 (wingolog-era). Including it causes "kernel module not found" errors during system build.
+The Guix default is what you want. It already includes `usbhid` and
+`hid-generic` for early-boot keyboards. `amdgpu`, `xhci_pci` and `i2c_piix4` were
+previously prepended and have been removed: the initrd only needs to mount root,
+and `amdgpu` there also requires its firmware in the initrd — one more way to
+fail before any console exists.
 
-**These are automatically included** by the installer.
+**Note:** `nvme` is absent because the driver is built into the kernel. If a
+future pin makes it modular, root will fail to mount and it must be added. See
+[NVME_MODULE_FIX.md](./NVME_MODULE_FIX.md).
 
-### Known-Good Channel Pinning (AMD GPU Issues)
+**This is automatically generated** by the installer.
 
-**Problem:** Framework 13 AMD laptops may experience GDM login loops with current guix/nonguix master commits.
+### Channel Pinning
 
-**Solution:** Use the included `wingolog-channels.scm` to pin to known-good channel commits.
+Framework-dual pins both `guix` and `nonguix` to an explicit commit pair for
+reproducibility. The pin is in `lib/common.go` and is applied automatically.
 
-**After completing basic installation:**
+> **Do not** follow older instructions to reconfigure with
+> `framework-dual/wingolog-channels.scm`. Those commits are from 2024-02-16,
+> which predates Ryzen AI 300 silicon and its firmware; on this hardware they
+> cause the GDM login loop rather than fixing it. That file is retained only for
+> Ryzen 7040 machines. See
+> [CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md).
+
+To reconfigure through the pinned channels the installer wrote:
 
 ```bash
-# Copy wingolog-channels.scm to your system
-# (It's included in this repository at framework-dual/wingolog-channels.scm)
-
-# Reconfigure using the pinned channels
-sudo guix time-machine -C ~/wingolog-channels.scm -- \
+sudo guix time-machine -C ~/channels.scm -- \
   system reconfigure /etc/config.scm
-
-# Reboot
 sudo reboot
 ```
-
-**What this fixes:**
-
-- AMD GPU firmware loading (amdgpu driver)
-- GDM/GNOME desktop login
-- Graphics acceleration via DRI3
 
 See [framework-dual/README.md](../framework-dual/README.md) for complete details on channel pinning.
 

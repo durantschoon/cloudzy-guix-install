@@ -1,87 +1,138 @@
 # Framework 13 Startup Hang Fix
 
+> **This document has been reversed.** It used to instruct you to add
+> `nomodeset`, `acpi=off`, `noapic` and `nolapic`. **Do not add them.** They were
+> a misdiagnosis, and each one broke something. The historical prescription is
+> kept below the fold because the reasoning is instructive, not because it should
+> be followed.
+
 ## Problem
 
-Framework 13 AMD systems installed with framework-dual hang on startup, typically at "Loading kernel modules..." with repeating "time with localhost and MARK" messages every 20 minutes.
+Framework 13 AMD systems installed with framework-dual appear to hang on startup,
+typically at "Loading kernel modules...", with repeating "time with localhost and
+MARK" messages every 20 minutes. Later variants of the same underlying fault:
+GDM renders and then ignores the keyboard, or GDM accepts the password and
+immediately returns to the login screen.
 
-## Root Cause
+## Actual root cause
 
-The installer was missing critical kernel parameters required for Framework 13 AMD GPU initialization. The documentation stated these parameters were included, but the code only had `("quiet")` instead of the full set.
+**The GPU firmware was older than the GPU.**
 
-## Solution
+The machine is a Framework Laptop 13 (AMD Ryzen AI 300), GPU `1002:1114` (Strix
+Point / Radeon 890M, gfx11.5). Framework-dual was pinned to wingolog-era channels
+from Feb 2024, which predate that silicon by ~5 months. amdgpu therefore failed:
 
-### For New Installations
-
-**Fixed in:** `framework-dual/install/03-config-dual-boot.go`
-
-The installer now automatically includes the required kernel parameters:
-
-```scheme
-(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
+```
+Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2
+amdgpu: Fatal error during GPU init
 ```
 
-**Note:** `acpi=off` was removed because it causes USB controller initialization failures. If you still experience boot hangs, you can try adding it back, but USB devices may not work.
+A GPU that never finishes initializing looks a lot like a hang. It is not one.
 
-### For Already-Installed Systems
+**Fix:** move the channel pin forward, so kernel >= 6.10 and mid-2024-or-later
+`linux-firmware` are available. See `docs/CHANNEL_PINNING_POLICY.md`.
 
-If your system is already installed and hanging on startup, you have two options:
+## Current kernel arguments
 
-#### Option 1: Temporary Fix via GRUB (Quick Recovery)
+`framework-dual/install/03-config-dual-boot.go` now generates:
 
-1. **At GRUB menu, press 'e' to edit** the boot entry
-2. **Find the kernel line** (starts with `linux /boot/vmlinuz-...`)
-3. **Add the parameters** to the end of the line:
-   ```
-   nomodeset acpi=off noapic nolapic
-   ```
-   The line should look like:
-   ```
-   linux /boot/vmlinuz-... quiet splash nomodeset acpi=off noapic nolapic
-   ```
-4. **Press Ctrl+X or F10 to boot** with these parameters
-5. **After booting successfully**, proceed to Option 2 to make the fix permanent
+```scheme
+(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
+```
 
-#### Option 2: Permanent Fix via Config (Recommended)
+Two properties matter:
 
-After booting with the temporary fix:
+- It **appends** to `%default-kernel-arguments` rather than replacing it. The
+  default carries `modprobe.blacklist=usbmouse,usbkbd`; upstream blacklists
+  `usbkbd` because it races `usbhid` (bugs.gnu.org/35574). Replacing the list
+  silently drops that, which is one more way to lose a keyboard.
+- It contains none of the four workaround arguments.
 
-1. **Edit `/etc/config.scm`**:
-   ```bash
-   sudo nano /etc/config.scm
-   ```
+A regression test in `framework-dual/install/03-config-dual-boot_test.go`
+fails the build if any of them reappear.
 
-2. **Find the `kernel-arguments` line** and update it:
-   ```scheme
-   ;; Change from:
-   (kernel-arguments '("quiet"))
-   
-   ;; To:
-   (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
-   
-   ;; Note: acpi=off removed - it causes USB controller failures
-   ;; If you still have boot hangs, you can try adding acpi=off back,
-   ;; but USB devices (keyboard/mouse) may not work
-   ```
+## Why each removed argument was harmful
 
-3. **Reconfigure the system**:
-   ```bash
-   sudo guix system reconfigure /etc/config.scm
-   ```
+| Argument | Claimed purpose | What it actually did |
+| --- | --- | --- |
+| `nomodeset` | "fixes AMD GPU display issues" | Disables kernel modesetting entirely, which contradicts loading `amdgpu` and `linux-firmware` at all. Leaves an unaccelerated console and cannot fix missing firmware. |
+| `acpi=off` | "prevents power management conflicts" | Broke `xhci_hcd` init (`probe ... failed with error -22`), killing USB. Removed earlier for this reason. |
+| `noapic` | "prevents interrupt controller issues" | Disables the I/O APIC, forcing legacy 8259 routing. |
+| `nolapic` | "prevents local interrupt issues" | Disables the local APIC. Together with `noapic` this starves the **internal keyboard** — an i8042 `AT Translated Set 2 keyboard` on IRQ 1 — of interrupts, so the greeter renders and ignores every keystroke. Also drops the machine to a single core. |
 
-4. **Reboot**:
-   ```bash
-   sudo reboot
-   ```
+The tell for the keyboard case: the firmware **F12 boot menu works fine** while
+the OS keyboard is dead. Firmware polls the embedded controller on its own path
+and never uses the APIC.
 
-The system should now boot without hanging.
+`loglevel=3` was harmless and is kept.
 
-## What These Parameters Do
+## If your installed system has the old arguments
 
-- **`nomodeset`**: Disables kernel mode setting (fixes AMD GPU display issues)
-- **`acpi=off`**: Disables ACPI (prevents power management conflicts)
-- **`noapic`**: Disables APIC (prevents interrupt controller issues)
-- **`nolapic`**: Disables Local APIC (prevents local interrupt issues)
-- **`loglevel=3`**: Reduces console verbosity (optional, for cleaner boot)
+You do not have to reinstall.
+
+### Step 1: confirm it at the GRUB menu (no disk write)
+
+1. At the Guix GRUB menu, highlight the entry and press **`e`**
+2. Find the line beginning `linux /gnu/store/...-linux-.../bzImage`
+3. Delete `nomodeset`, `noapic`, `nolapic` and `acpi=off` if present
+4. Press **Ctrl-X** to boot
+
+Nothing is written to disk; a plain reboot restores the previous arguments. If
+the keyboard works now, the diagnosis is confirmed.
+
+### Step 2: make it permanent
+
+```bash
+sudo nano /etc/config.scm
+```
+
+Replace the kernel arguments line with:
+
+```scheme
+(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
+```
+
+Then reconfigure and reboot:
+
+```bash
+sudo guix system reconfigure /etc/config.scm
+sudo reboot
+```
+
+If the GPU is still broken afterwards, the kernel arguments were never the whole
+problem — go fix the channel pin, which is the actual cause.
+
+### If you cannot get a working keyboard at all
+
+Boot the Pop!_OS side (or a live ISO) and edit the Guix config from there:
+
+```bash
+sudo mount /dev/nvme0n1p4 /mnt      # the GUIX_ROOT partition
+sudo nano /mnt/etc/config.scm
+```
+
+Then boot Guix and reconfigure.
+
+---
+
+## Historical prescription (superseded — do not follow)
+
+What follows is the advice this document used to give. It is retained so that the
+reasoning behind the 2025 changes is not lost.
+
+> The installer was believed to be missing critical kernel parameters required
+> for Framework 13 AMD GPU initialization, and the fix was to add:
+>
+> ```scheme
+> (kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
+> ```
+>
+> `acpi=off` had already been dropped from that set because it caused USB
+> controller initialization failures.
+>
+> The escalation path offered was: add all four, then drop `acpi=off`, then drop
+> `loglevel=3`, then fall back to `nomodeset` alone. Each step traded one broken
+> subsystem for another because none of them addressed the firmware mismatch.
 
 ## Boot Hang Symptoms
 
@@ -90,80 +141,70 @@ The system should now boot without hanging.
 - Never reaches login prompt
 - Ctrl+C doesn't work
 
-## Related Issues
+## Diagnosing a real hang
 
-### If System Hangs at Logo After Adding Parameters
+Do not start by adding kernel arguments. Start by finding out what actually
+failed. The arguments this document used to recommend all hid the evidence.
 
-If you added the parameters and the system hangs at the Guix logo (not reaching login), `acpi=off` may be too aggressive. Try these alternatives:
+### Step 1: remove `quiet`, don't add workarounds
 
-#### Step 1: Remove `quiet` to See What's Happening
+1. At the GRUB menu, press **`e`**
+2. Delete `quiet` and `loglevel=3` from the `linux` line so messages are visible
+3. Press **Ctrl-X** and read what scrolls past
 
-1. **At GRUB menu, press 'e' to edit**
-2. **Find the kernel line** and remove `quiet` to see boot messages:
-   ```
-   linux /boot/vmlinuz-... splash nomodeset acpi=off noapic nolapic 3
-   ```
-3. **Press Ctrl+X to boot** and watch for error messages
+Boot messages are the diagnosis. `nomodeset` and friends suppress the failing
+subsystem instead of reporting it.
 
-#### Step 2: Try Less Aggressive Parameters
+### Step 2: reach a console
 
-If it still hangs, try removing `acpi=off` (ACPI is often needed for modern hardware):
+`Alt+F2` / `Alt+F3` switches to a TTY. If the keyboard does nothing there but the
+firmware boot menu worked, suspect `noapic`/`nolapic` — see the table above.
 
-1. **At GRUB menu, press 'e' to edit**
-2. **Use this combination instead**:
-   ```
-   linux /boot/vmlinuz-... quiet nomodeset noapic nolapic
-   ```
-   (Removed `acpi=off` and `loglevel=3`)
-3. **Press Ctrl+X to boot**
+Once you have a shell:
 
-#### Step 3: Try Minimal Parameters
+```bash
+dmesg | grep -iE 'amdgpu|firmware|xhci|i8042'
+```
 
-If still hanging, try just the essential ones:
+### Step 3: match the error to a cause
 
-1. **At GRUB menu, press 'e' to edit**
-2. **Use minimal parameters**:
-   ```
-   linux /boot/vmlinuz-... quiet nomodeset
-   ```
-   (Only `nomodeset` - this is often sufficient for AMD GPU issues)
-3. **Press Ctrl+X to boot**
+| Message | Cause | Fix |
+| --- | --- | --- |
+| `Direct firmware load for amdgpu/... failed with error -2` | Channel pin is older than the GPU | `docs/CHANNEL_PINNING_POLICY.md` |
+| `xhci_hcd probe ... failed with error -22` | `acpi=off` | Remove it |
+| Greeter renders, keyboard dead | `noapic`/`nolapic` | Remove them |
+| `kernel module not found "<name>"` | A module in `initrd-modules` is built in, not loadable | `docs/NVME_MODULE_FIX.md` |
 
-#### Step 4: Check Console Output
+### Step 4: verify config fundamentals
 
-If you can access a text console (try `Alt+F2` or `Alt+F3`), check:
-- `dmesg | tail -50` - Look for errors
-- `journalctl -b` - Check system logs
-- Look for ACPI errors or hardware initialization failures
+```scheme
+(kernel linux)                   ; from nonguix
+(firmware (list linux-firmware)) ; from nonguix
+(initrd-modules %base-initrd-modules)
+```
 
-### If You Still Have Problems After Trying Alternatives
+`initrd-modules` should be the Guix default. It already contains `usbhid` and
+`hid-generic` for early-boot keyboards. Do **not** add `amdgpu` there: the initrd
+only needs to mount root, and loading the GPU driver early also requires its
+firmware in the initrd, which is one more way to fail before there is a console
+to show it. See `docs/NVME_MODULE_FIX.md`.
 
-1. **Check that initrd modules are correct**:
-   ```scheme
-   (initrd-modules
-    (append '("amdgpu"      ; AMD GPU driver
-              "usbhid"      ; USB keyboard/mouse
-              "i2c_piix4")  ; SMBus/I2C for sensors
-            %base-initrd-modules))
-   ```
+### Step 5: repair from the other OS if you cannot boot Guix
 
-2. **Verify you're using the correct kernel and firmware**:
-   ```scheme
-   (kernel linux)  ; From nonguix channel
-   (firmware (list linux-firmware))  ; From nonguix channel
-   ```
+```bash
+# From Pop!_OS, or a live ISO
+sudo mount /dev/nvme0n1p4 /mnt          # the GUIX_ROOT partition
+sudo mount /dev/nvme0n1p1 /mnt/boot/efi
+sudoedit /mnt/etc/config.scm
+```
 
-3. **Consider using wingolog-era channel pinning** if you have GDM login issues:
-   See [GNOME_LOGIN_TROUBLESHOOTING.md](./GNOME_LOGIN_TROUBLESHOOTING.md) for details.
+Fix the config there, then boot Guix and `guix system reconfigure`.
 
-4. **Try booting from Pop!_OS live ISO** and chrooting to fix the config:
-   ```bash
-   # Boot Pop!_OS live ISO
-   sudo mount /dev/nvme0n1pX /mnt  # Replace X with your Guix partition
-   sudo mount /dev/nvme0n1p1 /mnt/boot/efi
-   sudo chroot /mnt
-   # Edit /etc/config.scm with less aggressive parameters
-   ```
+> **Note:** older revisions of this document pointed at
+> [GNOME_LOGIN_TROUBLESHOOTING.md](./GNOME_LOGIN_TROUBLESHOOTING.md) and told you
+> to adopt wingolog-era channel pinning for GDM login problems. **That advice is
+> withdrawn.** On Ryzen AI 300 it is the cause of the failure, not the cure. See
+> `docs/CHANNEL_PINNING_POLICY.md`.
 
 ## USB Controller Initialization Errors
 
@@ -183,24 +224,18 @@ xhci_hcd probe of 0000:c3:00.4 failed with error -22
 - `acpi=off` completely disables ACPI, breaking USB controller setup
 - This can cause USB devices (keyboard, mouse, USB drives) to not work
 
-#### Solution: Remove `acpi=off`
+#### Solution: remove `acpi=off`, and everything like it
 
-The `acpi=off` parameter is too aggressive for Framework 13. Try these alternatives:
+`acpi=off` is too aggressive for Framework 13. The correct kernel arguments are:
 
-**Option 1: Remove `acpi=off` entirely** (Recommended)
 ```scheme
-(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
+(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
 ```
 
-**Option 2: Use less aggressive ACPI options**
-```scheme
-(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "acpi=noirq" "noapic" "nolapic"))
-```
-
-**Option 3: Minimal parameters** (if Option 1 works)
-```scheme
-(kernel-arguments '("quiet" "nomodeset"))
-```
+Do not substitute `acpi=noirq` or keep `nomodeset`/`noapic`/`nolapic` — those
+were the previously suggested "less aggressive" fallbacks and they trade one
+broken subsystem for another. If USB or the GPU still misbehaves afterwards, the
+problem is the channel pin, not the arguments.
 
 #### How to Fix
 
@@ -251,80 +286,105 @@ Only if you experience:
 
 ### How to Suppress (Optional)
 
-If the message is annoying, you can suppress it by adding to kernel arguments:
-```scheme
-(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))
-```
+`loglevel=3` already reduces console verbosity:
 
-The `quiet` and `loglevel=3` parameters will reduce console verbosity and hide non-critical messages.
+```scheme
+(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
+```
 
 ### If Input Devices Don't Work
 
-If you actually have keyboard/mouse issues:
+**First check the kernel arguments, not the initrd.** On this laptop the internal
+keyboard is an i8042 `AT Translated Set 2 keyboard` on IRQ 1 — not a USB device —
+so `usbhid` is irrelevant to it. If `noapic` or `nolapic` are present, they are
+almost certainly the cause. See the table near the top of this document.
 
-1. **Check that `usbhid` is in initrd-modules**:
-   ```scheme
-   (initrd-modules
-    (append '("amdgpu"
-              "usbhid"      ; USB keyboard/mouse - REQUIRED
-              "i2c_piix4")
-            %base-initrd-modules))
+1. **Confirm what the keyboard actually is**:
+   ```bash
+   grep -A4 'AT Translated' /proc/bus/input/devices
    ```
 
-2. **Try accessing a text console**: Press `Alt+F2` or `Alt+F3` to switch to a TTY
+2. **Check initrd modules are the Guix default**:
+   ```scheme
+   (initrd-modules %base-initrd-modules)
+   ```
+   `%base-initrd-modules` already includes `usbhid` and `hid-generic`. Listing
+   them again is noise, and adding `amdgpu` there is actively harmful.
 
-3. **Check dmesg for USB errors**:
+3. **Try accessing a text console**: Press `Alt+F2` or `Alt+F3` to switch to a TTY
+
+4. **Check dmesg for USB errors**:
    ```bash
    dmesg | grep -i usb
    dmesg | grep -i hid
    ```
 
-## ext4 "Unknown parameter 'defaults'" Error
+## ext4 "Unknown parameter" Error
 
 If you see repeated errors during boot:
+
 ```
 ext4: Unknown parameter 'defaults'
+ext4: Unknown parameter 'noatime'
 ```
 
-**This is caused by** using `defaults` as a mount option for ext4 filesystems. The `defaults` option is valid in `/etc/fstab` but ext4 doesn't recognize it as a direct parameter.
+**This is NOT harmless.** An earlier revision of this document said it was, and
+that was wrong. The mount is *rejected*, so on a non-root filesystem:
+`file-system-/data` fails, the `file-systems` target fails, `user-processes`
+never starts, and the machine boots with **no login ttys at all** — there is no
+way in to repair it.
+
+### Cause
+
+In a Guix `<file-system>` record, `flags` and `options` are not interchangeable:
+
+- **`flags`** takes symbols (`no-atime`, `no-suid`, `no-dev`, `read-only`, …) and
+  is converted to mount(2) flag bits
+- **`options`** is a string passed verbatim as mount(2)'s `data` argument, i.e.
+  **filesystem-specific parameters only**
+
+`defaults` and `noatime` are both VFS-level tokens, so ext4 rejects them as
+parameters. Guix's own `%base-file-systems` shows the split:
+`(flags '(read-only bind-mount no-atime))` versus `(options "size=50%")`.
 
 ### Solution
 
 **Fixed in:** `framework-dual/install/03-config-dual-boot.go`
 
-The installer now uses only valid ext4 options:
 ```scheme
 (file-system
   (mount-point "/data")
   (device (file-system-label "DATA"))
   (type "ext4")
-  (options "noatime"))  ; Removed "defaults" - not a valid ext4 option
+  (flags '(no-atime)))
 ```
 
 ### For Already-Installed Systems
 
-If you have this error, edit `/etc/config.scm`:
+Edit `/etc/config.scm`, change:
 
-1. Find the DATA partition filesystem entry (if you have one)
-2. Change from:
-   ```scheme
-   (options "defaults,noatime")
-   ```
-   To:
-   ```scheme
-   (options "noatime")
-   ```
-3. Reconfigure: `sudo guix system reconfigure /etc/config.scm`
-4. Reboot
+```scheme
+(options "defaults,noatime")   ; or (options "noatime")
+```
 
-**Note:** This error is harmless but annoying - it just means the `defaults` option is being ignored. The filesystem will still mount correctly.
+to:
 
-## Prevention
+```scheme
+(flags '(no-atime))
+```
 
-This fix has been applied to the installer code. Future installations will automatically include these parameters.
+then `sudo guix system reconfigure /etc/config.scm` and reboot.
+
+If the machine already boots with no ttys, repair it from Pop!_OS by mounting the
+Guix root and editing `/mnt/etc/config.scm` (see Step 5 above).
+
+This bit the repo twice — first `(options "defaults,noatime")`, then
+`(options "noatime")` — so a regression test now guards it.
 
 ## References
 
+- [CHANNEL_PINNING_POLICY.md](./CHANNEL_PINNING_POLICY.md) - the actual root cause of the "hang"
+- [NVME_MODULE_FIX.md](./NVME_MODULE_FIX.md) - initrd module policy
 - [INSTALLATION_KNOWLEDGE.md](./INSTALLATION_KNOWLEDGE.md) - Framework 13 AMD GPU Boot Issues section
 - [GUIDE_DUAL_BOOT.md](./GUIDE_DUAL_BOOT.md) - AMD GPU Boot Issues section
-- [GNOME_LOGIN_TROUBLESHOOTING.md](./GNOME_LOGIN_TROUBLESHOOTING.md) - For GDM login issues after successful boot
+- [GNOME_LOGIN_TROUBLESHOOTING.md](./GNOME_LOGIN_TROUBLESHOOTING.md) - GDM login issues
