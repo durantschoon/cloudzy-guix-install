@@ -217,42 +217,55 @@ If Pop!_OS doesn't appear in GRUB, you can manually add it or use `update-grub` 
 - Uses NVMe SSD (typically `/dev/nvme0n1`)
 - Requires UEFI boot (not legacy BIOS)
 - WiFi/Bluetooth firmware needed (add via `postinstall/customize` tool after first boot)
-- **AMD GPU boot issues**: Scripts automatically include `nomodeset acpi=off noapic nolapic` kernel parameters to prevent boot hangs
+- **AMD GPU**: needs a channel pin newer than the GPU — see below. The installer
+  generates `(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))`
+  and no longer adds `nomodeset`/`acpi=off`/`noapic`/`nolapic`
 
-## Framework 13 AMD: Known-Good Channel Pinning
+## Framework 13 AMD: Channel Pinning
 
-**Problem:** Framework 13 AMD laptops may experience GDM login loops or AMD GPU firmware failures with current guix/nonguix master commits. Symptoms include:
+**Problem:** Framework 13 AMD laptops may experience GDM login loops or AMD GPU firmware failures. Symptoms include:
 
 - TTY login works, but GDM immediately drops you back to login after entering password
+- The greeter renders but the keyboard does nothing (see the kernel-argument note below)
 - `dmesg` shows: `Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2`
 - GNOME sessions never register and are immediately removed
 
-**Solution:** Use the included `wingolog-channels.scm` to pin to known-good channel commits from [Wingo's Framework 13 AMD guide](https://wingolog.org/archives/2024/02/16/guix-on-the-framework-13-amd) (2024-02-16).
+**Cause:** the amdgpu firmware is older than the GPU.
 
-### Using Wingo-Era Channel Pinning
+`psp_14_0_4` is the Strix Point PSP. On a **Ryzen AI 300** machine that firmware,
+plus `gc_11_5_*` and `dcn_3_5_*`, entered `linux-firmware` in mid-2024, and
+gfx11.5 support entered Linux 6.10. Anything older cannot drive this GPU.
 
-After completing the basic installation, if you experience the AMD GPU issues described above:
+**Solution:** the installer pins both channels to a recent commit pair
+(`FrameworkDualGuixCommit` / `FrameworkDualNonguixCommit` in `lib/common.go`) and
+writes them to `~/channels.scm`. To reconfigure through them:
 
 ```bash
-# After booting into your installed Guix system (via TTY login)
-# Copy wingolog-channels.scm to your system if not already present
-# (It's included in this repository at framework-dual/wingolog-channels.scm)
-
-# Reconfigure using the pinned channels
-sudo guix time-machine -C ~/wingolog-channels.scm -- \
+sudo guix time-machine -C ~/channels.scm -- \
   system reconfigure /etc/config.scm
-
-# Reboot
 sudo reboot
 ```
 
-The `wingolog-channels.scm` file pins both guix and nonguix channels to commits from February 2024 that are known to work with Framework 13 AMD hardware.
+> ### Do not use `wingolog-channels.scm` on Ryzen AI 300
+>
+> Earlier revisions of this README told you to reconfigure with
+> `framework-dual/wingolog-channels.scm`, which pins to
+> [Wingo's Framework 13 AMD guide](https://wingolog.org/archives/2024/02/16/guix-on-the-framework-13-amd)
+> commits from 2024-02-16.
+>
+> **That advice is withdrawn.** Wingo's post is about the earlier **Ryzen 7040**
+> Framework 13. Strix Point shipped in July 2024, five months after those
+> commits, so pinning to them guarantees the exact `psp_14_0_4` failure above
+> rather than fixing it. The file is retained for Ryzen 7040 machines only.
+>
+> Check which machine you have before choosing:
+>
+> ```bash
+> cat /sys/class/dmi/id/product_name    # Laptop 13 (AMD Ryzen AI 300 Series)?
+> lspci -nn | grep -iE 'vga|display'    # 1002:1114 = Radeon 890M, Strix Point
+> ```
 
-**What this fixes:**
-- AMD GPU firmware loading (amdgpu driver)
-- GDM/GNOME desktop login
-- Graphics acceleration via DRI3
-
-**After the fix works**, you can optionally experiment with newer channel commits by editing the commit hashes in `wingolog-channels.scm` and re-running the `guix time-machine` command.
-
-See [docs/GNOME_LOGIN_TROUBLESHOOTING.md](../docs/GNOME_LOGIN_TROUBLESHOOTING.md) for detailed troubleshooting steps and background.
+See [docs/CHANNEL_PINNING_POLICY.md](../docs/CHANNEL_PINNING_POLICY.md) for how to
+move the pin forward, and
+[docs/GNOME_LOGIN_TROUBLESHOOTING.md](../docs/GNOME_LOGIN_TROUBLESHOOTING.md) for
+detailed troubleshooting.

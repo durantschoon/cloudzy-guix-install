@@ -248,13 +248,82 @@ func TestGeneratedConfigContainsInitrd(t *testing.T) {
 		t.Error("Generated config missing '(firmware (list linux-firmware))' field")
 	}
 
-	// Verify kernel arguments
-	// Should contain nomodeset, noapic, and nolapic to prevent boot hangs
-	expectedArgs := `(kernel-arguments '("quiet" "loglevel=3" "nomodeset" "noapic" "nolapic"))`
+	// Verify kernel arguments.
+	//
+	// This assertion used to require nomodeset/noapic/nolapic. It is inverted
+	// on purpose: those arguments broke the machine they were meant to fix.
+	// noapic+nolapic force legacy 8259 interrupt routing, which starves the
+	// i8042 internal keyboard of interrupts -- the greeter renders and then
+	// ignores every keystroke. nomodeset contradicts loading amdgpu at all.
+	expectedArgs := `(kernel-arguments (append '("loglevel=3") %default-kernel-arguments))`
 	if !strings.Contains(config, expectedArgs) {
 		t.Errorf("Generated config missing expected kernel arguments.\nExpected: %s\nGot: %s", expectedArgs, config)
 	}
-	if !strings.Contains(config, "nomodeset") {
-		t.Error("Generated config MUST contain 'nomodeset'")
+
+	for _, banned := range []string{"nomodeset", "noapic", "nolapic", "acpi=off"} {
+		if strings.Contains(config, banned) {
+			t.Errorf("Generated config MUST NOT contain %q: it breaks the internal "+
+				"keyboard and/or the GPU on Framework 13 AMD. See "+
+				"docs/FRAMEWORK_STARTUP_HANG_FIX.md", banned)
+		}
+	}
+
+	// kernel-arguments must APPEND to %default-kernel-arguments, never replace
+	// it: the default carries modprobe.blacklist=usbmouse,usbkbd and usbkbd
+	// races usbhid (bugs.gnu.org/35574).
+	if !strings.Contains(config, "%default-kernel-arguments") {
+		t.Errorf("Generated config must build on %%default-kernel-arguments, not replace it")
+	}
+}
+
+// TestGenerateMinimalConfig_InitrdModules guards the initrd module list.
+func TestGenerateMinimalConfig_InitrdModules(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	if !strings.Contains(config, "(initrd-modules %base-initrd-modules)") {
+		t.Errorf("Generated config should use the Guix default initrd modules.\nGot: %s", config)
+	}
+
+	// amdgpu in the initrd means its firmware must also be in the initrd, which
+	// is an extra way to fail before any console exists. udev loads it later.
+	if strings.Contains(config, `"amdgpu"`) {
+		t.Error("Generated config MUST NOT put amdgpu in initrd-modules")
+	}
+
+	// A no-op filter reads like something is being filtered when nothing is.
+	if strings.Contains(config, "(lambda (module) #f)") {
+		t.Error("Generated config should not emit an always-false module filter")
+	}
+}
+
+// TestGenerateMinimalConfig_DataFilesystemFlags guards against a mount option
+// that has bricked this platform twice. no-atime is a VFS-level flag; putting
+// it in 'options' makes ext4 reject the mount, which fails the file-systems
+// target, which means user-processes never starts and there are no login ttys.
+func TestGenerateMinimalConfig_DataFilesystemFlags(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName:      "test-host",
+		Timezone:      "America/New_York",
+		UserName:      "testuser",
+		FullName:      "Test User",
+		HomePartition: "/dev/nvme0n1p5",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	if !strings.Contains(config, `(flags '(no-atime))`) {
+		t.Errorf("DATA filesystem must use (flags '(no-atime)).\nGot: %s", config)
+	}
+	if strings.Contains(config, `(options "noatime")`) || strings.Contains(config, `(options "defaults`) {
+		t.Error("DATA filesystem must not pass VFS mount flags via 'options'")
 	}
 }

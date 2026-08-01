@@ -29,13 +29,14 @@ This checklist tracks remaining work for the cloudzy-guix-install project.
 ## ✅ Latest Completed Items
 
 **Most Recent:**
-1. ✅ **Log Serving Tool (2026-01-01)**: Created `tools/serve-logs.scm` to easily gather logs and serve them via HTTP for remote debugging. Added unit tests in `tools/test-serve-logs.scm`.
-2. ✅ **Build Failure Diagnostics (2026-01-01)**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
-3. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
-4. ✅ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored critical AMD GPU kernel arguments (`nomodeset`, `noapic`, `nolapic`) in `framework-dual/install/03-config-dual-boot.go` which were accidentally reverted during a refactor.
+1. ✅ **Framework-dual Repin + Kernel Arg Reversal (2026-08-01)**: Identified the laptop as **Ryzen AI 300** (Strix Point, GPU `1002:1114`) and the wingolog-era Feb-2024 channel pin as the *cause* of the amdgpu firmware failure it was meant to fix — that silicon shipped ~5 months after those commits. Repinned guix/nonguix to recent commits (`lib/common.go`), removed `nomodeset`/`noapic`/`nolapic` (they starved the i8042 internal keyboard of interrupts), fixed `(options "noatime")` → `(flags '(no-atime))`, and dropped the no-op initrd module filter. Regression tests added for all four.
+2. ✅ **Log Serving Tool (2026-01-01)**: Created `tools/serve-logs.scm` to easily gather logs and serve them via HTTP for remote debugging. Added unit tests in `tools/test-serve-logs.scm`.
+3. ✅ **Build Failure Diagnostics (2026-01-01)**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
+4. ✅ **Cloudzy Low-Mem Optimization (2026-01-01)**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
 5. ✅ **Cloudzy "No Space Left" Fix (2025-12-31)**: Fixed "No space left on device" error during Guix installation on Cloudzy. Root cause: Recovery script reused stale `cow-store` pointing to RAM. Fix: Auto-mount `/mnt` in recovery and force restart `cow-store` to bind to disk.
-6. ✅ **Recovery Script Improvements (2026-01-05)**: Enhanced `lib/recovery-complete-install.sh` to capture ephemeral errors into a log file replay them at exit (preventing scroll-past). Also added auto-skip for password prompt if already set.
-7. ✅ **SSL/Time Fix for ISOs (2026-01-05)**: Diagnosed that Guix 1.4.0 ISO clock (2025) causes SSL failures in 2026. Added `curl -k` patch to bootstrap script and documented `date 0105xxxx2026` fix for users. Hardcoded fallback in docs.
+
+**Superseded:**
+- ❌ **Framework-dual Kernel Args Restore (2025-12-31)**: Restored `nomodeset`, `noapic`, `nolapic` after a refactor dropped them. **Reversed on 2026-08-01** — the refactor had been closer to correct. Those arguments were a misdiagnosis, not a hardware workaround. See item 1 above.
 
 **See [archive/CHECKLIST_COMPLETED.md](archive/CHECKLIST_COMPLETED.md) for full history.**
 
@@ -121,17 +122,33 @@ See [docs/GUILE_CONVERSION.md](docs/GUILE_CONVERSION.md) for comprehensive plan.
   - TTY login works perfectly
   - GDM accepts password but drops back to login because GNOME session fails to start
   - `dmesg` shows: `Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2`
-  - Issue: Current guix/nonguix master commits don't provide working AMD firmware for Framework 13 AMD
-- ✅ **FIX IMPLEMENTED**: Wingo-era channel pinning
-  - Created `wingolog-channels.scm` files for framework-dual and framework platforms
-  - Pins guix and nonguix to known-good commits from 2024-02-16 (Wingo's blog post)
+  - ~~Issue: Current guix/nonguix master commits don't provide working AMD firmware for Framework 13 AMD~~
+  - **Corrected 2026-08-01**: the diagnosis was backwards. `psp_14_0_4` is the
+    **Strix Point** PSP. This laptop is a Framework 13 **Ryzen AI 300**
+    (`1002:1114`, gfx11.5), which shipped July 2024. Its firmware entered
+    linux-firmware mid-2024 and gfx11.5 entered Linux 6.10. Recent master has
+    the firmware; it was the *old* pin that lacked it.
+- ❌ **FIX WAS WRONG**: Wingo-era channel pinning (2024-02-16)
   - Guix commit: `91d80460296e2d5a01704d0f34fb966a45a165ae`
   - NonGuix commit: `10318ef7dd53c946bae9ed63f7e0e8bb8941b6b1`
-  - Updated READMEs with usage instructions
-  - Updated docs/GNOME_LOGIN_TROUBLESHOOTING.md with complete root cause analysis
-- 🧪 **IN PROGRESS**: Testing Wingo channel pinning on Framework 13 AMD
-  - Running: `sudo guix time-machine -C ~/wingolog-channels.scm -- system reconfigure /etc/config.scm`
-  - Expected: amdgpu firmware loads correctly, GDM/GNOME login works
+  - Those commits predate the hardware by ~5 months, so the pin **guaranteed**
+    the `psp_14_0_4_toc.bin ... error -2` failure it was adopted to fix.
+    Pinning backwards cannot supply firmware for hardware that did not exist.
+  - Wingo's post is about the earlier **Ryzen 7040** Framework 13. The pin was
+    valid there and was transferred without re-validating against this machine.
+  - `framework-dual/wingolog-channels.scm` is retained for Ryzen 7040 only, with
+    a warning header.
+- ✅ **REPINNED (2026-08-01)**: recent commits, still pinned for reproducibility
+  - Constants `FrameworkDualGuixCommit` / `FrameworkDualNonguixCommit` /
+    `FrameworkDualPinDate` in `lib/common.go`
+  - guix `df2d121208127ac22f10e0f7c2f38d6c74e106a3` (confirmed identical on
+    Savannah and Codeberg), nonguix `73baab37361b3a81f326aa3fdec78840f5acc577`
+  - At that pin `(kernel linux)` = `linux-7.1`, `linux-lts` = `linux-6.18`;
+    both comfortably exceed the >= 6.10 requirement
+  - Policy rewritten in `docs/CHANNEL_PINNING_POLICY.md`: pinning is for
+    reproducibility, and the pin must always be **newer** than the hardware
+- ⏳ **NOT YET TESTED ON HARDWARE**: needs a reinstall or reconfigure to confirm
+  amdgpu binds and GDM accepts input
   - ✅ **ISO artifacts cleanup complete** → [See archive](archive/CHECKLIST_COMPLETED.md#iso-artifacts-cleanup-implementation-2025-11-20)
     - **Problem**: When copying `/var/guix` from ISO using rsync/cp, ISO's filesystem structure was copied
     - **Solution**: Added `CleanupISOArtifacts()` function to fix filesystem invariants after ISO copy

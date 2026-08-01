@@ -1,0 +1,198 @@
+PURPOSE: framework-dual/install/03-config-dual-boot.go
+=====================================================
+
+Generates /mnt/etc/config.scm for a Framework 13 AMD dual-booting with Pop!_OS
+on a shared EFI partition.
+
+This file exists because the generated Guile config contains several settings
+whose justification is not visible from the code, and at least three of them
+have been "fixed" in the wrong direction at least once. Read this before
+changing any of them.
+
+TARGET HARDWARE
+---------------
+Framework Laptop 13 (AMD Ryzen AI 300 Series) -- Strix Point.
+
+  GPU              1002:1114  Radeon 890M, gfx11.5
+  Root disk        NVMe       /dev/nvme0n1
+  Internal keyboard  i8042    "AT Translated Set 2 keyboard", IRQ 1
+  Touchpad         i2c-hid    PIXA3854
+
+The keyboard being i8042 rather than USB is load-bearing; see KERNEL ARGUMENTS.
+
+Verify with:
+  cat /sys/class/dmi/id/product_name
+  lspci -nn | grep -iE 'vga|display'
+  grep -A4 'AT Translated' /proc/bus/input/devices
+
+
+generateMinimalConfig()
+-----------------------
+
+dataFS -- (flags '(no-atime)), NOT (options "noatime")
+......................................................
+Only emitted when state.HomePartition is set.
+
+In a Guix <file-system> record, flags and options are not interchangeable:
+
+  flags    list of symbols (no-atime, no-suid, no-dev, read-only), converted to
+           mount(2) flag bits by mount-flags->bit-mask
+  options  a string passed verbatim as mount(2)'s data argument, i.e.
+           FILESYSTEM-SPECIFIC PARAMETERS ONLY
+
+Putting a VFS-level token in options makes the kernel reject the mount:
+"ext4: Unknown parameter 'noatime'". On /data -- a non-root filesystem -- that
+is not cosmetic. file-system-/data fails, the file-systems target fails,
+user-processes never starts, and the machine boots with NO LOGIN TTYS AT ALL.
+There is then no way in to repair it except mounting the disk from Pop!_OS.
+
+This has been wrong twice: first (options "defaults,noatime"), then
+(options "noatime"). Guix's own %base-file-systems shows the split:
+(flags '(read-only bind-mount no-atime)) versus (options "size=50%").
+
+Guarded by TestGenerateMinimalConfig_DataFilesystemFlags.
+
+
+keyboardLayoutConfig
+....................
+Optional. Emitted only when the user chose a layout in an earlier step. The
+"us:ctrl:swapcaps" form exists because Emacs users want Caps Lock as Control,
+and remapping at the Guix level survives reconfigures.
+
+
+initrdModules -- %base-initrd-modules, unmodified
+.................................................
+The initrd only has to get far enough to mount root. udev handles everything
+else once the real system is up.
+
+Three modules used to be prepended here. All three are gone on purpose:
+
+  amdgpu      Not needed to mount root. Loading the GPU driver from the initrd
+              also requires its firmware in the initrd, which is a second way
+              to fail BEFORE there is any console to display the failure on.
+  usbhid      Already in %base-initrd-modules, next to hid-generic. Listing it
+              twice is noise. It is also irrelevant to this laptop's internal
+              keyboard, which is i8042, not USB.
+  i2c_piix4   SMBus for sensors. Nothing to do with booting.
+
+A filter -- (remove (lambda (module) (or (string=? module "nvme") ...)))
+-- also used to wrap %base-initrd-modules, on the theory that nvme and
+xhci_pci are built into kernel 6.6.16 and would raise "kernel module not
+found". It was a no-op: neither name appears in %base-initrd-modules. See
+default-initrd-modules in gnu/system/linux-initrd.scm, which lists ahci,
+usb-storage, uas, usbhid, hid-generic, hid-apple, mmc_block, dm-crypt, xts,
+serpent_generic, wp512, nls_iso8859-1, pata_acpi, pata_atiixp, isci, and the
+virtio set. Nothing else.
+
+Worse than useless: hardcoding "these are built in" is a statement about ONE
+pinned kernel. Under a newer pin it would eventually strip a module the kernel
+genuinely needs, and fail in the direction that does not boot.
+
+NVMe: "nvme" is deliberately absent, matching the Guix default. NVMe root works
+because the driver is built into the kernel rather than loadable. If a future
+pin makes it modular, root will fail to mount and "nvme" must be added. Check
+with:
+  find /gnu/store/<hash>-linux-<version>/lib/modules -name 'nvme.ko*'
+
+The filtering MECHANISM is kept in lib/check-kernel-modules.go rather than
+deleted, because it is the right shape for a real fix -- but it must be driven
+by FindKernelPackageForModules + CheckKernelModulesAvailable inspecting the
+actual built kernel, never by a hardcoded list.
+
+Guarded by TestGenerateMinimalConfig_InitrdModules.
+
+
+kernel-arguments -- append, and none of the old workarounds
+...........................................................
+  (kernel-arguments (append '("loglevel=3") %default-kernel-arguments))
+
+Two independent requirements.
+
+1. APPEND, never replace.
+   %default-kernel-arguments is not just "quiet". It is:
+     (list "modprobe.blacklist=usbmouse,usbkbd" "quiet")
+   Upstream blacklists usbkbd because it races usbhid
+   (bugs.gnu.org/35574). Replacing the list silently drops that blacklist --
+   on a laptop, a way to lose your keyboard, in a config whose whole problem
+   history is losing the keyboard.
+
+2. NEVER add nomodeset, noapic, nolapic or acpi=off.
+   All four were present at various points, added to suppress a boot hang.
+
+   nomodeset  Disables kernel modesetting. Directly contradicts (kernel linux)
+              + (firmware (list linux-firmware)) + amdgpu. Cannot fix missing
+              firmware; only guarantees an unaccelerated console.
+   acpi=off   Broke xhci_hcd init ("probe of 0000:c3:00.4 failed with error
+              -22"), killing USB. Removed earlier for this reason.
+   noapic     Disables the I/O APIC.
+   nolapic    Disables the local APIC. Together these force legacy 8259
+              interrupt routing, which modern AMD platforms do not reliably
+              provide. The internal keyboard is i8042 on IRQ 1, so it receives
+              no interrupts: GDM renders and then ignores every keystroke.
+              nolapic additionally drops the machine to a single core.
+
+   The tell for the keyboard case: the firmware F12 boot menu works fine while
+   the OS keyboard is dead. Firmware polls the EC on its own path and never
+   touches the APIC.
+
+   The hang these were treating was amdgpu failing on firmware older than the
+   GPU -- a channel pinning problem, fixed in lib/common.go. Every one of these
+   arguments was treating a firmware problem with an interrupt-controller
+   sledgehammer.
+
+   Guarded by TestGeneratedConfigContainsInitrd, which fails if any of the four
+   strings reappears anywhere in the generated config. Note this is why the
+   generated config's comments do NOT name them: grepping a deployed
+   config.scm for "nolapic" should stay a reliable "this machine is
+   misconfigured" check. The full explanation lives in the Go source comment
+   above the template instead.
+
+loglevel=3 was in the old set, is harmless, and is kept.
+
+
+kernel / firmware / initrd
+..........................
+  (kernel linux)                   nonguix, currently 7.1 at the pinned commit
+  (initrd base-initrd)
+  (firmware (list linux-firmware)) nonguix
+
+linux-libre will not drive this GPU: amdgpu needs redistributable firmware
+blobs. That is the entire reason framework-dual uses nonguix at all, and why
+this platform is separate from cloudzy, which is free-software-only.
+
+(kernel linux) resolves to whatever nonguix calls latest at the pinned commit.
+Because the channel is pinned this does not drift between installs.
+(kernel linux-lts) is the conservative alternative if a mainline release
+regresses on this hardware -- see docs/CHANNEL_PINNING_POLICY.md.
+
+
+bootloader
+..........
+GRUB EFI into the EFI partition shared with Pop!_OS. Pop!_OS uses systemd-boot
+in \EFI\systemd\, Guix installs to \EFI\Guix\; they coexist because they are
+separate directories on one ESP and separate NVRAM entries. timeout 5 so the
+generation menu is reachable when a reconfigure breaks the system.
+
+
+file-systems
+............
+Mounted by LABEL (GUIX_ROOT, EFI, DATA), never by device path. Device
+enumeration order is not stable, and on a dual-boot disk the numbering is
+whatever the other OS's installer left behind.
+
+
+users / packages / services
+...........................
+Deliberately minimal: %base-packages and %base-services, one wheel/netdev
+user, no desktop and no SSH. Everything else is added post-install with
+guix-customize. Rationale: a minimal config that boots is debuggable; a
+config that fails to boot with GNOME in it is not.
+
+
+RELATED
+-------
+docs/CHANNEL_PINNING_POLICY.md      why the pin must be newer than the hardware
+docs/FRAMEWORK_STARTUP_HANG_FIX.md  the kernel arguments, in full
+docs/NVME_MODULE_FIX.md             the initrd module policy
+lib/common.go                       SetupNonguixChannel, pinned commits
+lib/check-kernel-modules.go         BuildInitrdModulesExpr, module inspection

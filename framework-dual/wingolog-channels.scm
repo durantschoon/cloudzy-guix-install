@@ -1,11 +1,30 @@
 ;; wingolog-channels.scm
 ;; Channels pinned to the same era as Wingo's Framework 13 AMD writeup (2024-02-16).
 ;;
-;; This provides a known-good combination of kernel, firmware, and AMD GPU support
-;; for Framework 13 AMD laptops, avoiding the firmware loading failures seen with
-;; newer guix/nonguix commits.
+;; !! DO NOT USE THIS ON A RYZEN AI 300 MACHINE !!
 ;;
-;; Usage:
+;; Wingo's post is about the Framework 13 with a **Ryzen 7040** APU.  On that
+;; machine this pin is a reasonable known-good snapshot.
+;;
+;; On a Framework 13 **Ryzen AI 300** (Strix Point, GPU 1002:1114) it is
+;; actively harmful.  That silicon shipped in July 2024, ~5 months after these
+;; commits, and its amdgpu firmware -- psp_14_0_4, gc_11_5_*, dcn_3_5_* -- does
+;; not exist in a Feb 2024 linux-firmware.  Reconfiguring through this file
+;; produces exactly the failure it is reputed to fix:
+;;
+;;   Direct firmware load for amdgpu/psp_14_0_4_toc.bin failed with error -2
+;;   amdgpu: Fatal error during GPU init
+;;
+;; Check which machine you have before using this:
+;;
+;;   cat /sys/class/dmi/id/product_name
+;;   lspci -nn | grep -iE 'vga|display'
+;;
+;; The framework-dual installer no longer uses this file.  It pins to a recent
+;; commit pair instead -- see FrameworkDualGuixCommit in lib/common.go and
+;; docs/CHANNEL_PINNING_POLICY.md.  This file is kept only for Ryzen 7040.
+;;
+;; Usage (Ryzen 7040 only):
 ;;   sudo guix time-machine -C wingolog-channels.scm -- \
 ;;     system reconfigure /path/to/your/config.scm
 ;;
