@@ -381,6 +381,25 @@ cd ~/guix-customize
   deliberate omissions (no `initrd-modules`, root label must stay
   `Guix_image`, swap as a shepherd service rather than `swap-devices`)
 - ⏳ Not yet booted — untested in QEMU and on OCI
+- 🚩 **Blocked: the image will not build locally.** Three attempts, identical
+  failure, and it is NOT in `oracle-image.scm` — the config evaluates fine and
+  the build gets as far as populating the image's root:
+
+  ```
+  gnu/build/image.scm:265   register-closure "tmp-root" "system"
+  guix/store/database.scm:102  call-with-database "tmp-root/var/guix/db/db.sqlite"
+  sqlite3.scm:166: sqlite-error (sqlite-exec 5 "database is locked")
+  ```
+
+  Ruled out: concurrent QEMU disk I/O (failed again after that VM exited), a
+  running `guix gc` (none), and host store db contention (`/var/guix/db/db.sqlite`
+  idle). Attempts 1–2 copied all 350 store items first; attempt 3 threw almost
+  immediately, so it is not a timeout under load.
+
+  Next things to try: `--cores=1 --max-jobs=1`; `guix pull` (this Guix is 134
+  days old and this smells like a fixed upstream bug); check whether
+  `guix-daemon --discover=yes` is implicated; search guix-devel for
+  "register-closure database is locked".
 - ⏳ Upload / import / launch commands drafted in `oracle/README.md` but unrun
 - ⏳ Open question: boot volume may appear as `/dev/sda` rather than
   `/dev/vda`, which would break the first `guix system reconfigure`
