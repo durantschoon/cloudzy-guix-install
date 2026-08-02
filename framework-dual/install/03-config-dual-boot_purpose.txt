@@ -127,18 +127,26 @@ Two independent requirements.
    noapic     Disables the I/O APIC.
    nolapic    Disables the local APIC. Together these force legacy 8259
               interrupt routing, which modern AMD platforms do not reliably
-              provide. The internal keyboard is i8042 on IRQ 1, so it receives
-              no interrupts: GDM renders and then ignores every keystroke.
-              nolapic additionally drops the machine to a single core.
+              provide. The internal keyboard is i8042 on IRQ 1, so it would
+              receive no interrupts. nolapic additionally drops the machine to
+              a single core.
 
-   The tell for the keyboard case: the firmware F12 boot menu works fine while
-   the OS keyboard is dead. Firmware polls the EC on its own path and never
-   touches the APIC.
+   DO NOT OVER-ATTRIBUTE. When this laptop was actually observed with a dead
+   console keyboard on 2026-08-01, the deployed GRUB entry was inspected and
+   its kernel line carried only "quiet". None of these arguments had ever
+   reached the machine. They are a latent defect in this generator, worth
+   removing on their own merits, but they explained nothing that was observed.
 
-   The hang these were treating was amdgpu failing on firmware older than the
-   GPU -- a channel pinning problem, fixed in lib/common.go. Every one of these
-   arguments was treating a firmware problem with an interrupt-controller
-   sledgehammer.
+   The real cause was the channel pin: linux-6.6.16 and its firmware predate
+   this laptop. Repinning forward to linux-7.1.5 fixed the keyboard, WiFi,
+   Bluetooth and amdgpu together -- verified on hardware 2026-08-02. Every one
+   of these arguments was treating a firmware problem with an
+   interrupt-controller sledgehammer.
+
+   The generalizable lesson: several unrelated-looking hardware failures on a
+   single boot almost always share one cause underneath -- a kernel and
+   firmware set older than the machine -- rather than being several independent
+   problems each deserving its own kernel argument.
 
    Guarded by TestGeneratedConfigContainsInitrd, which fails if any of the four
    strings reappears anywhere in the generated config. Note this is why the
@@ -152,9 +160,16 @@ loglevel=3 was in the old set, is harmless, and is kept.
 
 kernel / firmware / initrd
 ..........................
-  (kernel linux)                   nonguix, currently 7.1 at the pinned commit
-  (initrd base-initrd)
-  (firmware (list linux-firmware)) nonguix
+  (kernel linux)                   nonguix, linux-7.1.5 at the pinned commit
+  (initrd microcode-initrd)        nonguix, from (nongnu system linux-initrd)
+  (firmware (list linux-firmware)) nonguix, linux-firmware-20260622
+
+microcode-initrd rather than base-initrd: it wraps base-initrd to prepend the
+CPU microcode blob, so the AMD microcode update is applied before the kernel
+proper starts. The module it lives in was already imported by this config while
+going unused, which is what flagged the discrepancy. It is also what the
+previously deployed system on this laptop used, so keeping it means the repo
+reproduces the configuration that was verified on hardware.
 
 linux-libre will not drive this GPU: amdgpu needs redistributable firmware
 blobs. That is the entire reason framework-dual uses nonguix at all, and why
@@ -183,10 +198,60 @@ whatever the other OS's installer left behind.
 
 users / packages / services
 ...........................
-Deliberately minimal: %base-packages and %base-services, one wheel/netdev
-user, no desktop and no SSH. Everything else is added post-install with
-guix-customize. Rationale: a minimal config that boots is debuggable; a
-config that fails to boot with GNOME in it is not.
+Deliberately minimal: %base-packages, one wheel/netdev user, no desktop and no
+SSH. Everything else is added post-install with guix-customize. Rationale: a
+minimal config that boots is debuggable; a config that fails to boot with GNOME
+in it is not.
+
+Networking is the one deliberate exception to "minimal".
+
+  (services (append (list (service network-manager-service-type)
+                          (service wpa-supplicant-service-type)
+                          (service dbus-root-service-type)
+                          (service polkit-service-type)
+                          (service ntp-service-type))
+                    %base-services))
+
+%base-services provides loopback and nothing else. This laptop's ONLY network
+interface is the MediaTek MT7925 wireless card (14c3:0717, driver mt7925e);
+Framework 13 has no built-in ethernet, it uses expansion cards. So a system
+installed with bare %base-services cannot reach the network at all, and
+therefore cannot guix pull to repair itself -- a very expensive state to land
+in on a machine whose keyboard is also suspect.
+
+This is not hypothetical. The previously installed system ran linux-6.6.16,
+which predates mt7925e (added in Linux 6.7). Verified directly:
+
+  find /mnt/guixroot/gnu/store/*-linux-6.6.16/lib/modules -name 'mt79*'
+  (no output)
+
+That kernel does ship mt76, mt76-connac-lib and mt7601u, which makes the
+absence easy to misread as "mediatek support is present". The same chip is the
+Bluetooth radio, so the console's "Bluetooth: hci0: Failed to send wmt func
+ctrl (-110)" has the same cause. amdgpu, WiFi and Bluetooth all failing on one
+boot was ONE root cause -- the stale channel pin -- not three.
+
+dbus and polkit are prerequisites, not extras. network-manager-service-type
+declares service-extensions onto dbus-root-service-type and
+polkit-service-type; Guix aborts the build with "no target of type ..." if
+either is absent, and %base-services instantiates neither. Guix's own
+%desktop-services pairs wpa-supplicant with NetworkManager, annotated in
+gnu/services/desktop.scm as ";needed by NetworkManager".
+
+ntp is included because clock skew breaks TLS, which breaks guix pull.
+
+APPEND to %base-services, never replace: it carries login, mingetty on tty1-6
+and the system log. Replacing it yields a system with no way to log in.
+
+nmcli/nmtui reach PATH automatically -- the service extends
+profile-service-type -- so no (packages ...) entry is needed. After first boot,
+run nmtui on the console.
+
+Guarded by TestGenerateMinimalConfig_Networking.
+
+NOTE: the generated config does not set a password for the user account, so
+that account is locked. On a fresh init, log in as root (empty password) on
+tty1 and run passwd.
 
 
 RELATED

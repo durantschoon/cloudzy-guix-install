@@ -263,14 +263,20 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
   //   nolapic    Disables the local APIC. Together these force legacy 8259
   //              interrupt routing, which modern AMD platforms do not reliably
   //              provide. The internal keyboard is an i8042 "AT Translated Set
-  //              2 keyboard" on IRQ 1, so it receives no interrupts: the
-  //              greeter renders and then ignores every keystroke. nolapic
-  //              also drops the machine to a single core.
+  //              2 keyboard" on IRQ 1, so it would receive no interrupts.
+  //              nolapic also drops the machine to a single core.
   //   acpi=off   Already removed earlier; broke xhci_hcd USB init.
   //
-  // All four were workarounds for a boot hang whose actual cause was amdgpu
-  // failing on firmware older than the GPU. That is fixed by the channel pin
-  // in lib/common.go, not by disabling the interrupt controller.
+  // All four were workarounds for a boot hang whose actual cause was a channel
+  // pin older than the hardware. That is fixed in lib/common.go, not by
+  // disabling the interrupt controller.
+  //
+  // Do NOT over-attribute to these arguments. When this laptop was actually
+  // observed with a dead console keyboard, its deployed GRUB entry carried only
+  // "quiet" -- none of them had ever reached the machine. Repinning forward to
+  // linux-7.1.5 fixed the keyboard, WiFi, Bluetooth and amdgpu together
+  // (verified on hardware 2026-08-02). Several unrelated-looking hardware
+  // failures on one boot means one cause underneath, not several.
 
   config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
 ;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
@@ -279,6 +285,8 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
 
 (use-modules (gnu)
              (gnu packages linux)
+             (gnu services dbus)       ;dbus-root-service-type, polkit-service-type
+             (gnu services networking) ;network-manager, wpa-supplicant, ntp
              (gnu system nss)
              (nongnu packages linux)
              (nongnu system linux-initrd)
@@ -290,8 +298,14 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  (locale "en_US.utf8")
 %s
  ;; Linux kernel with proprietary firmware support (from nonguix)
+ ;;
+ ;; microcode-initrd, not base-initrd: it prepends the CPU microcode blob so
+ ;; the AMD update is applied before the kernel proper starts.  It comes from
+ ;; (nongnu system linux-initrd), which this config already imports.  This is
+ ;; also what the previously deployed system on this laptop used, so keeping it
+ ;; means the repo reproduces the configuration that was verified on hardware.
  (kernel linux)
- (initrd base-initrd)
+ (initrd microcode-initrd)
  (firmware (list linux-firmware))
 
  ;; The initrd only has to get us far enough to mount the root filesystem;
@@ -351,8 +365,36 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  ;; Minimal packages - add more after installation
  (packages %%base-packages)
 
- ;; Minimal services - add SSH, desktop, etc. after installation
- (services %%base-services))
+ ;; Minimal services PLUS networking.  Add SSH, desktop, etc. after install.
+ ;;
+ ;; Networking is NOT optional here, even though everything else is minimal.
+ ;; This machine's only network interface is the MediaTek MT7925 wireless card
+ ;; (14c3:0717, driver mt7925e); Framework 13 has no built-in ethernet, it uses
+ ;; expansion cards.  %%base-services provides loopback and nothing else, so a
+ ;; system installed without these boots with no way to reach the network --
+ ;; and therefore no way to guix pull and repair itself.  That is a very
+ ;; expensive state to land in on a laptop whose keyboard may also be suspect.
+ ;;
+ ;; dbus and polkit are prerequisites, not extras: network-manager-service-type
+ ;; declares service-extensions onto dbus-root-service-type and
+ ;; polkit-service-type, and Guix aborts the build with "no target of type ..."
+ ;; if either is missing.  %%base-services instantiates neither.  Guix's own
+ ;; %%desktop-services pairs wpa-supplicant with NetworkManager, annotated in
+ ;; gnu/services/desktop.scm as ";needed by NetworkManager".
+ ;;
+ ;; ntp is here because clock skew breaks TLS, which breaks guix pull -- an
+ ;; unpleasant thing to debug on a fresh install with no network.
+ ;;
+ ;; nmcli/nmtui reach PATH automatically; the service extends
+ ;; profile-service-type.  After first boot, run nmtui on the console.
+ (services
+  (append
+   (list (service network-manager-service-type)
+         (service wpa-supplicant-service-type)
+         (service dbus-root-service-type)
+         (service polkit-service-type)
+         (service ntp-service-type))
+   %%base-services)))
 `,
     state.HostName,          // host-name
     state.Timezone,          // timezone

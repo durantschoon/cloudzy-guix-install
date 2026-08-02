@@ -237,9 +237,13 @@ func TestGeneratedConfigContainsInitrd(t *testing.T) {
 
 	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
 
-	// Verify critical fields are present
-	if !strings.Contains(config, "(initrd base-initrd)") {
-		t.Error("Generated config missing '(initrd base-initrd)' field")
+	// Verify critical fields are present.
+	//
+	// microcode-initrd rather than base-initrd: it wraps base-initrd to prepend
+	// the CPU microcode blob, so the AMD update lands before the kernel proper
+	// starts. It comes from (nongnu system linux-initrd).
+	if !strings.Contains(config, "(initrd microcode-initrd)") {
+		t.Error("Generated config missing '(initrd microcode-initrd)' field")
 	}
 	if !strings.Contains(config, "(kernel linux)") {
 		t.Error("Generated config missing '(kernel linux)' field")
@@ -325,5 +329,56 @@ func TestGenerateMinimalConfig_DataFilesystemFlags(t *testing.T) {
 	}
 	if strings.Contains(config, `(options "noatime")`) || strings.Contains(config, `(options "defaults`) {
 		t.Error("DATA filesystem must not pass VFS mount flags via 'options'")
+	}
+}
+
+// TestGenerateMinimalConfig_Networking guards the one non-minimal thing in this
+// config. The Framework 13 has no built-in ethernet -- its only interface is a
+// MediaTek MT7925 wireless card -- so a system installed with bare
+// %base-services has no way to reach the network and therefore no way to
+// 'guix pull' and repair itself.
+//
+// dbus and polkit are prerequisites rather than extras: network-manager-service-type
+// declares service-extensions onto both, and Guix aborts the build with
+// "no target of type ..." if either is absent from the service list.
+func TestGenerateMinimalConfig_Networking(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	required := []string{
+		"(service network-manager-service-type)",
+		"(service wpa-supplicant-service-type)",
+		"(service dbus-root-service-type)",
+		"(service polkit-service-type)",
+	}
+	for _, svc := range required {
+		if !strings.Contains(config, svc) {
+			t.Errorf("Generated config is missing required service %s.\nGot: %s", svc, config)
+		}
+	}
+
+	// The modules those services live in must be imported, or the config fails
+	// to evaluate with "unbound variable".
+	for _, mod := range []string{"(gnu services dbus)", "(gnu services networking)"} {
+		if !strings.Contains(config, mod) {
+			t.Errorf("Generated config is missing module import %s", mod)
+		}
+	}
+
+	// Services must be appended to %base-services, not replace it: %base-services
+	// carries login, mingetty on tty1-6 and the system log. Replacing it yields a
+	// system with no way to log in.
+	if !strings.Contains(config, "%base-services)") {
+		t.Errorf("Services must build on %%base-services.\nGot: %s", config)
+	}
+	if strings.Contains(config, "(services %base-services))") {
+		t.Error("Services no longer include networking; the installed system would have no network")
 	}
 }
