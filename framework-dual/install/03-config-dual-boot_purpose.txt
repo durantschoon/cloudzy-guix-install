@@ -127,18 +127,26 @@ Two independent requirements.
    noapic     Disables the I/O APIC.
    nolapic    Disables the local APIC. Together these force legacy 8259
               interrupt routing, which modern AMD platforms do not reliably
-              provide. The internal keyboard is i8042 on IRQ 1, so it receives
-              no interrupts: GDM renders and then ignores every keystroke.
-              nolapic additionally drops the machine to a single core.
+              provide. The internal keyboard is i8042 on IRQ 1, so it would
+              receive no interrupts. nolapic additionally drops the machine to
+              a single core.
 
-   The tell for the keyboard case: the firmware F12 boot menu works fine while
-   the OS keyboard is dead. Firmware polls the EC on its own path and never
-   touches the APIC.
+   DO NOT OVER-ATTRIBUTE. When this laptop was actually observed with a dead
+   console keyboard on 2026-08-01, the deployed GRUB entry was inspected and
+   its kernel line carried only "quiet". None of these arguments had ever
+   reached the machine. They are a latent defect in this generator, worth
+   removing on their own merits, but they explained nothing that was observed.
 
-   The hang these were treating was amdgpu failing on firmware older than the
-   GPU -- a channel pinning problem, fixed in lib/common.go. Every one of these
-   arguments was treating a firmware problem with an interrupt-controller
-   sledgehammer.
+   The real cause was the channel pin: linux-6.6.16 and its firmware predate
+   this laptop. Repinning forward to linux-7.1.5 fixed the keyboard, WiFi,
+   Bluetooth and amdgpu together -- verified on hardware 2026-08-02. Every one
+   of these arguments was treating a firmware problem with an
+   interrupt-controller sledgehammer.
+
+   The generalizable lesson: several unrelated-looking hardware failures on a
+   single boot almost always share one cause underneath -- a kernel and
+   firmware set older than the machine -- rather than being several independent
+   problems each deserving its own kernel argument.
 
    Guarded by TestGeneratedConfigContainsInitrd, which fails if any of the four
    strings reappears anywhere in the generated config. Note this is why the

@@ -58,11 +58,25 @@ fails the build if any of them reappear.
 | `nomodeset` | "fixes AMD GPU display issues" | Disables kernel modesetting entirely, which contradicts loading `amdgpu` and `linux-firmware` at all. Leaves an unaccelerated console and cannot fix missing firmware. |
 | `acpi=off` | "prevents power management conflicts" | Broke `xhci_hcd` init (`probe ... failed with error -22`), killing USB. Removed earlier for this reason. |
 | `noapic` | "prevents interrupt controller issues" | Disables the I/O APIC, forcing legacy 8259 routing. |
-| `nolapic` | "prevents local interrupt issues" | Disables the local APIC. Together with `noapic` this starves the **internal keyboard** — an i8042 `AT Translated Set 2 keyboard` on IRQ 1 — of interrupts, so the greeter renders and ignores every keystroke. Also drops the machine to a single core. |
+| `nolapic` | "prevents local interrupt issues" | Disables the local APIC. Together with `noapic` this would starve the **internal keyboard** — an i8042 `AT Translated Set 2 keyboard` on IRQ 1 — of interrupts. Also drops the machine to a single core. |
 
-The tell for the keyboard case: the firmware **F12 boot menu works fine** while
-the OS keyboard is dead. Firmware polls the embedded controller on its own path
-and never uses the APIC.
+**Do not over-attribute the keyboard failure to these arguments.** When the
+Framework 13 was actually observed with a dead console keyboard on 2026-08-01,
+inspection of the deployed GRUB entry showed the kernel line carried **only
+`quiet`** — none of these arguments had ever reached the machine. They were a
+latent defect in the config *generator*, worth removing on their own merits, but
+they were not the cause of anything observed.
+
+The real cause was the stale channel pin: `linux-6.6.16` and its firmware
+predate this laptop. Repinning forward to `linux-7.1.5` fixed the keyboard,
+WiFi, Bluetooth and amdgpu together — verified on hardware 2026-08-02. See
+[RECOVERY_REBUILD_FROM_HOST_OS.md](RECOVERY_REBUILD_FROM_HOST_OS.md).
+
+The lesson worth keeping: several unrelated-looking hardware failures appearing
+on one boot usually means one cause underneath — a kernel and firmware set older
+than the machine — not several independent problems each needing its own kernel
+argument. Every argument in the table above was added to treat a symptom of that
+single root cause.
 
 `loglevel=3` was harmless and is kept.
 

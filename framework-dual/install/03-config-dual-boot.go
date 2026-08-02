@@ -263,14 +263,20 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
   //   nolapic    Disables the local APIC. Together these force legacy 8259
   //              interrupt routing, which modern AMD platforms do not reliably
   //              provide. The internal keyboard is an i8042 "AT Translated Set
-  //              2 keyboard" on IRQ 1, so it receives no interrupts: the
-  //              greeter renders and then ignores every keystroke. nolapic
-  //              also drops the machine to a single core.
+  //              2 keyboard" on IRQ 1, so it would receive no interrupts.
+  //              nolapic also drops the machine to a single core.
   //   acpi=off   Already removed earlier; broke xhci_hcd USB init.
   //
-  // All four were workarounds for a boot hang whose actual cause was amdgpu
-  // failing on firmware older than the GPU. That is fixed by the channel pin
-  // in lib/common.go, not by disabling the interrupt controller.
+  // All four were workarounds for a boot hang whose actual cause was a channel
+  // pin older than the hardware. That is fixed in lib/common.go, not by
+  // disabling the interrupt controller.
+  //
+  // Do NOT over-attribute to these arguments. When this laptop was actually
+  // observed with a dead console keyboard, its deployed GRUB entry carried only
+  // "quiet" -- none of them had ever reached the machine. Repinning forward to
+  // linux-7.1.5 fixed the keyboard, WiFi, Bluetooth and amdgpu together
+  // (verified on hardware 2026-08-02). Several unrelated-looking hardware
+  // failures on one boot means one cause underneath, not several.
 
   config := fmt.Sprintf(`;; Framework 13 AMD Dual-Boot - Hardware-Aware Minimal Configuration
 ;; Includes kernel, firmware, and initrd modules for Framework 13 AMD hardware
