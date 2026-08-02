@@ -413,10 +413,28 @@ cd ~/guix-customize
   idle). Attempts 1–2 copied all 350 store items first; attempt 3 threw almost
   immediately, so it is not a timeout under load.
 
-  Next things to try: `--cores=1 --max-jobs=1`; `guix pull` (this Guix is 134
-  days old and this smells like a fixed upstream bug); check whether
-  `guix-daemon --discover=yes` is implicated; search guix-devel for
-  "register-closure database is locked".
+  **Leading hypothesis (unproven): the host root filesystem is full.** SQLite
+  reports "database is locked" rather than a disk error when it cannot create
+  its rollback journal, and `/` on this laptop is a 58.6 G partition sitting at
+  ~97% with ~2 G free — not enough for a 50 G image plus its temporary root.
+
+  ⏸️ **Paused 2026-08-02 pending more disk space.** Resume by freeing space
+  (`guix gc -F 20G` reclaims ~2425 dead items, but coordinate first: the
+  framework-dual work boots system paths out of this same store), then:
+
+  ```sh
+  # A pty is REQUIRED -- redirecting to a file makes the progress reporter die
+  # with "terminal-window-size: Inappropriate ioctl for device" before the
+  # build even starts. This is what invalidated the earlier time-machine test.
+  script -qec 'guix system image -t qcow2 --image-size=50G \
+      oracle/image/oracle-image.scm' /dev/null
+  ```
+
+  If it fails again with real headroom, the disk theory is dead. Fall back to:
+  `--cores=1 --max-jobs=1`; `guix pull` (this Guix is 134 days old and this
+  smells like a fixed upstream bug — an unpinned-master channels file for that
+  test was drafted but never run); check whether `guix-daemon --discover=yes`
+  is implicated; search guix-devel for "register-closure database is locked".
 - ⏳ Upload / import / launch commands drafted in `oracle/README.md` but unrun
 - ⏳ Open question: boot volume may appear as `/dev/sda` rather than
   `/dev/vda`, which would break the first `guix system reconfigure`
