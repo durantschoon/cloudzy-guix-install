@@ -2,13 +2,18 @@
 
 This archive contains all completed items from CHECKLIST.md, listed with newest items at the top.
 
-**Last Updated:** 2026-01-01
+**Last Updated:** 2026-08-02
 
 ---
 
+## 2026-01-01
+
+- ✅ **Cloudzy Low-Mem Optimization**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
+
 ## 2025-12-31
 
-- ✅ **Framework-dual Initrd Fix**: Switched from `microcode-initrd` to `base-initrd` in framework-dual config to resolve missing initrd file issue. Added directory listing diagnostics to `lib/common.go` for better debugging of missing kernel files.
+- ✅ **Cloudzy "No Space Left" Fix**: Fixed "No space left on device" during Guix installation on Cloudzy. Root cause: recovery script reused a stale `cow-store` pointing at RAM. Fix: auto-mount `/mnt` in recovery and force-restart `cow-store` to bind to disk.
+- ❌ **Framework-dual Initrd Fix** (SUPERSEDED 2026-08-02): Switched from `microcode-initrd` to `base-initrd` in framework-dual config to resolve a missing initrd file issue. Added directory listing diagnostics to `lib/common.go`. **Reversed** — the missing-initrd symptom was downstream of the stale channel pin, not of `microcode-initrd`. framework-dual uses `microcode-initrd` again so the AMD microcode update is applied before the kernel proper starts; see `framework-dual/install/03-config-dual-boot_purpose.txt`.
 
 ## 2025-12-16
 

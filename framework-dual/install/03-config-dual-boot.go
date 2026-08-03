@@ -253,6 +253,60 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
   // like something is being filtered when nothing is.
   initrdModules := lib.BuildInitrdModulesExpr(lib.GetBuiltInModulesToFilter())
 
+  // Mirror the build-time pin into the installed system.
+  //
+  // The installer pins channels for its own time-machine run, but that pin
+  // lived only on the machine doing the installing. The system it produced
+  // booted knowing about the 'guix' channel and nothing else, so
+  // "guix system reconfigure /etc/config.scm" -- on the very config that built
+  // it -- died with:
+  //
+  //   failed to load '/etc/config.scm': no code for module (nongnu packages linux)
+  //
+  // Observed on hardware 2026-08-02. Emitting the same commit pair into the
+  // generated config makes the installed system self-sufficient: the guix
+  // service writes /etc/guix/channels.scm at activation, so 'guix pull' and
+  // every later reconfigure reproduce the pin instead of jumping to HEAD.
+  //
+  // Built from the lib constants rather than written out here, so there is one
+  // place to move the pin forward. See docs/CHANNEL_PINNING_POLICY.md.
+  channelDefs := fmt.Sprintf(`;; Channels pinned %s, mirrored from the installer into this system.
+;; The guix service writes these to /etc/guix/channels.scm at activation.
+(define %%framework-dual-channels
+  (list (channel
+         (name 'guix)
+         (url "https://git.savannah.gnu.org/git/guix.git")
+         (branch "master")
+         (commit "%s")
+         (introduction
+          (make-channel-introduction
+           "9edb3f66fd807b096b48283debdcddccfea34bad"
+           (openpgp-fingerprint
+            "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+        (channel
+         (name 'nonguix)
+         (url "https://gitlab.com/nonguix/nonguix")
+         (branch "master")
+         (commit "%s")
+         (introduction
+          (make-channel-introduction
+           "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+           (openpgp-fingerprint
+            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
+
+;; The nonguix substitute server's signing key, verbatim from
+;; https://substitutes.nonguix.org/signing-key.pub -- embedded rather than
+;; fetched so the config evaluates on a machine with no network yet.
+(define %%nonguix-signing-key
+  (plain-file "nonguix.pub"
+              "(public-key
+ (ecc
+  (curve Ed25519)
+  (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)
+  )
+ )"))
+`, lib.FrameworkDualPinDate, lib.FrameworkDualGuixCommit, lib.FrameworkDualNonguixCommit)
+
   // Kernel arguments removed from the template below, and why. These are named
   // here rather than in the generated config so that grepping a deployed
   // config.scm for them stays a reliable "this machine is misconfigured" check.
@@ -288,10 +342,12 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
              (gnu services dbus)       ;dbus-root-service-type, polkit-service-type
              (gnu services networking) ;network-manager, wpa-supplicant, ntp
              (gnu system nss)
+             (guix channels)           ;channel, make-channel-introduction
              (nongnu packages linux)
              (nongnu system linux-initrd)
              (srfi srfi-1))
 
+%s
 (operating-system
  (host-name "%s")
  (timezone "%s")
@@ -404,6 +460,20 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  ;;
  ;; nmcli/nmtui reach PATH automatically; the service extends
  ;; profile-service-type.  After first boot, run nmtui on the console.
+ ;;
+ ;; The guix service is reconfigured rather than taken as-is.  Two separate
+ ;; things are wrong with the default on this machine:
+ ;;
+ ;;   channels        %%base-services carries no channel list, so the installed
+ ;;                   system knows only the "guix" channel.  Reconfiguring this
+ ;;                   very config then fails with "no code for module
+ ;;                   (nongnu packages linux)", and a bare "guix pull" would
+ ;;                   silently abandon the pin and jump to HEAD.
+ ;;   substitute-urls Authorizing a signing key and querying a substitute
+ ;;                   server are two different settings.  %%default-substitute-
+ ;;                   urls does not include nonguix, so with the key alone guix
+ ;;                   never asks -- it just compiles Linux from source, which
+ ;;                   is hours of CPU and several GiB of store on a laptop.
  (services
   (append
    (list (service network-manager-service-type)
@@ -411,8 +481,19 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
          (service dbus-root-service-type)
          (service polkit-service-type)
          (service ntp-service-type))
-   %%base-services)))
+   (modify-services %%base-services
+     (guix-service-type
+      config => (guix-configuration
+                 (inherit config)
+                 (channels %%framework-dual-channels)
+                 (substitute-urls
+                  (cons "https://substitutes.nonguix.org"
+                        %%default-substitute-urls))
+                 (authorized-keys
+                  (cons %%nonguix-signing-key
+                        %%default-authorized-guix-keys))))))))
 `,
+    channelDefs,             // pinned channels + nonguix key definitions
     state.HostName,          // host-name
     state.Timezone,          // timezone
     keyboardLayoutConfig,    // keyboard-layout (conditional)
