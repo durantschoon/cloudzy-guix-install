@@ -227,8 +227,48 @@ generation to roll back to**. The other OS is your only fallback.
   account is locked. Log in as `root` with an empty password on tty1, then
   `passwd <user>`.
 - Bring up networking with `nmtui` (curses, works on a bare console).
-- Guix's GRUB menu does not include an entry for the other OS. Switching back
-  is done from the firmware boot menu (F12 on Framework).
+- Guix's GRUB menu includes a `Pop!_OS` entry that chainloads the other
+  bootloader, so switching back does not need the firmware boot menu. F12 still
+  works as a fallback.
+
+## The installed system does not inherit your channels
+
+**Symptom.** On the freshly installed machine, reconfiguring the very config
+that built it fails:
+
+```
+$ sudo guix system reconfigure /etc/config.scm
+failed to load '/etc/config.scm':
+... in procedure resolve-interface: no code for module (nongnu packages linux)
+```
+
+**Cause.** The pin you set up in Step 1 lived on the *host* machine. `guix
+system init` copies the store closure of the built system; it does not copy the
+channel configuration that produced it. The target boots knowing only the
+`guix` channel, so `(nongnu ...)` is unresolvable and the only mechanism for
+changing the system is unavailable.
+
+**Fix on a system already installed without it.** Both files are reachable if
+you staged them on a partition shared with the host (`/data` here):
+
+```
+sudo mkdir -p /etc/guix
+sudo cp /data/<user>/channels-framework-dual.scm /etc/guix/channels.scm
+sudo -i guix pull                      # ~pinned commits, not HEAD
+sudo -i guix system reconfigure /etc/config.scm
+```
+
+Use `sudo -i`, not plain `sudo`. `guix pull` installs root's new guix at
+`/root/.config/guix/current/bin/guix`, which is only on `PATH` for a login
+shell; a bare `sudo guix` keeps resolving to the older
+`/run/current-system/profile/bin/guix` and fails the same way.
+
+**Prevention.** The generated config now mirrors the pin into the target via
+`guix-configuration`, so the guix service writes `/etc/guix/channels.scm` at
+activation and the machine is self-sufficient from first boot. The same
+override adds `https://substitutes.nonguix.org` to `substitute-urls` — see
+Step 0; a system with the key authorized but no URL compiles Linux from source
+instead of reporting anything.
 
 ## Related
 

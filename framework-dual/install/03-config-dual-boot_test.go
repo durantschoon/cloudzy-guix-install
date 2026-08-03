@@ -332,6 +332,39 @@ func TestGenerateMinimalConfig_DataFilesystemFlags(t *testing.T) {
 	}
 }
 
+// TestGenerateMinimalConfig_PopOSMenuEntry guards the GRUB chainload entry for
+// Pop!_OS. Without it, Guix's GRUB lists only its own generations and "Firmware
+// setup", so getting back to the other OS requires the firmware boot menu (F12
+// on Framework). That is a poor experience for what is explicitly a dual-boot
+// installer, and on machines whose UEFI timeout is 0 it is easy to miss.
+func TestGenerateMinimalConfig_PopOSMenuEntry(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	if !strings.Contains(config, "(menu-entries") {
+		t.Errorf("Generated config should add a menu entry for the other OS.\nGot: %s", config)
+	}
+	if !strings.Contains(config, `(chain-loader "/EFI/systemd/systemd-bootx64.efi")`) {
+		t.Error("Pop!_OS entry must chainload systemd-boot from the shared ESP")
+	}
+
+	// Match the ESP by label, not device path: numbering on a dual-boot disk is
+	// whatever the other OS's installer left behind.
+	if !strings.Contains(config, `(device (file-system-label "EFI"))`) {
+		t.Error("Menu entry must locate the ESP by label, not by device path")
+	}
+	if strings.Contains(config, `(device "/dev/nvme`) || strings.Contains(config, `(device "/dev/sd`) {
+		t.Error("Menu entry must not reference a raw device path")
+	}
+}
+
 // TestGenerateMinimalConfig_Networking guards the one non-minimal thing in this
 // config. The Framework 13 has no built-in ethernet -- its only interface is a
 // MediaTek MT7925 wireless card -- so a system installed with bare
@@ -375,10 +408,63 @@ func TestGenerateMinimalConfig_Networking(t *testing.T) {
 	// Services must be appended to %base-services, not replace it: %base-services
 	// carries login, mingetty on tty1-6 and the system log. Replacing it yields a
 	// system with no way to log in.
-	if !strings.Contains(config, "%base-services)") {
+	// Either shape is fine -- appended directly, or wrapped in modify-services to
+	// override one of the base services -- so long as %base-services is the base.
+	if !strings.Contains(config, "%base-services)") &&
+		!strings.Contains(config, "(modify-services %base-services") {
 		t.Errorf("Services must build on %%base-services.\nGot: %s", config)
 	}
 	if strings.Contains(config, "(services %base-services))") {
 		t.Error("Services no longer include networking; the installed system would have no network")
+	}
+}
+
+// TestGenerateMinimalConfig_ChannelsAndSubstitutes checks that the installed
+// system is told about the same channels and substitute server that built it.
+//
+// Regression: the first system installed from this repo booted knowing only the
+// "guix" channel, because the pin lived on the installing machine and was never
+// mirrored into the target. Running "guix system reconfigure /etc/config.scm" on
+// the installed machine -- against the very config that produced it -- failed
+// with "no code for module (nongnu packages linux)" (observed 2026-08-02).
+//
+// The substitute URL is a separate assertion from the signing key on purpose:
+// authorizing the key without adding the URL means guix never queries nonguix
+// and silently compiles Linux from source instead.
+func TestGenerateMinimalConfig_ChannelsAndSubstitutes(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	required := []string{
+		"(guix channels)",                   // channel / make-channel-introduction
+		"(define %framework-dual-channels",  // the mirrored pin
+		"(name 'nonguix)",                   // ...which must include nonguix
+		"(channels %framework-dual-channels)",
+		`"https://substitutes.nonguix.org"`, // URL, not just the key
+		"(define %nonguix-signing-key",      // key, not just the URL
+		"%default-authorized-guix-keys",     // added to the defaults, not replacing
+		"%default-substitute-urls",
+		"(modify-services %base-services",
+	}
+	for _, want := range required {
+		if !strings.Contains(config, want) {
+			t.Errorf("Generated config is missing %q.\nGot: %s", want, config)
+		}
+	}
+
+	// The pin in the generated config must be the one lib actually installs
+	// with; a config that mirrors a different commit pair would reproduce a
+	// system other than the one that was built.
+	for _, commit := range []string{lib.FrameworkDualGuixCommit, lib.FrameworkDualNonguixCommit} {
+		if !strings.Contains(config, commit) {
+			t.Errorf("Generated config does not carry pinned commit %s", commit)
+		}
 	}
 }

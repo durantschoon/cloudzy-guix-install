@@ -188,6 +188,31 @@ in \EFI\systemd\, Guix installs to \EFI\Guix\; they coexist because they are
 separate directories on one ESP and separate NVRAM entries. timeout 5 so the
 generation menu is reachable when a reconfigure breaks the system.
 
+menu-entries adds a chainload entry for Pop!_OS:
+
+  (menu-entry (label "Pop!_OS")
+              (device (file-system-label "EFI"))
+              (chain-loader "/EFI/systemd/systemd-bootx64.efi"))
+
+Without it, Guix's GRUB lists only its own generations and "Firmware setup",
+so returning to the other OS requires the firmware boot menu (F12 on
+Framework). That is a poor result for a dual-boot installer, and easy to miss
+entirely on machines whose UEFI timeout is 0 -- as this one's is, which means
+the firmware goes straight to whatever is first in BootOrder.
+
+This hands control to systemd-boot; it does not modify it. The ESP is matched
+by LABEL, not device path, for the same reason as the file-systems section.
+GRUB renders the entry as "search --label" followed by "chainloader".
+
+If Pop!_OS is absent the entry is harmless -- selecting it fails and the rest
+of the menu is unaffected.
+
+Guarded by TestGenerateMinimalConfig_PopOSMenuEntry.
+
+Note the Go template is a raw string literal delimited by backticks, so
+backticks must never appear in these comments. Doing so terminates the literal
+and produces a confusing parse error far from the real edit.
+
 
 file-systems
 ............
@@ -252,6 +277,67 @@ Guarded by TestGenerateMinimalConfig_Networking.
 NOTE: the generated config does not set a password for the user account, so
 that account is locked. On a fresh init, log in as root (empty password) on
 tty1 and run passwd.
+
+
+guix-service-type override (channels + substitutes)
+---------------------------------------------------
+  (modify-services %base-services
+    (guix-service-type
+     config => (guix-configuration
+                (inherit config)
+                (channels %framework-dual-channels)
+                (substitute-urls (cons "https://substitutes.nonguix.org"
+                                       %default-substitute-urls))
+                (authorized-keys (cons %nonguix-signing-key
+                                       %default-authorized-guix-keys)))))
+
+This exists because of a failure observed on hardware 2026-08-02. The installer
+pins channels for its own time-machine run, but that pin lived only on the
+machine doing the installing. The system it produced booted knowing about the
+"guix" channel and nothing else, so:
+
+  sudo guix system reconfigure /etc/config.scm
+
+  failed to load '/etc/config.scm':
+  ... in procedure resolve-interface: no code for module (nongnu packages linux)
+
+The config that BUILT the machine could not be re-evaluated ON the machine.
+That is the worst possible time to discover it: the only way to change anything
+about the system -- including rolling a change back -- is reconfigure.
+
+Two settings fix two genuinely separate problems, and it is easy to do one and
+believe you have done both:
+
+  channels          Written to /etc/guix/channels.scm by the guix service's
+                    activation gexp (install-channels-file in
+                    gnu/services/base.scm; the field takes a LIST OF CHANNEL
+                    RECORDS despite the "file-like" comment on the field).
+                    This makes (nongnu ...) resolvable, and makes "guix pull"
+                    on the machine reproduce the pin rather than jump to HEAD.
+
+  substitute-urls   Authorizing a signing key and querying a substitute server
+                    are different settings. %default-substitute-urls is
+                    bordeaux + ci.guix; nonguix is not in it. With the key
+                    authorized but the URL absent, guix does not error -- it
+                    quietly decides there is no substitute and compiles Linux
+                    from source. That is hours of CPU and several GiB of store
+                    on a laptop, and it looks like a hang. This exact trap cost
+                    2.5 GiB of store on the host machine during bring-up.
+
+The signing key is embedded with plain-file rather than local-file or a
+download, so the config still evaluates on a machine with no network yet -- the
+same machine that needs the network services above to get one.
+
+The channel commits come from lib.FrameworkDualGuixCommit /
+lib.FrameworkDualNonguixCommit rather than being written out in the template,
+so the pin moves in one place. TestGenerateMinimalConfig_ChannelsAndSubstitutes
+asserts the generated config carries those exact commits.
+
+Both cons onto the defaults rather than replacing them. Replacing
+%default-authorized-guix-keys would de-authorize ci.guix and bordeaux, i.e.
+turn off substitutes for all of Guix proper.
+
+Guarded by TestGenerateMinimalConfig_ChannelsAndSubstitutes.
 
 
 RELATED
