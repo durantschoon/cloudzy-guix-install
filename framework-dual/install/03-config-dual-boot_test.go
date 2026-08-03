@@ -332,6 +332,39 @@ func TestGenerateMinimalConfig_DataFilesystemFlags(t *testing.T) {
 	}
 }
 
+// TestGenerateMinimalConfig_PopOSMenuEntry guards the GRUB chainload entry for
+// Pop!_OS. Without it, Guix's GRUB lists only its own generations and "Firmware
+// setup", so getting back to the other OS requires the firmware boot menu (F12
+// on Framework). That is a poor experience for what is explicitly a dual-boot
+// installer, and on machines whose UEFI timeout is 0 it is easy to miss.
+func TestGenerateMinimalConfig_PopOSMenuEntry(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	if !strings.Contains(config, "(menu-entries") {
+		t.Errorf("Generated config should add a menu entry for the other OS.\nGot: %s", config)
+	}
+	if !strings.Contains(config, `(chain-loader "/EFI/systemd/systemd-bootx64.efi")`) {
+		t.Error("Pop!_OS entry must chainload systemd-boot from the shared ESP")
+	}
+
+	// Match the ESP by label, not device path: numbering on a dual-boot disk is
+	// whatever the other OS's installer left behind.
+	if !strings.Contains(config, `(device (file-system-label "EFI"))`) {
+		t.Error("Menu entry must locate the ESP by label, not by device path")
+	}
+	if strings.Contains(config, `(device "/dev/nvme`) || strings.Contains(config, `(device "/dev/sd`) {
+		t.Error("Menu entry must not reference a raw device path")
+	}
+}
+
 // TestGenerateMinimalConfig_Networking guards the one non-minimal thing in this
 // config. The Framework 13 has no built-in ethernet -- its only interface is a
 // MediaTek MT7925 wireless card -- so a system installed with bare

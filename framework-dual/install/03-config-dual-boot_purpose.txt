@@ -188,6 +188,31 @@ in \EFI\systemd\, Guix installs to \EFI\Guix\; they coexist because they are
 separate directories on one ESP and separate NVRAM entries. timeout 5 so the
 generation menu is reachable when a reconfigure breaks the system.
 
+menu-entries adds a chainload entry for Pop!_OS:
+
+  (menu-entry (label "Pop!_OS")
+              (device (file-system-label "EFI"))
+              (chain-loader "/EFI/systemd/systemd-bootx64.efi"))
+
+Without it, Guix's GRUB lists only its own generations and "Firmware setup",
+so returning to the other OS requires the firmware boot menu (F12 on
+Framework). That is a poor result for a dual-boot installer, and easy to miss
+entirely on machines whose UEFI timeout is 0 -- as this one's is, which means
+the firmware goes straight to whatever is first in BootOrder.
+
+This hands control to systemd-boot; it does not modify it. The ESP is matched
+by LABEL, not device path, for the same reason as the file-systems section.
+GRUB renders the entry as "search --label" followed by "chainloader".
+
+If Pop!_OS is absent the entry is harmless -- selecting it fails and the rest
+of the menu is unaffected.
+
+Guarded by TestGenerateMinimalConfig_PopOSMenuEntry.
+
+Note the Go template is a raw string literal delimited by backticks, so
+backticks must never appear in these comments. Doing so terminates the literal
+and produces a confusing parse error far from the real edit.
+
 
 file-systems
 ............

@@ -342,7 +342,24 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
   (bootloader-configuration
    (bootloader %s)
    (targets %s)
-   (timeout 5)))
+   (timeout 5)
+   ;; Chainload Pop!_OS's systemd-boot from Guix's GRUB, so switching back does
+   ;; not require the firmware boot menu.  Guix and Pop!_OS occupy separate
+   ;; directories on the one shared ESP (\EFI\Guix\ and \EFI\systemd\); this
+   ;; hands control to the other bootloader without modifying it.
+   ;;
+   ;; The device is the ESP itself, matched by LABEL rather than device path --
+   ;; partition numbering on a dual-boot disk is whatever the other OS's
+   ;; installer left behind.  GRUB renders this as a "search --label" followed
+   ;; by "chainloader".
+   ;;
+   ;; If Pop!_OS is absent, this entry is harmless: selecting it fails, and the
+   ;; rest of the menu is unaffected.
+   (menu-entries
+    (list (menu-entry
+           (label "Pop!_OS")
+           (device (file-system-label "EFI"))
+           (chain-loader "/EFI/systemd/systemd-bootx64.efi"))))))
  (file-systems
   (cons*          (file-system
           (mount-point "/")
