@@ -8,6 +8,8 @@ This archive contains all completed items from CHECKLIST.md, listed with newest 
 
 ## 2026-01-01
 
+- ✅ **Framework-dual Repin + Kernel Arg Reversal (2026-08-01)**: Identified the laptop as **Ryzen AI 300** (Strix Point, GPU `1002:1114`) and the wingolog-era Feb-2024 channel pin as the *cause* of the amdgpu firmware failure it was meant to fix. Repinned guix/nonguix, removed `nomodeset`/`noapic`/`nolapic`, fixed `(options "noatime")` → `(flags '(no-atime))`, dropped the no-op initrd module filter. **Correction:** removing those kernel arguments was right on its own merits, but the claim they explained the dead keyboard was wrong — the deployed GRUB entry only ever passed `quiet`.
+
 - ✅ **Cloudzy Low-Mem Optimization**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
 - ✅ **Build Failure Diagnostics**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
 - ✅ **Log Serving Tool**: Created `tools/serve-logs.scm` to gather logs and serve them over HTTP for remote debugging. Unit tests in `tools/test-serve-logs.scm`.

@@ -336,6 +336,61 @@ dead, the pull can "succeed" into compiling Guix from source — hours of CPU th
 looks like a hang. If it runs long with no download progress, interrupt it and
 re-check DNS rather than waiting it out.
 
+## Adding a desktop afterwards
+
+The installed system is deliberately minimal: `%base-services` plus networking.
+A desktop is added later, which means moving the base to `%desktop-services`.
+
+**`%desktop-services` is a superset of `%base-services`.** It already provides
+`network-manager`, `wpa-supplicant`, `dbus`, `polkit` and `ntp` — every one of
+which the generated config instantiates explicitly. Switching the base without
+removing those leaves each service instantiated twice:
+
+```
+guix system: error: more than one target service of type 'dbus'
+```
+
+Two things follow, and the second is the one that bites quietly:
+
+1. Drop the five explicit services from the list once the base is
+   `%desktop-services`.
+2. **Do not simply delete a service that carries a configuration record.**
+   NetworkManager here holds the DNS block from the previous section. Deleting
+   the service deletes the DNS setting with it — no error, and the failure shows
+   up later as `getaddrinfo` after some future reconnect. Move it into a
+   `modify-services` clause instead:
+
+```scheme
+(services
+ (append
+  (list (service gnome-desktop-service-type))
+  (modify-services %desktop-services
+    (network-manager-service-type
+     config => (network-manager-configuration
+                (inherit config)
+                (extra-configuration-files
+                 (list (list "dns.conf" (plain-file "nm-global-dns.conf" ...))))))
+    (console-font-service-type config => ...)
+    (guix-service-type config => ...))))
+```
+
+`%desktop-services` also brings **GDM**, so a graphical login comes with it.
+
+The customize tool's option 2 does all of this via
+`lib/guile-config-helper.scm switch-to-desktop`, which operates on parsed
+S-expressions: it switches the base, removes the services the new base provides,
+and rewrites any that carried configuration into `modify-services` clauses with
+`(inherit config)`. Regression test 6 in `postinstall/tests/run-guile-tests.sh`
+covers it.
+
+**One caveat about the customize tool.** Any option that adds a *service* routes
+through the Guile helper, which reads the config and rewrites it with
+`pretty-print`. The result is correct but **loses every comment** — on the
+framework-dual config that is 117 lines of reasoning about why each setting is
+what it is. Options that edit via `sed`, such as adding packages, keep them. If
+you value the comments, keep an annotated copy alongside the deployed config
+(this repo stages one on the shared `/data` partition).
+
 ## Related
 
 - `docs/CHANNEL_PINNING_POLICY.md` -- the pin must be newer than the hardware

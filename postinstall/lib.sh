@@ -93,6 +93,49 @@ guile_add_service() {
   fi
 }
 
+# Switch the config from %base-services to %desktop-services, removing the
+# services %desktop-services already provides and preserving the configuration
+# of any that carried one. See guile-config-helper.scm switch-to-desktop.
+# Usage: guile_switch_to_desktop
+guile_switch_to_desktop() {
+  local tmp_file
+  tmp_file=$(mktemp)
+
+  if [[ -w "$CONFIG_FILE" ]]; then
+    cp "$CONFIG_FILE" "$tmp_file"
+  else
+    sudo cp "$CONFIG_FILE" "$tmp_file"
+    sudo chown "$USER" "$tmp_file"
+  fi
+
+  local install_root="${INSTALL_ROOT:-}"
+  if [[ -z "$install_root" ]]; then
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    install_root="$(cd "$script_dir/.." && pwd)"
+  fi
+  local guile_helper="$install_root/lib/guile-config-helper.scm"
+
+  if [[ ! -f "$guile_helper" ]]; then
+    err "guile-config-helper.scm not found at: $guile_helper"
+    rm -f "$tmp_file"
+    return 1
+  fi
+
+  if guile --no-auto-compile -s "$guile_helper" switch-to-desktop "$tmp_file"; then
+    if [[ -w "$CONFIG_FILE" ]]; then
+      cp "$tmp_file" "$CONFIG_FILE"
+    else
+      sudo cp "$tmp_file" "$CONFIG_FILE"
+    fi
+    rm -f "$tmp_file"
+    return 0
+  else
+    rm -f "$tmp_file"
+    return 1
+  fi
+}
+
 # Safe sed-based config editing helper
 # Usage: safe_edit_config "sed command"
 # Example: safe_edit_config 's|(packages %base-packages)|(packages (append ...))|'
@@ -173,20 +216,37 @@ add_desktop() {
 
   # Check if we need to switch from %base-services to %desktop-services
   # Desktop environments require %desktop-services for proper display manager support
+  # %desktop-services is a SUPERSET of %base-services. A config written against
+  # %base-services instantiates its own networking; once the base becomes
+  # %desktop-services those services exist twice and the build dies with
+  #
+  #   guix system: error: more than one target service of type 'dbus'
+  #
+  # A plain sed of %base-services -> %desktop-services is therefore NOT enough,
+  # and was what this function used to do. The duplicates must be removed at the
+  # same time -- and any of them carrying a configuration record (framework-dual
+  # gives NetworkManager a DNS block) must be rewritten as a modify-services
+  # clause rather than deleted, or the setting vanishes silently.
+  #
+  # guile-config-helper.scm switch-to-desktop does all three, on parsed
+  # S-expressions rather than by text substitution.
   local needs_desktop_services=false
   if grep -q "%base-services" "$CONFIG_FILE" && ! grep -q "%desktop-services" "$CONFIG_FILE"; then
     needs_desktop_services=true
     info "Switching from %base-services to %desktop-services for desktop support..."
-    
-    # Replace %base-services with %desktop-services
-    if safe_edit_config 's|%base-services|%desktop-services|g'; then
+
+    if guile_switch_to_desktop; then
       info "[OK] Switched to %desktop-services"
-      info "  Note: %desktop-services includes NetworkManager and wpa-supplicant"
-      info "        You may want to remove explicit NetworkManager/wpa-supplicant entries"
+      info "  Services %desktop-services already provides (NetworkManager,"
+      info "  wpa-supplicant, dbus, polkit, ntp) were removed from the explicit"
+      info "  list; any that carried configuration were preserved as"
+      info "  modify-services clauses."
     else
-      warn "Could not automatically switch to %desktop-services"
-      warn "Please manually change %base-services to %desktop-services in config.scm"
-      warn "This is required for display manager (GDM/LightDM) to start properly"
+      err "Could not switch to %desktop-services"
+      err "Aborting rather than leaving a config that cannot build."
+      err "Change %base-services to %desktop-services manually, and remove the"
+      err "explicit network-manager/wpa-supplicant/dbus/polkit/ntp services."
+      return 1
     fi
   fi
 
@@ -195,13 +255,15 @@ add_desktop() {
     info "[OK] $desktop desktop added"
     echo ""
     
-    # Warn about NetworkManager if %desktop-services is used
-    if [ "$needs_desktop_services" = true ] || grep -q "%desktop-services" "$CONFIG_FILE"; then
-      if grep -q "network-manager-service-type\|wpa-supplicant-service-type" "$CONFIG_FILE"; then
-        warn "Note: %desktop-services already includes NetworkManager and wpa-supplicant"
-        warn "      You may have duplicate entries - remove explicit NetworkManager/wpa-supplicant"
-        warn "      to avoid 'service provided more than once' errors"
-      fi
+    # A duplicate can still be present if the config already used
+    # %desktop-services when we got here, so switch-to-desktop never ran.
+    # Detect the instantiation form specifically -- a modify-services clause
+    # also mentions these type names and is CORRECT, not a duplicate.
+    if grep -qE '\(service (network-manager|wpa-supplicant|dbus-root|polkit|ntp)-service-type' "$CONFIG_FILE"; then
+      warn "This config instantiates a service %desktop-services already provides."
+      warn "The build will fail with \"more than one target service of type ...\"."
+      warn "Remove the explicit entry, or move its configuration into a"
+      warn "modify-services clause so the settings are not lost with it."
     fi
     
     # For GNOME: Check if keyboard layout has options and configure accordingly

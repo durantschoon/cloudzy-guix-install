@@ -116,6 +116,124 @@
       ((expr rest ...)
        (loop rest (cons expr result) module-added?)))))
 
+;;; ---------------------------------------------------------------------------
+;;; Switching to %desktop-services
+;;;
+;;; %desktop-services is a SUPERSET of %base-services. A config written against
+;;; %base-services must instantiate networking itself; once the base becomes
+;;; %desktop-services those same services are provided twice, and the build
+;;; fails with:
+;;;
+;;;   guix system: error: more than one target service of type 'dbus'
+;;;
+;;; A plain sed of %base-services -> %desktop-services therefore produces a
+;;; config that cannot build. The duplicates have to be removed from the
+;;; explicit list at the same time.
+;;;
+;;; The subtle case is a service carrying a CONFIGURATION RECORD, e.g.
+;;;
+;;;   (service network-manager-service-type
+;;;            (network-manager-configuration (extra-configuration-files ...)))
+;;;
+;;; Deleting that outright silently discards the configuration -- for
+;;; framework-dual it would drop the DNS block and reintroduce the getaddrinfo
+;;; failure of 2026-08-02. Such a service is instead rewritten as a
+;;; modify-services clause against the new base, preserving the settings.
+
+;;; Service types %desktop-services already provides, which a %base-services
+;;; config commonly lists explicitly.
+(define %desktop-provided-services
+  '(network-manager-service-type
+    wpa-supplicant-service-type
+    dbus-root-service-type
+    polkit-service-type
+    ntp-service-type))
+
+;;; Recursively replace %base-services with %desktop-services.
+(define (rewrite-base-services expr)
+  (cond
+   ((eq? expr '%base-services) '%desktop-services)
+   ((pair? expr) (cons (rewrite-base-services (car expr))
+                       (rewrite-base-services (cdr expr))))
+   (else expr)))
+
+;;; A bare (service TYPE) -- no configuration argument to lose.
+(define (bare-duplicate? expr)
+  (match expr
+    (('service type) (memq type %desktop-provided-services))
+    (_ #f)))
+
+;;; A (service TYPE CONFIG) whose CONFIG must be preserved.
+(define (configured-duplicate? expr)
+  (match expr
+    (('service type config) (and (memq type %desktop-provided-services) #t))
+    (_ #f)))
+
+;;; Turn (service TYPE (record FIELDS ...)) into a modify-services clause that
+;;; inherits the base service's value and applies the same fields.
+(define (service->modify-clause expr)
+  (match expr
+    (('service type (record fields ...))
+     `(,type config => (,record (inherit config) ,@fields)))
+    (_ #f)))
+
+;;; Rewrite a services expression for %desktop-services.
+(define (switch-services-to-desktop services-expr)
+  (match services-expr
+    (('append ('list services ...) base ...)
+     (let* ((keep    (remove (lambda (s)
+                               (or (bare-duplicate? s)
+                                   (configured-duplicate? s)))
+                             services))
+            (clauses (filter-map service->modify-clause
+                                 (filter configured-duplicate? services)))
+            (base*   (rewrite-base-services base)))
+       ;; Fold the preserved clauses into an existing modify-services on the
+       ;; base if there is one; otherwise wrap the base in a new one.
+       (match base*
+         ((('modify-services base-sym existing ...))
+          `(append (list ,@keep)
+                   (modify-services ,base-sym ,@clauses ,@existing)))
+         ((single)
+          (if (null? clauses)
+              `(append (list ,@keep) ,single)
+              `(append (list ,@keep) (modify-services ,single ,@clauses))))
+         (_ `(append (list ,@keep) ,@base*)))))
+
+    ;; Bare %base-services with no explicit list -- nothing to de-duplicate.
+    ('%base-services '%desktop-services)
+
+    (_ (rewrite-base-services services-expr))))
+
+(define (switch-os-to-desktop os-expr)
+  (match os-expr
+    (('operating-system fields ...)
+     `(operating-system
+       ,@(map (lambda (field)
+                (match field
+                  (('services services-expr)
+                   `(services ,(switch-services-to-desktop services-expr)))
+                  (_ field)))
+              fields)))
+    (_ os-expr)))
+
+(define (cmd-switch-to-desktop config-file)
+  ;; %desktop-services is exported by (gnu services desktop). Rewriting the base
+  ;; without importing that module leaves a config that fails with
+  ;; "%desktop-services: unbound variable" -- so the module goes in here rather
+  ;; than relying on a subsequent add-service call to bring it along.
+  (let* ((exprs (read-config config-file))
+         (desktop-module '(gnu services desktop))
+         (modified (map (lambda (expr)
+                          (match expr
+                            (('use-modules _ ...)
+                             (add-module-to-use-modules expr desktop-module))
+                            (('operating-system _ ...) (switch-os-to-desktop expr))
+                            (_ expr)))
+                        exprs)))
+    (write-config modified config-file)
+    (display "Switched to %desktop-services\n")))
+
 ;;; Main command handlers
 (define (cmd-add-service config-file module-name service-expr-str)
   (let* ((exprs (read-config config-file))
@@ -160,10 +278,14 @@
     ((_ "check-service" config-file service-type)
      (cmd-check-service config-file service-type))
 
+    ((_ "switch-to-desktop" config-file)
+     (cmd-switch-to-desktop config-file))
+
     (_
      (display "Usage:\n")
      (display "  guile-config-helper.scm add-service CONFIG-FILE MODULE SERVICE-EXPR\n")
      (display "  guile-config-helper.scm check-service CONFIG-FILE SERVICE-TYPE\n")
+     (display "  guile-config-helper.scm switch-to-desktop CONFIG-FILE\n")
      (exit 1))))
 
 (main (command-line))

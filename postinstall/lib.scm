@@ -94,25 +94,29 @@
         helper-path
         #f)))
 
-(define* (guile-add-service config-file module service #:optional (install-root #f))
-  "Add service using Guile S-expression parser.
-   module: e.g., \"(gnu services ssh)\"
-   service: e.g., \"(service openssh-service-type)\"
-   install-root: root directory of installation (optional, will try to detect)"
+(define* (call-guile-helper config-file subcommand extra-args #:optional (install-root #f))
+  "Run guile-config-helper.scm SUBCOMMAND against CONFIG-FILE.
+
+   The edit is performed on a temp copy and only written back on success, so a
+   helper failure leaves the config untouched.
+
+   extra-args: list of already-formatted argument strings appended after the
+   temp file name.  Empty for subcommands that take only the config.
+   Returns #t on success, #f on failure."
   (let* ((root (or install-root
                    (getenv "INSTALL_ROOT")
                    ;; Fallback: try to detect from current directory
                    (getcwd)))
          (guile-helper (find-guile-helper root))
          (tmp-file (tmpnam)))
-    
+
     (unless guile-helper
       (err (format #f "guile-config-helper.scm not found at: ~a/lib/guile-config-helper.scm"
                    root))
       (err (format #f "INSTALL_ROOT: ~a" (or (getenv "INSTALL_ROOT") "<not set>")))
       (err (format #f "Calculated install_root: ~a" root))
       (throw 'helper-not-found))
-    
+
     ;; Copy config to temp file
     (let ((copy-cmd (if (access? config-file W_OK)
                         (format #f "cp ~s ~s" config-file tmp-file)
@@ -122,10 +126,11 @@
       (unless (zero? (system copy-cmd))
         (err "Failed to copy config to temp file")
         (throw 'copy-failed)))
-    
-    ;; Use Guile helper to add service
-    (let* ((helper-cmd (format #f "guile --no-auto-compile -s ~s add-service ~s ~s ~s"
-                               guile-helper tmp-file module service))
+
+    (let* ((helper-cmd (format #f "guile --no-auto-compile -s ~s ~a ~s~a"
+                               guile-helper subcommand tmp-file
+                               (string-concatenate
+                                (map (lambda (a) (string-append " " a)) extra-args))))
            (status (system helper-cmd)))
       (if (zero? status)
           (begin
@@ -139,6 +144,29 @@
           (begin
             (delete-file tmp-file)
             #f)))))
+
+(define* (guile-add-service config-file module service #:optional (install-root #f))
+  "Add service using Guile S-expression parser.
+   module: e.g., \"(gnu services ssh)\"
+   service: e.g., \"(service openssh-service-type)\"
+   install-root: root directory of installation (optional, will try to detect)"
+  (call-guile-helper config-file "add-service"
+                     (list (format #f "~s" module) (format #f "~s" service))
+                     install-root))
+
+(define* (guile-switch-to-desktop config-file #:optional (install-root #f))
+  "Switch the config's base from %base-services to %desktop-services.
+
+   %desktop-services is a SUPERSET of %base-services, so a minimal config's
+   explicit network-manager / wpa-supplicant / dbus / polkit / ntp become
+   duplicates and the build fails with
+
+     guix system: error: more than one target service of type 'dbus'
+
+   The helper removes those, and rewrites any that carried a configuration
+   record into a modify-services clause so the settings are not lost with the
+   service.  Returns #t on success, #f on failure."
+  (call-guile-helper config-file "switch-to-desktop" '() install-root))
 
 ;;; ============================================================================
 ;;; Safe config editing
@@ -257,20 +285,34 @@
                       #t)
                     (begin
                       (backup-config config-file backup-dir)
-                      
-                      ;; Use Guile helper to add desktop service
-                      (if (guile-add-service config-file
-                                             "(gnu services desktop)"
-                                             (format #f "(service ~a)" service-type)
-                                             install-root)
+
+                      ;; The display manager (GDM) lives in %desktop-services,
+                      ;; not in the desktop service itself, so a config still
+                      ;; built on %base-services would gain the desktop packages
+                      ;; and no graphical login.  Switch the base first -- and
+                      ;; via the helper, which also drops the services the new
+                      ;; base already provides and preserves the configuration
+                      ;; of any that carried one.  See guile-switch-to-desktop.
+                      (if (and (string-contains config-content "%base-services")
+                               (not (string-contains config-content "%desktop-services"))
+                               (not (guile-switch-to-desktop config-file install-root)))
                           (begin
-                            (info (format #f "[OK] ~a desktop added" desktop-name))
-                            #t)
-                          (begin
-                            (err "Failed to add desktop service")
-                            (err (format #f "Please add ~a manually to /etc/config.scm"
-                                         desktop-name))
-                            #f))))))))))))
+                            (err "Could not switch to %desktop-services")
+                            (err "Aborting rather than leaving a config that cannot build.")
+                            #f)
+                          ;; Use Guile helper to add desktop service
+                          (if (guile-add-service config-file
+                                                 "(gnu services desktop)"
+                                                 (format #f "(service ~a)" service-type)
+                                                 install-root)
+                              (begin
+                                (info (format #f "[OK] ~a desktop added" desktop-name))
+                                #t)
+                              (begin
+                                (err "Failed to add desktop service")
+                                (err (format #f "Please add ~a manually to /etc/config.scm"
+                                             desktop-name))
+                                #f)))))))))))))
 
 ;;; ============================================================================
 ;;; Package management
