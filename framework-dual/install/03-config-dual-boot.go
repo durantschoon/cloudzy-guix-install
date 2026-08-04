@@ -461,6 +461,8 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  ;; nmcli/nmtui reach PATH automatically; the service extends
  ;; profile-service-type.  After first boot, run nmtui on the console.
  ;;
+ ;; NetworkManager carries an explicit DNS block; see the comment on it below.
+ ;;
  ;; The guix service is reconfigured rather than taken as-is.  Two separate
  ;; things are wrong with the default on this machine:
  ;;
@@ -482,7 +484,40 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  ;; not up yet, that matters most exactly when something has gone wrong.
  (services
   (append
-   (list (service network-manager-service-type)
+   (list ;; NetworkManager with a resolver that survives reconnects.
+         ;;
+         ;; Observed 2026-08-02: after a reboot the machine had connectivity but
+         ;; an unusable /etc/resolv.conf, so "guix pull" died in
+         ;; getaddrinfo: Name or service not known -- which ALSO surfaced as
+         ;; "nonguix untrusted", because a channel introduction is verified
+         ;; against the keyring branch of a repo that could not be cloned.  One
+         ;; fault, two error messages, and the second one sends you chasing
+         ;; signing keys.  Editing /etc/resolv.conf by hand fixes it until the
+         ;; next re-association, when NetworkManager rewrites the file.
+         ;;
+         ;; This machine's ability to repair itself runs entirely through
+         ;; "guix pull", and that needs DNS.  Everything else in this config is
+         ;; minimal; a resolver is not somewhere to be minimal.
+         ;;
+         ;; [global-dns-domain-*] is NetworkManager's own override -- it beats
+         ;; whatever DHCP hands out, for every connection, so it cannot be
+         ;; undone by roaming.  TRADEOFF: that is an override, not a fallback.
+         ;; On a network with split-horizon DNS (corporate, or a home router
+         ;; serving .lan names) internal hostnames will stop resolving.  If you
+         ;; want DHCP's servers back, delete the whole
+         ;; network-manager-configuration record below, leaving the service
+         ;; instantiated with no configuration argument.
+         (service network-manager-service-type
+                  (network-manager-configuration
+                   (extra-configuration-files
+                    (list (list "dns.conf"
+                                (plain-file "nm-global-dns.conf"
+                                            "[global-dns]
+searches=
+
+[global-dns-domain-*]
+servers=9.9.9.9,1.1.1.1
+"))))))
          (service wpa-supplicant-service-type)
          (service dbus-root-service-type)
          (service polkit-service-type)

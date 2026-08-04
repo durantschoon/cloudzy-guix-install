@@ -398,6 +398,70 @@ exposed to that, since add_console_font appends rather than modifies.
 Guarded by TestGenerateMinimalConfig_ConsoleFont.
 
 
+network-manager-configuration: DNS that survives a reconnect
+-------------------------------------------------------------
+  (service network-manager-service-type
+           (network-manager-configuration
+            (extra-configuration-files
+             (list (list "dns.conf"
+                         (plain-file "nm-global-dns.conf" "..."))))))
+
+Observed on hardware 2026-08-02. After a reboot the machine had connectivity
+but an unusable /etc/resolv.conf, so:
+
+  sudo -i guix pull
+  ...
+  guix/ui.scm:1033:18 In procedure getaddrinfo: Name or service not known
+
+The same run ALSO reported the nonguix channel as untrusted. That was not a
+second problem. A channel introduction is verified against the signer key on
+the channel repo's "keyring" branch; with DNS down the repo could not be
+cloned, so the key was unreachable and the introduction unverifiable. One
+fault, two error messages -- and the more alarming of the two sends you off
+auditing signing keys instead of checking resolv.conf. Diagnose in this order:
+raw connectivity (ping an IP), then resolution (ping a name), then the trust
+error, which usually evaporates.
+
+Editing /etc/resolv.conf by hand is not a fix, only a reprieve: NetworkManager
+rewrites that file whenever a connection comes up.
+
+Two durable options were considered:
+
+  per-connection    nmcli con mod "<name>" ipv4.dns "..." +
+                    ipv4.ignore-auto-dns yes. Correct, but it lives in
+                    /etc/NetworkManager/system-connections, which this repo
+                    does not generate -- so a fresh install would not have it,
+                    which is exactly when it is needed most.
+
+  global-dns        A file in /etc/NetworkManager/conf.d, which the service's
+                    extra-configuration-files field populates. Declarative,
+                    part of the system generation, and rolls back with it.
+
+The second is what this config does. NetworkManager's activation gexp symlinks
+a file-union onto /etc/NetworkManager/conf.d when extra-configuration-files is
+non-empty (gnu/services/networking.scm). Verified by building that file-union:
+it yields dns.conf containing exactly the [global-dns] / [global-dns-domain-*]
+block written here.
+
+TRADEOFF, stated plainly: [global-dns-domain-*] is an OVERRIDE, not a fallback.
+It beats DHCP-supplied servers on every connection. On a network with
+split-horizon DNS -- a corporate resolver, or a home router serving .lan names
+-- internal hostnames stop resolving. That is a real cost, accepted here for
+one reason: this machine's only route to repairing itself is "guix pull", and
+that needs name resolution. The rest of this config is deliberately minimal;
+the resolver is not a good place to be minimal. To opt out, delete the
+network-manager-configuration record and instantiate the service with no
+configuration argument -- DHCP's servers come back.
+
+9.9.9.9 (Quad9) and 1.1.1.1 (Cloudflare) are two independent operators, so a
+single provider outage does not take name resolution with it.
+
+Guarded by TestGenerateMinimalConfig_DNS. Note that
+TestGenerateMinimalConfig_Networking matches "(service
+network-manager-service-type" WITHOUT the closing paren for this reason; the
+other services in that list are still instantiated bare.
+
+
 RELATED
 -------
 docs/CHANNEL_PINNING_POLICY.md      why the pin must be newer than the hardware

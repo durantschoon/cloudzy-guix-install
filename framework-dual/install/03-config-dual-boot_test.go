@@ -385,8 +385,11 @@ func TestGenerateMinimalConfig_Networking(t *testing.T) {
 
 	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
 
+	// NetworkManager is matched without its closing paren because it now takes a
+	// network-manager-configuration argument (see TestGenerateMinimalConfig_DNS).
+	// The others are still instantiated bare.
 	required := []string{
-		"(service network-manager-service-type)",
+		"(service network-manager-service-type",
 		"(service wpa-supplicant-service-type)",
 		"(service dbus-root-service-type)",
 		"(service polkit-service-type)",
@@ -508,5 +511,48 @@ func TestGenerateMinimalConfig_ConsoleFont(t *testing.T) {
 	if strings.Contains(config, "(service console-font-service-type") {
 		t.Errorf("console-font must be overridden via modify-services, not added as a "+
 			"second service -- %%base-services already provides console-font-tty1..6.\nGot: %s", config)
+	}
+}
+
+// Observed 2026-08-02: after a reboot the machine had connectivity but an
+// unusable /etc/resolv.conf, so "guix pull" failed in getaddrinfo. That also
+// surfaced as "nonguix untrusted", because a channel introduction is verified
+// against the keyring branch of a repo that could not be cloned -- one fault
+// wearing two error messages.
+//
+// Editing /etc/resolv.conf by hand does not survive: NetworkManager rewrites it
+// on re-association. NetworkManager's own [global-dns-domain-*] override does
+// survive, and is applied to every connection.
+func TestGenerateMinimalConfig_DNS(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	required := []string{
+		"(network-manager-configuration", // not the bare service
+		"(extra-configuration-files",     // symlinked to /etc/NetworkManager/conf.d
+		`"dns.conf"`,
+		"[global-dns-domain-*]", // the section NM actually honours as an override
+		"servers=",
+	}
+	for _, want := range required {
+		if !strings.Contains(config, want) {
+			t.Errorf("Generated config is missing %q -- DNS would revert to DHCP and a "+
+				"machine that loses name resolution cannot guix pull to repair itself.\nGot: %s",
+				want, config)
+		}
+	}
+
+	// A bare (service network-manager-service-type) takes no configuration, so
+	// the DNS block would be silently absent.
+	if strings.Contains(config, "(service network-manager-service-type)") {
+		t.Errorf("NetworkManager must be given a network-manager-configuration, " +
+			"not instantiated bare")
 	}
 }

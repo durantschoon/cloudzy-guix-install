@@ -270,6 +270,72 @@ override adds `https://substitutes.nonguix.org` to `substitute-urls` — see
 Step 0; a system with the key authorized but no URL compiles Linux from source
 instead of reporting anything.
 
+## DNS failure looks like a channel trust failure
+
+**Symptom.** On the installed machine, `guix pull` reports the nonguix channel
+as untrusted *and* dies in `getaddrinfo`:
+
+```
+$ sudo -i guix pull
+...
+guix/ui.scm:1033:18 In procedure getaddrinfo: Name or service not known
+```
+
+**These are one fault, not two.** A channel introduction is verified against the
+signer key on the channel repo's `keyring` branch. With DNS down, the repo
+cannot be cloned, so the key is unreachable and the introduction cannot be
+verified — which is reported as *untrusted*. The trust message is the louder of
+the two and sends you auditing signing keys. Ignore it and fix name resolution;
+it evaporates on its own.
+
+**Diagnose in this order.** One command, and the three possibilities separate:
+
+```bash
+( date; echo ---; ping -c2 -W2 9.9.9.9; echo ---; ping -c2 -W2 gnu.org; \
+  echo ---; cat /etc/resolv.conf; echo ---; sudo herd status nscd ) 2>&1 | tail -40
+```
+
+| Result | Meaning | Fix |
+|---|---|---|
+| `ping 9.9.9.9` fails | No link — WiFi did not re-associate after reboot | `nmtui` |
+| IP works, name fails | Resolver not configured | below |
+| Both work | DNS is fine; the trust error is real and separate | read the exact wording |
+
+Note `nscd` is in `%base-services` and is normally running; it is worth checking
+because Guix-built programs reach system NSS modules through it, but on a stock
+system it is rarely the cause.
+
+**The obvious fix does not hold.** Writing `/etc/resolv.conf` by hand works
+until the next re-association, when NetworkManager rewrites the file. Use it to
+confirm the diagnosis, not as the repair:
+
+```bash
+echo "nameserver 9.9.9.9" | sudo tee /etc/resolv.conf
+```
+
+**Durable fix, existing machine** — set it on the connection:
+
+```bash
+nmcli con show                                      # find the connection name
+nmcli con mod "<name>" ipv4.dns "9.9.9.9 1.1.1.1"
+nmcli con mod "<name>" ipv4.ignore-auto-dns yes
+nmcli con up "<name>"
+```
+
+**Prevention.** The generated config now ships a `[global-dns-domain-*]` block
+to `/etc/NetworkManager/conf.d/dns.conf` via the service's
+`extra-configuration-files` field, so a freshly installed system has working
+resolution before anyone logs in. Be aware this **overrides** DHCP-supplied
+servers on every connection: on a network with split-horizon DNS, internal
+hostnames will not resolve. See
+`framework-dual/install/03-config-dual-boot_purpose.txt` for the reasoning and
+how to opt out.
+
+**While a slow `guix pull` is running:** if name resolution is flaky rather than
+dead, the pull can "succeed" into compiling Guix from source — hours of CPU that
+looks like a hang. If it runs long with no download progress, interrupt it and
+re-check DNS rather than waiting it out.
+
 ## Related
 
 - `docs/CHANNEL_PINNING_POLICY.md` -- the pin must be newer than the hardware
