@@ -2,13 +2,14 @@
 
 This archive contains all completed items from CHECKLIST.md, listed with newest items at the top.
 
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-03
 
 ---
 
 ## 2026-01-01
 
 - ✅ **Cloudzy Low-Mem Optimization**: Enforced `--cores=1 --max-jobs=1` for Cloudzy builds in `lib/common.go` to prevent OOM kills.
+- ✅ **Build Failure Diagnostics**: Added `DiagnoseBuildFailure` (dmesg, free, herd status) to `lib/common.go` to capture critical debug info on build failures.
 
 ## 2025-12-31
 

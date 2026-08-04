@@ -340,6 +340,64 @@ turn off substitutes for all of Guix proper.
 Guarded by TestGenerateMinimalConfig_ChannelsAndSubstitutes.
 
 
+console-font-service-type override (readable console on a high-DPI panel)
+-------------------------------------------------------------------------
+  (modify-services %base-services
+    (console-font-service-type
+     config => (map (lambda (tty+font)
+                      (cons (car tty+font) "solar24x32"))
+                    config))
+    ...)
+
+The Framework 13 panel is 2256x1504 across a 13.5" diagonal. Guix's
+%default-console-font is Unifont-APL8x16 -- about 1.5 mm of cap height there,
+which is not readable at laptop distance. This is not cosmetic: the console is
+where you land when the desktop is not up, so the font is worst exactly when
+something has already gone wrong and you need to read an error.
+
+Why modify-services and not another (service console-font-service-type ...) in
+the appended list: %base-services ALREADY instantiates this type (gnu/system.scm
+maps tty1..tty6 to %default-console-font). Its shepherd services are named
+console-font-tty1 .. console-font-tty6, so a second instance covering the same
+ttys collides on those provisions and the system fails to build. Verified: the
+generated config yields exactly ONE instance whose value is
+(("tty1" . "solar24x32") ... ("tty6" . "solar24x32")).
+
+Why map over the incoming config rather than restating '("tty1" ... "tty6"):
+the tty list stays whatever %base-services defines. Only the font is this
+config's business; if upstream changes which ttys get fonts, this follows.
+
+Why "solar24x32" specifically. The service's own documentation says the font may
+be "the name of a font provided by the kbd package or any valid argument to
+setfont", and console-font-shepherd-services invokes
+(file-append kbd "/bin/setfont"), so a bare name resolves against that same kbd.
+kbd 2.5.1 ships exactly two fonts at this size: solar24x32.psfu.gz and
+latarcyrheb-sun32.psfu.gz.
+
+Do NOT use the Terminus console fonts (ter-v32n, ter-v32b) named in older notes
+in this repo, including docs/CONSOLE_FONT_TIPS.md before it was corrected. Those
+come from the font-terminus package, which this config does not install. Naming
+a font kbd does not ship produces no configuration error -- setfont simply fails
+at boot and the console stays at the default. TestGenerateMinimalConfig_
+ConsoleFont asserts they do not appear.
+
+Risk assessment, since this repo's policy is that the config stays minimal: this
+setting cannot cost you a console. console-font-shepherd-services declares
+(requirement (list 'term-ttyN)) -- the font service depends on mingetty, not the
+reverse -- so a font that fails to load cannot prevent a login prompt. The start
+gexp additionally treats setfont's EX_OSERR (71) as success, matching systemd's
+vconsole behaviour.
+
+Note for postinstall: framework-dual/postinstall/customize option 6
+(add_console_font in postinstall/lib.sh) becomes a no-op against this config --
+it greps for "console-font-service-type" and warns "already configured". That
+guard is what keeps it from appending the colliding second instance described
+above. Platforms whose generated config does NOT mention the type are still
+exposed to that, since add_console_font appends rather than modifies.
+
+Guarded by TestGenerateMinimalConfig_ConsoleFont.
+
+
 RELATED
 -------
 docs/CHANNEL_PINNING_POLICY.md      why the pin must be newer than the hardware

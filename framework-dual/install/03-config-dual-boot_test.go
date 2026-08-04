@@ -468,3 +468,45 @@ func TestGenerateMinimalConfig_ChannelsAndSubstitutes(t *testing.T) {
 		}
 	}
 }
+
+// The Framework 13 panel is 2256x1504 on a 13.5" diagonal, where the default
+// Unifont-APL8x16 console font is too small to read. The override must go
+// through modify-services: %base-services ALREADY instantiates
+// console-font-service-type, so a second (service console-font-service-type ...)
+// in the appended list collides on the shepherd provisions console-font-tty1
+// .. console-font-tty6 and the system fails to build.
+func TestGenerateMinimalConfig_ConsoleFont(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	if !strings.Contains(config, "(console-font-service-type") {
+		t.Errorf("Generated config does not set a console font.\nGot: %s", config)
+	}
+
+	// solar24x32 ships in kbd, which is the package the service invokes setfont
+	// from. ter-v32n/ter-v32b appear in older notes in this repo but live in
+	// font-terminus, which this config does not install -- naming one would
+	// leave the console at the default font with no error anywhere obvious.
+	if !strings.Contains(config, `"solar24x32"`) {
+		t.Errorf("Console font must be solar24x32 (a font kbd actually ships).\nGot: %s", config)
+	}
+	for _, absent := range []string{"ter-v32n", "ter-v32b"} {
+		if strings.Contains(config, absent) {
+			t.Errorf("Console font %q is not provided by kbd; it needs font-terminus", absent)
+		}
+	}
+
+	// The collision guard: the font override must NOT be a second instantiation
+	// appended alongside network-manager et al.
+	if strings.Contains(config, "(service console-font-service-type") {
+		t.Errorf("console-font must be overridden via modify-services, not added as a "+
+			"second service -- %%base-services already provides console-font-tty1..6.\nGot: %s", config)
+	}
+}

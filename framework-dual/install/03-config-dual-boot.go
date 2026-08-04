@@ -474,6 +474,12 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
  ;;                   urls does not include nonguix, so with the key alone guix
  ;;                   never asks -- it just compiles Linux from source, which
  ;;                   is hours of CPU and several GiB of store on a laptop.
+ ;;
+ ;; The console font is likewise overridden rather than added.  This panel is
+ ;; 2256x1504 on a 13.5" diagonal, and %%default-console-font is
+ ;; Unifont-APL8x16 -- roughly 1.5 mm of cap height, which is not readable at
+ ;; laptop distance.  Since the console is where you land when the desktop is
+ ;; not up yet, that matters most exactly when something has gone wrong.
  (services
   (append
    (list (service network-manager-service-type)
@@ -482,6 +488,24 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
          (service polkit-service-type)
          (service ntp-service-type))
    (modify-services %%base-services
+     ;; Rewrite the font in the tty/font alist that %%base-services already
+     ;; provides, preserving its tty list rather than restating tty1-tty6.
+     ;; This MUST be modify-services, not another (service console-font-...)
+     ;; in the list above: %%base-services already instantiates that type, and
+     ;; a second instance covering the same ttys collides on the shepherd
+     ;; provisions console-font-tty1 .. console-font-tty6.
+     ;;
+     ;; "solar24x32" is a bare name, which is what the service documents
+     ;; ("the name of a font provided by the kbd package"); it resolves to
+     ;; solar24x32.psfu.gz in kbd, the same package the service runs setfont
+     ;; from.  Only two large fonts ship in kbd -- this one and
+     ;; latarcyrheb-sun32.  The Terminus console fonts named in older notes in
+     ;; this repo come from font-terminus, which is NOT installed here; naming
+     ;; one silently leaves the console at the default font.
+     (console-font-service-type
+      config => (map (lambda (tty+font)
+                       (cons (car tty+font) "solar24x32"))
+                     config))
      (guix-service-type
       config => (guix-configuration
                  (inherit config)

@@ -2,6 +2,34 @@
 
 This guide helps you make the text larger during installation and after boot on systems with high-resolution displays (like the Framework 13 AMD).
 
+> **framework-dual already does this for you.** The generated `config.scm` sets
+> `solar24x32` on tty1-tty6 via `modify-services`, so a system installed from
+> this repo boots with a readable console. The rest of this page is for the
+> installer ISO, for other platforms, and for changing the font by hand.
+
+## Which fonts actually exist
+
+Only fonts in the **`kbd`** package resolve by bare name, because that is the
+package `console-font-service-type` runs `setfont` from. In `kbd` 2.5.1 there
+are exactly two at high-DPI size:
+
+| Font | Notes |
+|------|-------|
+| `solar24x32` | Recommended. What framework-dual configures. |
+| `latarcyrheb-sun32` | The only other 32px option. |
+
+**`ter-v32n` and `ter-v32b` are not in `kbd`.** They come from the separate
+`font-terminus` package. Earlier revisions of this document recommended them;
+that was wrong. Naming a font `kbd` does not ship raises no configuration error
+— `setfont` just fails at boot and the console silently stays at the default.
+Install `font-terminus` first if you want them.
+
+Confirm what your system has:
+
+```bash
+ls /run/current-system/profile/share/consolefonts/ | grep -E '24|32|36'
+```
+
 ## During Installation (Guix ISO)
 
 **TODO: Test on next ISO boot to confirm which fonts are available**
@@ -26,47 +54,46 @@ sudo setfont /run/current-system/profile/share/consolefonts/solar24x32
 ### Quick Temporary Change
 
 ```bash
-# List all available console fonts
-ls /run/current-system/profile/share/consolefonts/
+# Set font temporarily (until reboot) -- use the BARE NAME, not a path
+sudo setfont solar24x32
 
-# Recommended fonts for high-DPI displays:
-# - solar24x32 - Large, clean (recommended for Framework 13)
-# - ter-v32n - Terminus 32pt
-# - ter-v32b - Terminus 32pt bold
-
-# Set font temporarily (until reboot)
-sudo setfont /run/current-system/profile/share/consolefonts/solar24x32
+# Reset to the default
+sudo setfont
 ```
+
+Use the bare name. `setfont` searches `kbd`'s own font directory, and the fonts
+are stored gzipped (`solar24x32.psfu.gz`), so a hand-written absolute path that
+omits the suffix is an easy way to get a confusing failure.
 
 ### Make Font Change Permanent
 
-Add console font service to your `/etc/config.scm`:
+**Use `modify-services`, not another `(service console-font-service-type ...)`.**
+
+`%base-services` *already* instantiates this service type, mapping tty1-tty6 to
+`%default-console-font`. Its Shepherd services are named `console-font-tty1`
+through `console-font-tty6`, so adding a second instance over the same ttys
+collides on those provisions and the system fails to build.
 
 ```scheme
-(use-modules (gnu)
-             (gnu services base)  ; Required for console-font-service-type
-             (gnu services networking)
-             ...)
-
-(operating-system
-  (host-name "your-hostname")
-  (timezone "America/New_York")
-  (locale "en_US.utf8")
-
-  ;; ... other configuration ...
-
-  (services
-   (append
-    (list (service wpa-supplicant-service-type)
-          (service network-manager-service-type)
-
-          ;; Set large console font for all TTYs
-          (service console-font-service-type
-                   (map (lambda (tty)
-                          (cons tty "solar24x32"))
-                        '("tty1" "tty2" "tty3" "tty4" "tty5" "tty6"))))
-    %base-services)))
+(services
+ (append
+  (list (service network-manager-service-type)
+        (service wpa-supplicant-service-type))
+  (modify-services %base-services
+    ;; Rewrite only the font, keeping whatever tty list the base defines.
+    (console-font-service-type
+     config => (map (lambda (tty+font)
+                      (cons (car tty+font) "solar24x32"))
+                    config)))))
 ```
+
+`console-font-service-type` comes from `(gnu services base)`, which `(gnu)`
+re-exports — no extra `use-modules` entry is needed.
+
+This is safe to add to an otherwise minimal config. The font service declares
+`(requirement (list 'term-ttyN))`, meaning it depends on mingetty rather than the
+reverse, so a font that fails to load **cannot** leave you without a login
+prompt. Its start code also treats `setfont`'s `EX_OSERR` (71) as success.
 
 Then apply the changes:
 
@@ -76,34 +103,39 @@ sudo guix system reconfigure /etc/config.scm
 
 ### Testing Different Fonts
 
-Try different fonts to find what works best for your display:
+```bash
+sudo setfont solar24x32          # recommended
+sudo setfont latarcyrheb-sun32   # the other 32px font in kbd
+sudo setfont                     # back to the default
+
+# What this system actually has:
+ls /run/current-system/profile/share/consolefonts/ | grep -E '32|24'
+```
+
+To try Terminus, install it first — it is not in `kbd`:
 
 ```bash
-# Try Terminus fonts (designed for programming/terminals)
-sudo setfont ter-v32n  # 32pt normal
-sudo setfont ter-v32b  # 32pt bold
-
-# Try solar fonts
-sudo setfont solar24x32
-
-# If fonts are too small, try even larger:
-ls /run/current-system/profile/share/consolefonts/ | grep -E '32|24'
+guix install font-terminus
+sudo setfont ter-v32b
 ```
 
 ## Framework 13 AMD Recommendation
 
-For the Framework 13 AMD with its 2256x1504 display:
-- **Best choice**: `solar24x32` - Clean, readable, good size
-- **Alternative**: `ter-v32b` - Terminus bold for extra clarity
+For the Framework 13 AMD with its 2256x1504 display: **`solar24x32`**. This is
+what the generated framework-dual config sets, and it needs no extra package.
 
-## Adding Console Font to Customize Script
+## Console Font in the Customize Script
 
-The framework-dual customize script could offer this as an option in the future:
+`framework-dual/postinstall/customize` offers this as **option 6) Configure
+console font**. Against a framework-dual config it now reports "Console font
+already configured" and does nothing, which is correct — the font is set at
+install time.
 
-```bash
-# Option: Set larger console font for high-DPI displays
-# Adds console-font-service-type to config.scm
-```
+On platforms whose generated config does *not* mention
+`console-font-service-type`, be aware that `add_console_font`
+(`postinstall/lib.sh`) **appends** a new service rather than modifying the base
+one. If that config builds on `%base-services`, the result collides on
+`console-font-tty1`..`tty6` as described above.
 
 ## Notes
 
