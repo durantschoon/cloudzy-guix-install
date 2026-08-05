@@ -348,6 +348,63 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
              (srfi srfi-1))
 
 %s
+;; Pop!_OS chainload entry, emitted only when Pop!_OS is actually installed.
+;;
+;; Decided at CONFIG EVALUATION time, not at boot: stat runs on whichever
+;; machine evaluates this file, so the ESP has to be reachable from here.  That
+;; is a different path depending on when you run:
+;;
+;;   /boot/efi                a running, installed system (guix system reconfigure)
+;;   /mnt/guixroot/boot/efi   the installer, mid "guix system init"
+;;
+;; so both are probed.
+;;
+;; The check FAILS OPEN, and the distinction is not academic.  An ESP is vfat
+;; mounted umask=0077, so only root can stat anything beneath it: file-exists?
+;; answers #f for "not there" and for "you may not look" alike.  reconfigure
+;; and init run as root and see the truth, but a user-level "guix system build"
+;; does not, and would quietly emit a system with no way back to Pop!_OS from
+;; GRUB.  Hence three states rather than two: present and unknown both keep the
+;; entry, only a definite ENOENT drops it.  A spurious entry costs a "file not
+;; found" at the GRUB prompt; a missing one costs the boot menu route to the
+;; other OS, which is the more expensive mistake.
+(define %%popos-boot-loader "/EFI/systemd/systemd-bootx64.efi")
+
+(define %%esp-mount-candidates
+  '("/boot/efi" "/mnt/guixroot/boot/efi" "/mnt/boot/efi"))
+
+(define (popos-loader-state esp)
+  "Return 'present, 'absent, or 'unknown for the Pop!_OS loader under ESP."
+  (catch 'system-error
+    (lambda ()
+      (stat (string-append esp %%popos-boot-loader))
+      'present)
+    (lambda args
+      (if (= (system-error-errno args) ENOENT) 'absent 'unknown))))
+
+(define (popos-menu-entry)
+  (menu-entry
+   (label "Pop!_OS")
+   ;; The ESP is matched by LABEL rather than device path -- partition
+   ;; numbering on a dual-boot disk is whatever the other OS's installer left
+   ;; behind.  GRUB renders this as "search --label" then "chainloader".
+   (device (file-system-label "EFI"))
+   (chain-loader %%popos-boot-loader)))
+
+(define %%popos-menu-entries
+  (let ((states (map popos-loader-state %%esp-mount-candidates)))
+    (cond
+     ((memq 'present states) (list (popos-menu-entry)))
+     ((memq 'unknown states)
+      (format (current-error-port)
+              "note: cannot read the ESP (run as root to check); keeping the Pop!_OS entry~%%")
+      (list (popos-menu-entry)))
+     (else
+      (format (current-error-port)
+              "note: no Pop!_OS boot loader under ~a; omitting its GRUB entry~%%"
+              %%esp-mount-candidates)
+      '()))))
+
 (operating-system
  (host-name "%s")
  (timezone "%s")
@@ -404,18 +461,13 @@ func (s *Step03ConfigDualBoot) generateMinimalConfig(state *State, bootloader, t
    ;; directories on the one shared ESP (\EFI\Guix\ and \EFI\systemd\); this
    ;; hands control to the other bootloader without modifying it.
    ;;
-   ;; The device is the ESP itself, matched by LABEL rather than device path --
-   ;; partition numbering on a dual-boot disk is whatever the other OS's
-   ;; installer left behind.  GRUB renders this as a "search --label" followed
-   ;; by "chainloader".
    ;;
-   ;; If Pop!_OS is absent, this entry is harmless: selecting it fails, and the
-   ;; rest of the menu is unaffected.
-   (menu-entries
-    (list (menu-entry
-           (label "Pop!_OS")
-           (device (file-system-label "EFI"))
-           (chain-loader "/EFI/systemd/systemd-bootx64.efi"))))))
+   ;; Conditional on Pop!_OS actually being present -- see %%popos-menu-entries
+   ;; above, which resolves to the empty list on a machine without it so GRUB
+   ;; shows only the Guix generations.  This installer also targets Frameworks
+   ;; with no Pop!_OS at all, where an unconditional entry advertises an OS
+   ;; that was never installed.
+   (menu-entries %%popos-menu-entries)))
  (file-systems
   (cons*          (file-system
           (mount-point "/")

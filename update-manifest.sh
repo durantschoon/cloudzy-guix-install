@@ -22,7 +22,14 @@ EOF
 echo "## Go Source Files" >> "$MANIFEST_FILE"
 echo "" >> "$MANIFEST_FILE"
 
-find . -name "*.go" -not -path "./vendor/*" -not -path "./.git/*" | sort | while read -r file; do
+# .claude/ is pruned because git worktrees live under .claude/worktrees/, and
+# each one holds a complete second copy of every .go file in the repo. Sweeping
+# those in adds paths that do not exist in the published tarball, so bootstrap
+# verification fails for users -- and it changes the manifest hash they are
+# asked to eyeball, for reasons invisible from the repo. Whether the manifest
+# grows depends on whether a worktree happens to exist when this runs, which is
+# exactly the kind of nondeterminism a checksum manifest must not have.
+find . -name "*.go" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.claude/*" | sort | while read -r file; do
     hash=$(shasum -a 256 "$file" | awk '{print $1}')
     echo "$hash  $file" >> "$MANIFEST_FILE"
 done

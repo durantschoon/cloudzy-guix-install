@@ -351,8 +351,18 @@ func TestGenerateMinimalConfig_PopOSMenuEntry(t *testing.T) {
 	if !strings.Contains(config, "(menu-entries") {
 		t.Errorf("Generated config should add a menu entry for the other OS.\nGot: %s", config)
 	}
-	if !strings.Contains(config, `(chain-loader "/EFI/systemd/systemd-bootx64.efi")`) {
+	// The path moved into a definition so the entry can be constructed from two
+	// cond branches (present / unknown) without repeating the literal. Assert
+	// both halves rather than the old inline spelling: the constant, and the
+	// reference that consumes it. See
+	// TestGenerateMinimalConfig_PopOSMenuEntryIsConditional.
+	if !strings.Contains(config, `(define %popos-boot-loader "/EFI/systemd/systemd-bootx64.efi")`) {
 		t.Error("Pop!_OS entry must chainload systemd-boot from the shared ESP")
+	}
+	if !strings.Contains(config, "(chain-loader %popos-boot-loader)") {
+		// Errorf: vet reads a bare %p in the message as a format verb.
+		t.Errorf("the menu entry must consume %%popos-boot-loader rather than " +
+			"re-spelling the path, so the two branches cannot drift")
 	}
 
 	// Match the ESP by label, not device path: numbering on a dual-boot disk is
@@ -554,5 +564,69 @@ func TestGenerateMinimalConfig_DNS(t *testing.T) {
 	if strings.Contains(config, "(service network-manager-service-type)") {
 		t.Errorf("NetworkManager must be given a network-manager-configuration, " +
 			"not instantiated bare")
+	}
+}
+
+// TestGenerateMinimalConfig_PopOSMenuEntryIsConditional pins the Pop!_OS GRUB
+// entry to being emitted only when Pop!_OS is actually installed.
+//
+// It used to be unconditional. That is wrong for a fresh Framework with no
+// Pop!_OS on it: GRUB then advertises an OS that was never installed, and
+// selecting it fails with "file not found".
+func TestGenerateMinimalConfig_PopOSMenuEntryIsConditional(t *testing.T) {
+	step := &Step03ConfigDualBoot{}
+	state := &State{
+		HostName: "test-host",
+		Timezone: "America/New_York",
+		UserName: "testuser",
+		FullName: "Test User",
+		Device:   "/dev/nvme0n1",
+		EFI:      "/dev/nvme0n1p1",
+		Root:     "/dev/nvme0n1p4",
+		BootMode: "uefi",
+	}
+
+	config := step.generateMinimalConfig(state, "grub-efi-bootloader", `'("/boot/efi")`)
+
+	// The bootloader must reference the computed list, never a literal one.
+	if !strings.Contains(config, "(menu-entries %popos-menu-entries)") {
+		// Errorf, not Error: vet reads a bare %p in the message as a format verb.
+		t.Errorf("bootloader-configuration must use (menu-entries %%popos-menu-entries), " +
+			"so the Pop!_OS entry can be omitted on machines without Pop!_OS")
+	}
+
+	// The ESP sits at a different path during `guix system init` than on a
+	// running system, so both must be probed or the entry vanishes at install
+	// time and reappears at the first reconfigure.
+	for _, candidate := range []string{"/boot/efi", "/mnt/guixroot/boot/efi"} {
+		if !strings.Contains(config, candidate) {
+			t.Errorf("ESP candidate %q missing: the probe must cover both the "+
+				"installed-system and mid-install mount points", candidate)
+		}
+	}
+
+	// Fail-open is the whole point. An ESP is vfat mounted umask=0077, so a
+	// non-root evaluation gets EACCES, which file-exists? reports exactly like
+	// "absent". Only a definite ENOENT may drop the entry; anything else keeps
+	// it. Losing the entry costs the boot route back to the other OS, which is
+	// worse than a stale entry that merely fails when selected.
+	if !strings.Contains(config, "ENOENT") {
+		t.Error("the probe must distinguish ENOENT from other errno values; " +
+			"without that, EACCES silently drops the Pop!_OS entry")
+	}
+	if !strings.Contains(config, "(memq 'unknown states)") {
+		t.Error("the 'unknown state must keep the Pop!_OS entry (fail open)")
+	}
+
+	// Go format-verb escaping: every literal % in the generated Guile has to be
+	// written %% in the template. Guile's own ~% newline directive is the easy
+	// one to get wrong. Go marks a botched verb in the output, so scan for it.
+	if strings.Contains(config, "%!") {
+		t.Errorf("generated config contains a Go format error marker (%%!...); "+
+			"a %% in the template is unescaped.\nConfig:\n%s", config)
+	}
+	if !strings.Contains(config, "keeping the Pop!_OS entry~%") {
+		t.Error("Guile's ~% newline directive did not survive templating; " +
+			"it must be written ~%% inside the Go format string")
 	}
 }
