@@ -2,7 +2,15 @@
 
 This archive contains all completed items from CHECKLIST.md, listed with newest items at the top.
 
-**Last Updated:** 2026-08-03
+**Last Updated:** 2026-08-05
+
+---
+
+## 2026-08-02
+
+- ✅ **Installed System Now Inherits the Channel Pin (2026-08-02)**: The generated config mirrors the pinned guix+nonguix commit pair into the target via `guix-configuration`, so the guix service writes `/etc/guix/channels.scm` at activation. Found the hard way: `guix system reconfigure /etc/config.scm` **on the machine that config had just built** died with `no code for module (nongnu packages linux)` — `guix system init` copies the store closure, not the channels. The same override adds `https://substitutes.nonguix.org` to `substitute-urls` and its signing key to `authorized-keys`; authorizing the key without the URL does not error, it just silently compiles Linux from source. Guarded by `TestGenerateMinimalConfig_ChannelsAndSubstitutes`; recovery steps in [docs/RECOVERY_REBUILD_FROM_HOST_OS.md](../docs/RECOVERY_REBUILD_FROM_HOST_OS.md). Narrative account in [docs/STORY.md](../docs/STORY.md) section V.
+
+- ✅ **Framework-dual Repin VERIFIED ON HARDWARE (2026-08-02)**: Rebuilt the Guix system from the Pop!_OS side (no ISO) onto `linux-7.1.5` + `linux-firmware-20260622`. Confirmed on first boot: **keyboard works**, WiFi connects via `nmtui`, `dmesg | grep -i amdgpu` clean. One root cause explained four symptoms — dead keyboard, no wireless driver, Bluetooth `wmt` timeouts, and amdgpu `error -2` — all a kernel/firmware set older than the machine. Added NetworkManager + wpa-supplicant + dbus + polkit + ntp to the generated config (`%base-services` is loopback-only, and this laptop has no ethernet port, so the old config could never reach a network), switched to `microcode-initrd`, and documented the whole route in [docs/RECOVERY_REBUILD_FROM_HOST_OS.md](docs/RECOVERY_REBUILD_FROM_HOST_OS.md). Narrative account in [docs/STORY.md](../docs/STORY.md).
 
 ---
 
