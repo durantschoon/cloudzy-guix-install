@@ -550,6 +550,154 @@ Learned the complete workflow for getting Framework 13 fully operational after m
 
 ## 📋 Remaining Work
 
+### 🔴 Next Up — Roadmap to "New Laptop → Prompts → Full Guix" (2026-08-04)
+
+**North star:** someone buys a new Framework laptop, boots the installer, answers
+a few prompts (username, shell, desktop), and ends up with a working Guix
+system. Gap analysis done 2026-08-04 against a hand-evolved config that is
+running the full stack; these three items are the distance, in order of
+leverage. Documented now, deliberately not started — other priorities first.
+
+#### R1. Preference Prompts → Generated Config (shell, desktop)
+
+**Status:** ❌ Not started — but the target config content already exists and is validated
+
+**Current gap:** `generateMinimalConfig` emits a fixed console-only config:
+`%base-services`, no `(shell ...)` on the user-account (login shell silently
+bash), no desktop. Shell and desktop are exactly the preferences a new user
+would state up front.
+
+**The content to emit is already known-good.** A hand-evolved copy of the
+generated config (`~/config-framework-dual-new.scm` on the Pop!_OS partition,
+validated by evaluation to `<operating-system>`, 58 services) contains every
+piece:
+
+- Login shell: `(shell (file-append zsh "/bin/zsh"))` on the user-account.
+  Must be a SYSTEM setting: `file-append` pulls the shell into the system
+  closure so it exists at first boot, before guix home runs; `chsh` is futile
+  on Guix because reconfigure regenerates `/etc/passwd` from the declaration.
+- Desktop: `(service gnome-desktop-service-type)` + swap `%base-services` →
+  `%desktop-services` in `modify-services`. **The swap requires REMOVING the
+  five explicit services** (network-manager, wpa-supplicant, dbus-root,
+  polkit, ntp) — `%desktop-services` supplies all five, and duplicates fail
+  the reconfigure. GDM defaults to `(wayland? #t)`.
+- Bootstrap packages: `(append (list git openssh gnu-make) %base-packages)`.
+  `%base-packages` has none of the three; a fresh system cannot clone a
+  dotfiles repo or run `make` without them.
+
+**Implementation shape:** prompts modeled on the existing
+`lib.PromptKeyboardLayout` (see `03-config-dual-boot.go`), feeding the Go
+template. Shell: bash/zsh/fish → one field (bash = omit the field). Desktop:
+none/GNOME/Xfce → one service + the services-base swap.
+
+**Relation to the postinstall desktop switch:** the old sed-based
+`add_desktop` footgun was already fixed (2026-08-03, `954bb8b`) by
+`guile-config-helper.scm switch-to-desktop`, which rewrites the parsed
+S-expressions and drops the services `%desktop-services` supplies. R1 is the
+complement, not a duplicate: emitting the desktop at *generation* time means a
+user who states the preference up front never needs the switch tool at all —
+the postinstall path stays for users who start minimal and upgrade later.
+
+**Impact:** ⭐⭐⭐ High — this is the "enter some information" half of the vision
+
+---
+
+#### R2. Blank-Disk Support (create the ESP)
+
+**Status:** ❌ Not started
+
+**Current gap:** the installer is a *dual-boot* installer: step 01
+(`FindEFIPartition`, `framework-dual/install/01-partition-check.go`) only
+*finds* an ESP and hard-fails with `required variables not set (DEVICE, EFI)`
+when none exists. Nothing anywhere runs `mkfs.fat`. A genuinely new laptop —
+blank NVMe, no OS — fails at the first step.
+
+**Needed:** when no ESP exists on the chosen device, create GPT + ESP
+(`mkfs.fat -F32`, partition type EF00) + `GUIX_ROOT`, then proceed down the
+existing path. The find-or-create pattern already used for `GUIX_ROOT`
+(`parted --script` + `mkfs.ext4 -L GUIX_ROOT`) is the model.
+
+Related, already fixed (2026-08-04, `44a591c`): the Pop!_OS chainload entry is
+now conditional — on a machine without Pop!_OS the generated config omits it
+(three-state probe, fails open on EACCES so a user-level `guix system build`
+cannot silently drop the entry).
+
+**Impact:** ⭐⭐⭐ High — the difference between "dual-boot installer" and
+"new-machine installer"
+
+---
+
+#### R3. Channel Pin Lifecycle
+
+**Status:** ⚠️ Policy exists (docs/CHANNEL_PINNING_POLICY.md); recurring cost, not a feature
+
+Two clocks tick against the pin (`lib/common.go`:
+`FrameworkDualGuixCommit` / `FrameworkDualNonguixCommit`, dated
+`FrameworkDualPinDate`):
+
+1. **New hardware revisions** — the pin must be NEWER than the target silicon
+   (see the Ryzen AI 300 postmortem: a pin that predates the hardware cannot
+   contain its firmware). Each new Framework generation likely needs a
+   move-forward before the installer works on it.
+2. **Substitute GC** — once build farms garbage-collect substitutes for the
+   pinned commits, installs still work but compile from source (hours).
+
+**Needed:** a documented cadence (or CI check) that verifies the current pin
+still has substitute coverage and is newer than supported hardware, rather
+than discovering staleness mid-install.
+
+**Impact:** ⭐⭐ Medium — nothing breaks today; it rots silently
+
+---
+
+#### R4. Generic Dual-Boot: Guix + an OS of Your Choice (default Pop!_OS)
+
+**Status:** ❌ Not started — and cheaper than it sounds
+
+**Why it is cheap:** the installer's Pop!_OS coupling is almost entirely one
+string pair. The partitioning and mounting logic never touches the other OS —
+it finds the ESP and `GUIX_ROOT` by label and leaves everything else alone,
+which is already OS-agnostic by design. What actually says "Pop!_OS":
+
+- the chainload target `/EFI/systemd/systemd-bootx64.efi` (systemd-boot —
+  a Pop!_OS choice; Ubuntu/Fedora use shim+GRUB, Windows uses bootmgfw)
+- the GRUB menu label
+- a handful of user-facing prints and the dual-boot docs
+
+**Implementation shape:** turn the conditional-entry probe (`fa9d8c2`) into a
+loader *table* instead of a single path — each row `{label, esp-paths}`:
+
+| OS | loader on the shared ESP |
+|---|---|
+| Pop!_OS (systemd-boot) | `/EFI/systemd/systemd-bootx64.efi` |
+| Ubuntu | `/EFI/ubuntu/shimx64.efi` |
+| Fedora | `/EFI/fedora/shimx64.efi` |
+| Windows | `/EFI/Microsoft/Boot/bootmgfw.efi` |
+
+The generated config probes every row with the same three-state (present /
+absent / unknown-fails-open) logic and emits one `menu-entry` per loader
+found. GRUB's `search --label` + `chainloader` works identically for all of
+them. No per-OS code beyond the table row; "default Pop!_OS" stops being a
+special case and becomes just the row that matches on this hardware.
+
+**The honest cost** is not code but testing and docs: each claimed OS needs at
+least one real chainload test, and `docs/GUIDE_DUAL_BOOT.md` (written against
+Pop!_OS) needs per-OS notes — especially Windows, where BitLocker measures the
+boot path and a chainload can trip recovery-key prompts. Ship the table with
+only the tested rows enabled.
+
+**Impact:** ⭐⭐ Medium-High — widens the audience from "Pop!_OS owners" to
+"anyone with an EFI system," R2's natural companion
+
+---
+
+**Explicitly out of scope for the general-user vision:** keyd remapping, the
+`/lib64` FHS loader shim, and personal dotfiles. Those are user layers riding
+on `guix home` (see the dot_files repo) — the repo installs the *system*; the
+user brings their own home. That separation is working and should be kept.
+
+---
+
 ### 🟡 Medium Priority
 
 #### 1. Add NetworkManager to Framework Customize Script
