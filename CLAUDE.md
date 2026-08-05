@@ -523,6 +523,53 @@ After implementing user-visible behavior or flow changes, update the docs in the
 
 Docs should reflect new safety checks, logging, and any changed commands or defaults.
 
+### Documentation Voice: 90% Technical, 10% Narrative
+
+Docs under `docs/` are technical manuals that stay readable. The working ratio
+is roughly **90% technical content, 10% narrative engagement**: explain the
+mechanism, then spend a sentence on why it surprised someone. Section titles
+may carry that weight ("The Mystery of the Missing Lock Directory"); the
+paragraphs under them should not.
+
+Concretely, prefer:
+
+- the failure that motivated a fix, stated once, over a bare imperative
+- the specific wrong belief a reader is likely to hold, named and corrected
+- version and date anchors ("absent before Linux 6.7") over "recent kernels"
+
+and avoid narrative that displaces detail, or that a reader debugging at 2am
+has to scroll past.
+
+**Two deliberate exceptions:**
+
+- `docs/STORY.md` inverts the ratio on purpose -- it is the one place narrative
+  leads, and it cross-references the reference docs rather than restating them.
+- `known-good/**/ATTESTATION.md` is a record of what was observed, so it takes
+  no voice at all beyond plain answers.
+
+This convention was set on 2025-11-25 in `cdc475e` and then existed only in
+that commit message for eight months, so nobody editing those docs could have
+known it applied. That is why it is written here. See `docs/DORMANT_GOALS.md`.
+
+### Known-Good Artifacts vs the Generic Installer
+
+The repo holds two kinds of thing, and they must not blend:
+
+- **The generic installer** -- everything outside `known-good/`. Written for a
+  machine nobody has inspected: device auto-detected, hostname templated,
+  layout discovered. Machine-specific facts leaking in here break someone
+  else's laptop.
+- **`known-good/`** -- configurations that demonstrably booted a real machine,
+  captured from that machine's own `provenance-service-type` record. Evidence,
+  not recommendation. Never edited after capture; nothing reads it at build
+  time.
+
+When a fix comes out of one machine, ask which it is. The one-machine answer
+(a login shell, a keymap, an FHS shim) belongs in `known-good/` or in
+`guix home`; the generalization of it belongs in the installer, usually as a
+prompt rather than a constant. `CHECKLIST.md`'s R1-R4 roadmap is that
+generalization work.
+
 ### Checklist-Driven Workflow
 
 We work from `CHECKLIST.md` and track progress explicitly:
