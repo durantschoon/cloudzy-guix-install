@@ -692,9 +692,20 @@ only the tested rows enabled.
 ---
 
 **Explicitly out of scope for the general-user vision:** keyd remapping, the
-`/lib64` FHS loader shim, and personal dotfiles. Those are user layers riding
-on `guix home` (see the dot_files repo) — the repo installs the *system*; the
-user brings their own home. That separation is working and should be kept.
+`/lib64` FHS loader shim, and personal dotfiles. Those belong to the `dot_files`
+repo — this repo installs the *system*; the user brings their own machine. That
+separation is working and should be kept.
+
+Note that "user layer" does not mean "`guix home`" for all three. Dotfiles ride
+on `guix home`; keyd and the loader shim cannot. keyd reads `/dev/input/event*`
+and writes `/dev/uinput`, both root-only, which is why `dot_files`' `setup-keyd`
+target refuses to run on Guix System and why keyd is a hand-written
+`shepherd-service` in the user's own `operating-system` config instead. Those
+live in `dot_files/system/`; see `known-good/README.md` for how that state
+relates to the generated and captured configs here. Worth stating precisely,
+because reading "user layers riding on `guix home`" literally sends a system
+concern somewhere structurally unable to host it, and the config it belongs to
+then has no home in either repo.
 
 ---
 

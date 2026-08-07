@@ -28,6 +28,37 @@ This is the same line `CHECKLIST.md` draws when it scopes keyd, the FHS loader
 shim, and personal dotfiles out of the generic installer: those are one
 machine's answers, not the project's.
 
+## The third state, which is not in this repo
+
+The split above is really three states, and naming only two of them is how one
+of them ended up versioned nowhere at all:
+
+1. **Generated** — `framework-dual/install/03-config-dual-boot.go` writes a
+   minimal `/mnt/etc/config.scm` at install time. Deliberately minimal.
+2. **Living** — what you then hand-evolve on the machine, as it grows a channel
+   pin, a desktop, the `/lib64` loader shim, keyd. Neither generic enough for
+   the installer nor a capture, so it fits in neither directory here.
+3. **Captured** — this directory. What booted, recorded automatically.
+
+State 2 lives in **`dot_files/system/`**, alongside the `guix home` configs and
+the `keyd.conf` it has to stay consistent with. `dot_files/system/README.md`
+explains the constraints it holds (self-contained enough for root to evaluate
+from an installer ISO; no inlined secrets, since anything an `operating-system`
+puts in the store is world-readable on the machine) and the `make check-system`
+targets that enforce them.
+
+So `framework-dual-geeeks/` below is generation 1 of a config whose current form
+is in that other repo. If you are diffing this capture against a running machine
+and the machine has far more in it, that is expected — compare against
+`dot_files/system/framework-dual.scm`, not against this.
+
+One correction to the line `CHECKLIST.md` draws: it routes keyd to "user layers
+riding on `guix home`". keyd cannot be a `guix home` service — it reads
+`/dev/input/event*` and writes `/dev/uinput`, both root-only, which is exactly
+why `dot_files`' own `setup-keyd` target refuses to run on Guix System. Scoping
+keyd out of the *generic installer* is right; it just lands in a system config
+the user maintains, not in their home profile.
+
 ## These are captured, not written
 
 The files here are not hand-maintained copies. They come from Guix's own
