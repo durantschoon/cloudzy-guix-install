@@ -198,6 +198,22 @@ constraint is not "Oracle" — `oracle-a1` has 12 GB, six times the minimum. Tre
 the two Oracle profiles as genuinely different targets on the memory axis, and
 prefer `oracle-a1` as the viable free-tier target.
 
+### `raw.githubusercontent.com` does follow rename redirects
+
+An earlier draft of the Step 1 checklist asserted the opposite, and the whole
+new-repo-versus-rename question hung on it. Measured 2026-08-08 against two
+repositories that have actually been renamed:
+
+| URL requested | Status | Repository today |
+|---|---|---|
+| `raw.githubusercontent.com/Homebrew/homebrew/master/README.md` | 200 | `Homebrew/legacy-homebrew` |
+| `raw.githubusercontent.com/zeit/next.js/canary/readme.md` | 200 | `vercel/next.js` |
+
+Raw content, the web UI, and `git remote` all follow the redirect. What does
+*not* survive is the name being reclaimed: the redirect is a fallback for an
+unused name, not a permanent alias, so creating a repo at the old name replaces
+the redirect with that repo's content and no error is raised anywhere.
+
 ### Pre-existing validation failures
 
 `lib/validate-before-deploy.sh` reports two failures that are **not** caused by
@@ -230,12 +246,20 @@ not merge.
       against the working directory (broke on rename, and never worked for the
       bootstrap tarball)
 - [x] `SOURCE_MANIFEST.txt` regenerated
-- [ ] Land the remote side. The in-repo pass and the remote name must land close
-      together: `raw.githubusercontent.com` paths in already-published docs do
-      **not** redirect the way a git remote does. **OPEN:** rename in place
-      versus push this history to a new repo and leave the old one as a
-      deprecated pointer. The second option makes the change additive and breaks
-      no published URL.
+- [x] Land the remote side. **Resolved 2026-08-08: rename in place.** The OPEN
+      alternative — push this history to a new repo and leave the old one as a
+      deprecated pointer — rested on the claim that `raw.githubusercontent.com`
+      does not follow rename redirects, and that claim is false (measured
+      below). With it gone, the new-repo route only adds a second repository
+      that serves *stale bootstrap code* at the published URL indefinitely,
+      which is worse than a 404 because it fails silently. The old repo carried
+      0 stars, 0 forks, 0 watchers and 0 open issues or PRs at rename time, so
+      nothing was depending on either behaviour.
+
+      **Constraint this creates: never create another repository named
+      `cloudzy-guix-install`.** GitHub's redirect holds only while the freed
+      name is unclaimed; a new repo taking it would silently start answering
+      every published URL.
 - [ ] Fix the Unicode in `lib/bootstrap-installer.sh` (pre-existing; unrelated to
       the rename but cheap to clear while validation is being read)
 
