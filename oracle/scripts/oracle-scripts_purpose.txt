@@ -1,0 +1,176 @@
+Purpose notes for oracle/scripts/ -- why each piece exists and, where it
+matters more, what was deliberately left out.  Everything here was
+learned during the first end-to-end run on 2026-08-08, which took a Guix
+image from `guix system image` to a RUNNING instance at a public IP.
+
+========================================================================
+Why these are Guile scripts
+========================================================================
+Repo policy (CLAUDE.md): Guile for anything that runs on a Guix system.
+These run on the operator's local Guix machine.  A practical consequence
+drove one design rule: core Guile has NO JSON parser (guile-json is a
+separate package), so every oci CLI call uses --query/--raw-output and
+the CLI does all JSON work.  Do not "improve" this by parsing JSON in
+Guile unless you also add guix-shell plumbing for guile-json.
+
+The scripts load oci-common.scm with (load ...) relative to
+(car (command-line)) instead of use-modules, so they work from any
+checkout path with zero GUILE_LOAD_PATH setup.
+
+========================================================================
+oci-common.scm
+========================================================================
+prompt-tty          reads /dev/tty, never stdin -- repo-wide pattern;
+                    stdin may be a pipe from the caller.
+oci / oci/status    every call sets SUPPRESS_LABEL_WARNING=True; without
+                    it the CLI prints key-security advice on EVERY
+                    invocation and that noise lands inside --raw-output
+                    capture paths.
+poll-until          all long waits go through one helper so every
+                    script's waiting behavior (dots, timeout, message)
+                    is identical.
+
+========================================================================
+01-setup-client.scm
+========================================================================
+python via `guix install python`
+    Guix packages the Go OCI SDK but not the CLI.  The CLI is Python.
+    A venv under ~/.venvs/oci-cli keeps pip packages out of the Guix
+    profile; the symlink into ~/.local/bin makes `oci` a normal command.
+
+Console-GENERATED API key, not locally-generated
+    First attempt had the user paste a locally generated public key into
+    the console form; transcription of a 7-line PEM through a chat/copy
+    path corrupted it silently (a mangled key still LOOKS like a key).
+    "Generate API key pair" + "Download private key" is two clicks and
+    cannot be mistyped.  The script then finds the newest ~/Downloads/
+    *.pem, asks for confirmation, and moves it into ~/.oci with 600.
+
+Fingerprint computed locally
+    MD5 over the DER SubjectPublicKeyInfo, colon-separated -- computed
+    with the venv's own `cryptography` lib because openssl(1) is not
+    on a stock Guix system.  Printing it lets the user compare against
+    the console's displayed fingerprint, which is the fastest way to
+    detect "downloaded one key, Added a different one".
+
+Auth poll after setup
+    A fresh key returns NotAuthenticated for up to ~a minute.  Without
+    the poll, users conclude the setup failed and start over.
+
+Statement of omission: `oci session authenticate` (browser flow) was
+tried and rejected as the primary path -- it needs a running local
+callback listener, the token expires hourly, and it cannot be resumed
+by a script the next morning.  API keys are durable.
+
+Statement of omission: no attempt to read tenancy/user OCIDs from a
+previous machine's ~/.oci.  Recovering config from an old disk needs
+root to mount it; simpler to re-enter two OCIDs.
+
+========================================================================
+02-build-image.scm
+========================================================================
+pty via script(1)
+    `guix system image` output redirected to a file dies before the
+    build starts: "terminal-window-size: Inappropriate ioctl for
+    device".  script(1) provides a pty and tees to the log.
+
+setsid detachment
+    The first two "failed" builds of this image were healthy builds
+    whose controlling session died.  Detached + logged means the build
+    survives the terminal, and reruns find the finished path in the log.
+    Guix's derivation cache makes interrupted builds resume, so kill
+    and rerun is always safe.
+
+authorized-key.pub prompt
+    The key is baked into the image and is the only way in; the build
+    fails at evaluation without it (local-file).  The script offers the
+    keys in ~/.ssh rather than silently picking one: baking the wrong
+    key = unreachable instance.
+
+Statement of omission: no --dry-run pre-pass.  It doubles evaluation
+time and the real build fails just as clearly at the same point.
+
+========================================================================
+03-smoke-test.scm
+========================================================================
+Serial console over TCP, not a unix socket
+    sun_path is limited to 108 bytes; socket paths inside deep per-
+    session scratch directories exceed it and QEMU refuses to start.
+    TCP on 127.0.0.1 has no such limit and Guile's socket API speaks it
+    directly.
+
+Sentinel is computed by the GUEST ($((41+1)) -> 42)
+    Matching command completion by echoing a literal sentinel fails
+    because the ECHOED COMMAND LINE contains the sentinel too, so the
+    matcher fires before the command runs.  The guest computing it
+    means the literal string never appears in the input line.
+
+Commands must not end in `&`
+    console-run appends " ; echo SENTINEL-..." and `& ;` is a bash
+    syntax error.  Background with "... & true".
+
+Root console login with no password
+    The image sets no root password, so the serial console gives a root
+    shell.  That is what makes unattended key injection possible.  (On
+    the real OCI serial console this is also the recovery path; whether
+    to lock root's console later is a hardening decision for the user.)
+
+Throwaway key, not the user's key
+    The single most misleading failure of the first run: `ssh -o
+    BatchMode=yes` with a passphrase-protected key prints "Permission
+    denied (publickey)" -- while the server-side `sshd -ddd` shows
+    "Accepted key ... Postponed publickey" and the CLIENT hanging up
+    because BatchMode cannot prompt for the passphrase to sign.  It
+    looks exactly like README failure mode #2 (wrong key baked in) but
+    is purely client-side.  A fresh passphrase-less key exercises the
+    same server path with no ambiguity.
+
+Key injected into the scratch COPY only
+    The store image stays byte-identical to what 04 uploads; the tested
+    artifact and the deployed artifact differ only by the injected line
+    in a copy that is deleted afterwards.
+
+What a PASS certifies: serial console (= OCI console) login prompt,
+root-by-label mount, sshd accepting authorized_keys, completed login
+for the locked-password account (guix:!: + UsePAM yes -- the purpose
+file of the image asserts this works; this test is the proof), and
+passwordless sudo.
+
+========================================================================
+04-deploy.scm
+========================================================================
+Idempotency by display-name lookup
+    Cloud steps fail halfway (quota, network, typo).  Every ensure-*
+    looks up before creating, so rerunning after ANY failure continues.
+    The trade-off, stated: a rebuilt qcow2 does not re-import while an
+    AVAILABLE image named guix-oracle exists -- delete that image in
+    the console (or rename %image-name) to force it.  The script says
+    this aloud when it skips the upload.
+
+PARAVIRTUALIZED launch mode
+    Must match the BIOS/MBR layout of the qcow2 image type.  NATIVE
+    boots UEFI and would need qcow2-gpt + grub-efi-bootloader.
+
+Networking created in code, not by the console wizard
+    VCN 10.0.0.0/16, internet gateway, 0.0.0.0/0 route in the DEFAULT
+    route table, subnet 10.0.0.0/24.  The default security list already
+    allows SSH from 0.0.0.0/0, so no security-list edits are needed for
+    port 22.  Web serving later needs 80/443 added there.
+
+No cloud-init metadata
+    --metadata ssh_authorized_keys only works for images running
+    cloud-init.  Guix has none; the key is baked in.  Passing metadata
+    anyway would silently do nothing and mislead readers.
+
+SSH BANNER check, deliberately not a login
+    "Permission denied (publickey)" from a BatchMode probe user proves
+    sshd is up, the route/security list work, and auth is enforced.  A
+    full unattended login would require an unencrypted private key on
+    disk, which this repo will not ask for.  The user performs the
+    first real login interactively.
+
+Known open question carried in the final output: the boot volume may be
+/dev/sda (virtio-scsi) rather than /dev/vda on OCI, in which case
+(targets ...) in oracle-image.scm must be fixed BEFORE the first
+`guix system reconfigure`.  First boot is unaffected (GRUB was written
+at image-build time).

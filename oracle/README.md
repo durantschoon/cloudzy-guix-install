@@ -1,6 +1,6 @@
 # Guix System on Oracle Cloud Infrastructure (Always Free)
 
-⚠️ **Status: the image definition is written and validated, but nothing here has been booted yet.** Commands below marked *(untested)* are reasoned from the OCI docs, not from a successful run. Treat this as a working draft.
+✅ **Status: verified end-to-end on 2026-08-08.** The image built, passed the QEMU smoke test, uploaded, imported, and launched as a running instance with sshd answering on its public IP. The whole flow is scripted in `scripts/` (see below); the manual commands in this file are kept as the reference for what the scripts do.
 
 ## How this platform differs from the others
 
@@ -12,6 +12,25 @@ So there is no bootstrap script, no numbered install steps, and no Go code here.
 guix system image  ->  Object Storage  ->  custom image  ->  instance
    (your machine)         (upload)          (import)        (launch)
 ```
+
+## The scripted path (recommended)
+
+Four Guile scripts under `scripts/` reproduce the whole verified flow.
+Each is idempotent — rerunning after any failure continues instead of
+duplicating work. Run them in order from anywhere:
+
+```bash
+oracle/scripts/01-setup-client.scm   # oci CLI + ~/.oci config (one-time, interactive)
+oracle/scripts/02-build-image.scm    # detached pty build; prints /gnu/store/...qcow2
+oracle/scripts/03-smoke-test.scm     # boots it in QEMU, proves SSH + sudo work
+oracle/scripts/04-deploy.scm /gnu/store/...-image.qcow2   # upload/import/network/launch
+```
+
+`04-deploy.scm` ends by printing the `ssh guix@<public-ip>` command. The
+design reasoning and the traps each script encodes (pty requirement,
+BatchMode-vs-passphrase false negative, 108-byte unix socket limit,
+guest-computed sentinels) are documented in
+`scripts/oracle-scripts_purpose.txt`.
 
 ## Prerequisites
 
@@ -35,7 +54,7 @@ Prints a store path ending in `image.qcow2`. `--image-size=50G` makes the root p
 
 ## 2. Smoke-test locally before uploading
 
-Strongly recommended — an hour of upload plus import is a slow way to discover the image does not boot.
+Strongly recommended — an hour of upload plus import is a slow way to discover the image does not boot. `scripts/03-smoke-test.scm` does all of this unattended, including an actual SSH login test; the manual version:
 
 ```bash
 IMG=$(guix system image -t qcow2 --image-size=50G oracle/image/oracle-image.scm)
@@ -45,7 +64,9 @@ qemu-system-x86_64 -m 2048 -drive file=/tmp/guix-oracle.qcow2,format=qcow2 -nogr
 
 `-nographic` routes everything to the serial line, which is exactly what OCI's console does — so this also verifies the `console=ttyS0` configuration. You should see the GRUB menu, then a login prompt. Exit QEMU with `Ctrl-a x`.
 
-## 3. Upload to Object Storage *(untested)*
+⚠️ **Do not "verify" SSH with `-o BatchMode=yes` and your own key.** If your key has a passphrase, the client cannot sign in batch mode and prints `Permission denied (publickey)` even when the server accepted the key — indistinguishable from a wrong baked-in key until you read `sshd -ddd` output from the server side. The smoke-test script uses a throwaway passphrase-less key for exactly this reason.
+
+## 3. Upload to Object Storage *(verified 2026-08-08)*
 
 ```bash
 COMPARTMENT=$(oci iam compartment list --query 'data[0]."compartment-id"' --raw-output)  # or your tenancy OCID
@@ -56,7 +77,7 @@ oci os object put --bucket-name guix-images --name guix-oracle.qcow2 \
                   --file /tmp/guix-oracle.qcow2
 ```
 
-## 4. Import as a custom image *(untested)*
+## 4. Import as a custom image *(verified 2026-08-08)*
 
 ```bash
 oci compute image import from-object \
@@ -81,7 +102,7 @@ oci compute image list --compartment-id "$COMPARTMENT" \
     --query 'data[0].{state:"lifecycle-state",id:id}' --output table
 ```
 
-## 5. Launch *(untested)*
+## 5. Launch *(verified 2026-08-08)*
 
 Needs a VCN with a public subnet. The console's **Create VCN with Internet Connectivity** wizard is the fast path; then:
 
