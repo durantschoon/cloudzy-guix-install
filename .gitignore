@@ -1,6 +1,9 @@
 # Build artifacts (compiled binaries)
 run-remote-steps
 /hash-to-words
+# Built on demand by lib.WriteRecoveryScript (go build ./cmd/recovery), which
+# removes any existing copy first -- so a committed one is never used.
+/recovery
 
 # IDE and editor files
 .claude/
