@@ -445,11 +445,11 @@ cd ~/guix-customize
 - ⏳ Scripts are transcriptions of the verified manual run; they have not
   themselves been run end-to-end yet (parse-checked only). Next fresh
   deploy should use them and note divergences.
-- ⏳ Open question: boot volume may appear as `/dev/sda` rather than
-  `/dev/vda`, which would break the first `guix system reconfigure` (not
-  first boot — GRUB is installed at image-build time). QEMU's IDE default
-  showed `sda` and booted fine; check `lsblk` on the real instance before
-  reconfiguring, and fix `(targets ...)` if needed
+- ✅ Open question resolved (2026-08-08): `lsblk` on the live instance shows
+  the boot volume as **`/dev/sda`** (paravirtualized boot volumes attach via
+  virtio-scsi), matching QEMU's IDE default. `(targets ...)` in
+  `oracle-image.scm` updated from `/dev/vda` to `/dev/sda` before anyone ran
+  a `guix system reconfigure`, so the failure mode never fired
 
 - **Superseded analysis** — the Top 5 below was written assuming the cloudzy
   ISO installer could be adapted. Kept for reference, but items 1–2 and 5

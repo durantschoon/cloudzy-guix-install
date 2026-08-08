@@ -133,7 +133,7 @@ Most likely causes, in order:
 
 1. **Launch mode mismatch** — `PARAVIRTUALIZED` vs. the image's BIOS/MBR layout
 2. **Wrong SSH key baked in** — boots fine, refuses your login
-3. **Boot volume is `/dev/sda`, not `/dev/vda`** — boots fine, but the *first* `guix system reconfigure` fails installing GRUB. Check `lsblk` and update `(targets ...)` in `image/oracle-image.scm`.
+3. ~~**Boot volume is `/dev/sda`, not `/dev/vda`**~~ — *resolved 2026-08-08*: it **is** `/dev/sda` (paravirtualized boot volumes attach via virtio-scsi), and `(targets ...)` in `image/oracle-image.scm` now says so. Only relevant if you change the launch mode or shape: verify with `lsblk` before the first `guix system reconfigure`.
 
 ## Design notes
 

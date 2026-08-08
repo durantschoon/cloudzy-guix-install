@@ -118,7 +118,11 @@
    ;; PARAVIRTUALIZED launch mode.  Using grub-efi-bootloader here would
    ;; require the 'qcow2-gpt' image type and the NATIVE launch mode instead.
    (bootloader grub-bootloader)
-   (targets '("/dev/vda"))
+   ;; /dev/sda, not /dev/vda: OCI's PARAVIRTUALIZED launch mode attaches the
+   ;; boot volume via virtio-scsi, so it enumerates as sda.  Observed with
+   ;; lsblk on the first live instance (2026-08-08).  This only matters at
+   ;; `guix system reconfigure` time -- the image build writes GRUB itself.
+   (targets '("/dev/sda"))
    ;; Mirror the boot menu onto the serial line so the OCI console can be used
    ;; to pick an older generation when a reconfigure breaks the system.
    (terminal-outputs '(console serial_0))

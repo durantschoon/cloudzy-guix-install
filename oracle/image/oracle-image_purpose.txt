@@ -169,13 +169,16 @@ bootloader
     grub-bootloader with qcow2-gpt -- produces an image that builds fine and
     then does not boot.
 
-    targets '("/dev/vda")
+    targets '("/dev/sda")
     For an image build the bootloader is installed into the image file itself,
     so this value is not what makes the build work.  It matters LATER: the
     first `guix system reconfigure` run on the live instance will try to
-    install GRUB to this path.  If OCI presents the boot volume as /dev/sda
-    rather than /dev/vda, that reconfigure fails.  Check `lsblk` on the
-    running instance and correct this before the first reconfigure.
+    install GRUB to this path.  RESOLVED 2026-08-08: this was originally
+    /dev/vda on the assumption of plain virtio-blk, but lsblk on the first
+    live instance showed the PARAVIRTUALIZED launch mode attaches the boot
+    volume via virtio-scsi, which enumerates as /dev/sda (sda1 40M BIOS
+    boot, sda2 root).  QEMU's default IDE also shows sda, so the smoke test
+    matches the cloud here.
 
     terminal-outputs/inputs '(console serial_0), serial-unit 0,
     serial-speed 115200
@@ -261,13 +264,15 @@ storage total, so two 50G micro instances fit comfortably.
 STATUS
 ------
 
-Validated: `guix system image -t qcow2 --image-size=50G --dry-run` evaluates
-cleanly and computes a full derivation (323.0 MB of substitutes).
+Fully validated 2026-08-08.  Everything below was observed, not reasoned:
 
-NOT yet validated: nothing here has been booted -- not in QEMU, not on OCI.
-The following are reasoned but unproven, and are the first things to suspect
-if the instance does not come up:
-
-  - PARAVIRTUALIZED launch mode accepting a BIOS/MBR qcow2 image
-  - whether the boot volume appears as /dev/vda or /dev/sda (see 'targets')
-  - the serial console actually reaching a login prompt
+  - the image builds (once the host had disk headroom; see CHECKLIST.md for
+    the "database is locked" red herring)
+  - QEMU smoke test: serial login prompt in ~10s, root mounted by label,
+    sshd accepts the baked key, locked-password account completes pubkey
+    login under UsePAM, passwordless sudo works, 2G swapfile active
+  - PARAVIRTUALIZED launch mode accepted the BIOS/MBR qcow2 image
+  - live instance boots on OCI and sshd answers on the public IP
+  - boot volume appears as /dev/sda (virtio-scsi), settled by lsblk on the
+    live instance; 'targets' now records this (an sda1 40M BIOS-boot
+    partition plus sda2 root, exactly as in QEMU)
