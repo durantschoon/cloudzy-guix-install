@@ -397,47 +397,59 @@ cd ~/guix-customize
 - ✅ `oracle/image/oracle-image_purpose.txt` documents every setting and the
   deliberate omissions (no `initrd-modules`, root label must stay
   `Guix_image`, swap as a shepherd service rather than `swap-devices`)
-- ⏳ Not yet booted — untested in QEMU and on OCI
-- 🚩 **Blocked: the image will not build locally.** Three attempts, identical
-  failure, and it is NOT in `oracle-image.scm` — the config evaluates fine and
-  the build gets as far as populating the image's root:
-
-  ```
-  gnu/build/image.scm:265   register-closure "tmp-root" "system"
-  guix/store/database.scm:102  call-with-database "tmp-root/var/guix/db/db.sqlite"
-  sqlite3.scm:166: sqlite-error (sqlite-exec 5 "database is locked")
-  ```
-
-  Ruled out: concurrent QEMU disk I/O (failed again after that VM exited), a
-  running `guix gc` (none), and host store db contention (`/var/guix/db/db.sqlite`
-  idle). Attempts 1–2 copied all 350 store items first; attempt 3 threw almost
-  immediately, so it is not a timeout under load.
-
-  **Leading hypothesis (unproven): the host root filesystem is full.** SQLite
-  reports "database is locked" rather than a disk error when it cannot create
-  its rollback journal, and `/` on this laptop is a 58.6 G partition sitting at
-  ~97% with ~2 G free — not enough for a 50 G image plus its temporary root.
-
-  ⏸️ **Paused 2026-08-02 pending more disk space.** Resume by freeing space
-  (`guix gc -F 20G` reclaims ~2425 dead items, but coordinate first: the
-  framework-dual work boots system paths out of this same store), then:
-
-  ```sh
-  # A pty is REQUIRED -- redirecting to a file makes the progress reporter die
-  # with "terminal-window-size: Inappropriate ioctl for device" before the
-  # build even starts. This is what invalidated the earlier time-machine test.
-  script -qec 'guix system image -t qcow2 --image-size=50G \
-      oracle/image/oracle-image.scm' /dev/null
-  ```
-
-  If it fails again with real headroom, the disk theory is dead. Fall back to:
-  `--cores=1 --max-jobs=1`; `guix pull` (this Guix is 134 days old and this
-  smells like a fixed upstream bug — an unpinned-master channels file for that
-  test was drafted but never run); check whether `guix-daemon --discover=yes`
-  is implicated; search guix-devel for "register-closure database is locked".
-- ⏳ Upload / import / launch commands drafted in `oracle/README.md` but unrun
+- ✅ **Build blocker resolved (2026-08-08): it was the full disk.** The
+  2026-08-02 "database is locked" failure during `register-closure` never
+  reproduced once `/` moved from the ~97%-full 58.6 G Pop!_OS partition to the
+  96 G Guix partition with 43 G free. SQLite reports a lock error, not a disk
+  error, when it cannot create its rollback journal — hypothesis confirmed by
+  absence. Built with Guix `17c2142` (pulled 2026-08-04). A pty is still
+  REQUIRED (`script -qec '...' /dev/null`); redirecting output kills the
+  progress reporter with `terminal-window-size: Inappropriate ioctl for
+  device`. Also note: a `setsid`-detached build survives the invoking session;
+  two earlier attempts died only because their session was killed.
+- ✅ Image builds: `/gnu/store/ihym40qx8l08iq1jz3kkj3xnj0gdbw65-image.qcow2`
+  (617 MiB compressed for the nominal 50 G)
+- ✅ **QEMU smoke test passed (2026-08-08):** boots to a serial-console login
+  prompt in ~10 s, root mounts by the `Guix_image` label, host keys generate,
+  the baked authorized key lands in `/etc/ssh/authorized_keys.d/guix`,
+  kernel 6.18.13-gnu, 2 G `/swapfile` active, layout is 40 M BIOS-boot +
+  50 G root.
+- ✅ **SSH key-only login verified end-to-end** (throwaway key injected into
+  the running VM's `~guix/.ssh/authorized_keys` — the store image is
+  untouched): login succeeds, `sudo -n true` passes. This also proves the
+  purpose-file's assumption that a locked-password account (`guix:!:` in
+  shadow) still completes pubkey auth under `UsePAM yes`.
+- ⚠️ **Test-harness trap worth remembering:** `ssh -o BatchMode=yes` with a
+  passphrase-protected key and no agent fails as `Permission denied
+  (publickey)` even though the server accepted the key (`sshd -ddd` shows
+  `Accepted key ... Postponed publickey` then the *client* disconnecting).
+  Looks exactly like README failure mode #2 but is client-side.
+- ⚠️ Benign-looking early-boot artifact: initrd logs one transient
+  `init[1]: segfault ... in guile` yet boot always completes; not chased.
+- ✅ **Deployed and RUNNING on OCI (2026-08-08).** Upload (617 MiB to
+  Object Storage bucket `guix-images`) → import as custom image
+  `guix-oracle` (PARAVIRTUALIZED, reached AVAILABLE) → VCN + internet
+  gateway + default route + public subnet created via CLI → launched
+  `VM.Standard.E2.1.Micro` in us-ashburn-1 → sshd answering on the public
+  IP with key-only auth enforced. Client side was rebuilt from scratch on
+  the new Guix laptop: python via `guix install python`, `oci-cli` in
+  `~/.venvs/oci-cli`, API key via the console's generate-and-download flow
+  (pasting a locally generated PEM through chat/copy corrupted it once —
+  avoid).
+- ✅ **Whole flow scripted** in `oracle/scripts/01-setup-client.scm`,
+  `02-build-image.scm`, `03-smoke-test.scm`, `04-deploy.scm` (Guile, per
+  repo language policy; idempotent; no JSON parsing — `--query`/
+  `--raw-output` only). Reasoning and traps in
+  `oracle/scripts/oracle-scripts_purpose.txt`; `oracle/README.md` updated,
+  its upload/import/launch sections now marked verified.
+- ⏳ Scripts are transcriptions of the verified manual run; they have not
+  themselves been run end-to-end yet (parse-checked only). Next fresh
+  deploy should use them and note divergences.
 - ⏳ Open question: boot volume may appear as `/dev/sda` rather than
-  `/dev/vda`, which would break the first `guix system reconfigure`
+  `/dev/vda`, which would break the first `guix system reconfigure` (not
+  first boot — GRUB is installed at image-build time). QEMU's IDE default
+  showed `sda` and booted fine; check `lsblk` on the real instance before
+  reconfiguring, and fix `(targets ...)` if needed
 
 - **Superseded analysis** — the Top 5 below was written assuming the cloudzy
   ISO installer could be adapted. Kept for reference, but items 1–2 and 5
