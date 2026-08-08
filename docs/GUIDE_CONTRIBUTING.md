@@ -2,7 +2,7 @@
 
 **For developers contributing code, documentation, or maintaining this project.**
 
-This guide helps you get started contributing to the cloudzy-guix-install project. It covers the codebase structure, development workflow, testing, and best practices.
+This guide helps you get started contributing to the guix-platform-install project. It covers the codebase structure, development workflow, testing, and best practices.
 
 ---
 
@@ -29,7 +29,7 @@ This guide helps you get started contributing to the cloudzy-guix-install projec
 
 **Key Directories:**
 ```
-cloudzy-guix-install/
+guix-platform-install/
 ├── lib/                    # Shared Go library functions
 ├── cloudzy/               # VPS platform
 ├── framework/             # Framework 13 single-boot
@@ -299,8 +299,8 @@ See [Testing Guide](TESTING.md) for complete details.
 
 ```bash
 # Clone repository
-git clone https://github.com/durantschoon/cloudzy-guix-install.git
-cd cloudzy-guix-install
+git clone https://github.com/durantschoon/guix-platform-install.git
+cd guix-platform-install
 
 # Install dependencies (if testing locally)
 # Or use Docker: ./test-docker.sh

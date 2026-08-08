@@ -14,7 +14,7 @@ Users install postinstall scripts with a single command:
 
 ```bash
 # One-line installation (pure Guile)
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-postinstall.scm | guile
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-postinstall.scm | guile
 ```
 
 **What this does:**
@@ -107,7 +107,7 @@ This compares local file checksums against `SOURCE_MANIFEST.txt` from GitHub.
 ## File Structure
 
 ```
-cloudzy-guix-install/
+guix-platform-install/
 ├── lib/
 │   ├── guile-config-helper.scm      # Core S-expression parser
 │   └── verify-postinstall.sh        # Checksum verification tool

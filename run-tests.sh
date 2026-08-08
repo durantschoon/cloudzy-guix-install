@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Test runner script for cloudzy-guix-install
+# Test runner script for guix-platform-install
 # This script runs all tests to ensure the refactored code works correctly
 
 set -e
 
-echo "=== Running Tests for cloudzy-guix-install ==="
+echo "=== Running Tests for guix-platform-install ==="
 echo
 
 # Colors for output

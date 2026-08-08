@@ -7,7 +7,7 @@ set -euo pipefail
 #   2. Go verifies go.mod and go.sum (if external deps exist)
 #   3. Source code is compiled locally before execution
 
-REPO_OWNER="${GUIX_INSTALL_REPO:-durantschoon/cloudzy-guix-install}"
+REPO_OWNER="${GUIX_INSTALL_REPO:-durantschoon/guix-platform-install}"
 REPO_REF="${GUIX_INSTALL_REF:-main}"
 
 # Parse channel arguments
@@ -294,7 +294,7 @@ fi
 # Extract tarball
 echo "Extracting..."
 tar -xzf repo.tar.gz
-cd cloudzy-guix-install-*
+cd guix-platform-install-*
 
 # Show what we're building
 echo ""

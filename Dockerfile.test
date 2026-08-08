@@ -1,4 +1,4 @@
-# Test environment for cloudzy-guix-install
+# Test environment for guix-platform-install
 # This simulates a minimal Linux environment for testing installer logic
 
 FROM golang:1.23-alpine

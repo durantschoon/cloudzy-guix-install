@@ -12,7 +12,7 @@
 
 ;;; Configuration
 (define github-user "durantschoon")
-(define github-repo "cloudzy-guix-install")
+(define github-repo "guix-platform-install")
 (define github-branch "main")
 (define base-url (format #f "https://raw.githubusercontent.com/~a/~a/~a"
                          github-user github-repo github-branch))

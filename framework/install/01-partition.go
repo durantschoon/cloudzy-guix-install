@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 // Step01Partition handles partitioning for Framework laptop

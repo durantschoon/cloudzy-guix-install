@@ -4632,7 +4632,7 @@ func DownloadCustomizationTools(platform string, username string) error {
 	fmt.Printf("Copying customize script and recipes to %s/\n", destDir)
 	fmt.Println()
 
-	repoOwner := GetEnv("GUIX_INSTALL_REPO", "durantschoon/cloudzy-guix-install")
+	repoOwner := GetEnv("GUIX_INSTALL_REPO", "durantschoon/guix-platform-install")
 	repoRef := GetEnv("GUIX_INSTALL_REF", "main")
 	rawBase := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s", repoOwner, repoRef)
 
@@ -4719,7 +4719,7 @@ Run them individually:
 ## Documentation
 
 For more examples and detailed guides, see:
-https://github.com/durantschoon/cloudzy-guix-install/blob/main/CUSTOMIZATION.md
+https://github.com/durantschoon/guix-platform-install/blob/main/CUSTOMIZATION.md
 `
 
 	if err := os.WriteFile(filepath.Join(destDir, "README.txt"), []byte(readmeContent), 0644); err != nil {
@@ -5001,19 +5001,34 @@ func WriteRecoveryScript(scriptPath, platform string) error {
 		goModPath = "../go.mod"
 		buildCmd.Dir = ".."
 	} else {
-		// Try to find go.mod by checking common locations
-		wd, _ := os.Getwd()
-		if strings.Contains(wd, "cloudzy-guix-install") {
-			// Try to navigate to repo root
-			parts := strings.Split(wd, "cloudzy-guix-install")
-			if len(parts) > 0 {
-				repoRoot := parts[0] + "cloudzy-guix-install"
-				if _, err := os.Stat(filepath.Join(repoRoot, "go.mod")); err == nil {
-					buildDir = repoRoot
+		// Walk up from the working directory looking for go.mod.
+		//
+		// Purpose: locate the repo root when the recovery build runs from deeper
+		// than one subdirectory, without depending on what the checkout is CALLED.
+		//
+		// This previously matched the repo name against the working directory path
+		// and rebuilt the root as parts[0]+"<repo-name>". That failed two ways.
+		// It broke on any rename of the repo (this one included). And it never
+		// worked for the bootstrap tarball at all: GitHub extracts that to
+		// <repo>-<ref>/ -- guix-platform-install-main -- so cutting the path at
+		// "guix-platform-install" reconstructed a sibling directory that does not
+		// exist, os.Stat failed, and goModFound stayed false. Walking up finds the
+		// real root whatever the directory is named, tarball suffix included.
+		if wd, err := os.Getwd(); err == nil {
+			for dir := wd; ; {
+				candidate := filepath.Join(dir, "go.mod")
+				if _, err := os.Stat(candidate); err == nil {
+					buildDir = dir
 					goModFound = true
-					goModPath = filepath.Join(repoRoot, "go.mod")
-					buildCmd.Dir = repoRoot
+					goModPath = candidate
+					buildCmd.Dir = dir
+					break
 				}
+				parent := filepath.Dir(dir)
+				if parent == dir {
+					break // reached the filesystem root without finding go.mod
+				}
+				dir = parent
 			}
 		}
 	}

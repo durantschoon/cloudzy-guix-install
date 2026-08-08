@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 // Step02Mount mounts partitions and sets up store

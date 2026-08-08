@@ -184,12 +184,12 @@
   
   (display "\n")
   (display "On Guix ISO, verify with:\n")
-  (display "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | sha256sum\n")
+  (display "  curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt | sha256sum\n")
   
   (when manifest-words
     (display "\n")
     (display "Or verify with words (easier to read aloud):\n")
-    (display "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | sha256sum | awk '{print $1}' | ./hash-to-words\n"))
+    (display "  curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt | sha256sum | awk '{print $1}' | ./hash-to-words\n"))
   
   (display "\n")
   (display "If checksums match, GitHub CDN has the latest version.\n")

@@ -38,7 +38,7 @@ export KEYBOARD_LAYOUT="us:ctrl:swapcaps"  # or "us" for standard layout
 **One command to install:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
 ```
 
 **Platforms:**
@@ -51,10 +51,10 @@ curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/m
 
 ```bash
 # VPS installation
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- cloudzy
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh | bash -s -- cloudzy
 
 # Framework 13 dual-boot
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- framework-dual
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh | bash -s -- framework-dual
 ```
 
 **What this does:**
@@ -354,7 +354,7 @@ If you want to update the customize tool to the latest version:
 
 ```bash
 # Download fresh copy (requires network)
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/cloudzy/postinstall/customize -o ~/customize-latest
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/cloudzy/postinstall/customize -o ~/customize-latest
 chmod +x ~/customize-latest
 ./customize-latest
 ```

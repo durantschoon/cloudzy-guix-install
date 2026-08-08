@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-MANIFEST_URL="https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt"
+MANIFEST_URL="https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt"
 
 echo "=== Postinstall Script Verification ==="
 echo ""

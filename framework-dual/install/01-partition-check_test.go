@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 // TestStep01PartitionCheck_Integration tests the integration of refactored functions

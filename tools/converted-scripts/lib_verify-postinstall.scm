@@ -14,7 +14,7 @@
 ;;; Configuration
 
 (define manifest-url
-  "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt")
+  "https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt")
 
 (define platforms
   '("cloudzy" "framework" "framework-dual" "raspberry-pi"))

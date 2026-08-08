@@ -198,11 +198,11 @@ if [ -n "$MANIFEST_WORDS" ]; then
 fi
 echo ""
 echo "On Guix ISO, verify with:"
-echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256"
+echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt | shasum -a 256"
 if [ -n "$MANIFEST_WORDS" ]; then
     echo ""
     echo "Or verify with words (easier to read aloud):"
-    echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256 | awk '{print \$1}' | ./hash-to-words"
+    echo "  curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt | shasum -a 256 | awk '{print \$1}' | ./hash-to-words"
 fi
 echo ""
 echo "If checksums match, GitHub CDN has the latest version."

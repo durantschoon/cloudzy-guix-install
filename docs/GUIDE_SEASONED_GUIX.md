@@ -86,7 +86,7 @@ export GUIX_CHANNEL_BRANCH="main"
 export GUIX_CHANNEL_PATH="channels/"
 
 # Run installer - it will download and use your channels.scm
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh | bash
 ```
 
 **Channel repository structure:**

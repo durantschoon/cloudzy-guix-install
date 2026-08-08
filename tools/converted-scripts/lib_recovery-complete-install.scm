@@ -25,7 +25,7 @@
 (define *channels-path* "/tmp/channels.scm")
 (define *tmpdir* "/mnt/var/tmp")
 (define *cache-dir* "/mnt/var/cache")
-(define *repo-base* "https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main")
+(define *repo-base* "https://raw.githubusercontent.com/durantschoon/guix-platform-install/main")
 
 ;;; Helper Functions
 

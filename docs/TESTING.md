@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document describes the test suite for the cloudzy-guix-install project, created to ensure the refactored code works correctly after moving duplicate functions to the common library.
+This document describes the test suite for the guix-platform-install project, created to ensure the refactored code works correctly after moving duplicate functions to the common library.
 
 ## Test Structure
 

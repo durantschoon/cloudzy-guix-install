@@ -1,3 +1,3 @@
-module github.com/durantschoon/cloudzy-guix-install
+module github.com/durantschoon/guix-platform-install
 
 go 1.22

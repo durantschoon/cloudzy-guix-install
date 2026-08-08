@@ -1,5 +1,5 @@
 #!/bin/bash
-# Docker-based test runner for cloudzy-guix-install
+# Docker-based test runner for guix-platform-install
 # This script runs all tests in a clean Docker environment
 
 set -e
@@ -101,12 +101,12 @@ clean() {
 
     # Remove volumes
     echo "Removing volumes (this will clear Go cache)..."
-    docker volume rm cloudzy-guix-install_go-cache 2>/dev/null || true
-    docker volume rm cloudzy-guix-install_go-tmp 2>/dev/null || true
+    docker volume rm guix-platform-install_go-cache 2>/dev/null || true
+    docker volume rm guix-platform-install_go-tmp 2>/dev/null || true
 
     # Remove test image
     echo "Removing test image..."
-    docker rmi cloudzy-guix-install-test 2>/dev/null || true
+    docker rmi guix-platform-install-test 2>/dev/null || true
 
     echo -e "${GREEN}✓ Cleanup complete${NC}"
 }

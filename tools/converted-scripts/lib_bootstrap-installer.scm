@@ -20,7 +20,7 @@
 
 ;;; Configuration
 
-(define default-repo-owner "durantschoon/cloudzy-guix-install")
+(define default-repo-owner "durantschoon/guix-platform-install")
 (define default-repo-ref "main")
 
 ;;; Command Execution Helpers
@@ -408,7 +408,7 @@
         (let ((extracted-dirs (scandir "." (lambda (f) 
                                             (and (not (member f '("." "..")))
                                                  (file-is-directory? f)
-                                                 (string-prefix? "cloudzy-guix-install-" f))))))
+                                                 (string-prefix? "guix-platform-install-" f))))))
           (unless (and extracted-dirs (not (null? extracted-dirs)))
             (error "Could not find extracted directory"))
           

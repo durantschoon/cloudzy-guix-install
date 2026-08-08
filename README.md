@@ -33,7 +33,7 @@ buymeacoffee.com/durantschoon (🙏 help support my LLM habit)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durantschoon/\
-cloudzy-guix-install/main/lib/bootstrap-installer.sh | \
+guix-platform-install/main/lib/bootstrap-installer.sh | \
 bash -s -- <platform>
 ```
 
@@ -310,14 +310,14 @@ Step 1: Verify the manifest checksum (get this from your local machine after run
 
 **Option A: Hex hash verification (traditional method):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt | shasum -a 256
 # Compare the output with the expected hash from update-manifest.sh output
 ```
 
 **Option B: Word-based verification (easier to read aloud/verify):**
 ```bash
 # After bootstrap builds hash-to-words tool (see Step 2):
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/SOURCE_MANIFEST.txt | shasum -a 256 | awk '{print $1}' | ./hash-to-words
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/SOURCE_MANIFEST.txt | shasum -a 256 | awk '{print $1}' | ./hash-to-words
 # Compare the word output with the expected words from update-manifest.sh
 ```
 
@@ -326,7 +326,7 @@ The word-based method converts the 64-character hex hash into a series of readab
 Step 2: Download and run the bootstrap:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh -o bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh -o bootstrap.sh
 bash bootstrap.sh
 ```
 
@@ -334,7 +334,7 @@ bash bootstrap.sh
 
 ```bash
 export GUIX_INSTALL_REF=v0.1.6  # Use a specific tag
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/${GUIX_INSTALL_REF}/lib/bootstrap-installer.sh -o bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/${GUIX_INSTALL_REF}/lib/bootstrap-installer.sh -o bootstrap.sh
 bash bootstrap.sh
 ```
 
@@ -362,8 +362,8 @@ This means you can safely rerun after interruptions - answer "yes" to all steps 
 **Manual build (for advanced users):**
 
 ```bash
-git clone --depth 1 --branch main https://github.com/durantschoon/cloudzy-guix-install.git
-cd cloudzy-guix-install
+git clone --depth 1 --branch main https://github.com/durantschoon/guix-platform-install.git
+cd guix-platform-install
 go build -o run-remote-steps .
 ./run-remote-steps
 ```
@@ -433,7 +433,7 @@ export USEBIGFONT="1"  # Use default (solar24x32), or specify any font name from
 export KEYBOARD_LAYOUT="us:ctrl:swapcaps"  # or "us" for standard layout
 
 # Then run bootstrap
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh | bash -s -- <platform>
 ```
 
 **Benefits:**

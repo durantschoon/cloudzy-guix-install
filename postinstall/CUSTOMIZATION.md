@@ -24,7 +24,7 @@ After first boot, copy the customization tool to your system:
 
 ```bash
 # Download the tool
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/cloudzy-guix-install/main/lib/guix-customize -o ~/guix-customize
+curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/guix-platform-install/main/lib/guix-customize -o ~/guix-customize
 chmod +x ~/guix-customize
 
 # Run interactive customization

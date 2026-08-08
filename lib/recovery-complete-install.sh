@@ -856,7 +856,7 @@ else
     mkdir -p "$CUSTOMIZE_DIR"
 
     # Download customize script
-    REPO_BASE="https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main"
+    REPO_BASE="https://raw.githubusercontent.com/durantschoon/guix-platform-install/main"
     if wget -q -O "$CUSTOMIZE_DIR/customize" "$REPO_BASE/$PLATFORM/postinstall/customize"; then
         chmod +x "$CUSTOMIZE_DIR/customize"
         echo "[OK] Downloaded customize script"

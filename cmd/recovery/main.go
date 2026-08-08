@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 const maxRetryAttempts = 3

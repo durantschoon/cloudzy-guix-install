@@ -172,9 +172,9 @@ sudo cp ~/Downloads/firmware/boot/bootcode.bin /Volumes/boot/
 
 # Option 1: Use pre-made templates (recommended)
 # Copy the appropriate template for your Pi model:
-# For Pi 3: cp ~/Downloads/cloudzy-guix-install/raspberry-pi/postinstall/templates/config-pi3.txt /Volumes/boot/config.txt
-# For Pi 4: cp ~/Downloads/cloudzy-guix-install/raspberry-pi/postinstall/templates/config-pi4.txt /Volumes/boot/config.txt  
-# For Pi 5: cp ~/Downloads/cloudzy-guix-install/raspberry-pi/postinstall/templates/config-pi5.txt /Volumes/boot/config.txt
+# For Pi 3: cp ~/Downloads/guix-platform-install/raspberry-pi/postinstall/templates/config-pi3.txt /Volumes/boot/config.txt
+# For Pi 4: cp ~/Downloads/guix-platform-install/raspberry-pi/postinstall/templates/config-pi4.txt /Volumes/boot/config.txt  
+# For Pi 5: cp ~/Downloads/guix-platform-install/raspberry-pi/postinstall/templates/config-pi5.txt /Volumes/boot/config.txt
 
 # Option 2: Create manually (choose your model):
 

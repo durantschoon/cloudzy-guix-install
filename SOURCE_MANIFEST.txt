@@ -7,40 +7,40 @@
 
 ## Go Source Files
 
-5b4ff1586db975a0fc2f5b80a3494500d45f513d705dfec22114516ed054b4c3  ./cloudzy/install/01-partition.go
-ef5cc8642b785280e930bf80825fab32cf44f5ac755a7cb250ebd01feedcb120  ./cloudzy/install/02-mount.go
-af1874cedf600e6971e127c99e12aff946c074cda6c4024b3618d108dd594e29  ./cloudzy/install/03-config.go
-c8e9fa608c6e336a0c6adb6941b9095932fc22668a1d96b45e60275369ed3438  ./cloudzy/install/04-system-init.go
+aa5c9f59fc4f780358c9a0e239b8eb640e1031d226bd64d731aef4078eea0a2b  ./cloudzy/install/01-partition.go
+afe036905ac887402c9cec059a441340f81663adc5c595ff6afa99d2807bf77b  ./cloudzy/install/02-mount.go
+6c48ca627b53d3bac4f7012490c076f2036c9a8d6c781025da6afbe627e09d46  ./cloudzy/install/03-config.go
+1413e38244ac26c90435221c62d3aeb0cc7fe41959f24ec296d060f0c7f73b24  ./cloudzy/install/04-system-init.go
 2f5888d739db6a21bf724a73712cf6b4299355cc42bb694c39d65f328d322e49  ./cloudzy/install/state.go
 b2d66c39f05a9943073c963eb1763993f4873841c28eab1e888c7500fc09d20b  ./cmd/hash-to-words/main.go
 2a6a93d83ad59fd45b081a76d09dddf94c19cf052dc2f56eb4e8dc0613847fed  ./cmd/hash-to-words/main_test.go
-cf4cd7858fb6f1a5b284d7b51389effb9cea3d79d81879f6acd2be910f4cc120  ./cmd/recovery/main.go
-992a35541e314aa7007e7ea6e39c14f8593803edb7191a63c1901a1f682dfba3  ./framework-dual/install/01-partition-check.go
-e27fad09c63142bfe442f31ba3a4029502a02cb1152d2ac8b2d2c1c36654b779  ./framework-dual/install/01-partition-check_test.go
-5cf15120906a8878178330a9647087c7c5e5dcac4ded4c1237c6a0b5a8d7fd18  ./framework-dual/install/02-mount-existing.go
-48e2c74554e3982b59e681edf9b9554d6e37c21989b2247382ad460dd7668cee  ./framework-dual/install/02-mount-existing_test.go
-3a3cc34678db922dde17d3fff069b658ae2d67126dd55c7864397a62681f2bac  ./framework-dual/install/03-config-dual-boot.go
-9fe5edd608cd9f5a6276396f32d5cc6b2fda4499ec97eb9c5f5c6751260557b8  ./framework-dual/install/03-config-dual-boot_test.go
-88ec2e3db371a7b10dfd919a2cba0646956ec84d257080f85a8e02cb73e9ebb2  ./framework-dual/install/04-system-init.go
+8f182be114dd652fc8c1c6ec48b722709b58a1bc7e7cb492d846c9e18723dd4b  ./cmd/recovery/main.go
+5b9757f039714f87bd5cc115b7e53ae3704ed790c0a7cce352c4d25418f6d396  ./framework-dual/install/01-partition-check.go
+16ada754d612ddc64a30667a37bcccc02b001409e452d18a02076c70b949c402  ./framework-dual/install/01-partition-check_test.go
+cb21308d6873b378ee6a6db59c2fb86b31a317cd3ccedde9783150b94ddeb811  ./framework-dual/install/02-mount-existing.go
+f14b5c13b9f056167119b6d33d1ca684202eb7b729db09c9abd967d56bb54882  ./framework-dual/install/02-mount-existing_test.go
+f48de5fe152bb5bcd5b72cbcc36f037375bd3e6a0b35c761eb555e5f41517451  ./framework-dual/install/03-config-dual-boot.go
+2a6f53312dbd769654f06fc5fb46b65c5a60147f8c764af89ee30644d8f65a19  ./framework-dual/install/03-config-dual-boot_test.go
+5a8e7614862d195466c887d21df1d8016e8cbabd357047745fe5044724b5f462  ./framework-dual/install/04-system-init.go
 8fb7f99a29777c429c071e0eeb2e09055fe3b63e4eef37b03373f73daa501441  ./framework-dual/install/state.go
-a6e9c049a1e08ad5c48f38a8fa3a3e79afdc1095bc8e83a05dd06cd688530eb4  ./framework/install/01-partition.go
-365af002f2c49347e1b2e6fc0e7d886b42371d564507c886bb46da08a90a59c7  ./framework/install/02-mount.go
-58b56f717fe04630447fae857d5f7d26734bd79187c7d9be20163fb6859af58b  ./framework/install/03-config.go
+feb2b8b8e2cb190fb35cb7a359015ab197d0d555fcc717d2c9fcb2243f0b8ead  ./framework/install/01-partition.go
+032b5ca87fe76594bd9072939c895e560c510a15ee3e050fb8bee3dd33ec4550  ./framework/install/02-mount.go
+b47c2f4e3819bd25bc64e0866e58ef3c243b5693ebccf609800dd689e487e09e  ./framework/install/03-config.go
 d1471db6cd0d6ce0b5d3942a49c37e44f9c42d2a4624c2fdc0969e96e57c6573  ./framework/install/03-config_test.go
-17b2a8adaeb45d3df913ea44ecf19b1dc24a29749dfa699ae08c9a3c8f73df17  ./framework/install/04-system-init.go
+66fb5d50255d179a67be2886fb2d7cf0adbb14ef07f70d859d760980802c67be  ./framework/install/04-system-init.go
 abc5adff7532385203b236564f6aa59b1755f1f3e091cb5f3b66ae1e9cffc39f  ./framework/install/state.go
 cf0e0f9a551560cf335782c3cf1e8301c044911eec3a302e0cacf489b6fd2e68  ./lib/check-kernel-modules.go
 499c5b966dee469aa4c2e23e58e33a43108b5126649210d1477357b31b6b2a4a  ./lib/colors.go
-b653fa4f6bfba1e8dd2310db332b2cba83432c14282e699d56a8a2619511969f  ./lib/common.go
+0b7b5229750366f4f7bdfd5d39ed32dcf5ad718821d9d599b581853a3a827ff9  ./lib/common.go
 f0b17e052df3bdc2a85d1543bf6295cf2207456acc2c3d00b057b76a10440fa6  ./lib/common_test.go
-ddc7f955c3c9f641424c03c1cc6c8b46d041ebef66e53881e3b003810deeb8de  ./run-remote-steps.go
+fcf87db6aaf77059af1026e3dce07d3ebd91d6a7567d49731360d3cee82c8203  ./run-remote-steps.go
 
 ## Critical Shell Scripts
 
-f8a1bca8b786bf90a766e78faeb3d4c8ab2bddaa07cfd2acbaa1c01f1bc1f8eb  lib/bootstrap-installer.sh
-488316a6f7882a88f5562867678b8c7cc4db6d207778d9a62a490b774120f703  lib/clean-install.sh
+1aee725a9e7ea9537b2715897ebe39ca394b2f347e0927b41bdc9547f73bbe87  lib/bootstrap-installer.sh
+b6c21e662ca071bec4dcb734fc7abc95f431e1e91655366473aa349508ab17f5  lib/clean-install.sh
 11537f49ea21ecc83299bc2b6ace77b0e12682b2b89937573e70d8a676e32997  lib/verify-guix-install.sh
-8eaa6cee4a629a24426621416a39d5629df8693d3b1f408b39da4f12756b06cf  lib/recovery-complete-install.sh
+0db0e6e259230ed7af5049562ed60caa625be39e28091b8675df50fd3acf9946  lib/recovery-complete-install.sh
 7ba7183ec8de691428cf30aed2c550e085b79869644e4a64fd44a68c0769597f  lib/fix-iso-artifacts.sh
 f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstall.sh
 0afe9c41c07c4cd947b0535e5940e4babe9a090a77ac45d821a3b19c304b5213  postinstall/lib.sh
@@ -48,7 +48,7 @@ f856f82f394f1a3d6b982eb61e0fcab1d62a30de59ca01bdd08f6c362e46d25e  lib/postinstal
 ## Guile Library Scripts
 
 abc76ad3b486dac52eed9d27d15dd88131ca1772d3d8d1ef12bf78a8cfcb924a  lib/guile-config-helper.scm
-5ae34e8a36353930db26bdb7dc7e01ed51f0b8ccf7d38cf055f8bed206809031  lib/bootstrap-postinstall.scm
+c6cf685b75ed05e77f858a00474a610b2dc1191ea8ed3124a0106ce7de55f45b  lib/bootstrap-postinstall.scm
 5b8b7a45831e204ecc74fee477e3bcb1ce2c2a130706d2aa6a26eb40fe0daaca  lib/fix-network.scm
 cf72b297e8043a00058ad0f5baa3806b175e91c34c315a21659074d6082925bc  lib/finish-installation.scm
 f7e385cb935f6b498d32d0d5efea0efa51fdfff905ec2cf51be8906e7a98d497  postinstall/lib.scm

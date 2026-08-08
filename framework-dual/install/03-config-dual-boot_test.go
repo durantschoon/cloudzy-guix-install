@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 // TestStep03ConfigDualBoot_Integration tests the integration of refactored functions

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"syscall"
 
-	cloudzyi "github.com/durantschoon/cloudzy-guix-install/cloudzy/install"
-	frameworkduali "github.com/durantschoon/cloudzy-guix-install/framework-dual/install"
-	frameworki "github.com/durantschoon/cloudzy-guix-install/framework/install"
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	cloudzyi "github.com/durantschoon/guix-platform-install/cloudzy/install"
+	frameworkduali "github.com/durantschoon/guix-platform-install/framework-dual/install"
+	frameworki "github.com/durantschoon/guix-platform-install/framework/install"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 func main() {

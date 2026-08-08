@@ -115,7 +115,7 @@ Located in `postinstall/` - Run after booting into installed minimal Guix system
 **Usage:**
 ```bash
 # After booting into minimal Guix system
-curl https://raw.githubusercontent.com/YOUR_USERNAME/cloudzy-guix-install/main/cloudzy/postinstall/customize -o ~/customize
+curl https://raw.githubusercontent.com/YOUR_USERNAME/guix-platform-install/main/cloudzy/postinstall/customize -o ~/customize
 chmod +x ~/customize
 ./customize
 ```

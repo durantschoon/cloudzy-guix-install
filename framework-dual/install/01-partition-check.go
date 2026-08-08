@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 // Step01PartitionCheck performs partition detection and setup

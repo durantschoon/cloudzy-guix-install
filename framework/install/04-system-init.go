@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/durantschoon/cloudzy-guix-install/lib"
+	"github.com/durantschoon/guix-platform-install/lib"
 )
 
 // Step04SystemInit performs the final system initialization

@@ -138,7 +138,7 @@ export SWAP_SIZE="4G"       # Default: 4G
 **One command to install:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/bootstrap-installer.sh | bash -s -- framework-dual
+curl -fsSL https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/bootstrap-installer.sh | bash -s -- framework-dual
 ```
 
 **What happens:**

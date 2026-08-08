@@ -1586,7 +1586,7 @@ chmod +x /root/recovery-complete-install.sh
 
 # Or download the bash fallback script (if Go build fails):
 cd /root
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/recovery-complete-install.sh
+wget https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/recovery-complete-install.sh
 chmod +x recovery-complete-install.sh
 ./recovery-complete-install.sh
 ```
@@ -1708,7 +1708,7 @@ Use this script if:
 ```bash
 # Download the script
 cd /root
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/enforce-guix-filesystem-invariants.sh
+wget https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/enforce-guix-filesystem-invariants.sh
 chmod +x enforce-guix-filesystem-invariants.sh
 
 # Mount your root partition first
@@ -1726,7 +1726,7 @@ mount $(blkid -L GUIX_ROOT) /mnt
 ```bash
 # Download the script
 cd ~
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/enforce-guix-filesystem-invariants.sh
+wget https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/enforce-guix-filesystem-invariants.sh
 chmod +x enforce-guix-filesystem-invariants.sh
 
 # Run with sudo (it will detect it's running on installed system)
@@ -2992,7 +2992,7 @@ $ guix weather curl
 
 ```bash
 # Download and run the diagnostic script
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/diagnose-guix-build.sh
+wget https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/diagnose-guix-build.sh
 chmod +x diagnose-guix-build.sh
 ./diagnose-guix-build.sh
 ```
@@ -3107,7 +3107,7 @@ sudo iptables -L -n
 
 ```bash
 # Download and run the network fix script
-wget https://raw.githubusercontent.com/durantschoon/cloudzy-guix-install/main/lib/fix-network.scm
+wget https://raw.githubusercontent.com/durantschoon/guix-platform-install/main/lib/fix-network.scm
 chmod +x fix-network.scm
 guile --no-auto-compile fix-network.scm
 ```
